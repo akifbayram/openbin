@@ -11,36 +11,56 @@ export interface Bucket {
   label: string;
 }
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Parse a strict `YYYY-MM-DD` string. Returns null for any malformed input. */
+export function parseIsoDate(iso: unknown): { y: number; m: number; d: number } | null {
+  if (typeof iso !== 'string' || !ISO_DATE_RE.test(iso)) return null;
+  const y = parseInt(iso.slice(0, 4), 10);
+  const m = parseInt(iso.slice(5, 7), 10);
+  const d = parseInt(iso.slice(8, 10), 10);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return { y, m, d };
+}
+
+/** UTC year from an ISO date, or NaN for unparsable input. */
 export function yearOf(isoDate: string): number {
-  return parseInt(isoDate.slice(0, 4), 10);
+  return parseIsoDate(isoDate)?.y ?? Number.NaN;
 }
 
 export function availableYears(data: { date: string }[]): number[] {
-  if (data.length === 0) return [new Date().getUTCFullYear()];
+  const fallback = [new Date().getUTCFullYear()];
+  if (data.length === 0) return fallback;
   const years = new Set<number>();
-  for (const d of data) years.add(yearOf(d.date));
+  for (const d of data) {
+    const y = yearOf(d.date);
+    if (Number.isFinite(y)) years.add(y);
+  }
+  if (years.size === 0) return fallback;
   return [...years].sort((a, b) => b - a);
 }
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const FALLBACK_MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function bucketByMonth(
   data: { date: string; count: number }[],
   year: number,
 ): Bucket[] {
-  const buckets: Bucket[] = MONTH_LABELS.map((label, index) => ({
+  const buckets: Bucket[] = FALLBACK_MONTH_LABELS.map((label, index) => ({
     index,
     activeDays: 0,
     totalCount: 0,
     label,
   }));
 
+  if (!Number.isFinite(year)) return buckets;
+
   for (const day of data) {
-    if (yearOf(day.date) !== year) continue;
-    const month = parseInt(day.date.slice(5, 7), 10) - 1;
-    if (month < 0 || month > 11) continue;
-    buckets[month].activeDays += 1;
-    buckets[month].totalCount += day.count;
+    const parsed = parseIsoDate(day.date);
+    if (!parsed || parsed.y !== year) continue;
+    const monthIdx = parsed.m - 1;
+    buckets[monthIdx].activeDays += 1;
+    buckets[monthIdx].totalCount += Math.max(0, Number.isFinite(day.count) ? day.count : 0);
   }
 
   return buckets;
@@ -61,17 +81,19 @@ export function bucketByWeek(
     label: `W${index + 1}`,
   }));
 
+  if (!Number.isFinite(year)) return buckets;
+
   const yearStart = Date.UTC(year, 0, 1);
 
   for (const day of data) {
-    if (yearOf(day.date) !== year) continue;
-    const parts = day.date.split('-').map(Number);
-    const dayUtc = Date.UTC(parts[0], parts[1] - 1, parts[2]);
+    const parsed = parseIsoDate(day.date);
+    if (!parsed || parsed.y !== year) continue;
+    const dayUtc = Date.UTC(parsed.y, parsed.m - 1, parsed.d);
     const dayOfYear = Math.floor((dayUtc - yearStart) / 86_400_000);
     if (dayOfYear < 0) continue;
     const weekIdx = Math.min(52, Math.floor(dayOfYear / 7));
     buckets[weekIdx].activeDays += 1;
-    buckets[weekIdx].totalCount += day.count;
+    buckets[weekIdx].totalCount += Math.max(0, Number.isFinite(day.count) ? day.count : 0);
   }
 
   return buckets;

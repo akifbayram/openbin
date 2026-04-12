@@ -210,6 +210,47 @@ body {
   display: none;
 }
 
+/* ─── Thin auto-hiding scrollbar ───
+   Desktop (hover-capable): slim thumb reveals on hover/focus, invisible at rest.
+   Touch (no hover): thumb stays visible so scrollable regions are discoverable. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 180ms ease;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--radius-full);
+  transition: background 180ms ease;
+}
+
+@media (hover: hover) {
+  .scrollbar-thin:hover,
+  .scrollbar-thin:focus-within {
+    scrollbar-color: var(--bg-active) transparent;
+  }
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb,
+  .scrollbar-thin:focus-within::-webkit-scrollbar-thumb {
+    background: var(--bg-active);
+  }
+}
+
+@media (hover: none) {
+  .scrollbar-thin {
+    scrollbar-color: var(--bg-active) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--bg-active);
+  }
+}
+
 /* ─── Selection ─── */
 ::selection {
   background: var(--accent);

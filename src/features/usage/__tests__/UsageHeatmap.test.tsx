@@ -72,4 +72,68 @@ describe('UsageHeatmap', () => {
     const activeCell = container.querySelector('[data-intensity="3"]');
     expect(activeCell).not.toBeNull();
   });
+
+  it('ignores malformed date entries without crashing', () => {
+    const { container } = render(
+      <UsageHeatmap
+        data={[
+          { date: 'garbage', count: 10 },
+          { date: '2026-13-99', count: 10 },
+          { date: '2026-03-05', count: 2 },
+        ]}
+        year={2026}
+        granularity="daily"
+        mode="per-bin"
+      />,
+    );
+    // Exactly one active cell (the valid 2026-03-05 entry)
+    const activeCells = container.querySelectorAll('[data-intensity="2"]');
+    expect(activeCells.length).toBe(1);
+  });
+
+  it('falls back safely when year is NaN', () => {
+    const { container } = render(
+      <UsageHeatmap
+        data={[{ date: '2026-03-05', count: 10 }]}
+        year={Number.NaN}
+        granularity="monthly"
+        mode="per-bin"
+      />,
+    );
+    // Renders 12 month cells without crashing
+    const cells = container.querySelectorAll('[data-testid="usage-cell"]');
+    expect(cells).toHaveLength(12);
+  });
+
+  it('exposes a role="img" with an aria-label for screen readers', () => {
+    const { container } = render(
+      <UsageHeatmap
+        data={[{ date: '2026-03-05', count: 2 }]}
+        year={2026}
+        granularity="monthly"
+        mode="per-bin"
+      />,
+    );
+    const img = container.querySelector('[role="img"]');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('aria-label')).toContain('2026');
+  });
+
+  it('marks today with a highlight in daily view', () => {
+    // Use the current year so the "today" cell actually falls within the grid.
+    const currentYear = new Date().getUTCFullYear();
+    const { container } = render(
+      <UsageHeatmap data={[]} year={currentYear} granularity="daily" mode="per-bin" />,
+    );
+    const todayCells = container.querySelectorAll('[data-today="true"]');
+    expect(todayCells.length).toBe(1);
+  });
+
+  it('does not mark any cell as today when viewing a past year', () => {
+    const { container } = render(
+      <UsageHeatmap data={[]} year={2020} granularity="daily" mode="per-bin" />,
+    );
+    const todayCells = container.querySelectorAll('[data-today="true"]');
+    expect(todayCells.length).toBe(0);
+  });
 });

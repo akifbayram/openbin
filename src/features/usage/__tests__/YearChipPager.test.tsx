@@ -3,18 +3,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { YearChipPager } from '../YearChipPager';
 
 describe('YearChipPager', () => {
-  it('renders a chip per year', () => {
-    render(<YearChipPager years={[2024, 2025, 2026]} selected={2026} onSelect={() => {}} />);
-    expect(screen.getByRole('button', { name: '2024' })).toBeDefined();
-    expect(screen.getByRole('button', { name: '2025' })).toBeDefined();
-    expect(screen.getByRole('button', { name: '2026' })).toBeDefined();
+  it('shows only the currently selected year', () => {
+    render(<YearChipPager years={[2024, 2025, 2026]} selected={2025} onSelect={() => {}} />);
+    expect(screen.getByText('2025')).toBeDefined();
+    expect(screen.queryByText('2024')).toBeNull();
+    expect(screen.queryByText('2026')).toBeNull();
   });
 
-  it('fires onSelect when a chip is clicked', () => {
-    const onSelect = vi.fn();
-    render(<YearChipPager years={[2024, 2025, 2026]} selected={2026} onSelect={onSelect} />);
-    fireEvent.click(screen.getByRole('button', { name: '2024' }));
-    expect(onSelect).toHaveBeenCalledWith(2024);
+  it('falls back to the newest year when none is selected', () => {
+    render(<YearChipPager years={[2024, 2025, 2026]} selected={null} onSelect={() => {}} />);
+    expect(screen.getByText('2026')).toBeDefined();
   });
 
   it('pager buttons move selection one year back/forward', () => {

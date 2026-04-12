@@ -5,6 +5,7 @@ import {
   bucketByMonth,
   bucketByWeek,
   intensityStep,
+  parseIsoDate,
   yearOf,
 } from '../usageBuckets';
 
@@ -102,5 +103,71 @@ describe('yearOf', () => {
   it('extracts UTC year from ISO date', () => {
     expect(yearOf('2026-04-12')).toBe(2026);
     expect(yearOf('1999-12-31')).toBe(1999);
+  });
+
+  it('returns NaN for malformed input', () => {
+    expect(Number.isNaN(yearOf(''))).toBe(true);
+    expect(Number.isNaN(yearOf('garbage'))).toBe(true);
+    expect(Number.isNaN(yearOf('2026-13-01'))).toBe(true);
+    expect(Number.isNaN(yearOf('2026-01-32'))).toBe(true);
+    expect(Number.isNaN(yearOf('26-01-01'))).toBe(true);
+  });
+});
+
+describe('parseIsoDate', () => {
+  it('parses well-formed dates', () => {
+    expect(parseIsoDate('2026-04-12')).toEqual({ y: 2026, m: 4, d: 12 });
+  });
+
+  it('rejects malformed input', () => {
+    expect(parseIsoDate('')).toBeNull();
+    expect(parseIsoDate('garbage')).toBeNull();
+    expect(parseIsoDate('2026-00-01')).toBeNull();
+    expect(parseIsoDate('2026-13-01')).toBeNull();
+    expect(parseIsoDate('2026-01-32')).toBeNull();
+    expect(parseIsoDate(null as unknown as string)).toBeNull();
+    expect(parseIsoDate(undefined as unknown as string)).toBeNull();
+  });
+});
+
+describe('availableYears with malformed data', () => {
+  it('skips invalid dates and returns valid years', () => {
+    const data: UsageDay[] = [
+      { date: '2026-04-12', count: 1 },
+      { date: 'garbage', count: 1 },
+      { date: '2025-01-01', count: 1 },
+    ];
+    expect(availableYears(data)).toEqual([2026, 2025]);
+  });
+
+  it('returns current-year fallback when all dates are invalid', () => {
+    const data: UsageDay[] = [
+      { date: '', count: 1 },
+      { date: 'nope', count: 1 },
+    ];
+    expect(availableYears(data)).toEqual([new Date().getUTCFullYear()]);
+  });
+});
+
+describe('bucketByMonth with malformed data', () => {
+  it('skips invalid dates without throwing', () => {
+    const data: UsageDay[] = [
+      { date: '2026-01-05', count: 2 },
+      { date: 'garbage', count: 99 },
+      { date: '2026-01-06', count: Number.NaN },
+    ];
+    const buckets = bucketByMonth(data, 2026);
+    expect(buckets[0].activeDays).toBe(2);
+    expect(buckets[0].totalCount).toBe(2);
+  });
+
+  it('returns empty buckets when year is NaN', () => {
+    const buckets = bucketByMonth([{ date: '2026-01-05', count: 1 }], Number.NaN);
+    expect(buckets.every((b) => b.activeDays === 0)).toBe(true);
+  });
+
+  it('clamps negative counts to 0', () => {
+    const buckets = bucketByMonth([{ date: '2026-01-05', count: -10 }], 2026);
+    expect(buckets[0].totalCount).toBe(0);
   });
 });

@@ -3,20 +3,34 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { useUserPreferences } from '@/lib/userPreferences';
-import { cn, disclosureSectionLabel } from '@/lib/utils';
+import { disclosureSectionLabel, plural } from '@/lib/utils';
 import { GranularitySegmented } from './GranularitySegmented';
-import { UsageHeatmap } from './UsageHeatmap';
+import { InlineRetryError, UsageHeatmap, UsageHeatmapSkeleton } from './UsageHeatmap';
 import { availableYears, yearOf } from './usageBuckets';
 import { useBinUsage } from './useBinUsage';
 import { YearChipPager } from './YearChipPager';
 
-function formatDaysAgo(iso: string): string {
+const RELATIVE_FMT = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+
+function formatRelativeFromNow(iso: string): string {
   const then = Date.parse(iso);
-  if (Number.isNaN(then)) return '';
-  const days = Math.floor((Date.now() - then) / 86_400_000);
-  if (days === 0) return 'today';
-  if (days === 1) return '1 day ago';
-  return `${days} days ago`;
+  if (!Number.isFinite(then)) return '';
+  const days = Math.round((then - Date.now()) / 86_400_000);
+  if (Math.abs(days) < 1) return RELATIVE_FMT.format(0, 'day');
+  if (Math.abs(days) < 30) return RELATIVE_FMT.format(days, 'day');
+  const months = Math.round(days / 30);
+  if (Math.abs(months) < 12) return RELATIVE_FMT.format(months, 'month');
+  return RELATIVE_FMT.format(Math.round(months / 12), 'year');
+}
+
+/** Server sorts DESC but don't trust it — malformed rows at the head would mask a valid latest date. */
+function findLastValidDate(entries: Array<{ date: string }>): string | null {
+  let latest: string | null = null;
+  for (const e of entries) {
+    if (!Number.isFinite(yearOf(e.date))) continue;
+    if (latest === null || e.date > latest) latest = e.date;
+  }
+  return latest;
 }
 
 interface BinUsageSectionProps {
@@ -24,14 +38,20 @@ interface BinUsageSectionProps {
 }
 
 export function BinUsageSection({ binId }: BinUsageSectionProps) {
-  const { usage, isLoading } = useBinUsage(binId);
+  const { usage, isLoading, error, refresh } = useBinUsage(binId);
   const { preferences } = useUserPreferences();
   const years = useMemo(() => availableYears(usage), [usage]);
   const [year, setYear] = useState<number | null>(null);
-  const selectedYear = year ?? years[0] ?? new Date().getUTCFullYear();
 
-  const activeInYear = usage.filter((d) => yearOf(d.date) === selectedYear).length;
-  const lastUse = usage[0]?.date;
+  const selectedYear =
+    year !== null && years.includes(year) ? year : (years[0] ?? new Date().getUTCFullYear());
+
+  const lastUse = useMemo(() => findLastValidDate(usage), [usage]);
+  const activeInYear = useMemo(() => {
+    let count = 0;
+    for (const d of usage) if (yearOf(d.date) === selectedYear) count++;
+    return count;
+  }, [usage, selectedYear]);
 
   return (
     <Card>
@@ -39,12 +59,19 @@ export function BinUsageSection({ binId }: BinUsageSectionProps) {
         <Disclosure label="Usage" labelClassName={disclosureSectionLabel}>
           <div className="pb-3 flex flex-col gap-3">
             {isLoading ? (
-              <div className="text-[13px] text-[var(--text-tertiary)]">Loading…</div>
+              <UsageHeatmapSkeleton />
+            ) : error ? (
+              <InlineRetryError
+                title="Couldn't load usage data"
+                detail={error}
+                onRetry={refresh}
+                className="py-1"
+              />
             ) : usage.length === 0 ? (
-              <div className="text-[13px] text-[var(--text-tertiary)]">
-                No activity recorded yet. Update triggers in{' '}
+              <p className="text-[12px] text-[var(--text-tertiary)] leading-relaxed py-1">
+                No activity yet. Choose which actions count in{' '}
                 <Link to="/settings/preferences" className="underline text-[var(--accent)]">preferences</Link>.
-              </div>
+              </p>
             ) : (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -61,9 +88,9 @@ export function BinUsageSection({ binId }: BinUsageSectionProps) {
                   granularity={preferences.usage_granularity}
                   mode="per-bin"
                 />
-                <p className={cn(disclosureSectionLabel, 'text-[11px] text-[var(--text-tertiary)]')}>
-                  {activeInYear} active day{activeInYear === 1 ? '' : 's'} in {selectedYear}
-                  {lastUse ? ` · last use ${formatDaysAgo(lastUse)}` : ''}
+                <p className="text-[11px] text-[var(--text-tertiary)] tabular-nums">
+                  {activeInYear} active {plural(activeInYear, 'day')} in {selectedYear}
+                  {lastUse ? ` · last used ${formatRelativeFromNow(lastUse)}` : ''}
                 </p>
               </>
             )}
