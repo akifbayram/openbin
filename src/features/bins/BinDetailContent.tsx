@@ -12,6 +12,7 @@ import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { useTerminology } from '@/lib/terminology';
+import type { useDictation } from '@/lib/useDictation';
 import { cn, disclosureSectionLabel } from '@/lib/utils';
 import type { AiSuggestions, Bin, CustomField, ItemCheckout, Photo } from '@/types';
 import { BinPreviewCard } from './BinPreviewCard';
@@ -38,6 +39,8 @@ interface BinDetailContentProps {
   canEdit: boolean;
   canChangeVisibility: boolean;
   quickAdd: ReturnType<typeof useQuickAdd>;
+  dictation: ReturnType<typeof useDictation>;
+  canTranscribe: boolean;
   allTags: string[];
   aiEnabled: boolean;
   aiGated?: boolean;
@@ -60,6 +63,8 @@ export function BinDetailContent({
   canEdit,
   canChangeVisibility,
   quickAdd,
+  dictation,
+  canTranscribe,
   allTags,
   aiEnabled,
   aiGated,
@@ -136,7 +141,7 @@ export function BinDetailContent({
         <Card>
           <CardContent className="pt-3 pb-4">
             <ItemList items={bin.items} binId={bin.id} readOnly={!canEdit} collapsible checkouts={checkouts} />
-            {canEdit && <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} aiGated={aiGated} onUpgrade={onUpgrade} />}
+            {canEdit && <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} aiGated={aiGated} onUpgrade={onUpgrade} dictation={dictation} canTranscribe={canTranscribe} />}
           </CardContent>
         </Card>
 

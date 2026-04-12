@@ -15,7 +15,8 @@ import { aiRateLimiters } from '../lib/rateLimiters.js';
 import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
 import { resolveTaskConfig } from '../lib/taskRouting.js';
-import { memoryPhotoUpload } from '../lib/uploadConfig.js';
+import { transcribeAudio } from '../lib/transcribe.js';
+import { memoryAudioUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 import { checkAiCredits, requireAiAccess, requirePlusOrAbove } from '../middleware/requirePlan.js';
 
@@ -447,6 +448,29 @@ router.delete('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('d
   }
   await query('DELETE FROM user_ai_task_overrides WHERE user_id = $1 AND task_group = $2', [req.user!.id, group]);
   res.json({ deleted: true });
+}));
+
+// POST /api/ai/transcribe — transcribe audio to text
+router.post('/transcribe', memoryAudioUpload.single('audio'), ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('transcribe audio', async (req, res) => {
+  const file = req.file;
+  if (!file || !file.buffer || file.buffer.length === 0) {
+    throw new ValidationError('No audio file provided');
+  }
+
+  if (config.aiMock) {
+    res.json({ text: 'three AA batteries, a Phillips screwdriver, some zip ties' });
+    return;
+  }
+
+  const settings = await getUserAiSettings(req.user!.id);
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'quickText', settings.config);
+
+  if (taskConfig.provider === 'anthropic') {
+    throw new ValidationError('Anthropic does not support audio transcription. Switch to OpenAI or Gemini for dictation.');
+  }
+
+  const result = await transcribeAudio(taskConfig, file.buffer, file.mimetype);
+  res.json(result);
 }));
 
 export default router;

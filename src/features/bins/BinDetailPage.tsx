@@ -191,6 +191,8 @@ export function BinDetailPage() {
         customFields={customFieldDefs}
         photos={actions.photos}
         activeLocationId={actions.activeLocationId ?? undefined}
+        dictation={actions.dictation}
+        canTranscribe={actions.canTranscribe}
         checkouts={checkouts}
         onApplySuggestions={actions.handleApplySuggestions}
         onClearSuggestions={actions.clearSuggestions}

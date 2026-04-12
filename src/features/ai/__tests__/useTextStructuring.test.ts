@@ -4,10 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@/lib/api', () => {
   class ApiError extends Error {
     status: number;
-    constructor(status: number, message: string) {
+    code?: string;
+    constructor(status: number, message: string, code?: string) {
       super(message);
       this.name = 'ApiError';
       this.status = status;
+      this.code = code;
     }
   }
   return { apiFetch: vi.fn(), ApiError };
@@ -77,6 +79,10 @@ describe('mapAiError (structure fallback)', () => {
 
   it('maps unknown error to generic message', () => {
     expect(mapAiError(new TypeError('oops'), 'Couldn\'t find items — try describing them differently')).toBe('Couldn\'t find items — try describing them differently');
+  });
+
+  it('maps 422 VALIDATION_ERROR to actual message', () => {
+    expect(mapAiError(new ApiError(422, 'text must be 5000 characters or less', 'VALIDATION_ERROR'), 'Couldn\'t find items — try describing them differently')).toBe('text must be 5000 characters or less');
   });
 });
 

@@ -4,10 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@/lib/api', () => {
   class ApiError extends Error {
     status: number;
-    constructor(status: number, message: string) {
+    code?: string;
+    constructor(status: number, message: string, code?: string) {
       super(message);
       this.name = 'ApiError';
       this.status = status;
+      this.code = code;
     }
   }
   return { apiFetch: vi.fn(), ApiError };

@@ -116,6 +116,21 @@ export const memoryPhotoUpload = multer({
   },
 });
 
+const AUDIO_MIME_TYPES = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/mpeg', 'audio/wav'];
+
+/** Multer config for in-memory audio uploads (dictation endpoint, max 10 MB). */
+export const memoryAudioUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (AUDIO_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only WebM, MP4, OGG, MPEG, and WAV audio files are allowed'));
+    }
+  },
+});
+
 /** Multer config for demo account in-memory photo uploads (3 MB per file). */
 export const demoMemoryPhotoUpload = multer({
   storage: multer.memoryStorage(),
