@@ -1,21 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AiProgressBar } from '@/components/ui/ai-progress-bar';
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { takeCapturedPhotos } from '@/features/capture/capturedPhotos';
 import { isRecordingSupported } from '@/lib/audioRecorder';
+import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { useTranscription } from '@/lib/useTranscription';
-import { CommandActionPreview } from './CommandActionPreview';
-import { CommandIdleInput } from './CommandIdleInput';
-import { CommandSuccess } from './CommandSuccess';
+import { ConversationComposer } from './ConversationComposer';
+import { ConversationThread } from './ConversationThread';
 import { getCommandSelectedBinIds } from './commandSelectedBins';
+import { EmptyConversationState } from './EmptyConversationState';
 import { AiSetupView } from './InlineAiSetup';
-import { InventoryQueryResult } from './InventoryQueryResult';
 import { PhotoBulkAdd } from './PhotoBulkAdd';
-import { useActionExecutor } from './useActionExecutor';
-import { useCommandInputState } from './useCommandInputState';
+import { useAiSettings } from './useAiSettings';
+import { useConversation } from './useConversation';
 
 interface CommandInputProps {
   open: boolean;
@@ -27,58 +25,40 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
   const selectedBinIds = getCommandSelectedBinIds();
   const navigate = useNavigate();
   const t = useTerminology();
+  const { activeLocationId } = useAuth();
+  const { settings, isLoading: aiSettingsLoading } = useAiSettings();
 
-  const {
-    text, setText,
-    checkedActions,
-    queryResult,
-    queryPartialText,
-    isQueryStreaming,
-    photoMode, setPhotoMode,
-    initialFiles, setInitialFiles,
-    examplesOpen, setExamplesOpen,
-    executionResult,
-    fileInputRef,
-    state, isAiReady, aiSettings, aiSettingsLoading, selectedCount,
-    actions, interpretation, error,
-    handleParse, handleBack, toggleAction,
-    handleClose, handlePhotoSelect, handleBinClick,
-    handleExecuteComplete, handleAskAnother, handleFollowUp,
-    scopeInfo,
-  } = useCommandInputState(onOpenChange, selectedBinIds);
+  const conversation = useConversation({
+    locationId: activeLocationId,
+    initialSelectedBinIds: selectedBinIds,
+  });
 
-  const canTranscribe = isAiReady && !!aiSettings && aiSettings.provider !== 'anthropic' && isRecordingSupported();
+  const [photoMode, setPhotoMode] = useState(false);
+  const [initialFiles, setInitialFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const stateRef = useRef(state);
-  stateRef.current = state;
-  const handleFollowUpRef = useRef(handleFollowUp);
-  handleFollowUpRef.current = handleFollowUp;
-  const handleParseRef = useRef(handleParse);
-  handleParseRef.current = handleParse;
-  const setTextRef = useRef(setText);
-  setTextRef.current = setText;
+  const canTranscribe = !!settings && settings.provider !== 'anthropic' && isRecordingSupported();
+  const isAiReady = settings !== null;
 
   const transcription = useTranscription({
     onTranscribed: (text) => {
-      if (stateRef.current === 'query-result') {
-        handleFollowUpRef.current(text);
-      } else {
-        setTextRef.current(text);
-        // Defer parse to next tick so setText has flushed
-        setTimeout(() => handleParseRef.current(), 0);
-      }
+      conversation.ask(text);
     },
   });
 
-  const { isExecuting, executingProgress, executeActions } = useActionExecutor({
-    actions,
-    checkedActions,
-    onComplete: handleExecuteComplete,
-  });
+  // Clear conversation when dialog closes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — fire only on `open` transitions
+  useEffect(() => {
+    if (!open) {
+      conversation.clearConversation();
+      setPhotoMode(false);
+      setInitialFiles([]);
+      transcription.cancel();
+    }
+  }, [open]);
 
   // Auto-trigger photo picker when opened via "Scan more"
   const autoTriggeredRef = useRef(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: fileInputRef is a stable ref — .current must not be a dep
   useEffect(() => {
     if (open && autoTriggerPhoto && !autoTriggeredRef.current) {
       autoTriggeredRef.current = true;
@@ -87,7 +67,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     if (!open) autoTriggeredRef.current = false;
   }, [open, autoTriggerPhoto]);
 
-  // Pick up photos captured via the camera capture page
+  // Pick up photos captured via the /capture page
   const capturePickedUp = useRef(false);
   useEffect(() => {
     if (!open) {
@@ -101,149 +81,116 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
       setInitialFiles(captured);
       setPhotoMode(true);
     }
-  }, [open, setInitialFiles, setPhotoMode]);
-
-  function handleCameraClick() {
-    handleClose(false);
-    navigate('/capture');
-  }
-
-  // Augment state with executor state
-  const effectiveState = isExecuting ? 'executing' : state;
-
-  // Progress bar: show during parsing, hold at 100% briefly after completion
-  const isParsing = effectiveState === 'parsing' || effectiveState === 'querying';
-  const parseDone = !isParsing && (effectiveState === 'preview' || effectiveState === 'query-result');
-  const [showProgress, setShowProgress] = useState(false);
-
-  useEffect(() => {
-    if (isParsing) {
-      setShowProgress(true);
-      return;
-    }
-    if (parseDone) {
-      const id = setTimeout(() => setShowProgress(false), 800);
-      return () => clearTimeout(id);
-    }
-    // Error or back to idle — hide immediately
-    setShowProgress(false);
-  }, [isParsing, parseDone]);
-
-  // Reset progress when dialog closes
-  useEffect(() => {
-    if (!open) setShowProgress(false);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) transcription.cancel();
-  }, [open, transcription]);
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setInitialFiles(Array.from(files));
+    setPhotoMode(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function handleBinClick(binId: string, isTrashed?: boolean) {
+    onOpenChange(false);
+    if (isTrashed) {
+      navigate('/trash');
+    } else {
+      navigate(`/bin/${binId}`, { state: { backLabel: t.Bins, backPath: '/bins' } });
+    }
+  }
+
+  const executingProgressProp = conversation.executingTurnId
+    ? {
+        turnId: conversation.executingTurnId,
+        current: conversation.executingProgress.current,
+        total: conversation.executingProgress.total,
+      }
+    : null;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent>
-        <DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg h-[min(720px,85vh)] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="px-5 pt-4 pb-3 border-b border-[var(--border-subtle)]">
           <DialogTitle>{photoMode ? 'Create from Photos' : 'Ask AI'}</DialogTitle>
+          {conversation.scopeInfo.isScoped && !photoMode && (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="inline-flex items-center gap-1 bg-[var(--tab-pill-bg)] text-[var(--ai-accent)] px-2.5 py-0.5 rounded-full text-[12px]">
+                Focused on {conversation.scopeInfo.binCount}{' '}
+                {conversation.scopeInfo.binCount === 1 ? t.bin : t.bins}
+                <button
+                  type="button"
+                  onClick={conversation.scopeInfo.clearScope}
+                  className="ml-0.5 text-[var(--ai-accent)] hover:underline"
+                  aria-label="Clear scope"
+                >
+                  ×
+                </button>
+              </span>
+            </div>
+          )}
         </DialogHeader>
 
-        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
-
-        {scopeInfo.isScoped && !photoMode && (
-          <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 border border-[var(--ai-accent)]/20 px-3 py-2 mb-1 text-[13px]">
-            <span className="text-[var(--text-secondary)]">
-              Focused on {scopeInfo.binCount} selected {scopeInfo.binCount === 1 ? t.bin : t.bins}
-            </span>
-            <button
-              type="button"
-              className="text-[var(--ai-accent)] hover:underline whitespace-nowrap transition-colors"
-              onClick={scopeInfo.clearScope}
-            >
-              Use all {t.bins} instead
-            </button>
-          </div>
-        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handlePhotoSelect}
+        />
 
         {photoMode ? (
-          <div key="photo">
-            <PhotoBulkAdd
-              initialFiles={initialFiles}
-              aiSettings={aiSettings}
-              onClose={() => handleClose(false)}
-              onBack={() => { setPhotoMode(false); setInitialFiles([]); }}
-            />
-          </div>
-        ) : showProgress ? (
-          <div key="progress" className="py-4 space-y-3">
-            <AiProgressBar
-              active={isParsing}
-              complete={parseDone}
-              label={isParsing ? 'Processing' : 'Complete'}
-            />
-            {isParsing && (
-              <div className="flex justify-center">
-                <Button variant="ghost" size="sm" onClick={handleBack}>
-                  Cancel
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : effectiveState === 'success' && executionResult ? (
-          <div key="success">
-            <CommandSuccess
-              result={executionResult}
-              onAskAnother={handleAskAnother}
-              onClose={() => handleClose(false)}
-              onBinClick={handleBinClick}
-            />
-          </div>
-        ) : effectiveState === 'query-result' ? (
-          <div key="query-result">
-            <InventoryQueryResult
-              queryResult={queryResult}
-              streamingText={queryPartialText}
-              isStreaming={isQueryStreaming}
-              onBinClick={handleBinClick}
-              onBack={handleBack}
-              onFollowUp={handleFollowUp}
-              transcription={canTranscribe ? transcription : undefined}
-            />
-          </div>
-        ) : effectiveState === 'preview' && actions ? (
-          <div key="preview">
-            <CommandActionPreview
-              actions={actions}
-              interpretation={interpretation}
-              checkedActions={checkedActions}
-              toggleAction={toggleAction}
-              selectedCount={selectedCount}
-              isExecuting={isExecuting}
-              executingProgress={executingProgress}
-              onBack={handleBack}
-              onExecute={executeActions}
-            />
-          </div>
+          <PhotoBulkAdd
+            initialFiles={initialFiles}
+            aiSettings={settings}
+            onClose={() => onOpenChange(false)}
+            onBack={() => {
+              setPhotoMode(false);
+              setInitialFiles([]);
+            }}
+          />
         ) : !aiSettingsLoading && !isAiReady ? (
-          <div key="setup">
+          <div className="p-4">
             <AiSetupView
-              onNavigate={() => { handleClose(false); navigate('/settings/ai'); }}
-              onDismiss={() => handleClose(false)}
+              onNavigate={() => {
+                onOpenChange(false);
+                navigate('/settings/ai');
+              }}
+              onDismiss={() => onOpenChange(false)}
             />
           </div>
         ) : (
-          <div key="idle">
-            <CommandIdleInput
-              text={text}
-              setText={setText}
-              isLoading={isParsing}
-              examplesOpen={examplesOpen}
-              setExamplesOpen={setExamplesOpen}
-              error={error}
-              onParse={handleParse}
+          <>
+            {conversation.turns.length === 0 ? (
+              <div className="flex-1 overflow-y-auto px-4">
+                <EmptyConversationState
+                  isScoped={conversation.scopeInfo.isScoped}
+                  onPickExample={conversation.ask}
+                />
+              </div>
+            ) : (
+              <ConversationThread
+                turns={conversation.turns}
+                onToggleAction={conversation.toggleAction}
+                onExecute={conversation.executeActions}
+                onBinClick={handleBinClick}
+                onRetry={conversation.retry}
+                executingProgress={executingProgressProp}
+              />
+            )}
+            <ConversationComposer
+              onSend={conversation.ask}
+              onCancel={conversation.cancelStreaming}
               onPhotoClick={() => fileInputRef.current?.click()}
-              onCameraClick={handleCameraClick}
-              isScoped={scopeInfo.isScoped}
+              onCameraClick={() => {
+                onOpenChange(false);
+                navigate('/capture');
+              }}
+              isStreaming={conversation.isStreaming}
               transcription={canTranscribe ? transcription : undefined}
             />
-          </div>
+          </>
         )}
       </DialogContent>
     </Dialog>
