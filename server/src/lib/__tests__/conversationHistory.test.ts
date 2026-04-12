@@ -88,21 +88,6 @@ describe('toProviderMessages', () => {
     expect(msgs.map((m) => m.role)).toEqual(['user', 'assistant', 'user']);
   });
 
-  it('includes "N failed" suffix when executionErrors is non-empty', () => {
-    const msgs = toProviderMessages([
-      {
-        role: 'assistant',
-        kind: 'command',
-        interpretation: 'Delete bins',
-        actions: [{}, {}, {}],
-        executed: true,
-        executedActionIndices: [0, 1, 2],
-        executionErrors: ['bin not found'],
-      },
-    ]);
-    expect(msgs[0].content).toMatch(/3 actions \(1 failed\)/);
-  });
-
   it('uses failedCount for the "N failed" suffix when present', () => {
     const msgs = toProviderMessages([
       {
@@ -116,21 +101,6 @@ describe('toProviderMessages', () => {
       },
     ]);
     expect(msgs[0].content).toMatch(/3 actions \(2 failed\)/);
-  });
-
-  it('falls back to executionErrors.length when failedCount is absent', () => {
-    const msgs = toProviderMessages([
-      {
-        role: 'assistant',
-        kind: 'command',
-        interpretation: 'Delete',
-        actions: [{}],
-        executed: true,
-        executedActionIndices: [0],
-        executionErrors: ['x'],
-      },
-    ]);
-    expect(msgs[0].content).toMatch(/\(1 failed\)/);
   });
 
   it('omits the em-dash action-count suffix when interpretation is empty', () => {

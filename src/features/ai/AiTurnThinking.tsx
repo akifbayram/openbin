@@ -11,7 +11,7 @@ const LABELS: Record<AiTurnThinkingProps['phase'], string> = {
 export function AiTurnThinking({ phase }: AiTurnThinkingProps) {
   return (
     <output
-      className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)] px-1"
+      className="ai-turn-enter flex items-center gap-2 text-[13px] text-[var(--text-secondary)] px-1"
       aria-busy="true"
       aria-label="AI is thinking"
     >
@@ -29,7 +29,7 @@ export function AiTurnThinking({ phase }: AiTurnThinkingProps) {
           style={{ animationDelay: '400ms' }}
         />
       </span>
-      <span>{LABELS[phase]}…</span>
+      <span className="ai-thinking-label">{LABELS[phase]}…</span>
     </output>
   );
 }

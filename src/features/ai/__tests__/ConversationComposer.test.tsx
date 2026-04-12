@@ -19,13 +19,31 @@ describe('ConversationComposer', () => {
     expect(screen.getByLabelText(/send/i)).toBeDefined();
   });
 
-  it('calls onSend with trimmed text when Cmd+Enter is pressed', () => {
+  it('calls onSend with trimmed text when Enter is pressed', () => {
     const onSend = vi.fn();
     render(<ConversationComposer {...defaultProps} onSend={onSend} />);
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: '  hi  ' } });
-    fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });
+    fireEvent.keyDown(textarea, { key: 'Enter' });
     expect(onSend).toHaveBeenCalledWith('hi');
+  });
+
+  it('sends on Enter without modifier', () => {
+    const onSend = vi.fn();
+    render(<ConversationComposer {...defaultProps} onSend={onSend} />);
+    const textarea = screen.getByRole('textbox');
+    fireEvent.change(textarea, { target: { value: 'hi' } });
+    fireEvent.keyDown(textarea, { key: 'Enter' });
+    expect(onSend).toHaveBeenCalledWith('hi');
+  });
+
+  it('does not send on Shift+Enter', () => {
+    const onSend = vi.fn();
+    render(<ConversationComposer {...defaultProps} onSend={onSend} />);
+    const textarea = screen.getByRole('textbox');
+    fireEvent.change(textarea, { target: { value: 'hi' } });
+    fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: true });
+    expect(onSend).not.toHaveBeenCalled();
   });
 
   it('shows Stop button when streaming', () => {
@@ -45,7 +63,7 @@ describe('ConversationComposer', () => {
     render(<ConversationComposer {...defaultProps} onSend={onSend} />);
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: 'hi' } });
-    fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });
+    fireEvent.keyDown(textarea, { key: 'Enter' });
     expect(textarea.value).toBe('');
   });
 
@@ -54,7 +72,7 @@ describe('ConversationComposer', () => {
     render(<ConversationComposer {...defaultProps} onSend={onSend} />);
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: '   ' } });
-    fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });
+    fireEvent.keyDown(textarea, { key: 'Enter' });
     expect(onSend).not.toHaveBeenCalled();
   });
 });

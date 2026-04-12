@@ -103,7 +103,6 @@ vi.mock('../useStreamingAsk', async () => {
       classified: null,
       isStreaming: false,
       error: null,
-      partialText: '',
       ask: mockAsk,
       cancel: mockCancelAsk,
       clear: mockClearAsk,
@@ -299,6 +298,71 @@ describe('CommandInput (chat shell)', () => {
       state: { backLabel: 'Bins', backPath: '/bins' },
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('renders a "New chat" button only after the conversation has turns', async () => {
+    mockAsk.mockResolvedValue({ answer: 'Found it.', matches: [] });
+    render(<CommandInput {...defaultProps} />);
+
+    // Empty state: no button yet — nothing to reset.
+    expect(screen.queryByLabelText('New chat')).toBeNull();
+
+    fireEvent.change(getComposer(), { target: { value: 'where is the tape?' } });
+    fireEvent.click(screen.getByLabelText('Send'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Found it.')).toBeDefined();
+    });
+
+    // With turns present, the button is visible.
+    expect(screen.getByLabelText('New chat')).toBeDefined();
+  });
+
+  it('clicking "New chat" abandons the current chat and restores the empty state', async () => {
+    mockAsk.mockResolvedValue({ answer: 'Found it.', matches: [] });
+    render(<CommandInput {...defaultProps} />);
+
+    fireEvent.change(getComposer(), { target: { value: 'where is the tape?' } });
+    fireEvent.click(screen.getByLabelText('Send'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Found it.')).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByLabelText('New chat'));
+
+    // Previous answer is gone and the empty-state examples return.
+    expect(screen.queryByText('Found it.')).toBeNull();
+    expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+    // And the button hides itself since there are no turns to reset.
+    expect(screen.queryByLabelText('New chat')).toBeNull();
+  });
+
+  it('clicking "New chat" while a request is in flight aborts the stream and clears the thread', async () => {
+    let resolveAsk: ((v: unknown) => void) | null = null;
+    mockAsk.mockImplementationOnce(
+      () => new Promise((res) => { resolveAsk = res; }),
+    );
+
+    render(<CommandInput {...defaultProps} />);
+
+    fireEvent.change(getComposer(), { target: { value: 'slow query' } });
+    fireEvent.click(screen.getByLabelText('Send'));
+
+    // The thinking turn flushes and the "New chat" button becomes available.
+    await waitFor(() => {
+      expect(screen.getByLabelText('New chat')).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByLabelText('New chat'));
+
+    expect(mockCancelAsk).toHaveBeenCalled();
+    // Empty state is back — the in-flight request is abandoned.
+    expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+    expect(screen.queryByLabelText('New chat')).toBeNull();
+
+    // Release the hanging promise so no dangling handlers.
+    if (resolveAsk) (resolveAsk as (v: unknown) => void)({ answer: 'late', matches: [] });
   });
 
   it('shows an error turn with a Retry button when the stream rejects, and Retry re-invokes ask', async () => {

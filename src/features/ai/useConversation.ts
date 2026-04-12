@@ -14,14 +14,12 @@ interface UseConversationOptions {
 export interface UseConversationReturn {
   turns: Turn[];
   isStreaming: boolean;
-  executingTurnId: string | null;
   /**
-   * Tracks whether a command turn is currently executing. Because `/api/batch` is a single
-   * round-trip, this is effectively binary: `{current: 0, total: N}` at start and
-   * `{current: N, total: N}` on completion. Consumers wanting fine-grained progress should
-   * treat this as a boolean `isExecuting` rather than a progress percentage.
+   * Which turn is executing and how far along. `null` when idle. Because `/api/batch` is a
+   * single round-trip, progress is effectively binary: `{current: 0, total: N}` at start and
+   * `{current: N, total: N}` on completion.
    */
-  executingProgress: { current: number; total: number };
+  executing: { turnId: string; current: number; total: number } | null;
   scopeInfo: { binCount: number; isScoped: boolean; clearScope: () => void };
   ask: (text: string) => Promise<void>;
   executeActions: (turnId: string) => Promise<void>;
@@ -39,11 +37,16 @@ export function useConversation({
   const { ask: streamAsk, isStreaming, cancel: cancelAsk, clear: clearAsk } = useStreamingAsk();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [scopeCleared, setScopeCleared] = useState(false);
-  const [executingTurnId, setExecutingTurnId] = useState<string | null>(null);
-  const [executingProgress, setExecutingProgress] = useState({ current: 0, total: 0 });
+  const [executing, setExecuting] = useState<
+    { turnId: string; current: number; total: number } | null
+  >(null);
   const turnsRef = useRef<Turn[]>([]);
   turnsRef.current = turns;
-  const executingTurnIdRef = useRef<string | null>(null);
+  const executingRef = useRef<{ turnId: string; current: number; total: number } | null>(null);
+  // Synchronous lock: prevents concurrent asks (race between rapid Enter presses,
+  // example-click + composer, or transcription completing mid-stream) from producing
+  // orphaned thinking turns when useAiStream aborts the earlier request.
+  const askInFlightRef = useRef(false);
 
   const scopeInfo = useMemo(() => {
     const isScoped = !scopeCleared && (initialSelectedBinIds?.length ?? 0) > 0;
@@ -60,6 +63,8 @@ export function useConversation({
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || !locationId) return;
+      if (askInFlightRef.current) return;
+      askInFlightRef.current = true;
 
       const userTurn: Turn = {
         kind: 'user-text',
@@ -114,6 +119,8 @@ export function useConversation({
               : t,
           ),
         );
+      } finally {
+        askInFlightRef.current = false;
       }
     },
     [locationId, effectiveBinIds, streamAsk, showToast],
@@ -136,7 +143,7 @@ export function useConversation({
       if (!turn || turn.kind !== 'ai-command-preview' || !locationId) return;
       // Concurrent-execute guard: if another turn is already executing, ignore this call.
       // Also rejects re-running an already-executed/executing/canceled turn.
-      if (executingTurnIdRef.current !== null || turn.status !== 'pending') return;
+      if (executingRef.current !== null || turn.status !== 'pending') return;
 
       const selectedIndices: number[] = [];
       for (let i = 0; i < turn.actions.length; i++) {
@@ -144,9 +151,9 @@ export function useConversation({
       }
       if (selectedIndices.length === 0) return;
 
-      setExecutingTurnId(turnId);
-      executingTurnIdRef.current = turnId;
-      setExecutingProgress({ current: 0, total: selectedIndices.length });
+      const startState = { turnId, current: 0, total: selectedIndices.length };
+      executingRef.current = startState;
+      setExecuting(startState);
       setTurns((curr) =>
         curr.map((t) =>
           t.id === turnId && t.kind === 'ai-command-preview'
@@ -163,7 +170,7 @@ export function useConversation({
           onUndoToast: (message, undo) =>
             showToast({ message, action: { label: 'Undo', onClick: undo } }),
         });
-        setExecutingProgress({ current: selectedIndices.length, total: selectedIndices.length });
+        setExecuting({ turnId, current: selectedIndices.length, total: selectedIndices.length });
         if (result.failedCount > 0) {
           showToast({
             message: `${result.completedActions.length} of ${selectedIndices.length} actions completed`,
@@ -187,9 +194,8 @@ export function useConversation({
           ),
         );
       } finally {
-        setExecutingTurnId(null);
-        executingTurnIdRef.current = null;
-        setExecutingProgress({ current: 0, total: 0 });
+        executingRef.current = null;
+        setExecuting(null);
       }
     },
     [locationId, showToast],
@@ -250,8 +256,7 @@ export function useConversation({
   return {
     turns,
     isStreaming,
-    executingTurnId,
-    executingProgress,
+    executing,
     scopeInfo,
     ask,
     executeActions,

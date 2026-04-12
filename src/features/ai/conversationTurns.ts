@@ -38,7 +38,6 @@ export type ConversationTurnPayload =
       actions: CommandAction[];
       executed: boolean;
       executedActionIndices?: number[];
-      executionErrors?: string[];
       failedCount?: number;
     };
 

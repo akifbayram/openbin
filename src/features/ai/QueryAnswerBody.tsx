@@ -19,7 +19,7 @@ export function QueryAnswerBody({ queryResult, streamingText, isStreaming, onBin
       <StreamingText
         text={answer}
         isStreaming={!!showStreaming}
-        className="text-[14px] text-[var(--text-primary)] leading-relaxed"
+        className="text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]"
       />
 
       {matches.length > 0 && (

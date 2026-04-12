@@ -52,7 +52,7 @@ export function classifyResult(result: AskResult): AskClassified {
 }
 
 export function useStreamingAsk() {
-  const { result, isStreaming, error, partialText, stream, cancel, clear: clearStream } = useAiStream<AskResult>(
+  const { result, isStreaming, error, stream, cancel, clear: clearStream } = useAiStream<AskResult>(
     '/api/ai/ask/stream',
     "Couldn't process that request"
   );
@@ -68,6 +68,6 @@ export function useStreamingAsk() {
   );
 
   return useMemo(() => ({
-    classified, isStreaming, error, partialText, ask, cancel, clear: clearStream,
-  }), [classified, isStreaming, error, partialText, ask, cancel, clearStream]);
+    classified, isStreaming, error, ask, cancel, clear: clearStream,
+  }), [classified, isStreaming, error, ask, cancel, clearStream]);
 }

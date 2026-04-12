@@ -1,9 +1,6 @@
-import { useCallback, useState } from 'react';
-import { useToast } from '@/components/ui/toast';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { notifyBinsChanged } from '@/features/bins/useBins';
 import { apiFetch } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
 import { Events, notify } from '@/lib/eventBus';
 import type { CommandAction } from './useCommand';
 
@@ -105,59 +102,3 @@ export async function executeBatch(opts: ExecuteBatchOptions): Promise<Execution
   };
 }
 
-interface UseActionExecutorOptions {
-  actions: CommandAction[] | null;
-  checkedActions: Map<number, boolean>;
-  onComplete: (result: ExecutionResult) => void;
-}
-
-export function useActionExecutor({ actions, checkedActions, onComplete }: UseActionExecutorOptions) {
-  const { activeLocationId } = useAuth();
-  const { showToast } = useToast();
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [executingProgress, setExecutingProgress] = useState({ current: 0, total: 0 });
-
-  const executeActions = useCallback(async () => {
-    if (!actions || !activeLocationId) return;
-
-    const selectedIndices: number[] = [];
-    for (let i = 0; i < actions.length; i++) {
-      if (checkedActions.get(i) !== false) selectedIndices.push(i);
-    }
-    if (selectedIndices.length === 0) return;
-
-    setIsExecuting(true);
-    setExecutingProgress({ current: 0, total: selectedIndices.length });
-
-    try {
-      const result = await executeBatch({
-        actions,
-        selectedIndices,
-        locationId: activeLocationId,
-        onUndoToast: (message, undo) =>
-          showToast({ message, action: { label: 'Undo', onClick: undo } }),
-      });
-      setExecutingProgress({ current: selectedIndices.length, total: selectedIndices.length });
-      if (result.failedCount > 0) {
-        showToast({
-          message: `${result.completedActions.length} of ${selectedIndices.length} actions completed`,
-        });
-      }
-      onComplete(result);
-    } catch (err) {
-      console.error('Batch execution failed:', err);
-      showToast({ message: 'Failed to execute actions' });
-      onComplete({
-        completedActions: [],
-        completedActionIndices: [],
-        createdBins: [],
-        failedCount: selectedIndices.length,
-      });
-    } finally {
-      setIsExecuting(false);
-      setExecutingProgress({ current: 0, total: 0 });
-    }
-  }, [actions, checkedActions, activeLocationId, onComplete, showToast]);
-
-  return { isExecuting, executingProgress, executeActions };
-}

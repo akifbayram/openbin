@@ -52,10 +52,13 @@ function DialogContent({
   children,
   className,
   fullScreenMobile,
+  flush,
 }: {
   children: React.ReactNode;
   className?: string;
   fullScreenMobile?: boolean;
+  /** Skip the default padded scroll wrapper so the caller can own the flex layout (e.g. chat shell). */
+  flush?: boolean;
 }) {
   const { open, onOpenChange } = React.useContext(DialogContext);
   const contentRef = React.useRef<HTMLDivElement>(null);
@@ -109,7 +112,9 @@ function DialogContent({
             >
               <X className="h-4 w-4" />
             </button>
-            {fullScreenMobile ? (
+            {flush ? (
+              children
+            ) : fullScreenMobile ? (
               <div className="flex-1 overflow-y-auto min-h-0 px-5 sm:px-8 pt-5 pb-[calc(24px+var(--safe-bottom))] sm:pb-6">
                 {children}
               </div>

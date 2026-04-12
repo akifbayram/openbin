@@ -43,15 +43,26 @@ export function ConversationThread({
     return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally scroll on turn count change only
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on any turn mutation so in-place swaps (thinking → result) also stick to the bottom
   useEffect(() => {
-    if (atBottom && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [turns.length]);
+    const el = scrollRef.current;
+    if (!atBottom || !el) return;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: prefersReduced ? 'auto' : 'smooth',
+    });
+  }, [turns]);
 
   function jumpToBottom() {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const el = scrollRef.current;
+    if (el) {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: prefersReduced ? 'auto' : 'smooth',
+      });
+    }
     setAtBottom(true);
   }
 
@@ -62,28 +73,28 @@ export function ConversationThread({
         role="log"
         aria-live="polite"
         aria-relevant="additions"
-        className="absolute inset-0 overflow-y-auto px-4 py-4 space-y-3"
+        className="absolute inset-0 overflow-y-auto px-5 py-5"
       >
-        {turns.map((turn) => {
+        {turns.map((turn, i) => {
+          // Conversational rhythm: tight gap after a user question (they belong
+          // to the same exchange), generous gap otherwise (new exchange starts).
+          const prev = i > 0 ? turns[i - 1] : null;
+          const withinExchange = prev?.kind === 'user-text' && turn.kind !== 'user-text';
+          const gapClass = i === 0 ? '' : withinExchange ? 'mt-2' : 'mt-5';
+
+          let content: React.ReactNode = null;
           if (turn.kind === 'user-text') {
-            return <UserMessage key={turn.id} text={turn.text} />;
-          }
-          if (turn.kind === 'ai-thinking') {
-            return <AiTurnThinking key={turn.id} phase={turn.phase} />;
-          }
-          if (turn.kind === 'ai-command-preview') {
-            if (turn.status === 'executed' && turn.executionResult) {
-              return (
-                <AiTurnExecutionResult
-                  key={turn.id}
-                  result={turn.executionResult}
-                  onBinClick={onBinClick}
-                />
-              );
-            }
-            return (
+            content = <UserMessage text={turn.text} />;
+          } else if (turn.kind === 'ai-thinking') {
+            content = <AiTurnThinking phase={turn.phase} />;
+          } else if (turn.kind === 'ai-command-preview') {
+            content = turn.status === 'executed' && turn.executionResult ? (
+              <AiTurnExecutionResult
+                result={turn.executionResult}
+                onBinClick={onBinClick}
+              />
+            ) : (
               <AiTurnCommandPreview
-                key={turn.id}
                 turnId={turn.id}
                 actions={turn.actions}
                 interpretation={turn.interpretation}
@@ -98,29 +109,30 @@ export function ConversationThread({
                 }
               />
             );
-          }
-          if (turn.kind === 'ai-query-result') {
-            return (
+          } else if (turn.kind === 'ai-query-result') {
+            content = (
               <AiTurnQueryResult
-                key={turn.id}
                 queryResult={turn.queryResult}
                 streamingText={turn.streamingText}
                 isStreaming={turn.isStreaming}
                 onBinClick={onBinClick}
               />
             );
-          }
-          if (turn.kind === 'ai-error') {
-            return (
+          } else if (turn.kind === 'ai-error') {
+            content = (
               <AiTurnError
-                key={turn.id}
                 error={turn.error}
                 canRetry={turn.canRetry}
                 onRetry={() => onRetry(turn.id)}
               />
             );
           }
-          return null;
+
+          return (
+            <div key={turn.id} className={gapClass}>
+              {content}
+            </div>
+          );
         })}
       </div>
 

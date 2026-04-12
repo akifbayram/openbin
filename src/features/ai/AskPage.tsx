@@ -1,4 +1,4 @@
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, SquarePen } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { useTranscription } from '@/lib/useTranscription';
 import { ConversationComposer } from './ConversationComposer';
+import { ConversationScopePill } from './ConversationScopePill';
 import { ConversationThread } from './ConversationThread';
 import { EmptyConversationState } from './EmptyConversationState';
 import { AiSetupView } from './InlineAiSetup';
@@ -70,14 +71,6 @@ export function AskPage() {
     }
   }
 
-  const executingProgressProp = conversation.executingTurnId
-    ? {
-        turnId: conversation.executingTurnId,
-        current: conversation.executingProgress.current,
-        total: conversation.executingProgress.total,
-      }
-    : null;
-
   const title = photoMode ? 'Create from Photos' : 'Ask AI';
 
   return (
@@ -100,18 +93,24 @@ export function AskPage() {
           {title}
         </h1>
         {conversation.scopeInfo.isScoped && !photoMode && (
-          <span className="ml-2 inline-flex items-center gap-1 bg-[var(--tab-pill-bg)] text-[var(--ai-accent)] px-2.5 py-0.5 rounded-full text-[12px]">
-            Focused on {conversation.scopeInfo.binCount}{' '}
-            {conversation.scopeInfo.binCount === 1 ? t.bin : t.bins}
-            <button
-              type="button"
-              onClick={conversation.scopeInfo.clearScope}
-              className="ml-0.5 text-[var(--ai-accent)] hover:underline"
-              aria-label="Clear scope"
-            >
-              ×
-            </button>
-          </span>
+          <div className="ml-2">
+            <ConversationScopePill
+              binCount={conversation.scopeInfo.binCount}
+              onClear={conversation.scopeInfo.clearScope}
+            />
+          </div>
+        )}
+        {!photoMode && conversation.turns.length > 0 && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={conversation.clearConversation}
+            aria-label="New chat"
+            title="New chat"
+            className="ai-newchat-enter ml-auto shrink-0"
+          >
+            <SquarePen className="h-5 w-5" />
+          </Button>
         )}
       </div>
 
@@ -144,7 +143,7 @@ export function AskPage() {
       ) : (
         <>
           {conversation.turns.length === 0 ? (
-            <div className="flex-1 overflow-y-auto px-4">
+            <div className="flex-1 overflow-y-auto px-5">
               <EmptyConversationState
                 isScoped={conversation.scopeInfo.isScoped}
                 onPickExample={conversation.ask}
@@ -157,7 +156,7 @@ export function AskPage() {
               onExecute={conversation.executeActions}
               onBinClick={handleBinClick}
               onRetry={conversation.retry}
-              executingProgress={executingProgressProp}
+              executingProgress={conversation.executing}
             />
           )}
           <ConversationComposer

@@ -14,7 +14,6 @@ vi.mock('../useStreamingAsk', async () => {
       classified: null,
       isStreaming: false,
       error: null,
-      partialText: '',
       ask: mockAsk,
       cancel: vi.fn(),
       clear: vi.fn(),
@@ -130,6 +129,38 @@ describe('useConversation - ask flow', () => {
         ]),
       }),
     );
+  });
+
+  it('ignores a second ask while the first is still in flight', async () => {
+    let resolveFirst: ((v: unknown) => void) | null = null;
+    mockAsk.mockImplementationOnce(
+      () => new Promise((res) => { resolveFirst = res; }),
+    );
+
+    const { result } = renderHook(() => useConversation({ locationId: 'loc-1' }));
+
+    // First ask — hangs on the unresolved promise.
+    const firstPromise = act(async () => {
+      await result.current.ask('first');
+    });
+    // Let the initial setTurns flush.
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Second ask — should be a no-op until the first resolves.
+    await act(async () => {
+      await result.current.ask('second');
+    });
+
+    // Only the first user-text turn should be present; "second" never entered the thread.
+    const userTexts = result.current.turns
+      .filter((t) => t.kind === 'user-text')
+      .map((t) => (t.kind === 'user-text' ? t.text : ''));
+    expect(userTexts).toEqual(['first']);
+    expect(mockAsk).toHaveBeenCalledTimes(1);
+
+    // Release the first so the test doesn't leave a dangling timer.
+    if (resolveFirst) (resolveFirst as (v: unknown) => void)({ answer: 'ok', matches: [] });
+    await firstPromise;
   });
 });
 

@@ -1,6 +1,6 @@
 import { AlertTriangle, Check, Sparkles } from 'lucide-react';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
+import { cn, plural } from '@/lib/utils';
 import { describeAction, getActionIcon, isDestructiveAction } from './commandActionUtils';
 import type { CommandAction } from './useCommand';
 
@@ -86,7 +86,7 @@ export function CommandActionList({
         <div className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-[var(--destructive)]/10 px-3 py-2">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-[var(--destructive)]" />
           <p className="text-[13px] text-[var(--destructive)]">
-            {destructiveCount} destructive action{destructiveCount !== 1 ? 's' : ''} selected. Click apply again to confirm.
+            {destructiveCount} destructive {plural(destructiveCount, 'action')} selected. Click apply again to confirm.
           </p>
         </div>
       )}

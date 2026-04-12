@@ -11,7 +11,7 @@ interface AiTurnQueryResultProps {
 
 export function AiTurnQueryResult(props: AiTurnQueryResultProps) {
   return (
-    <div className={cn(flatCard, 'p-3')}>
+    <div className={cn(flatCard, 'ai-turn-enter p-3')}>
       <QueryAnswerBody {...props} />
     </div>
   );

@@ -14,7 +14,6 @@ export type ConversationTurn =
       actions: Array<Record<string, unknown>>;
       executed: boolean;
       executedActionIndices?: number[];
-      executionErrors?: string[];
       failedCount?: number;
     };
 
@@ -33,7 +32,7 @@ function compactCommandTurn(turn: Extract<ConversationTurn, { kind: 'command' }>
     ? (turn.executedActionIndices?.length ?? turn.actions.length)
     : turn.actions.length;
   const countLabel = `${count} action${count === 1 ? '' : 's'}`;
-  const failures = turn.failedCount ?? turn.executionErrors?.length ?? 0;
+  const failures = turn.failedCount ?? 0;
   const errors = failures > 0 ? ` (${failures} failed)` : '';
   const body = interp ? `${interp} — ${countLabel}` : countLabel;
   return `${prefix}: ${body}${errors}.`;

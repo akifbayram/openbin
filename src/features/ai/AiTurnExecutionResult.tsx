@@ -11,7 +11,7 @@ export function AiTurnExecutionResult({ result, onBinClick }: AiTurnExecutionRes
   const completedCount = result.completedActionIndices.length;
 
   return (
-    <div className={cn(flatCard, 'p-3 space-y-2 animate-fade-in')}>
+    <div className={cn(flatCard, 'ai-turn-enter p-3 space-y-2')}>
       <div className="flex items-center gap-2 text-[14px] text-[var(--text-primary)]">
         <Check className="h-4 w-4 text-[var(--color-success)]" strokeWidth={3} />
         <span>

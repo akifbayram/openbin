@@ -7,7 +7,7 @@ describe('UserMessage', () => {
     const { container } = render(<UserMessage text="where is the wrench" />);
     expect(screen.getByText('where is the wrench')).toBeDefined();
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.className).toContain('ml-auto');
+    expect(wrapper.className).toContain('ms-auto');
   });
 
   it('preserves whitespace and newlines', () => {

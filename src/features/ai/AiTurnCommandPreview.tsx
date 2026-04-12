@@ -52,7 +52,7 @@ export function AiTurnCommandPreview({
   }
 
   return (
-    <div className={cn(flatCard, 'p-3 space-y-3')}>
+    <div className={cn(flatCard, 'ai-turn-enter p-3 space-y-3')}>
       <CommandActionList
         actions={actions}
         interpretation={interpretation}

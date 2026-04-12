@@ -1,3 +1,4 @@
+import { SquarePen } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -7,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { useTranscription } from '@/lib/useTranscription';
 import { ConversationComposer } from './ConversationComposer';
+import { ConversationScopePill } from './ConversationScopePill';
 import { ConversationThread } from './ConversationThread';
 import { getCommandSelectedBinIds } from './commandSelectedBins';
 import { EmptyConversationState } from './EmptyConversationState';
@@ -100,36 +102,32 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     }
   }
 
-  const executingProgressProp = conversation.executingTurnId
-    ? {
-        turnId: conversation.executingTurnId,
-        current: conversation.executingProgress.current,
-        total: conversation.executingProgress.total,
-      }
-    : null;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg h-[min(720px,85vh)] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-5 pt-4 pb-3 border-b border-[var(--border-subtle)]">
+      <DialogContent flush className="sm:max-w-lg h-[min(720px,85vh)]">
+        <DialogHeader className="shrink-0 px-5 pt-4 pb-3 mb-0 text-left border-b border-[var(--border-subtle)]">
           <DialogTitle>{photoMode ? 'Create from Photos' : 'Ask AI'}</DialogTitle>
           {conversation.scopeInfo.isScoped && !photoMode && (
             <div className="flex items-center gap-2 mt-1">
-              <span className="inline-flex items-center gap-1 bg-[var(--tab-pill-bg)] text-[var(--ai-accent)] px-2.5 py-0.5 rounded-full text-[12px]">
-                Focused on {conversation.scopeInfo.binCount}{' '}
-                {conversation.scopeInfo.binCount === 1 ? t.bin : t.bins}
-                <button
-                  type="button"
-                  onClick={conversation.scopeInfo.clearScope}
-                  className="ml-0.5 text-[var(--ai-accent)] hover:underline"
-                  aria-label="Clear scope"
-                >
-                  ×
-                </button>
-              </span>
+              <ConversationScopePill
+                binCount={conversation.scopeInfo.binCount}
+                onClear={conversation.scopeInfo.clearScope}
+              />
             </div>
           )}
         </DialogHeader>
+
+        {!photoMode && conversation.turns.length > 0 && (
+          <button
+            type="button"
+            aria-label="New chat"
+            title="New chat"
+            className="ai-newchat-enter absolute right-14 top-2.5 z-10 rounded-[var(--radius-sm)] h-11 w-11 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center"
+            onClick={conversation.clearConversation}
+          >
+            <SquarePen className="h-4 w-4" />
+          </button>
+        )}
 
         <input
           ref={fileInputRef}
@@ -141,17 +139,19 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
         />
 
         {photoMode ? (
-          <PhotoBulkAdd
-            initialFiles={initialFiles}
-            aiSettings={settings}
-            onClose={() => onOpenChange(false)}
-            onBack={() => {
-              setPhotoMode(false);
-              setInitialFiles([]);
-            }}
-          />
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-[calc(24px+var(--safe-bottom))]">
+            <PhotoBulkAdd
+              initialFiles={initialFiles}
+              aiSettings={settings}
+              onClose={() => onOpenChange(false)}
+              onBack={() => {
+                setPhotoMode(false);
+                setInitialFiles([]);
+              }}
+            />
+          </div>
         ) : !aiSettingsLoading && !isAiReady ? (
-          <div className="p-4">
+          <div className="flex-1 min-h-0 overflow-y-auto p-5">
             <AiSetupView
               onNavigate={() => {
                 onOpenChange(false);
@@ -163,7 +163,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
         ) : (
           <>
             {conversation.turns.length === 0 ? (
-              <div className="flex-1 overflow-y-auto px-4">
+              <div className="flex-1 min-h-0 overflow-y-auto px-5">
                 <EmptyConversationState
                   isScoped={conversation.scopeInfo.isScoped}
                   onPickExample={conversation.ask}
@@ -176,7 +176,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
                 onExecute={conversation.executeActions}
                 onBinClick={handleBinClick}
                 onRetry={conversation.retry}
-                executingProgress={executingProgressProp}
+                executingProgress={conversation.executing}
               />
             )}
             <ConversationComposer
