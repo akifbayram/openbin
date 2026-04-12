@@ -1,5 +1,6 @@
 import { legacy } from './0001_legacy.js';
 import { shareExpires } from './0002_share_expires.js';
+import { binUsageDays } from './0003_bin_usage_days.js';
 import type { Migration } from './types.js';
 
 /**
@@ -9,4 +10,5 @@ import type { Migration } from './types.js';
 export const migrations: Migration[] = [
   legacy,
   shareExpires,
+  binUsageDays,
 ];

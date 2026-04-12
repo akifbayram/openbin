@@ -454,3 +454,14 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   name       TEXT PRIMARY KEY,
   applied_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS bin_usage_days (
+  bin_id           TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
+  date             TEXT NOT NULL,
+  count            INTEGER NOT NULL DEFAULT 1,
+  last_user_id     TEXT REFERENCES users(id) ON DELETE SET NULL,
+  last_recorded_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (bin_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_bin_usage_days_date ON bin_usage_days(date);
+CREATE INDEX IF NOT EXISTS idx_bin_usage_days_bin ON bin_usage_days(bin_id, date DESC);
