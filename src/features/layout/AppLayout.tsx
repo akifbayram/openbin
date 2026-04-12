@@ -75,14 +75,33 @@ export function AppLayout() {
   const commandMounted = useRef(false);
   if (commandOpen) commandMounted.current = true;
   const aiEnabled = !!aiSettings && (isSelfHosted || !isGated('ai') || demoMode);
+  const rawNavigate = useNavigate();
+  const location = useLocation();
+  const { guardedNavigate } = useNavigationGuard();
+  const navigate = useCallback(
+    (path: string, opts?: { state?: unknown }) => guardedNavigate(() => rawNavigate(path, opts)),
+    [rawNavigate, guardedNavigate],
+  );
+  // Dispatch: mobile navigates to /ask full-page view; desktop opens the CommandInput dialog.
+  const openAskAi = useCallback(() => {
+    if (isMobile) {
+      navigate('/ask');
+    } else {
+      setCommandOpen(true);
+    }
+  }, [isMobile, navigate]);
   // Register directly on the module-level ref (can't use useRegisterCommandInput here
   // because AppLayout is *above* TourProvider, so useTourContext() would return null).
   useEffect(() => {
     const ref = getCommandInputRef();
-    ref.current = { open: () => setCommandOpen(true), close: () => setCommandOpen(false) };
+    ref.current = { open: openAskAi, close: () => setCommandOpen(false) };
     return () => { ref.current = null; };
-  }, []);
-  useAutoOpenOnCapture(aiEnabled, setCommandOpen);
+  }, [openAskAi]);
+  // Wrap openAskAi to match the (v: boolean) => void signature expected by useAutoOpenOnCapture.
+  const openAskAiForCapture = useCallback((v: boolean) => {
+    if (v) openAskAi();
+  }, [openAskAi]);
+  useAutoOpenOnCapture(aiEnabled, openAskAiForCapture);
 
   const tourContext = useMemo<TourContext>(() => ({
     canWrite,
@@ -94,14 +113,6 @@ export function AppLayout() {
     openCommandInput: () => getCommandInputRef().current?.open(),
     closeCommandInput: () => getCommandInputRef().current?.close(),
   }), [canWrite, aiSettings, firstBinId, bins, terminology, isMobile]);
-
-  const rawNavigate = useNavigate();
-  const location = useLocation();
-  const { guardedNavigate } = useNavigationGuard();
-  const navigate = useCallback(
-    (path: string, opts?: { state?: unknown }) => guardedNavigate(() => rawNavigate(path, opts)),
-    [rawNavigate, guardedNavigate],
-  );
 
   const tour = useTour({ context: tourContext, navigate, updatePreferences });
 
@@ -125,11 +136,11 @@ export function AppLayout() {
       const el = document.querySelector<HTMLInputElement>('[data-shortcut-search]');
       el?.focus();
     },
-    'ask-ai': () => getCommandInputRef().current?.open(),
+    'ask-ai': openAskAi,
     'command-palette': () => setCommandPaletteOpen(true),
     'shortcuts-help': () => setShortcutsHelpOpen(true),
     'toggle-sidebar': () => toggleSidebarCollapsed(),
-  }), [navigate, openScanDialog]);
+  }), [navigate, openScanDialog, openAskAi]);
 
   useKeyboardShortcuts({ actions: shortcutActions, enabled: !onboarding.isOnboarding && preferences.keyboard_shortcuts_enabled });
 
@@ -222,7 +233,7 @@ export function AppLayout() {
           onNavigate={navigate}
           onScanClick={openScanDialog}
           onMoreClick={() => setDrawerOpen(true)}
-          onAskAi={aiEnabled ? () => getCommandInputRef().current?.open() : undefined}
+          onAskAi={aiEnabled ? openAskAi : undefined}
         />
       )}
 
