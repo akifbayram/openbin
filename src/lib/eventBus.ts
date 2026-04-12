@@ -11,6 +11,7 @@ export const Events = {
   CUSTOM_FIELDS: 'custom-fields-changed',
   PLAN: 'plan-changed',
   CHECKOUTS: 'checkouts-changed',
+  BIN_USAGE: 'bin-usage-changed',
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

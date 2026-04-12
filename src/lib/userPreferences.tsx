@@ -10,6 +10,7 @@ export interface UserPreferences {
   dashboard_show_pinned_bins: boolean;
   dashboard_show_recently_scanned: boolean;
   dashboard_show_recently_updated: boolean;
+  dashboard_show_activity: boolean;
   dashboard_show_timestamps: boolean;
   ai_enabled: boolean;
   onboarding_completed: boolean;
@@ -19,6 +20,11 @@ export interface UserPreferences {
   tour_version: number;
   keyboard_shortcuts_enabled: boolean;
   checklist_dismissed: boolean;
+  usage_tracking_scan: boolean;
+  usage_tracking_manual_lookup: boolean;
+  usage_tracking_view: boolean;
+  usage_tracking_modify: boolean;
+  usage_granularity: 'daily' | 'weekly' | 'monthly';
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -30,6 +36,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   dashboard_show_pinned_bins: true,
   dashboard_show_recently_scanned: true,
   dashboard_show_recently_updated: true,
+  dashboard_show_activity: true,
   dashboard_show_timestamps: false,
   ai_enabled: true,
   onboarding_completed: false,
@@ -39,6 +46,11 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   tour_version: 0,
   keyboard_shortcuts_enabled: true,
   checklist_dismissed: false,
+  usage_tracking_scan: true,
+  usage_tracking_manual_lookup: true,
+  usage_tracking_view: false,
+  usage_tracking_modify: false,
+  usage_granularity: 'monthly',
 };
 
 const PREFERENCES_EVENT = 'user-preferences-changed';

@@ -330,3 +330,16 @@ export interface PlanInfo {
   canDowngradeToFree: boolean;
   aiCredits: { used: number; limit: number; resetsAt: string | null } | null;
 }
+
+export interface UsageDay {
+  date: string;       // 'YYYY-MM-DD' UTC
+  count: number;
+}
+
+export interface LocationUsageDay {
+  date: string;
+  binCount: number;
+  totalCount: number;
+}
+
+export type UsageGranularity = 'daily' | 'weekly' | 'monthly';
