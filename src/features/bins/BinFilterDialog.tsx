@@ -16,6 +16,7 @@ const sortLabels: Record<SortOption, string> = {
   created: 'Created',
   name: 'Name',
   area: 'Area',
+  last_used: 'Last used',
 };
 
 function SectionHeader({ label, count }: { label: string; count?: number }) {
@@ -266,6 +267,32 @@ export function BinFilterDialog({
               </div>
             </div>
           )}
+
+          {/* Usage — filter by last-used date */}
+          <div className="space-y-2.5">
+            <SectionHeader label="Usage" count={draft.unusedSince ? 1 : 0} />
+            <div className="flex items-center gap-2">
+              <label htmlFor="unused-since-date" className="text-[13px] text-[var(--text-secondary)]">Unused since</label>
+              <input
+                id="unused-since-date"
+                type="date"
+                value={draft.unusedSince ?? ''}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, unusedSince: e.target.value || undefined }))
+                }
+                className="rounded-[var(--radius-xs)] bg-[var(--bg-input)] px-2.5 py-1 text-[13px] text-[var(--text-primary)]"
+              />
+              {draft.unusedSince && (
+                <button
+                  type="button"
+                  onClick={() => setDraft((d) => ({ ...d, unusedSince: undefined }))}
+                  className="text-[12px] text-[var(--accent)] hover:underline"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
 
         </div>
 

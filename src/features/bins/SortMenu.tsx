@@ -13,6 +13,7 @@ const sortLabels: Record<SortOption, string> = {
   created: 'Created',
   name: 'Name',
   area: 'Area',
+  last_used: 'Last used',
 };
 
 interface SortMenuProps {

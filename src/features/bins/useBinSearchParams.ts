@@ -6,14 +6,15 @@ import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { useDebounce } from '@/lib/useDebounce';
 import { type BinFilters, EMPTY_FILTERS, type SortOption } from './useBins';
 
-const SORT_TO_API: Record<SortOption, string> = { updated: 'updated_at', created: 'created_at', name: 'name', area: 'area' };
-const API_TO_SORT: Record<string, SortOption> = { updated_at: 'updated', created_at: 'created', name: 'name', area: 'area' };
+const SORT_TO_API: Record<SortOption, string> = { updated: 'updated_at', created: 'created_at', name: 'name', area: 'area', last_used: 'last_used' };
+const API_TO_SORT: Record<string, SortOption> = { updated_at: 'updated', created_at: 'created', name: 'name', area: 'area', last_used: 'last_used' };
 
 export const DEFAULT_BIN_SORT_DIRS: Record<SortOption, SortDirection> = {
   name: 'asc',
   updated: 'desc',
   created: 'desc',
   area: 'asc',
+  last_used: 'desc',
 };
 
 function parseSortFromParams(params: URLSearchParams): SortOption {
@@ -39,6 +40,7 @@ function parseFiltersFromParams(params: URLSearchParams): BinFilters {
     hasItems: params.get('has_items') === 'true',
     hasNotes: params.get('has_notes') === 'true',
     needsOrganizing: params.get('needs_organizing') === 'true' || undefined,
+    unusedSince: params.get('unused_since') ?? undefined,
   };
 }
 
@@ -60,6 +62,7 @@ export function buildViewSearchParams(view: SavedView): string {
   if (f.hasItems) params.set('has_items', 'true');
   if (f.hasNotes) params.set('has_notes', 'true');
   if (f.needsOrganizing) params.set('needs_organizing', 'true');
+  if (f.unusedSince) params.set('unused_since', f.unusedSince);
   return params.toString();
 }
 
@@ -139,6 +142,7 @@ export function useBinSearchParams() {
     if (filters.hasItems) params.set('has_items', 'true');
     if (filters.hasNotes) params.set('has_notes', 'true');
     if (filters.needsOrganizing) params.set('needs_organizing', 'true');
+    if (filters.unusedSince) params.set('unused_since', filters.unusedSince);
 
     if (page > 1) params.set('page', String(page));
 

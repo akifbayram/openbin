@@ -21,6 +21,7 @@ const SECTION_TOGGLES: Array<{ key: keyof DashboardSettings & `show${string}`; l
   { key: 'showPinnedBins', label: 'Pinned' },
   { key: 'showRecentlyScanned', label: 'Recently Scanned' },
   { key: 'showRecentlyUpdated', label: 'Recently Updated' },
+  { key: 'showActivity', label: 'Activity' },
 ];
 
 export function DashboardSettingsMenu({ settings, onUpdate, terminology }: DashboardSettingsMenuProps) {
