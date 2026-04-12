@@ -1,4 +1,4 @@
-import type { LanguageModel, UserContent } from 'ai';
+import type { LanguageModel, ModelMessage, UserContent } from 'ai';
 import { Output, streamText } from 'ai';
 import type { Response } from 'express';
 import { mapSdkError, toSafeAiMessage } from './aiCaller.js';
@@ -15,6 +15,8 @@ export interface StreamOptions {
   temperature?: number;
   topP?: number;
   abortSignal?: AbortSignal;
+  /** Prior conversation turns to prepend before the current user message. */
+  priorMessages?: ModelMessage[];
 }
 
 /** Set SSE headers on an Express response and return a typed event writer. */
@@ -44,7 +46,10 @@ export async function streamAiToWriter(
       model,
       ...(opts.schema ? { output: Output.object({ schema: opts.schema }) } : {}),
       system: opts.system,
-      messages: [{ role: 'user' as const, content: opts.userContent }],
+      messages: [
+        ...(opts.priorMessages ?? []),
+        { role: 'user' as const, content: opts.userContent },
+      ],
       maxOutputTokens: opts.maxTokens,
       temperature: opts.temperature,
       topP: opts.topP,

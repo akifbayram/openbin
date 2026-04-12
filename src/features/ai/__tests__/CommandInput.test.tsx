@@ -1,7 +1,12 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockNavigate = vi.fn();
+const mockAsk = vi.fn();
+const mockExecuteBatch = vi.fn();
+const mockShowToast = vi.fn();
+const mockCancelAsk = vi.fn();
+const mockClearAsk = vi.fn();
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
@@ -28,11 +33,14 @@ vi.mock('@/lib/auth', () => ({
 }));
 
 vi.mock('@/components/ui/toast', () => ({
-  useToast: () => ({ showToast: vi.fn() }),
+  useToast: () => ({ showToast: mockShowToast }),
 }));
 
 vi.mock('../useAiSettings', () => ({
-  useAiSettings: () => ({ settings: { id: 's1', provider: 'openai' }, isLoading: false }),
+  useAiSettings: () => ({
+    settings: { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null },
+    isLoading: false,
+  }),
 }));
 
 vi.mock('@/features/areas/useAreas', () => ({
@@ -57,6 +65,26 @@ vi.mock('@/features/bins/useBins', () => ({
   addItemsToBin: vi.fn(),
 }));
 
+vi.mock('@/features/capture/capturedPhotos', () => ({
+  takeCapturedPhotos: () => [],
+}));
+
+vi.mock('@/lib/audioRecorder', () => ({
+  isRecordingSupported: () => false,
+  startRecording: vi.fn(),
+}));
+
+vi.mock('@/lib/useTranscription', () => ({
+  useTranscription: () => ({
+    state: 'idle',
+    duration: 0,
+    error: null,
+    start: vi.fn(),
+    stop: vi.fn(),
+    cancel: vi.fn(),
+  }),
+}));
+
 vi.mock('../PhotoBulkAdd', () => ({
   PhotoBulkAdd: ({ onClose, onBack }: { onClose: () => void; onBack: () => void }) => (
     <div data-testid="photo-bulk-add">
@@ -66,112 +94,76 @@ vi.mock('../PhotoBulkAdd', () => ({
   ),
 }));
 
-import { apiStream } from '@/lib/apiStream';
+// Mock useStreamingAsk so we can control what the unified /ask endpoint returns.
+vi.mock('../useStreamingAsk', async () => {
+  const actual = await vi.importActual<typeof import('../useStreamingAsk')>('../useStreamingAsk');
+  return {
+    ...actual,
+    useStreamingAsk: () => ({
+      classified: null,
+      isStreaming: false,
+      error: null,
+      ask: mockAsk,
+      cancel: mockCancelAsk,
+      clear: mockClearAsk,
+    }),
+  };
+});
+
+// executeBatch now lives inside useConversation, so mock it here too.
+vi.mock('../useActionExecutor', async (importActual) => {
+  const actual = await importActual<typeof import('../useActionExecutor')>();
+  return {
+    ...actual,
+    executeBatch: (...args: unknown[]) => mockExecuteBatch(...args),
+  };
+});
+
 import { CommandInput } from '../CommandInput';
-
-const mockApiStream = vi.mocked(apiStream);
-
-/** Helper to create a mock async generator that yields a done event with JSON data. */
-function mockStreamDone(data: unknown) {
-  return async function* () {
-    yield { type: 'done' as const, text: JSON.stringify(data) };
-  };
-}
-
-/** Helper to create a mock async generator that yields an error event. */
-function mockStreamError(message: string, code = 'PROVIDER_ERROR') {
-  return async function* () {
-    yield { type: 'error' as const, message, code };
-  };
-}
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('CommandInput', () => {
+describe('CommandInput (chat shell)', () => {
   const defaultProps = {
     open: true,
     onOpenChange: vi.fn(),
   };
 
-  it('renders idle state with textarea and button', () => {
+  function getComposer() {
+    // The composer textarea carries aria-label="Ask AI". The dialog title also has the
+    // text "Ask AI", so we filter by role to disambiguate.
+    return screen.getByRole('textbox', { name: 'Ask AI' }) as HTMLTextAreaElement;
+  }
+
+  it('renders the composer and empty-state examples when there are no turns', () => {
     render(<CommandInput {...defaultProps} />);
 
-    expect(screen.getByPlaceholderText('What would you like to do?')).toBeDefined();
-    expect(screen.getByText('Send')).toBeDefined();
+    expect(getComposer()).toBeDefined();
+    expect(screen.getByLabelText('Send')).toBeDefined();
+    // Empty-state example list — at least one known example from the default (non-scoped) list
+    expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+    expect(screen.getByText(/Where is the glass cleaner/)).toBeDefined();
   });
 
-  it('button is disabled when textarea is empty', () => {
+  it('submits typed text via Cmd+Enter and calls the mocked streaming ask', async () => {
+    mockAsk.mockResolvedValue({ answer: 'pending', matches: [] });
     render(<CommandInput {...defaultProps} />);
 
-    const button = screen.getByText('Send');
-    expect(button.closest('button')).toHaveProperty('disabled', true);
-  });
-
-  it('transitions to preview state on successful parsing', async () => {
-    mockApiStream.mockReturnValue(mockStreamDone({
-      actions: [
-        { type: 'add_items', bin_id: 'b1', bin_name: 'Tools', items: ['Hammer'] },
-      ],
-      interpretation: 'Add hammer to Tools',
-    })());
-
-    render(<CommandInput {...defaultProps} />);
-
-    const textarea = screen.getByPlaceholderText('What would you like to do?');
-    fireEvent.change(textarea, { target: { value: 'add hammer to tools' } });
-
-    const button = screen.getByText('Send');
-    fireEvent.click(button);
+    const textarea = getComposer();
+    fireEvent.change(textarea, { target: { value: 'where is the tape?' } });
+    fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });
 
     await waitFor(() => {
-      expect(screen.getByText('Add hammer to Tools')).toBeDefined();
-    });
-
-    expect(screen.getByText(/Add Hammer to "Tools"/)).toBeDefined();
-  });
-
-  it('back button returns to idle state', async () => {
-    mockApiStream.mockReturnValue(mockStreamDone({
-      actions: [
-        { type: 'add_items', bin_id: 'b1', bin_name: 'Tools', items: ['Hammer'] },
-      ],
-      interpretation: 'Add hammer to Tools',
-    })());
-
-    render(<CommandInput {...defaultProps} />);
-
-    const textarea = screen.getByPlaceholderText('What would you like to do?');
-    fireEvent.change(textarea, { target: { value: 'add hammer' } });
-    fireEvent.click(screen.getByText('Send'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Back')).toBeDefined();
-    });
-
-    fireEvent.click(screen.getByText('Back'));
-
-    expect(screen.getByPlaceholderText('What would you like to do?')).toBeDefined();
-  });
-
-  it('shows error message on failure', async () => {
-    mockApiStream.mockReturnValue(mockStreamError("Couldn't understand that command")());
-
-    render(<CommandInput {...defaultProps} />);
-
-    const textarea = screen.getByPlaceholderText('What would you like to do?');
-    fireEvent.change(textarea, { target: { value: 'do something' } });
-    fireEvent.click(screen.getByText('Send'));
-
-    await waitFor(() => {
-      expect(screen.getByText("Couldn't understand that command")).toBeDefined();
+      expect(mockAsk).toHaveBeenCalledWith(
+        expect.objectContaining({ text: 'where is the tape?', locationId: 'loc-1' }),
+      );
     });
   });
 
-  it('shows query result when AI returns answer instead of actions', async () => {
-    // Unified endpoint returns a query-style response for questions
-    mockApiStream.mockReturnValue(mockStreamDone({
+  it('renders the query answer in the thread when the stream returns answer + matches', async () => {
+    mockAsk.mockResolvedValue({
       answer: 'Glass cleaner is in the Kitchen bin.',
       matches: [
         {
@@ -183,27 +175,100 @@ describe('CommandInput', () => {
           relevance: 'Contains glass cleaner',
         },
       ],
-    })());
+    });
 
     render(<CommandInput {...defaultProps} />);
 
-    const textarea = screen.getByPlaceholderText('What would you like to do?');
-    fireEvent.change(textarea, { target: { value: 'where is glass cleaner?' } });
-    fireEvent.click(screen.getByText('Send'));
+    fireEvent.change(getComposer(), { target: { value: 'where is glass cleaner?' } });
+    fireEvent.click(screen.getByLabelText('Send'));
 
     await waitFor(() => {
       expect(screen.getByText('Glass cleaner is in the Kitchen bin.')).toBeDefined();
     });
-
     expect(screen.getByText('Kitchen Supplies')).toBeDefined();
-    expect(screen.getByText('glass cleaner, sponges')).toBeDefined();
-    // Relevance is not shown to the user
-    // No Execute button in query-result state
-    expect(screen.queryByText(/Execute/)).toBeNull();
   });
 
-  it('navigates to bin on match click', async () => {
-    mockApiStream.mockReturnValue(mockStreamDone({
+  it('renders an Apply button in the thread when the stream returns actions', async () => {
+    mockAsk.mockResolvedValue({
+      actions: [
+        { type: 'add_items', bin_id: 'b1', bin_name: 'Tools', items: ['Hammer'] },
+      ],
+      interpretation: 'Add hammer to Tools',
+    });
+
+    render(<CommandInput {...defaultProps} />);
+
+    fireEvent.change(getComposer(), { target: { value: 'add hammer to tools' } });
+    fireEvent.click(screen.getByLabelText('Send'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Add hammer to Tools')).toBeDefined();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Apply/ })).toBeDefined();
+    });
+  });
+
+  it('clicking Apply calls executeBatch with the selected actions and locationId', async () => {
+    const action = { type: 'add_items', bin_id: 'b1', bin_name: 'Tools', items: ['Hammer'] };
+    mockAsk.mockResolvedValue({
+      actions: [action],
+      interpretation: 'Add hammer to Tools',
+    });
+    mockExecuteBatch.mockResolvedValue({
+      completedActions: [action],
+      completedActionIndices: [0],
+      createdBins: [],
+      failedCount: 0,
+    });
+
+    render(<CommandInput {...defaultProps} />);
+
+    fireEvent.change(getComposer(), { target: { value: 'add hammer to tools' } });
+    fireEvent.click(screen.getByLabelText('Send'));
+
+    const applyButton = await screen.findByRole('button', { name: /^Apply/ });
+
+    await act(async () => {
+      fireEvent.click(applyButton);
+    });
+
+    expect(mockExecuteBatch).toHaveBeenCalledTimes(1);
+    expect(mockExecuteBatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actions: [action],
+        selectedIndices: [0],
+        locationId: 'loc-1',
+      }),
+    );
+  });
+
+  it('closing the dialog clears state so re-opening shows the empty state again', async () => {
+    mockAsk.mockResolvedValue({ answer: 'Found it.', matches: [] });
+
+    const onOpenChange = vi.fn();
+    const { rerender } = render(<CommandInput open={true} onOpenChange={onOpenChange} />);
+
+    fireEvent.change(getComposer(), { target: { value: 'where is the tape?' } });
+    fireEvent.click(screen.getByLabelText('Send'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Found it.')).toBeDefined();
+    });
+
+    // Simulate user closing the dialog
+    rerender(<CommandInput open={false} onOpenChange={onOpenChange} />);
+    // Re-open
+    rerender(<CommandInput open={true} onOpenChange={onOpenChange} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+    });
+    expect(screen.queryByText('Found it.')).toBeNull();
+  });
+
+  it('navigates to the bin when a query match is clicked and closes the dialog', async () => {
+    mockAsk.mockResolvedValue({
       answer: 'Found it in Kitchen.',
       matches: [
         {
@@ -215,15 +280,13 @@ describe('CommandInput', () => {
           relevance: 'Match',
         },
       ],
-    })());
+    });
 
     const onOpenChange = vi.fn();
     render(<CommandInput open={true} onOpenChange={onOpenChange} />);
 
-    fireEvent.change(screen.getByPlaceholderText('What would you like to do?'), {
-      target: { value: 'where is glass cleaner?' },
-    });
-    fireEvent.click(screen.getByText('Send'));
+    fireEvent.change(getComposer(), { target: { value: 'where is glass cleaner?' } });
+    fireEvent.click(screen.getByLabelText('Send'));
 
     await waitFor(() => {
       expect(screen.getByText('Kitchen Supplies')).toBeDefined();
@@ -237,47 +300,93 @@ describe('CommandInput', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('back from query result returns to idle', async () => {
-    mockApiStream.mockReturnValue(mockStreamDone({
-      answer: 'Found it.',
-      matches: [],
-    })());
-
+  it('renders a "New chat" button only after the conversation has turns', async () => {
+    mockAsk.mockResolvedValue({ answer: 'Found it.', matches: [] });
     render(<CommandInput {...defaultProps} />);
 
-    fireEvent.change(screen.getByPlaceholderText('What would you like to do?'), {
-      target: { value: 'where is the tape?' },
-    });
-    fireEvent.click(screen.getByText('Send'));
+    // Empty state: no button yet — nothing to reset.
+    expect(screen.queryByLabelText('New chat')).toBeNull();
+
+    fireEvent.change(getComposer(), { target: { value: 'where is the tape?' } });
+    fireEvent.click(screen.getByLabelText('Send'));
 
     await waitFor(() => {
       expect(screen.getByText('Found it.')).toBeDefined();
     });
 
-    fireEvent.click(screen.getByText('Back'));
-
-    expect(screen.getByPlaceholderText('What would you like to do?')).toBeDefined();
+    // With turns present, the button is visible.
+    expect(screen.getByLabelText('New chat')).toBeDefined();
   });
 
-  it('shows answer even with zero matches', async () => {
-    mockApiStream.mockReturnValue(mockStreamDone({
-      answer: "I couldn't find any bins containing that item.",
-      matches: [],
-    })());
+  it('clicking "New chat" abandons the current chat and restores the empty state', async () => {
+    mockAsk.mockResolvedValue({ answer: 'Found it.', matches: [] });
+    render(<CommandInput {...defaultProps} />);
+
+    fireEvent.change(getComposer(), { target: { value: 'where is the tape?' } });
+    fireEvent.click(screen.getByLabelText('Send'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Found it.')).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByLabelText('New chat'));
+
+    // Previous answer is gone and the empty-state examples return.
+    expect(screen.queryByText('Found it.')).toBeNull();
+    expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+    // And the button hides itself since there are no turns to reset.
+    expect(screen.queryByLabelText('New chat')).toBeNull();
+  });
+
+  it('clicking "New chat" while a request is in flight aborts the stream and clears the thread', async () => {
+    let resolveAsk: ((v: unknown) => void) | null = null;
+    mockAsk.mockImplementationOnce(
+      () => new Promise((res) => { resolveAsk = res; }),
+    );
 
     render(<CommandInput {...defaultProps} />);
 
-    fireEvent.change(screen.getByPlaceholderText('What would you like to do?'), {
-      target: { value: 'where is the unicorn?' },
+    fireEvent.change(getComposer(), { target: { value: 'slow query' } });
+    fireEvent.click(screen.getByLabelText('Send'));
+
+    // The thinking turn flushes and the "New chat" button becomes available.
+    await waitFor(() => {
+      expect(screen.getByLabelText('New chat')).toBeDefined();
     });
-    fireEvent.click(screen.getByText('Send'));
+
+    fireEvent.click(screen.getByLabelText('New chat'));
+
+    expect(mockCancelAsk).toHaveBeenCalled();
+    // Empty state is back — the in-flight request is abandoned.
+    expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+    expect(screen.queryByLabelText('New chat')).toBeNull();
+
+    // Release the hanging promise so no dangling handlers.
+    if (resolveAsk) (resolveAsk as (v: unknown) => void)({ answer: 'late', matches: [] });
+  });
+
+  it('shows an error turn with a Retry button when the stream rejects, and Retry re-invokes ask', async () => {
+    // Plain Error → mapAiError falls back to 'Request failed'. The retry path then
+    // resolves, so the error turn is replaced by a successful answer.
+    mockAsk.mockRejectedValueOnce(new Error('network boom'));
+    mockAsk.mockResolvedValueOnce({ answer: 'Recovered.', matches: [] });
+
+    render(<CommandInput {...defaultProps} />);
+
+    const textarea = getComposer();
+    fireEvent.change(textarea, { target: { value: 'where is the tape?' } });
+    fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });
+
+    const retryButton = await screen.findByRole('button', { name: /retry/i });
+    expect(screen.getByText(/Request failed/i)).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(retryButton);
+    });
 
     await waitFor(() => {
-      expect(screen.getByText("I couldn't find any bins containing that item.")).toBeDefined();
+      expect(screen.getByText('Recovered.')).toBeDefined();
     });
-
-    // Only Back button, no bin cards
-    expect(screen.getByText('Back')).toBeDefined();
-    expect(screen.queryByText(/Execute/)).toBeNull();
+    expect(mockAsk).toHaveBeenCalledTimes(2);
   });
 });
