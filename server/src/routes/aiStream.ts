@@ -13,6 +13,7 @@ import { initSseResponse, pipeAiStreamToResponse, streamAiToWriter } from '../li
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, buildUnifiedSystemPrompt } from '../lib/commandParser.js';
 import { config, isDemoUser } from '../lib/config.js';
+import { parseHistoryFromBody } from '../lib/conversationHistory.js';
 import { ValidationError } from '../lib/httpErrors.js';
 import { classifyIntent } from '../lib/intentClassifier.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
@@ -84,6 +85,7 @@ function validateBinIds(binIds: unknown): string[] | undefined {
 streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream query', async (req, res) => {
   const question = validateTextInput(req.body.question, 'question');
   const { locationId } = req.body;
+  const priorMessages = parseHistoryFromBody(req.body);
   const [{ settings, model }, context] = await Promise.all([
     resolveUserModel(req.user!.id, 'query', isDemoUser(req)),
     buildInventoryContext(locationId, req.user!.id, undefined, question),
@@ -93,6 +95,7 @@ streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAi
     schema: QueryResultSchema,
     system: buildQuerySysPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
     userContent: buildQueryUserMsg(question, context),
+    priorMessages,
     ...streamOpts(settings, { maxTokens: 4096 }),
   });
 }));
@@ -101,6 +104,7 @@ streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAi
 streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream command', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId } = req.body;
+  const priorMessages = parseHistoryFromBody(req.body);
   const [{ settings, model }, context] = await Promise.all([
     resolveUserModel(req.user!.id, 'command', isDemoUser(req)),
     buildCommandContext(locationId, req.user!.id, undefined, text),
@@ -113,6 +117,7 @@ streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), check
   await pipeAiStreamToResponse(res, model, {
     system: buildCommandSysPrompt(context.availableColors, context.availableIcons, settings.command_prompt ?? undefined, isDemoUser(req)),
     userContent: buildCommandUserMsg(request),
+    priorMessages,
     ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
   });
 }));
@@ -123,6 +128,7 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
   const { locationId, binIds: rawBinIds } = req.body;
   const binIds = validateBinIds(rawBinIds);
   const isScoped = (binIds?.length ?? 0) > 0;
+  const priorMessages = parseHistoryFromBody(req.body);
 
   const scopeNote = isScoped
     ? '\nSELECTION SCOPE: The user selected specific bins. The inventory context below contains ONLY these bins. Apply actions or answer based only on the bins provided.\n'
@@ -140,6 +146,7 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
       schema: QueryResultSchema,
       system: buildQuerySysPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
       userContent: buildQueryUserMsg(`${scopeNote}${text}`, queryContext),
+      priorMessages,
       ...streamOpts(settings, { maxTokens: 4096 }),
     });
   } else {
@@ -156,6 +163,7 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
     await pipeAiStreamToResponse(res, model, {
       system,
       userContent: buildCommandUserMsg(request),
+      priorMessages,
       ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
     });
   }

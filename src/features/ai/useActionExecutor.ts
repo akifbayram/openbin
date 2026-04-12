@@ -23,6 +23,8 @@ interface BatchResponse {
 
 export interface ExecutionResult {
   completedActions: CommandAction[];
+  /** Positions of completed actions in the original `actions[]` array (not `selected[]`). */
+  completedActionIndices: number[];
   createdBins: CreatedBinInfo[];
   failedCount: number;
 }
@@ -62,12 +64,16 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
 
       // Map batch results back to completed actions and created bins
       const completedActions: CommandAction[] = [];
+      const completedActionIndices: number[] = [];
       const createdBins: CreatedBinInfo[] = [];
 
       for (let i = 0; i < results.length; i++) {
         const r = results[i];
         if (r.success) {
           completedActions.push(selected[i]);
+          // Map back to original index in `actions` (selected is a reference-preserving filter).
+          const originalIdx = actions.indexOf(selected[i]);
+          if (originalIdx !== -1) completedActionIndices.push(originalIdx);
           if (r.type === 'create_bin' || r.type === 'duplicate_bin') {
             createdBins.push({
               id: r.bin_id ?? '',
@@ -109,11 +115,16 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
       }
 
       setExecutingProgress({ current: selected.length, total: selected.length });
-      onComplete({ completedActions, createdBins, failedCount });
+      onComplete({ completedActions, completedActionIndices, createdBins, failedCount });
     } catch (err) {
       console.error('Batch execution failed:', err);
       showToast({ message: 'Failed to execute actions' });
-      onComplete({ completedActions: [], createdBins: [], failedCount: selected.length });
+      onComplete({
+        completedActions: [],
+        completedActionIndices: [],
+        createdBins: [],
+        failedCount: selected.length,
+      });
     } finally {
       setIsExecuting(false);
       setExecutingProgress({ current: 0, total: 0 });
