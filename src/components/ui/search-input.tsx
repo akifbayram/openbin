@@ -16,7 +16,7 @@ const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
     return (
       <div
         className={cn(
-          'flex min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 min-h-10 py-1.5 ring-2 ring-[var(--accent)] transition-all duration-200',
+          'flex min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 min-h-11 py-1.5 ring-1 ring-inset ring-[var(--border-flat)] transition-all duration-200',
           containerClassName,
         )}
       >
@@ -36,7 +36,7 @@ const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
             type="button"
             onClick={onClear}
             aria-label="Clear search"
-            className="p-2 -mr-1 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="p-2 -mr-1 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0 flex items-center justify-center"
           >
             <X className="h-4 w-4" />
           </button>

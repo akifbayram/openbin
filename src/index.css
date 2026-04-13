@@ -37,6 +37,7 @@
   --text-primary: #1c1c1e;
   --text-secondary: #3c3c43;
   --text-tertiary: #636368;
+  --text-quaternary: #c7c7cc;
   --text-on-accent: #ffffff;
   --accent: #5e2fe0;
   --accent-hover: #4e1fd0;
@@ -97,6 +98,7 @@
   --text-primary: #f5f5f7;
   --text-secondary: #ebebf0;
   --text-tertiary: #98989d;
+  --text-quaternary: #636368;
   --text-on-accent: #ffffff;
   --accent: #7b52f5;
   --accent-hover: #9b7af7;
