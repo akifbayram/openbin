@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BinItem } from '@/types';
 import { ItemList } from '../ItemList';
+import { setItemPageSize } from '../useItemPageSize';
 
 vi.mock('@/lib/api', () => ({ apiFetch: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ useAuth: vi.fn(() => ({ activeLocationId: 'loc-1', token: 'test' })) }));
@@ -197,6 +198,7 @@ describe('ItemList pagination', () => {
   }
 
   beforeEach(() => {
+    setItemPageSize(25);
     localStorage.clear();
   });
 
@@ -207,16 +209,14 @@ describe('ItemList pagination', () => {
     expect(screen.queryByText('Item 26')).not.toBeInTheDocument();
   });
 
-  it('hides pagination footer entirely when below threshold', () => {
+  it('hides the pager on single-page lists', () => {
     render(<ItemList items={makeItems(5)} readOnly />);
     expect(screen.queryByLabelText('Pagination')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Items per page')).not.toBeInTheDocument();
   });
 
-  it('shows size picker but not pager at count between 10 and pageSize', () => {
-    render(<ItemList items={makeItems(15)} readOnly />);
-    expect(screen.queryByLabelText('Pagination')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Items per page')).toBeInTheDocument();
+  it('does not render an inline size picker (that now lives in Settings)', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    expect(screen.queryByLabelText('Items per page')).not.toBeInTheDocument();
   });
 
   it('clicking page 2 shows that page slice', () => {
@@ -227,23 +227,21 @@ describe('ItemList pagination', () => {
     expect(screen.getByText('Item 30')).toBeInTheDocument();
   });
 
-  it('changing size to 10 resets to page 1 and applies new size', () => {
+  it('reacts to external setItemPageSize — re-slices and resets to page 1', () => {
     render(<ItemList items={makeItems(30)} readOnly />);
     fireEvent.click(screen.getByLabelText('Page 2'));
-    const sizeGroup = screen.getByLabelText('Items per page');
-    const option10 = Array.from(sizeGroup.querySelectorAll('[role="radio"]'))
-      .find((el) => el.textContent === '10') as HTMLElement;
-    fireEvent.click(option10);
+    expect(screen.getByText('Item 26')).toBeInTheDocument();
+
+    act(() => setItemPageSize(10));
+
     expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('Item 10')).toBeInTheDocument();
     expect(screen.queryByText('Item 11')).not.toBeInTheDocument();
   });
 
-  it('selecting "All" hides the pager and shows every item', () => {
+  it('hides the pager when size "all" is active', () => {
+    setItemPageSize('all');
     render(<ItemList items={makeItems(30)} readOnly />);
-    const sizeGroup = screen.getByLabelText('Items per page');
-    const optionAll = Array.from(sizeGroup.querySelectorAll('[role="radio"]'))
-      .find((el) => el.textContent === 'All') as HTMLElement;
-    fireEvent.click(optionAll);
     expect(screen.queryByLabelText('Pagination')).not.toBeInTheDocument();
     expect(screen.getByText('Item 1')).toBeInTheDocument();
     expect(screen.getByText('Item 30')).toBeInTheDocument();

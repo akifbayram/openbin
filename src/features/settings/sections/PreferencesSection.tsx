@@ -1,9 +1,16 @@
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Check, ChevronsUpDown, Monitor, Moon, Sun } from 'lucide-react';
+import { useRef } from 'react';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import type { OptionGroupOption } from '@/components/ui/option-group';
 import { OptionGroup } from '@/components/ui/option-group';
 import { Switch } from '@/components/ui/switch';
+import {
+  ITEM_PAGE_SIZE_OPTIONS,
+  type PageSizeValue,
+  setItemPageSize,
+  useItemPageSize,
+} from '@/features/bins/useItemPageSize';
 import {
   clamp,
   DASHBOARD_LIMITS,
@@ -13,7 +20,10 @@ import {
 import { useTerminology } from '@/lib/terminology';
 import type { ThemePreference } from '@/lib/theme';
 import { useTheme } from '@/lib/theme';
+import { useClickOutside } from '@/lib/useClickOutside';
+import { usePopover } from '@/lib/usePopover';
 import { useUserPreferences } from '@/lib/userPreferences';
+import { cn } from '@/lib/utils';
 import { SettingsPageHeader } from '../SettingsPageHeader';
 import { SettingsRow } from '../SettingsRow';
 import { SettingsSection } from '../SettingsSection';
@@ -25,11 +35,76 @@ const themeOptions: OptionGroupOption<ThemePreference>[] = [
   { key: 'auto', label: 'Auto', icon: Monitor },
 ];
 
+function formatPageSizeLabel(v: PageSizeValue, entityLabel: string): string {
+  return v === 'all' ? `All on one page` : `${v} per ${entityLabel}`;
+}
+
+interface ItemPageSizeSelectProps {
+  value: PageSizeValue;
+  onChange: (v: PageSizeValue) => void;
+  ariaLabel: string;
+  entityLabel: string;
+}
+
+function ItemPageSizeSelect({ value, onChange, ariaLabel, entityLabel }: ItemPageSizeSelectProps) {
+  const { visible, animating, close, toggle } = usePopover();
+  const ref = useRef<HTMLDivElement>(null);
+  useClickOutside(ref, close);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={toggle}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] border border-[var(--border-flat)] text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+        aria-haspopup="listbox"
+        aria-expanded={visible}
+        aria-label={ariaLabel}
+      >
+        <span className="tabular-nums">{formatPageSizeLabel(value, entityLabel)}</span>
+        <ChevronsUpDown className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+      </button>
+      {visible && (
+        <div
+          role="listbox"
+          className={cn(
+            animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+            'absolute top-full mt-1.5 right-0 z-50 rounded-[var(--radius-md)] flat-popover min-w-[160px] overflow-hidden',
+          )}
+        >
+          {ITEM_PAGE_SIZE_OPTIONS.map((opt) => {
+            const selected = opt === value;
+            return (
+              <button
+                key={String(opt)}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => { onChange(opt); close(); }}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-1.5 text-[13px] transition-colors',
+                  selected
+                    ? 'text-[var(--text-primary)] bg-[var(--bg-hover)]'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
+                )}
+              >
+                <Check className={cn('h-3.5 w-3.5 shrink-0', selected ? 'text-[var(--accent)]' : 'invisible')} />
+                <span className="tabular-nums">{formatPageSizeLabel(opt, entityLabel)}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PreferencesSection() {
   const { preference, setThemePreference } = useTheme();
   const { preferences, updatePreferences } = useUserPreferences();
   const { settings: dashSettings, updateSettings: updateDashSettings } =
     useDashboardSettings();
+  const { pageSize: itemPageSize } = useItemPageSize();
   const t = useTerminology();
   const { saved, flash } = useSavedFlash();
 
@@ -51,6 +126,21 @@ export function PreferencesSection() {
               value={preference}
               onChange={setThemePreference}
               iconOnly
+            />
+          }
+        />
+      </SettingsSection>
+
+      <SettingsSection label="Display">
+        <SettingsRow
+          label={`Items per ${t.bin} page`}
+          description={`How many items are shown before pagination kicks in. "All on one page" disables pagination.`}
+          control={
+            <ItemPageSizeSelect
+              value={itemPageSize}
+              onChange={setItemPageSize}
+              ariaLabel={`Items per ${t.bin} page`}
+              entityLabel="page"
             />
           }
         />

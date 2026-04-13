@@ -1,6 +1,7 @@
 import { Check, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
 import { useRef } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
+import { getPageNumbers } from '@/lib/paginationUtil';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
@@ -16,29 +17,6 @@ interface PaginationProps {
   /** When provided with onPageSizeChange, renders a page-size dropdown */
   pageSizeOptions?: number[];
   onPageSizeChange?: (size: number) => void;
-}
-
-function getPageNumbers(current: number, total: number): (number | 'ellipsis')[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-
-  const pages: (number | 'ellipsis')[] = [1];
-
-  if (current <= 3) {
-    // Near start: 1 2 3 4 ... last
-    for (let i = 2; i <= 4; i++) pages.push(i);
-    pages.push('ellipsis', total);
-  } else if (current >= total - 2) {
-    // Near end: 1 ... n-3 n-2 n-1 last
-    pages.push('ellipsis');
-    for (let i = total - 3; i <= total; i++) pages.push(i);
-  } else {
-    // Middle: 1 ... prev curr next ... last
-    pages.push('ellipsis', current - 1, current, current + 1, 'ellipsis', total);
-  }
-
-  return pages;
 }
 
 function PageSizeSelect({ value, options, onChange }: { value: number; options: number[]; onChange: (size: number) => void }) {

@@ -27,15 +27,15 @@ export function useItemPagination<T>(
   const totalCount = items.length;
   const totalPages = computeTotalPages(totalCount, pageSize);
 
-  // Reset to page 1 when any reset signal changes. Serialized so the dep array length is stable.
+  // Reset to page 1 when any reset signal changes. Serialize so the dep array length is stable,
+  // which keeps the rules-of-hooks invariant without a lint suppression.
   const resetKey = resetSignals.map((v) => (v == null ? '\u0000' : String(v))).join('\u0001');
-  // biome-ignore lint/correctness/useExhaustiveDependencies: resetKey is the intended trigger; the effect body deliberately doesn't reference it
+  // biome-ignore lint/correctness/useExhaustiveDependencies: resetKey is the only intended trigger
   useEffect(() => { setPageInternal(1); }, [resetKey]);
 
-  // Clamp page when the list shrinks past the current page.
-  useEffect(() => {
-    if (pageInternal > totalPages) setPageInternal(totalPages);
-  }, [pageInternal, totalPages]);
+  // Render-time clamp: when the list shrinks past the current page, sync state in place so
+  // the next render sees the corrected value without an extra effect-driven round-trip.
+  if (pageInternal > totalPages) setPageInternal(totalPages);
 
   const page = Math.min(pageInternal, totalPages);
 

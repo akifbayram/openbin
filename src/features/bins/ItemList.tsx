@@ -16,9 +16,7 @@ import { useItemPageSize } from './useItemPageSize';
 import { useItemPagination } from './useItemPagination';
 
 // Filter-search input appears once the bin has more than this many items.
-// Intentionally independent of the pagination size-picker threshold
-// (min count inside ItemListPagination, currently 10) — the two serve
-// different UX affordances and can diverge without coupling.
+// The page-size preference itself lives in Settings → Preferences → Display.
 const FILTER_THRESHOLD = 15;
 
 interface ItemListProps {
@@ -363,12 +361,14 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
     return displayItems.filter((i) => i.name.toLowerCase().includes(lower));
   }, [displayItems, filterQuery]);
 
-  const { pageSize, setPageSize, pageSizeOptions } = useItemPageSize();
+  const { pageSize } = useItemPageSize();
   const {
     page,
     setPage,
     totalPages,
     visibleItems,
+    rangeStart,
+    rangeEnd,
     jumpToLastPage,
   } = useItemPagination(filteredItems, pageSize, [filterQuery, sortColumn, sortDirection, pageSize]);
 
@@ -617,22 +617,21 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
               </div>
             )
           )}
-          <ItemListPagination
-            page={page}
-            totalPages={totalPages}
-            totalCount={filteredItems.length}
-            pageSize={pageSize}
-            pageSizeOptions={pageSizeOptions}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            itemLabel={displayItems.length === 1 ? 'item' : 'items'}
-          />
           {footerSlot && (
             <>
               {displayItems.length > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
               {footerSlot}
             </>
           )}
+          <ItemListPagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={filteredItems.length}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            onPageChange={setPage}
+            itemLabel={displayItems.length === 1 ? 'item' : 'items'}
+          />
         </div>
       )}
     </div>
