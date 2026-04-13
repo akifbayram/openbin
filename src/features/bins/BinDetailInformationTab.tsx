@@ -15,7 +15,7 @@ interface BinDetailInformationTabProps {
 }
 
 const SECTION_HEADER =
-  'text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-3';
+  'text-[12px] font-medium text-[var(--text-tertiary)] mb-3';
 
 // QR codes are spec'd pure black on the lightest surface; kept here so the
 // on-screen card stays bit-for-bit identical to the printed label.

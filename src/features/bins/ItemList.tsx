@@ -1,11 +1,13 @@
-import { ChevronDown, PackageMinus, Search, Trash2, Undo2, X } from 'lucide-react';
+import { PackageMinus, Trash2, Undo2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
+import { SearchInput } from '@/components/ui/search-input';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { checkoutItem, returnItem } from '@/features/checkouts/useCheckouts';
 import { formatTimeAgo } from '@/lib/formatTime';
+import { parseBareQuantity } from '@/lib/itemQuantities';
 import { cn, rowAction } from '@/lib/utils';
 import type { BinItem, ItemCheckout } from '@/types';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
@@ -16,10 +18,40 @@ interface ItemListProps {
   binId?: string;
   readOnly?: boolean;
   hideWhenEmpty?: boolean;
-  collapsible?: boolean;
+  hideHeader?: boolean;
   checkouts?: ItemCheckout[];
   onItemsChange?: (items: BinItem[]) => void;
   headerExtra?: React.ReactNode;
+  /** Node rendered inside the card below items, separated by a subtle divider.
+   *  When set, the card renders even if there are no items (so the slot stays visible). */
+  footerSlot?: React.ReactNode;
+}
+
+type SortColumn = '' | 'name' | 'qty';
+const SWIPE_THRESHOLD = 80;
+
+function compareByName(a: BinItem, b: BinItem): number {
+  return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+}
+
+function sortBinItems(items: BinItem[], column: SortColumn, direction: SortDirection): BinItem[] {
+  if (column === 'name') {
+    return [...items].sort((a, b) => direction === 'asc' ? compareByName(a, b) : -compareByName(a, b));
+  }
+  if (column === 'qty') {
+    return [...items].sort((a, b) => {
+      const aNull = a.quantity == null;
+      const bNull = b.quantity == null;
+      if (aNull && bNull) return compareByName(a, b);
+      if (aNull) return 1;
+      if (bNull) return -1;
+      const qa = a.quantity as number;
+      const qb = b.quantity as number;
+      const diff = direction === 'desc' ? qb - qa : qa - qb;
+      return diff !== 0 ? diff : compareByName(a, b);
+    });
+  }
+  return items;
 }
 
 interface ItemRowProps {
@@ -34,18 +66,17 @@ interface ItemRowProps {
   onDelete: () => void;
 }
 
-const SWIPE_THRESHOLD = 80;
-
 function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit, onSave, onCancel, onDelete }: ItemRowProps) {
   const [editValue, setEditValue] = useState(text);
-  const [editQuantity, setEditQuantity] = useState<string>(quantity != null ? String(quantity) : '');
-  const [inlineQty, setInlineQty] = useState(quantity != null ? String(quantity) : '');
-  // Sync inline quantity when prop changes (e.g. after server round-trip)
-  const prevQty = useRef(quantity);
-  if (quantity !== prevQty.current) {
-    prevQty.current = quantity;
-    setInlineQty(quantity != null ? String(quantity) : '');
+  const [qtyDraft, setQtyDraft] = useState(quantity != null ? String(quantity) : '');
+  // Sync on prop change during render (React 18 idiom) — avoids the one-frame
+  // stale paint that `useEffect` would introduce after a server round-trip.
+  const prevQtyRef = useRef(quantity);
+  if (quantity !== prevQtyRef.current) {
+    prevQtyRef.current = quantity;
+    setQtyDraft(quantity != null ? String(quantity) : '');
   }
+
   const [swipeX, setSwipeX] = useState(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const swipingRef = useRef(false);
@@ -54,7 +85,7 @@ function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit
 
   function handleStartEdit() {
     setEditValue(text);
-    setEditQuantity(quantity != null ? String(quantity) : '');
+    setQtyDraft(quantity != null ? String(quantity) : '');
     onStartEdit();
     requestAnimationFrame(() => {
       const el = inputRef.current;
@@ -68,8 +99,8 @@ function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit
 
   function handleSave() {
     const trimmed = editValue.trim();
-    const parsedQty = editQuantity.trim() === '' ? null : Number.parseInt(editQuantity, 10);
-    const finalQty = parsedQty != null && Number.isFinite(parsedQty) && parsedQty >= 1 ? parsedQty : (editQuantity.trim() === '' ? null : quantity);
+    const parsed = parseBareQuantity(qtyDraft);
+    const finalQty = parsed != null && parsed >= 1 ? parsed : (qtyDraft.trim() === '' ? null : quantity);
     if (trimmed && (trimmed !== text || finalQty !== quantity)) {
       onSave(trimmed, finalQty);
     } else {
@@ -111,7 +142,6 @@ function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit
 
   return (
     <div className="relative overflow-hidden">
-      {/* Delete zone behind */}
       <div
         className="absolute inset-y-0 right-0 flex items-center justify-end gap-1.5 px-4 text-white text-[13px] font-medium"
         style={{ width: Math.max(0, -swipeX), backgroundColor: swipeX < 0 ? 'var(--destructive)' : undefined }}
@@ -124,7 +154,6 @@ function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit
         )}
       </div>
 
-      {/* Foreground row */}
       <div
         ref={rowRef}
         className={cn(
@@ -138,15 +167,8 @@ function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit
         onTouchEnd={handleTouchEnd}
       >
         <input
-          value={isEditing ? editQuantity : inlineQty}
-          onChange={(e) => {
-            const val = e.target.value.replace(/[^0-9]/g, '');
-            if (!isEditing) {
-              setInlineQty(val);
-            } else {
-              setEditQuantity(val);
-            }
-          }}
+          value={qtyDraft}
+          onChange={(e) => setQtyDraft(e.target.value.replace(/[^0-9]/g, ''))}
           onKeyDown={(e) => {
             if (isEditing) {
               if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
@@ -156,18 +178,20 @@ function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit
               (e.target as HTMLElement).blur();
             }
           }}
-          onBlur={isEditing
-            ? () => { requestAnimationFrame(() => { if (!rowRef.current?.contains(document.activeElement)) handleSave(); }); }
-            : () => {
-                const num = inlineQty.trim() === '' ? null : Number.parseInt(inlineQty, 10);
-                const finalQty = num != null && Number.isFinite(num) && num >= 0 ? num : null;
-                if (finalQty !== quantity) onSave(text, finalQty);
-              }
-          }
+          onBlur={() => {
+            if (isEditing) {
+              requestAnimationFrame(() => {
+                if (!rowRef.current?.contains(document.activeElement)) handleSave();
+              });
+            } else {
+              const parsed = parseBareQuantity(qtyDraft);
+              if (parsed !== quantity) onSave(text, parsed);
+            }
+          }}
           placeholder="—"
           className={cn(
             'shrink-0 w-8 text-center text-[13px] tabular-nums bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]',
-            (isEditing ? editQuantity : inlineQty).trim() ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'
+            qtyDraft.trim() ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'
           )}
           inputMode="numeric"
           aria-label="Quantity"
@@ -203,8 +227,8 @@ function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit
           </button>
         )}
 
-        {/* Desktop action buttons — spacer preserves row width during edit */}
         {isEditing ? (
+          // Spacer keeps row width stable while action buttons are hidden during edit.
           <div className="size-9 shrink-0" />
         ) : (
           <>
@@ -226,21 +250,67 @@ function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit
   );
 }
 
-export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, checkouts = [], onItemsChange, headerExtra }: ItemListProps) {
-  const storageKey = collapsible && binId ? `openbin-items-collapsed-${binId}` : null;
-  const [collapsed, setCollapsed] = useState(() => storageKey ? localStorage.getItem(storageKey) === 'true' : false);
+interface CheckoutRowProps {
+  item: BinItem;
+  checkout: ItemCheckout;
+  canReturn: boolean;
+  onReturn: () => void;
+}
+
+function CheckoutRow({ item, checkout, canReturn, onReturn }: CheckoutRowProps) {
+  return (
+    <div className="group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
+      <span className="shrink-0 w-8 opacity-50" />
+      <span className="flex-1 min-w-0 text-[15px] text-[var(--text-tertiary)] leading-relaxed line-through opacity-50">
+        {item.name}
+      </span>
+      <span className="shrink-0 text-[12px] text-[var(--text-tertiary)] opacity-50">
+        Out &middot; {checkout.checked_out_by_name} &middot; {formatTimeAgo(checkout.checked_out_at)}
+      </span>
+      {canReturn && (
+        <Tooltip content="Return item">
+          <button
+            type="button"
+            onClick={onReturn}
+            className={rowAction}
+            aria-label="Return item"
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
+      )}
+    </div>
+  );
+}
+
+function ReadOnlyRow({ item }: { item: BinItem }) {
+  return (
+    <div className="row-tight px-3.5 py-1">
+      {item.quantity != null && (
+        <span className="shrink-0 w-8 text-center text-[13px] text-[var(--text-primary)] tabular-nums">
+          {item.quantity}
+        </span>
+      )}
+      <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
+        {item.name}
+      </span>
+    </div>
+  );
+}
+
+export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, checkouts = [], onItemsChange, headerExtra, footerSlot }: ItemListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [sortColumn, setSortColumn] = useState<'' | 'name' | 'qty'>('');
+  const [sortColumn, setSortColumn] = useState<SortColumn>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { showToast } = useToast();
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
+  const pendingDeletesRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const checkoutMap = useMemo(() => {
     const map = new Map<string, ItemCheckout>();
     for (const co of checkouts) map.set(co.item_id, co);
     return map;
   }, [checkouts]);
-  const pendingDeletesRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const savedTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -257,21 +327,18 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
   const [revealFrom, setRevealFrom] = useState<number | null>(null);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Optimistic local state for view mode (binId without onItemsChange).
-  // Mutations update localItems immediately and call the API with quiet:true
-  // to skip the full bin refetch, cutting API calls roughly in half.
+  // View mode = binId set, parent doesn't control items.
+  // Mutations update localItems immediately and persist quietly, skipping the full bin refetch.
   const viewMode = binId != null && !onItemsChange;
   const [localItems, setLocalItems] = useState(items);
-  const prevItemsRef2 = useRef(items);
-  if (items !== prevItemsRef2.current) {
-    prevItemsRef2.current = items;
+  const prevItemsRef = useRef(items);
+  if (items !== prevItemsRef.current) {
+    prevItemsRef.current = items;
     setLocalItems(items);
   }
   const effectiveItems = viewMode ? localItems : items;
 
-  // Debounce reorder persistence — rapid sort toggles only persist the final order
   const reorderTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => () => { if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current); }, []);
 
   const displayItems = useMemo(
     () => effectiveItems.filter((item) => !pendingDeleteIds.has(item.id)),
@@ -279,38 +346,25 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
   );
 
   const { showFilter, filterQuery, setFilterQuery, filteredCount, visibleIndices, hiddenCount, expand, collapse, canCollapse } =
-    useCollapsibleList(displayItems.length, (i) => displayItems[i].name);
+    useCollapsibleList(displayItems, (item) => item.name);
+
+  const onItemsChangeRef = useRef(onItemsChange);
+  onItemsChangeRef.current = onItemsChange;
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   const handleHeaderSort = useCallback((column: string, direction: SortDirection) => {
-    setSortColumn(column as '' | 'name' | 'qty');
+    if (column !== 'name' && column !== 'qty') return;
+    setSortColumn(column);
     setSortDirection(direction);
     const source = viewMode ? localItems : items;
-    let sorted: BinItem[];
-    if (column === 'name') {
-      sorted = [...source].sort((a, b) =>
-        direction === 'asc'
-          ? a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-          : b.name.localeCompare(a.name, undefined, { sensitivity: 'base' })
-      );
-    } else {
-      sorted = [...source].sort((a, b) => {
-        const aNull = a.quantity == null;
-        const bNull = b.quantity == null;
-        if (aNull && bNull) return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-        if (aNull) return 1;
-        if (bNull) return -1;
-        const diff = direction === 'desc' ? (b.quantity as number) - (a.quantity as number) : (a.quantity as number) - (b.quantity as number);
-        return diff !== 0 ? diff : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-      });
-    }
+    const sorted = sortBinItems(source, column, direction);
     if (onItemsChange) {
       onItemsChange(sorted);
       return;
     }
     if (!binId) return;
-    // Optimistic: update UI immediately
     setLocalItems(sorted);
-    // Debounce the API call so rapid sort toggles only persist once
     if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
     reorderTimerRef.current = setTimeout(() => {
       reorderItems(binId, sorted.map((i) => i.id), { quiet: true }).catch(() => {
@@ -321,52 +375,43 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
 
   async function handleSaveEdit(itemId: string, value: string, quantity: number | null) {
     setEditingId(null);
+    const next = effectiveItems.map((i) => (i.id === itemId ? { ...i, name: value, quantity } : i));
     if (onItemsChange) {
-      onItemsChange(items.map((i) => (i.id === itemId ? { ...i, name: value, quantity } : i)));
+      onItemsChange(next);
       markSaved(itemId);
       return;
     }
     if (!binId) return;
-    // Optimistic update
-    setLocalItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, name: value, quantity } : i)));
+    setLocalItems(next);
     try {
       await renameItem(binId, itemId, value, quantity, { quiet: true });
       markSaved(itemId);
     } catch {
-      setLocalItems(items); // revert on failure
+      setLocalItems(items);
       showToast({ message: 'Failed to update item', variant: 'error' });
     }
   }
 
-  // Refs so timers and cleanup read current values, not stale closures
-  const onItemsChangeRef = useRef(onItemsChange);
-  onItemsChangeRef.current = onItemsChange;
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
-
   function handleDelete(itemId: string) {
     if (pendingDeleteIds.has(itemId)) return;
-
     setPendingDeleteIds((prev) => new Set(prev).add(itemId));
 
-    const commitDelete = () => {
+    const timerId = setTimeout(() => {
       pendingDeletesRef.current.delete(itemId);
+      const next = itemsRef.current.filter((i) => i.id !== itemId);
       if (onItemsChangeRef.current) {
-        onItemsChangeRef.current(itemsRef.current.filter((i) => i.id !== itemId));
-      } else {
-        // Remove from local state so the item stays hidden
-        setLocalItems((prev) => prev.filter((i) => i.id !== itemId));
-        if (binId) {
-          removeItemFromBin(binId, itemId, { quiet: true }).catch(() => {
-            setLocalItems(itemsRef.current);
-            setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
-            showToast({ message: 'Failed to delete item', variant: 'error' });
-          });
-        }
+        onItemsChangeRef.current(next);
+        return;
       }
-    };
-
-    const timerId = setTimeout(commitDelete, 5000);
+      setLocalItems(next);
+      if (binId) {
+        removeItemFromBin(binId, itemId, { quiet: true }).catch(() => {
+          setLocalItems(itemsRef.current);
+          setPendingDeleteIds((prev) => { const n = new Set(prev); n.delete(itemId); return n; });
+          showToast({ message: 'Failed to delete item', variant: 'error' });
+        });
+      }
+    }, 5000);
     pendingDeletesRef.current.set(itemId, timerId);
 
     showToast({
@@ -406,35 +451,31 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
     }
   }
 
-  // Flush all pending deletes on unmount (navigation away or edit mode transition)
   useEffect(() => {
-    const ref = pendingDeletesRef;
+    const pending = pendingDeletesRef;
+    const saved = savedTimersRef;
+    const reveal = revealTimerRef;
+    const reorder = reorderTimerRef;
     return () => {
-      const entries = [...ref.current.entries()];
-      ref.current.clear(); // prevent re-entry from any subsequent cleanup
-      for (const [itemId, timerId] of entries) {
-        clearTimeout(timerId);
-        if (onItemsChangeRef.current) {
-          // handled below in batch
-        } else {
-          if (binId) removeItemFromBin(binId, itemId, { quiet: true }).catch(() => {});
-        }
-      }
-      if (onItemsChangeRef.current && entries.length > 0) {
-        const ids = new Set(entries.map(([id]) => id));
+      for (const t of saved.current.values()) clearTimeout(t);
+      clearTimeout(reveal.current);
+      clearTimeout(reorder.current);
+
+      const entries = [...pending.current.entries()];
+      pending.current.clear();
+      if (entries.length === 0) return;
+      for (const [, timerId] of entries) clearTimeout(timerId);
+
+      const ids = new Set(entries.map(([id]) => id));
+      if (onItemsChangeRef.current) {
         onItemsChangeRef.current(itemsRef.current.filter((i) => !ids.has(i.id)));
+      } else if (binId) {
+        for (const id of ids) {
+          removeItemFromBin(binId, id, { quiet: true }).catch(() => {});
+        }
       }
     };
   }, [binId]);
-
-  useEffect(() => {
-    const save = savedTimersRef;
-    const reveal = revealTimerRef;
-    return () => {
-      for (const t of save.current.values()) clearTimeout(t);
-      clearTimeout(reveal.current);
-    };
-  }, []);
 
   function handleExpand() {
     setRevealFrom(visibleIndices.length);
@@ -445,159 +486,112 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
 
   if (hideWhenEmpty && items.length === 0) return null;
 
+  const itemWord = displayItems.length === 1 ? 'Item' : 'Items';
+  const headerCount = filterQuery
+    ? `${filteredCount} of ${displayItems.length} ${itemWord}`
+    : `${displayItems.length} ${itemWord}`;
+  const showSortHeaders = !readOnly && effectiveItems.length >= 2;
+  const showColumnHeader = !readOnly || displayItems.some((item) => item.quantity != null);
+
   return (
     <div>
-      <div className="row-spread mb-2 min-h-8">
-        <Label>
-          {filterQuery
-            ? `${filteredCount} of ${displayItems.length} ${displayItems.length === 1 ? 'Item' : 'Items'}`
-            : `${displayItems.length} ${displayItems.length === 1 ? 'Item' : 'Items'}`}
-          {checkouts.length > 0 && ` \u00b7 ${checkouts.length} out`}
-        </Label>
-        {(headerExtra || collapsible) && (
-          <span className="inline-flex items-center gap-1.5">
-            {headerExtra}
-            {collapsible && (
-              <button
-                type="button"
-                onClick={() => setCollapsed((v) => {
-                  const next = !v;
-                  if (storageKey) {
-                    if (next) localStorage.setItem(storageKey, 'true');
-                    else localStorage.removeItem(storageKey);
-                  }
-                  return next;
-                })}
-                aria-label="Toggle items"
-                className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', !collapsed && 'rotate-180')} />
-              </button>
-            )}
-          </span>
-        )}
-      </div>
-
-      {!collapsed && showFilter && (
-        <div className="relative mb-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-quaternary)]" />
-          <input
-            value={filterQuery}
-            onChange={(e) => setFilterQuery(e.target.value)}
-            placeholder="Filter items..."
-            className="w-full h-8 pl-8 pr-8 rounded-[var(--radius-md)] bg-[var(--bg-input)] text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)] outline-none focus:ring-2 focus:ring-[var(--accent)]"
-          />
-          {filterQuery && (
-            <button
-              type="button"
-              onClick={() => setFilterQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-              aria-label="Clear filter"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+      {!hideHeader && (
+        <div className="row-spread mb-2 min-h-8">
+          <Label>
+            {headerCount}
+            {checkouts.length > 0 && ` \u00b7 ${checkouts.length} out`}
+          </Label>
+          {headerExtra && <span className="inline-flex items-center gap-1.5">{headerExtra}</span>}
         </div>
       )}
 
-      {collapsed ? null : displayItems.length === 0 ? (
+      {showFilter && (
+        <div className="mb-2">
+          <SearchInput
+            value={filterQuery}
+            onChange={(e) => setFilterQuery(e.target.value)}
+            onClear={filterQuery ? () => setFilterQuery('') : undefined}
+            placeholder="Filter items..."
+          />
+        </div>
+      )}
+
+      {displayItems.length === 0 && !footerSlot ? (
         <p className="text-[14px] text-[var(--text-tertiary)] py-2">
           {readOnly ? 'No items' : 'No items yet — add one below'}
         </p>
       ) : (
         <div className="rounded-[var(--radius-sm)] bg-[var(--bg-input)] border border-[var(--border-flat)] overflow-hidden">
-          {(!readOnly || displayItems.some((item) => item.quantity != null)) && (
-            <div className="row-tight px-3.5 pt-1.5 pb-0.5">
-              {!readOnly && effectiveItems.length >= 2 ? (
+          {displayItems.length > 0 && showColumnHeader && (
+            <div className="row-tight px-3.5 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-hover)]">
+              {showSortHeaders ? (
                 <>
                   <SortHeader label="Qty" column="qty" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleHeaderSort} defaultDirection="desc" className="shrink-0 w-8 justify-center" />
                   <SortHeader label="Name" column="name" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleHeaderSort} className="flex-1" />
                 </>
               ) : (
                 <>
-                  <span className="shrink-0 w-8 text-center text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Qty</span>
-                  <span className="flex-1 text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Name</span>
+                  <span className="shrink-0 w-8 text-center text-[12px] font-medium text-[var(--text-tertiary)]">Qty</span>
+                  <span className="flex-1 text-[12px] font-medium text-[var(--text-tertiary)]">Name</span>
                 </>
               )}
             </div>
           )}
-          {visibleIndices.length === 0 && filterQuery ? (
-            <p className="px-3.5 py-3 text-[14px] text-[var(--text-tertiary)] italic">
-              No items match &ldquo;{filterQuery}&rdquo;
-            </p>
-          ) : (
-            visibleIndices.map((idx, i) => {
-              const item = displayItems[idx];
-              const checkout = checkoutMap.get(item.id);
-              const isNewlyRevealed = revealFrom !== null && i >= revealFrom;
-              const staggerDelay = isNewlyRevealed ? Math.min((i - revealFrom) * 30, 500) : undefined;
-              return (
-                <div
-                  key={item.id}
-                  className={cn(isNewlyRevealed && 'animate-item-reveal')}
-                  style={staggerDelay != null ? { animationDelay: `${staggerDelay}ms` } : undefined}
-                >
-                  {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-                  {checkout ? (
-                    <div className="group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
-                      <span className="shrink-0 w-8 opacity-50" />
-                      <span className="flex-1 min-w-0 text-[15px] text-[var(--text-tertiary)] leading-relaxed line-through opacity-50">
-                        {item.name}
-                      </span>
-                      <span className="shrink-0 text-[12px] text-[var(--text-tertiary)] opacity-50">
-                        Out &middot; {checkout.checked_out_by_name} &middot; {formatTimeAgo(checkout.checked_out_at)}
-                      </span>
-                      {!readOnly && binId && (
-                        <Tooltip content="Return item">
-                          <button
-                            type="button"
-                            onClick={() => handleReturn(item.id)}
-                            className={rowAction}
-                            aria-label="Return item"
-                          >
-                            <Undo2 className="h-3.5 w-3.5" />
-                          </button>
-                        </Tooltip>
-                      )}
-                    </div>
-                  ) : readOnly ? (
-                    <div className={cn('row-tight px-3.5 py-1', savedIds.has(item.id) && 'animate-save-flash')}>
-                      {item.quantity != null && (
-                        <span className="shrink-0 w-8 text-center text-[13px] text-[var(--text-primary)] tabular-nums">
-                          {item.quantity}
-                        </span>
-                      )}
-                      <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
-                        {item.name}
-                      </span>
-                    </div>
-                  ) : (
-                    <ItemRow
-                      text={item.name}
-                      quantity={item.quantity}
-                      isEditing={editingId === item.id}
-                      saved={savedIds.has(item.id)}
-                      onStartEdit={() => setEditingId(item.id)}
-                      onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
-                      onCancel={() => setEditingId(null)}
-                      onDelete={() => handleDelete(item.id)}
-                      checkoutButton={!readOnly && binId ? (
-                        <Tooltip content="Check out">
-                          <button
-                            type="button"
-                            onClick={() => handleCheckout(item.id)}
-                            className={rowAction}
-                            aria-label="Check out item"
-                          >
-                            <PackageMinus className="h-3.5 w-3.5" />
-                          </button>
-                        </Tooltip>
-                      ) : undefined}
-                    />
-                  )}
-                </div>
-              );
-            })
+          {displayItems.length > 0 && (
+            visibleIndices.length === 0 && filterQuery ? (
+              <p className="px-3.5 py-3 text-[14px] text-[var(--text-tertiary)] italic">
+                No items match &ldquo;{filterQuery}&rdquo;
+              </p>
+            ) : (
+              visibleIndices.map((idx, i) => {
+                const item = displayItems[idx];
+                const checkout = checkoutMap.get(item.id);
+                const isNewlyRevealed = revealFrom !== null && i >= revealFrom;
+                const staggerDelay = isNewlyRevealed ? Math.min((i - revealFrom) * 30, 500) : undefined;
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(isNewlyRevealed && 'animate-item-reveal')}
+                    style={staggerDelay != null ? { animationDelay: `${staggerDelay}ms` } : undefined}
+                  >
+                    {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+                    {checkout ? (
+                      <CheckoutRow
+                        item={item}
+                        checkout={checkout}
+                        canReturn={!readOnly && !!binId}
+                        onReturn={() => handleReturn(item.id)}
+                      />
+                    ) : readOnly ? (
+                      <ReadOnlyRow item={item} />
+                    ) : (
+                      <ItemRow
+                        text={item.name}
+                        quantity={item.quantity}
+                        isEditing={editingId === item.id}
+                        saved={savedIds.has(item.id)}
+                        onStartEdit={() => setEditingId(item.id)}
+                        onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
+                        onCancel={() => setEditingId(null)}
+                        onDelete={() => handleDelete(item.id)}
+                        checkoutButton={binId ? (
+                          <Tooltip content="Check out">
+                            <button
+                              type="button"
+                              onClick={() => handleCheckout(item.id)}
+                              className={rowAction}
+                              aria-label="Check out item"
+                            >
+                              <PackageMinus className="h-3.5 w-3.5" />
+                            </button>
+                          </Tooltip>
+                        ) : undefined}
+                      />
+                    )}
+                  </div>
+                );
+              })
+            )
           )}
           {hiddenCount > 0 && (
             <>
@@ -621,6 +615,12 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
               >
                 Show less
               </button>
+            </>
+          )}
+          {footerSlot && (
+            <>
+              {displayItems.length > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+              {footerSlot}
             </>
           )}
         </div>

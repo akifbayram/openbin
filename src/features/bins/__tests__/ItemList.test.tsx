@@ -152,57 +152,12 @@ describe('ItemList header sorting', () => {
   });
 });
 
-describe('ItemList collapsible', () => {
-  it('does not render a collapse toggle when collapsible is not set', () => {
-    render(<ItemList items={items} readOnly />);
+describe('ItemList hideHeader', () => {
+  it('hides the count header and items render without a toggle', () => {
+    render(<ItemList items={items} readOnly hideHeader />);
+    expect(screen.queryByText('3 Items')).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/toggle items/i)).not.toBeInTheDocument();
-  });
-
-  it('renders a collapse toggle when collapsible is true', () => {
-    render(<ItemList items={items} readOnly collapsible />);
-    expect(screen.getByLabelText(/toggle items/i)).toBeInTheDocument();
-  });
-
-  it('shows items by default when collapsible is true', () => {
-    render(<ItemList items={items} readOnly collapsible />);
     expect(screen.getByText('Hammer')).toBeInTheDocument();
-    expect(screen.getByText('Nails')).toBeInTheDocument();
-  });
-
-  it('hides items when the toggle is clicked', () => {
-    render(<ItemList items={items} readOnly collapsible />);
-    fireEvent.click(screen.getByLabelText(/toggle items/i));
-    expect(screen.queryByText('Hammer')).not.toBeInTheDocument();
-    expect(screen.queryByText('Nails')).not.toBeInTheDocument();
-    // Header with count still visible
-    expect(screen.getByText('3 Items')).toBeInTheDocument();
-  });
-
-  it('shows items again when the toggle is clicked twice', () => {
-    render(<ItemList items={items} readOnly collapsible />);
-    fireEvent.click(screen.getByLabelText(/toggle items/i));
-    fireEvent.click(screen.getByLabelText(/toggle items/i));
-    expect(screen.getByText('Hammer')).toBeInTheDocument();
-  });
-
-  it('persists collapsed state to localStorage keyed by binId', () => {
-    render(<ItemList items={items} binId="bin-42" readOnly collapsible />);
-    fireEvent.click(screen.getByLabelText(/toggle items/i));
-    expect(localStorage.getItem('openbin-items-collapsed-bin-42')).toBe('true');
-  });
-
-  it('restores collapsed state from localStorage on mount', () => {
-    localStorage.setItem('openbin-items-collapsed-bin-42', 'true');
-    render(<ItemList items={items} binId="bin-42" readOnly collapsible />);
-    expect(screen.queryByText('Hammer')).not.toBeInTheDocument();
-    expect(screen.getByText('3 Items')).toBeInTheDocument();
-  });
-
-  it('clears localStorage when expanded', () => {
-    localStorage.setItem('openbin-items-collapsed-bin-42', 'true');
-    render(<ItemList items={items} binId="bin-42" readOnly collapsible />);
-    fireEvent.click(screen.getByLabelText(/toggle items/i));
-    expect(localStorage.getItem('openbin-items-collapsed-bin-42')).toBeNull();
   });
 });
 

@@ -55,19 +55,22 @@ export function BinDetailContentsTab({
         items={bin.items}
         binId={bin.id}
         readOnly={!canEdit}
-        collapsible
+        hideHeader
         checkouts={checkouts}
+        footerSlot={
+          canEdit ? (
+            <QuickAddWidget
+              quickAdd={quickAdd}
+              aiEnabled={aiEnabled}
+              aiGated={aiGated}
+              onUpgrade={onUpgrade}
+              dictation={dictation}
+              canTranscribe={canTranscribe}
+              variant="inline"
+            />
+          ) : undefined
+        }
       />
-      {canEdit && (
-        <QuickAddWidget
-          quickAdd={quickAdd}
-          aiEnabled={aiEnabled}
-          aiGated={aiGated}
-          onUpgrade={onUpgrade}
-          dictation={dictation}
-          canTranscribe={canTranscribe}
-        />
-      )}
 
       {showCustomFields && (
         <div className={SUBGROUP_DIVIDER}>

@@ -2,7 +2,6 @@ import { Check, Copy, Pencil } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -80,8 +79,8 @@ export function BinDetailRail({
     <section className="flex flex-col gap-6" data-tour="qr-section">
       <h2 className="sr-only">Bin details</h2>
 
-      <div className={cn(autoSave.savedFields.has('notes') && 'animate-save-flash')}>
-        <Label htmlFor="detail-notes" className="sr-only">Notes</Label>
+      <div className={cn(META_FIELD, autoSave.savedFields.has('notes') && 'animate-save-flash')}>
+        <label htmlFor="detail-notes" className={META_LABEL}>Notes</label>
         {canEdit ? (
           <Textarea
             id="detail-notes"
