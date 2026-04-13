@@ -505,7 +505,7 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
           {readOnly ? 'No items' : 'No items yet — add one below'}
         </p>
       ) : (
-        <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
+        <div className="rounded-[var(--radius-sm)] bg-[var(--bg-input)] border border-[var(--border-flat)] overflow-hidden">
           {(!readOnly || displayItems.some((item) => item.quantity != null)) && (
             <div className="row-tight px-3.5 pt-1.5 pb-0.5">
               {!readOnly && effectiveItems.length >= 2 ? (

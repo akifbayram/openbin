@@ -1,16 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const COLLAPSED_COUNT = 10;
 const FILTER_THRESHOLD = 15;
 
-export function useCollapsibleList(
-  itemCount: number,
-  getSearchText: (index: number) => string,
+export function useCollapsibleList<T>(
+  items: ReadonlyArray<T>,
+  getSearchText: (item: T) => string,
 ) {
   const [expanded, setExpanded] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
 
-  // Auto-expand when items are added
+  const itemCount = items.length;
   const prevCountRef = useRef(itemCount);
   useEffect(() => {
     if (itemCount > prevCountRef.current) setExpanded(true);
@@ -19,19 +19,24 @@ export function useCollapsibleList(
 
   const showFilter = itemCount > FILTER_THRESHOLD;
 
-  // Clear stale filter when item count drops below threshold
   useEffect(() => {
     if (!showFilter) setFilterQuery('');
   }, [showFilter]);
 
-  const lowerFilter = filterQuery.toLowerCase();
+  const getSearchTextRef = useRef(getSearchText);
+  getSearchTextRef.current = getSearchText;
 
-  const filteredIndices: number[] = [];
-  for (let i = 0; i < itemCount; i++) {
-    if (!filterQuery || getSearchText(i).toLowerCase().includes(lowerFilter)) {
-      filteredIndices.push(i);
+  const filteredIndices = useMemo(() => {
+    if (!filterQuery) return items.map((_, i) => i);
+    const lower = filterQuery.toLowerCase();
+    const out: number[] = [];
+    for (let i = 0; i < items.length; i++) {
+      if (getSearchTextRef.current(items[i]).toLowerCase().includes(lower)) {
+        out.push(i);
+      }
     }
-  }
+    return out;
+  }, [items, filterQuery]);
 
   const isCollapsed = !expanded && !filterQuery && filteredIndices.length > COLLAPSED_COUNT;
   const visibleIndices = isCollapsed ? filteredIndices.slice(0, COLLAPSED_COUNT) : filteredIndices;

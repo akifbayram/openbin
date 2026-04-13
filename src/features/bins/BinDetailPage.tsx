@@ -4,16 +4,13 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
 import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Disclosure } from '@/components/ui/disclosure';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { useCheckouts } from '@/features/checkouts/useCheckouts';
-import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
 import { usePlan } from '@/lib/usePlan';
-import { disclosureSectionLabel } from '@/lib/utils';
+import { BinAppearanceDialog } from './BinAppearanceDialog';
 import { BinDetailContent } from './BinDetailContent';
 import { BinDetailSkeleton } from './BinDetailSkeleton';
 import { BinDetailToolbar } from './BinDetailToolbar';
@@ -51,8 +48,9 @@ export function BinDetailPage() {
   const autoSave = useAutoSaveBin(bin ?? null);
   const { fields: customFieldDefs } = useCustomFields(bin?.location_id);
   const { isLocked } = usePlan();
-  const [shareOpen, setShareOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const showShareButton = actions.isAdmin && !isLocked;
 
   // Fetch the bin list matching the sort/search/filters the user had active
@@ -104,21 +102,6 @@ export function BinDetailPage() {
 
   const HeaderIcon = resolveIcon(bin.icon);
 
-  const photosSection = (
-    <Card>
-      <CardContent className="!py-0">
-        <Disclosure
-          label={`Photos${actions.photos.length > 0 ? ` (${actions.photos.length})` : ''}`}
-          labelClassName={disclosureSectionLabel}
-        >
-          <div className="pb-2">
-            <PhotoGallery binId={bin.id} variant="inline" />
-          </div>
-        </Disclosure>
-      </CardContent>
-    </Card>
-  );
-
   function handleClose() {
     if (backState?.backPath) navigate(backState.backPath);
     else if (window.history.length > 1) navigate(-1);
@@ -147,6 +130,7 @@ export function BinDetailPage() {
         hasBinListContext={hasBinListContext}
         onAnalyze={actions.aiGated ? () => setUpgradeOpen(true) : actions.handleAnalyzeClick}
         onTogglePin={actions.handleTogglePin}
+        onCustomize={() => setAppearanceOpen(true)}
         onPrint={() => navigate(`/print?ids=${id}`)}
         onDuplicate={actions.handleDuplicate}
         onMove={() => {
@@ -157,8 +141,6 @@ export function BinDetailPage() {
           }
         }}
         onDelete={actions.handleDelete}
-        isAdmin={actions.isAdmin}
-        onChangeCode={() => actions.setChangeCodeOpen(true)}
         onShare={() => setShareOpen(true)}
         showShareButton={showShareButton}
         onSaveName={autoSave.saveName}
@@ -177,9 +159,10 @@ export function BinDetailPage() {
       <BinDetailContent
         bin={bin}
         autoSave={autoSave}
-        photosSection={photosSection}
         canEdit={actions.canEdit}
         canChangeVisibility={actions.canChangeVisibility(bin.created_by)}
+        canChangeCode={actions.isAdmin}
+        onChangeCode={() => actions.setChangeCodeOpen(true)}
         quickAdd={actions.quickAdd}
         allTags={allTags}
         aiEnabled={actions.aiEnabled}
@@ -223,6 +206,14 @@ export function BinDetailPage() {
         open={actions.changeCodeOpen}
         onOpenChange={actions.setChangeCodeOpen}
         currentBin={{ id: bin.id, short_code: bin.short_code, name: bin.name }}
+      />
+
+      <BinAppearanceDialog
+        open={appearanceOpen}
+        onOpenChange={setAppearanceOpen}
+        bin={bin}
+        autoSave={autoSave}
+        photos={actions.photos}
       />
 
       {showShareButton && (
