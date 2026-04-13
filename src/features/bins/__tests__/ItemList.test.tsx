@@ -186,3 +186,117 @@ describe('ItemList hideWhenEmpty', () => {
     expect(screen.getByText('3 Items')).toBeInTheDocument();
   });
 });
+
+describe('ItemList pagination', () => {
+  function makeItems(n: number): BinItem[] {
+    return Array.from({ length: n }, (_, i) => ({
+      id: `${i + 1}`,
+      name: `Item ${i + 1}`,
+      quantity: null,
+    }));
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('renders only pageSize items on the first page', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('Item 25')).toBeInTheDocument();
+    expect(screen.queryByText('Item 26')).not.toBeInTheDocument();
+  });
+
+  it('hides pagination footer entirely when below threshold', () => {
+    render(<ItemList items={makeItems(5)} readOnly />);
+    expect(screen.queryByLabelText('Pagination')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Items per page')).not.toBeInTheDocument();
+  });
+
+  it('shows size picker but not pager at count between 10 and pageSize', () => {
+    render(<ItemList items={makeItems(15)} readOnly />);
+    expect(screen.queryByLabelText('Pagination')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Items per page')).toBeInTheDocument();
+  });
+
+  it('clicking page 2 shows that page slice', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    fireEvent.click(screen.getByLabelText('Page 2'));
+    expect(screen.queryByText('Item 25')).not.toBeInTheDocument();
+    expect(screen.getByText('Item 26')).toBeInTheDocument();
+    expect(screen.getByText('Item 30')).toBeInTheDocument();
+  });
+
+  it('changing size to 10 resets to page 1 and applies new size', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    fireEvent.click(screen.getByLabelText('Page 2'));
+    const sizeGroup = screen.getByLabelText('Items per page');
+    const option10 = Array.from(sizeGroup.querySelectorAll('[role="radio"]'))
+      .find((el) => el.textContent === '10') as HTMLElement;
+    fireEvent.click(option10);
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.queryByText('Item 11')).not.toBeInTheDocument();
+  });
+
+  it('selecting "All" hides the pager and shows every item', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    const sizeGroup = screen.getByLabelText('Items per page');
+    const optionAll = Array.from(sizeGroup.querySelectorAll('[role="radio"]'))
+      .find((el) => el.textContent === 'All') as HTMLElement;
+    fireEvent.click(optionAll);
+    expect(screen.queryByLabelText('Pagination')).not.toBeInTheDocument();
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('Item 30')).toBeInTheDocument();
+  });
+
+  it('clicking the Name sort header resets page to 1', () => {
+    const onItemsChange = vi.fn();
+    render(<ItemList items={makeItems(30)} onItemsChange={onItemsChange} />);
+    fireEvent.click(screen.getByLabelText('Page 2'));
+    expect(screen.getByText('Item 26')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Sort by Name'));
+    expect(screen.queryByText('Item 26')).not.toBeInTheDocument();
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+  });
+
+  it('typing in the filter resets to page 1 and paginates matches', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    fireEvent.click(screen.getByLabelText('Page 2'));
+    const search = screen.getByPlaceholderText('Filter items...');
+    fireEvent.change(search, { target: { value: 'Item 1' } });
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('Item 10')).toBeInTheDocument();
+    expect(screen.getByText('Item 19')).toBeInTheDocument();
+  });
+
+  it('paginates in readOnly mode the same as edit mode', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    expect(screen.getByLabelText('Pagination')).toBeInTheDocument();
+    expect(screen.queryByText('Item 26')).not.toBeInTheDocument();
+  });
+
+  it('adding items jumps to the new last page', () => {
+    const { rerender } = render(<ItemList items={makeItems(26)} readOnly />);
+    expect(screen.getByText('Item 25')).toBeInTheDocument();
+    expect(screen.queryByText('Item 26')).not.toBeInTheDocument();
+
+    rerender(<ItemList items={makeItems(27)} readOnly />);
+    expect(screen.queryByText('Item 1')).not.toBeInTheDocument();
+    expect(screen.getByText('Item 26')).toBeInTheDocument();
+    expect(screen.getByText('Item 27')).toBeInTheDocument();
+  });
+
+  it('still renders nothing when hideWhenEmpty is true and list is empty', () => {
+    const onItemsChange = vi.fn();
+    const { container } = render(
+      <ItemList items={[]} onItemsChange={onItemsChange} hideWhenEmpty />,
+    );
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('does not render the "Show more" collapse button anymore', () => {
+    render(<ItemList items={makeItems(15)} readOnly />);
+    expect(screen.queryByText(/show \d+ more/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/show less/i)).not.toBeInTheDocument();
+  });
+});

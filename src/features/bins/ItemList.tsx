@@ -10,8 +10,16 @@ import { formatTimeAgo } from '@/lib/formatTime';
 import { parseBareQuantity } from '@/lib/itemQuantities';
 import { cn, rowAction } from '@/lib/utils';
 import type { BinItem, ItemCheckout } from '@/types';
+import { ItemListPagination } from './ItemListPagination';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
-import { useCollapsibleList } from './useCollapsibleList';
+import { useItemPageSize } from './useItemPageSize';
+import { useItemPagination } from './useItemPagination';
+
+// Filter-search input appears once the bin has more than this many items.
+// Intentionally independent of the pagination size-picker threshold
+// (min count inside ItemListPagination, currently 10) — the two serve
+// different UX affordances and can diverge without coupling.
+const FILTER_THRESHOLD = 15;
 
 interface ItemListProps {
   items: BinItem[];
@@ -324,9 +332,6 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
     }, 600));
   }
 
-  const [revealFrom, setRevealFrom] = useState<number | null>(null);
-  const revealTimerRef = useRef<ReturnType<typeof setTimeout>>();
-
   // View mode = binId set, parent doesn't control items.
   // Mutations update localItems immediately and persist quietly, skipping the full bin refetch.
   const viewMode = binId != null && !onItemsChange;
@@ -345,8 +350,41 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
     [effectiveItems, pendingDeleteIds],
   );
 
-  const { showFilter, filterQuery, setFilterQuery, filteredCount, visibleIndices, hiddenCount, expand, collapse, canCollapse } =
-    useCollapsibleList(displayItems, (item) => item.name);
+  const [filterQuery, setFilterQuery] = useState('');
+  const showFilter = displayItems.length > FILTER_THRESHOLD;
+
+  useEffect(() => {
+    if (!showFilter) setFilterQuery('');
+  }, [showFilter]);
+
+  const filteredItems = useMemo(() => {
+    if (!filterQuery) return displayItems;
+    const lower = filterQuery.toLowerCase();
+    return displayItems.filter((i) => i.name.toLowerCase().includes(lower));
+  }, [displayItems, filterQuery]);
+
+  const { pageSize, setPageSize, pageSizeOptions } = useItemPageSize();
+  const {
+    page,
+    setPage,
+    totalPages,
+    visibleItems,
+    jumpToLastPage,
+  } = useItemPagination(filteredItems, pageSize, [filterQuery, sortColumn, sortDirection, pageSize]);
+
+  // Jump to the last page whenever the upstream `items` count grows (i.e. the
+  // parent/server added one). We intentionally watch the raw `items` prop, NOT
+  // `effectiveItems` or `displayItems`: (a) adds only arrive via the prop in
+  // both form- and view-mode, so `items` is the authoritative signal; (b)
+  // `displayItems` grows when a pending delete is undone, and we must NOT jump
+  // in that case — the user is actively trying to retrieve something, not add.
+  const prevItemsLengthRef = useRef(items.length);
+  useEffect(() => {
+    if (items.length > prevItemsLengthRef.current) {
+      jumpToLastPage();
+    }
+    prevItemsLengthRef.current = items.length;
+  }, [items.length, jumpToLastPage]);
 
   const onItemsChangeRef = useRef(onItemsChange);
   onItemsChangeRef.current = onItemsChange;
@@ -454,11 +492,9 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
   useEffect(() => {
     const pending = pendingDeletesRef;
     const saved = savedTimersRef;
-    const reveal = revealTimerRef;
     const reorder = reorderTimerRef;
     return () => {
       for (const t of saved.current.values()) clearTimeout(t);
-      clearTimeout(reveal.current);
       clearTimeout(reorder.current);
 
       const entries = [...pending.current.entries()];
@@ -477,18 +513,11 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
     };
   }, [binId]);
 
-  function handleExpand() {
-    setRevealFrom(visibleIndices.length);
-    expand();
-    clearTimeout(revealTimerRef.current);
-    revealTimerRef.current = setTimeout(() => setRevealFrom(null), 1000);
-  }
-
   if (hideWhenEmpty && items.length === 0) return null;
 
   const itemWord = displayItems.length === 1 ? 'Item' : 'Items';
   const headerCount = filterQuery
-    ? `${filteredCount} of ${displayItems.length} ${itemWord}`
+    ? `${filteredItems.length} of ${displayItems.length} ${itemWord}`
     : `${displayItems.length} ${itemWord}`;
   const showSortHeaders = !readOnly && effectiveItems.length >= 2;
   const showColumnHeader = !readOnly || displayItems.some((item) => item.quantity != null);
@@ -538,85 +567,66 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
             </div>
           )}
           {displayItems.length > 0 && (
-            visibleIndices.length === 0 && filterQuery ? (
+            visibleItems.length === 0 && filterQuery ? (
               <p className="px-3.5 py-3 text-[14px] text-[var(--text-tertiary)] italic">
                 No items match &ldquo;{filterQuery}&rdquo;
               </p>
             ) : (
-              visibleIndices.map((idx, i) => {
-                const item = displayItems[idx];
-                const checkout = checkoutMap.get(item.id);
-                const isNewlyRevealed = revealFrom !== null && i >= revealFrom;
-                const staggerDelay = isNewlyRevealed ? Math.min((i - revealFrom) * 30, 500) : undefined;
-                return (
-                  <div
-                    key={item.id}
-                    className={cn(isNewlyRevealed && 'animate-item-reveal')}
-                    style={staggerDelay != null ? { animationDelay: `${staggerDelay}ms` } : undefined}
-                  >
-                    {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-                    {checkout ? (
-                      <CheckoutRow
-                        item={item}
-                        checkout={checkout}
-                        canReturn={!readOnly && !!binId}
-                        onReturn={() => handleReturn(item.id)}
-                      />
-                    ) : readOnly ? (
-                      <ReadOnlyRow item={item} />
-                    ) : (
-                      <ItemRow
-                        text={item.name}
-                        quantity={item.quantity}
-                        isEditing={editingId === item.id}
-                        saved={savedIds.has(item.id)}
-                        onStartEdit={() => setEditingId(item.id)}
-                        onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
-                        onCancel={() => setEditingId(null)}
-                        onDelete={() => handleDelete(item.id)}
-                        checkoutButton={binId ? (
-                          <Tooltip content="Check out">
-                            <button
-                              type="button"
-                              onClick={() => handleCheckout(item.id)}
-                              className={rowAction}
-                              aria-label="Check out item"
-                            >
-                              <PackageMinus className="h-3.5 w-3.5" />
-                            </button>
-                          </Tooltip>
-                        ) : undefined}
-                      />
-                    )}
-                  </div>
-                );
-              })
+              <div key={page} className="animate-page-enter">
+                {visibleItems.map((item, i) => {
+                  const checkout = checkoutMap.get(item.id);
+                  return (
+                    <div key={item.id}>
+                      {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+                      {checkout ? (
+                        <CheckoutRow
+                          item={item}
+                          checkout={checkout}
+                          canReturn={!readOnly && !!binId}
+                          onReturn={() => handleReturn(item.id)}
+                        />
+                      ) : readOnly ? (
+                        <ReadOnlyRow item={item} />
+                      ) : (
+                        <ItemRow
+                          text={item.name}
+                          quantity={item.quantity}
+                          isEditing={editingId === item.id}
+                          saved={savedIds.has(item.id)}
+                          onStartEdit={() => setEditingId(item.id)}
+                          onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
+                          onCancel={() => setEditingId(null)}
+                          onDelete={() => handleDelete(item.id)}
+                          checkoutButton={binId ? (
+                            <Tooltip content="Check out">
+                              <button
+                                type="button"
+                                onClick={() => handleCheckout(item.id)}
+                                className={rowAction}
+                                aria-label="Check out item"
+                              >
+                                <PackageMinus className="h-3.5 w-3.5" />
+                              </button>
+                            </Tooltip>
+                          ) : undefined}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )
           )}
-          {hiddenCount > 0 && (
-            <>
-              <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />
-              <button
-                type="button"
-                onClick={handleExpand}
-                className="w-full py-2.5 text-[13px] font-medium text-[var(--accent)] hover:bg-[var(--bg-hover)] transition-colors"
-              >
-                Show {hiddenCount} more {hiddenCount === 1 ? 'item' : 'items'}
-              </button>
-            </>
-          )}
-          {canCollapse && (
-            <>
-              <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />
-              <button
-                type="button"
-                onClick={collapse}
-                className="w-full py-2.5 text-[13px] font-medium text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
-              >
-                Show less
-              </button>
-            </>
-          )}
+          <ItemListPagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={filteredItems.length}
+            pageSize={pageSize}
+            pageSizeOptions={pageSizeOptions}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            itemLabel={displayItems.length === 1 ? 'item' : 'items'}
+          />
           {footerSlot && (
             <>
               {displayItems.length > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}

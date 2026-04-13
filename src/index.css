@@ -454,9 +454,19 @@ body {
   animation: item-reveal 200ms ease-out both;
 }
 
+/* ─── Pagination Page Enter ─── */
+@keyframes page-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-page-enter {
+  animation: page-enter 80ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-save-flash { animation: none !important; }
   .animate-item-reveal { animation: none !important; opacity: 1 !important; }
+  .animate-page-enter { animation: none !important; opacity: 1 !important; }
 }
 
 /* ─── Streaming Cursor Blink ─── */
