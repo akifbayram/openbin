@@ -1,9 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
-import { Disclosure } from '@/components/ui/disclosure';
 import { useUserPreferences } from '@/lib/userPreferences';
-import { disclosureSectionLabel, plural } from '@/lib/utils';
+import { plural } from '@/lib/utils';
 import { GranularitySegmented } from './GranularitySegmented';
 import { InlineRetryError, UsageHeatmap, UsageHeatmapSkeleton } from './UsageHeatmap';
 import { availableYears, yearOf } from './usageBuckets';
@@ -54,49 +52,39 @@ export function BinUsageSection({ binId }: BinUsageSectionProps) {
   }, [usage, selectedYear]);
 
   return (
-    <Card>
-      <CardContent className="!py-0">
-        <Disclosure label="Usage" labelClassName={disclosureSectionLabel}>
-          <div className="pb-3 flex flex-col gap-3">
-            {isLoading ? (
-              <UsageHeatmapSkeleton />
-            ) : error ? (
-              <InlineRetryError
-                title="Couldn't load usage data"
-                detail={error}
-                onRetry={refresh}
-                className="py-1"
-              />
-            ) : usage.length === 0 ? (
-              <p className="text-[12px] text-[var(--text-tertiary)] leading-relaxed py-1">
-                No activity yet. Choose which actions count in{' '}
-                <Link to="/settings/preferences" className="underline text-[var(--accent)]">preferences</Link>.
-              </p>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <GranularitySegmented />
-                  <YearChipPager
-                    years={years}
-                    selected={selectedYear}
-                    onSelect={setYear}
-                  />
-                </div>
-                <UsageHeatmap
-                  data={usage}
-                  year={selectedYear}
-                  granularity={preferences.usage_granularity}
-                  mode="per-bin"
-                />
-                <p className="text-[11px] text-[var(--text-tertiary)] tabular-nums">
-                  {activeInYear} active {plural(activeInYear, 'day')} in {selectedYear}
-                  {lastUse ? ` · last used ${formatRelativeFromNow(lastUse)}` : ''}
-                </p>
-              </>
-            )}
+    <div className="flex flex-col gap-3">
+      {isLoading ? (
+        <UsageHeatmapSkeleton />
+      ) : error ? (
+        <InlineRetryError
+          title="Couldn't load usage data"
+          detail={error}
+          onRetry={refresh}
+          className="py-1"
+        />
+      ) : usage.length === 0 ? (
+        <p className="text-[12px] text-[var(--text-tertiary)] leading-relaxed py-1">
+          No activity yet. Choose which actions count in{' '}
+          <Link to="/settings/preferences" className="underline text-[var(--accent)]">preferences</Link>.
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <GranularitySegmented />
+            <YearChipPager years={years} selected={selectedYear} onSelect={setYear} />
           </div>
-        </Disclosure>
-      </CardContent>
-    </Card>
+          <UsageHeatmap
+            data={usage}
+            year={selectedYear}
+            granularity={preferences.usage_granularity}
+            mode="per-bin"
+          />
+          <p className="text-[11px] text-[var(--text-tertiary)] tabular-nums">
+            {activeInYear} active {plural(activeInYear, 'day')} in {selectedYear}
+            {lastUse ? ` · last used ${formatRelativeFromNow(lastUse)}` : ''}
+          </p>
+        </>
+      )}
+    </div>
   );
 }

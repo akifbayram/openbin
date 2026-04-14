@@ -1,4 +1,4 @@
-import { Loader2, Search } from 'lucide-react';
+import { AlertTriangle, Loader2, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -90,6 +90,17 @@ export function ChangeCodeDialog({ open, onOpenChange, currentBin }: ChangeCodeD
 
         {step === 'input' && (
           <div className="space-y-4 py-2">
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-[var(--radius-sm)] bg-[var(--color-warning-soft)] ring-1 ring-[var(--color-warning-ring)] px-3 py-2.5"
+            >
+              <AlertTriangle className="h-4 w-4 text-[var(--color-warning)] shrink-0 mt-0.5" />
+              <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
+                Changing the code will invalidate any printed QR labels pointing to{' '}
+                <span className="font-mono font-semibold text-[var(--text-primary)]">{currentBin.short_code}</span>
+                . You&apos;ll need to reprint labels before they scan to this bin again.
+              </p>
+            </div>
             <div>
               <div className="flex gap-2">
                 <Input

@@ -136,4 +136,21 @@ describe('UsageHeatmap', () => {
     const todayCells = container.querySelectorAll('[data-today="true"]');
     expect(todayCells.length).toBe(0);
   });
+
+  it('formats the Jan 1 cell tooltip in UTC regardless of the host timezone', () => {
+    const { container } = render(
+      <UsageHeatmap
+        data={[{ date: '2026-01-01', count: 1 }]}
+        year={2026}
+        granularity="daily"
+        mode="per-bin"
+        onDayClick={() => {}}
+      />,
+    );
+    const janCell = container.querySelector('[data-intensity="1"]');
+    expect(janCell).not.toBeNull();
+    const label = janCell?.getAttribute('aria-label') ?? '';
+    expect(label).toContain('2026');
+    expect(label).not.toMatch(/Dec/i);
+  });
 });

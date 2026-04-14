@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useRef } from 'react';
 import { useSlidingIndicator } from '@/lib/useSlidingIndicator';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +20,14 @@ interface OptionGroupProps<K extends string> {
   iconOnly?: boolean;
   renderContent?: (opt: OptionGroupOption<K>, active: boolean) => ReactNode;
   className?: string;
+  /**
+   * 'radio'  — default segmented control (role="radiogroup" / role="radio")
+   * 'tabs'   — proper tab bar (role="tablist" / role="tab") with arrow-key navigation.
+   *            Requires aria-label to be set for a11y.
+   */
+  variant?: 'radio' | 'tabs';
+  /** Required when variant="tabs" for screen-reader navigation */
+  'aria-label'?: string;
 }
 
 export function OptionGroup<K extends string>({
@@ -31,18 +39,54 @@ export function OptionGroup<K extends string>({
   iconOnly,
   renderContent,
   className,
+  variant = 'radio',
+  'aria-label': ariaLabel,
 }: OptionGroupProps<K>) {
   const containerRadius = 'rounded-[var(--radius-md)]';
   const segmentRadius = 'rounded-[var(--radius-xs)]';
-  const textSize = size === 'sm' ? 'text-[12px]' : 'text-[13px]';
-  const padding = iconOnly ? 'p-2' : size === 'sm' ? 'px-2 py-1' : 'px-3 py-1.5';
+  const textSize = size === 'sm' ? 'text-[12px]' : size === 'lg' ? 'text-[14px]' : 'text-[13px]';
+  const padding = iconOnly
+    ? 'p-2'
+    : size === 'sm'
+      ? 'px-2 py-1'
+      : size === 'lg'
+        ? 'px-3 py-2.5'
+        : 'px-3 py-1.5';
 
   const { containerRef, setButtonRef, indicator, animate } = useSlidingIndicator(value);
 
+  // Button refs for arrow-key focus management in tabs variant
+  const buttonMap = useRef(new Map<K, HTMLButtonElement | null>());
+
+  if (variant === 'tabs' && !ariaLabel && import.meta.env.DEV) {
+    console.warn('OptionGroup: variant="tabs" requires an aria-label prop for accessibility.');
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, key: K) => {
+    if (variant !== 'tabs') return;
+    const enabled = options.filter((o) => !o.disabled);
+    const i = enabled.findIndex((o) => o.key === key);
+    if (i < 0) return;
+    let next: K | null = null;
+    if (e.key === 'ArrowLeft') next = enabled[(i - 1 + enabled.length) % enabled.length].key;
+    else if (e.key === 'ArrowRight') next = enabled[(i + 1) % enabled.length].key;
+    else if (e.key === 'Home') next = enabled[0].key;
+    else if (e.key === 'End') next = enabled[enabled.length - 1].key;
+    if (next !== null) {
+      e.preventDefault();
+      onChange(next);
+      buttonMap.current.get(next)?.focus();
+    }
+  };
+
+  const isTabs = variant === 'tabs';
+
   return (
+    // biome-ignore lint/a11y/useAriaPropsSupportedByRole: role is dynamic (tablist or radiogroup); aria-label is valid on both
     <div
       ref={containerRef}
-      role="radiogroup"
+      role={isTabs ? 'tablist' : 'radiogroup'}
+      aria-label={ariaLabel}
       className={cn(
         'relative flex bg-[var(--bg-flat)] border border-[var(--border-flat)] p-1 gap-0.5',
         containerRadius,
@@ -67,16 +111,21 @@ export function OptionGroup<K extends string>({
         const disabled = opt.disabled && !active;
 
         return (
-          // biome-ignore lint/a11y/useSemanticElements: custom segmented control with sliding indicator cannot use native radio inputs
+          // biome-ignore lint/a11y/useAriaPropsSupportedByRole: role is dynamic (tab or radio); aria-selected/aria-checked are set conditionally
           <button
             key={opt.key}
-            ref={setButtonRef(opt.key)}
+            ref={(el) => {
+              setButtonRef(opt.key)(el);
+              buttonMap.current.set(opt.key, el);
+            }}
             type="button"
-            role="radio"
-            aria-checked={active}
+            role={isTabs ? 'tab' : 'radio'}
+            aria-selected={isTabs ? active : undefined}
+            aria-checked={isTabs ? undefined : active}
             disabled={disabled}
             title={disabled ? opt.disabledTitle : undefined}
             onClick={() => !disabled && onChange(opt.key)}
+            onKeyDown={(e) => handleKeyDown(e, opt.key)}
             className={cn(
               'relative z-10 font-medium transition-colors',
               textSize,

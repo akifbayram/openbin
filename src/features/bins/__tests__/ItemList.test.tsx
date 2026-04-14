@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BinItem } from '@/types';
 import { ItemList } from '../ItemList';
+import { setItemPageSize } from '../useItemPageSize';
 
 vi.mock('@/lib/api', () => ({ apiFetch: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ useAuth: vi.fn(() => ({ activeLocationId: 'loc-1', token: 'test' })) }));
@@ -152,57 +153,12 @@ describe('ItemList header sorting', () => {
   });
 });
 
-describe('ItemList collapsible', () => {
-  it('does not render a collapse toggle when collapsible is not set', () => {
-    render(<ItemList items={items} readOnly />);
+describe('ItemList hideHeader', () => {
+  it('hides the count header and items render without a toggle', () => {
+    render(<ItemList items={items} readOnly hideHeader />);
+    expect(screen.queryByText('3 Items')).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/toggle items/i)).not.toBeInTheDocument();
-  });
-
-  it('renders a collapse toggle when collapsible is true', () => {
-    render(<ItemList items={items} readOnly collapsible />);
-    expect(screen.getByLabelText(/toggle items/i)).toBeInTheDocument();
-  });
-
-  it('shows items by default when collapsible is true', () => {
-    render(<ItemList items={items} readOnly collapsible />);
     expect(screen.getByText('Hammer')).toBeInTheDocument();
-    expect(screen.getByText('Nails')).toBeInTheDocument();
-  });
-
-  it('hides items when the toggle is clicked', () => {
-    render(<ItemList items={items} readOnly collapsible />);
-    fireEvent.click(screen.getByLabelText(/toggle items/i));
-    expect(screen.queryByText('Hammer')).not.toBeInTheDocument();
-    expect(screen.queryByText('Nails')).not.toBeInTheDocument();
-    // Header with count still visible
-    expect(screen.getByText('3 Items')).toBeInTheDocument();
-  });
-
-  it('shows items again when the toggle is clicked twice', () => {
-    render(<ItemList items={items} readOnly collapsible />);
-    fireEvent.click(screen.getByLabelText(/toggle items/i));
-    fireEvent.click(screen.getByLabelText(/toggle items/i));
-    expect(screen.getByText('Hammer')).toBeInTheDocument();
-  });
-
-  it('persists collapsed state to localStorage keyed by binId', () => {
-    render(<ItemList items={items} binId="bin-42" readOnly collapsible />);
-    fireEvent.click(screen.getByLabelText(/toggle items/i));
-    expect(localStorage.getItem('openbin-items-collapsed-bin-42')).toBe('true');
-  });
-
-  it('restores collapsed state from localStorage on mount', () => {
-    localStorage.setItem('openbin-items-collapsed-bin-42', 'true');
-    render(<ItemList items={items} binId="bin-42" readOnly collapsible />);
-    expect(screen.queryByText('Hammer')).not.toBeInTheDocument();
-    expect(screen.getByText('3 Items')).toBeInTheDocument();
-  });
-
-  it('clears localStorage when expanded', () => {
-    localStorage.setItem('openbin-items-collapsed-bin-42', 'true');
-    render(<ItemList items={items} binId="bin-42" readOnly collapsible />);
-    fireEvent.click(screen.getByLabelText(/toggle items/i));
-    expect(localStorage.getItem('openbin-items-collapsed-bin-42')).toBeNull();
   });
 });
 
@@ -229,5 +185,116 @@ describe('ItemList hideWhenEmpty', () => {
     );
     expect(screen.getByText('Hammer')).toBeInTheDocument();
     expect(screen.getByText('3 Items')).toBeInTheDocument();
+  });
+});
+
+describe('ItemList pagination', () => {
+  function makeItems(n: number): BinItem[] {
+    return Array.from({ length: n }, (_, i) => ({
+      id: `${i + 1}`,
+      name: `Item ${i + 1}`,
+      quantity: null,
+    }));
+  }
+
+  beforeEach(() => {
+    setItemPageSize(25);
+    localStorage.clear();
+  });
+
+  it('renders only pageSize items on the first page', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('Item 25')).toBeInTheDocument();
+    expect(screen.queryByText('Item 26')).not.toBeInTheDocument();
+  });
+
+  it('hides the pager on single-page lists', () => {
+    render(<ItemList items={makeItems(5)} readOnly />);
+    expect(screen.queryByLabelText('Pagination')).not.toBeInTheDocument();
+  });
+
+  it('does not render an inline size picker (that now lives in Settings)', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    expect(screen.queryByLabelText('Items per page')).not.toBeInTheDocument();
+  });
+
+  it('clicking page 2 shows that page slice', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    fireEvent.click(screen.getByLabelText('Page 2'));
+    expect(screen.queryByText('Item 25')).not.toBeInTheDocument();
+    expect(screen.getByText('Item 26')).toBeInTheDocument();
+    expect(screen.getByText('Item 30')).toBeInTheDocument();
+  });
+
+  it('reacts to external setItemPageSize — re-slices and resets to page 1', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    fireEvent.click(screen.getByLabelText('Page 2'));
+    expect(screen.getByText('Item 26')).toBeInTheDocument();
+
+    act(() => setItemPageSize(10));
+
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('Item 10')).toBeInTheDocument();
+    expect(screen.queryByText('Item 11')).not.toBeInTheDocument();
+  });
+
+  it('hides the pager when size "all" is active', () => {
+    setItemPageSize('all');
+    render(<ItemList items={makeItems(30)} readOnly />);
+    expect(screen.queryByLabelText('Pagination')).not.toBeInTheDocument();
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('Item 30')).toBeInTheDocument();
+  });
+
+  it('clicking the Name sort header resets page to 1', () => {
+    const onItemsChange = vi.fn();
+    render(<ItemList items={makeItems(30)} onItemsChange={onItemsChange} />);
+    fireEvent.click(screen.getByLabelText('Page 2'));
+    expect(screen.getByText('Item 26')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Sort by Name'));
+    expect(screen.queryByText('Item 26')).not.toBeInTheDocument();
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+  });
+
+  it('typing in the filter resets to page 1 and paginates matches', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    fireEvent.click(screen.getByLabelText('Page 2'));
+    const search = screen.getByPlaceholderText('Filter items...');
+    fireEvent.change(search, { target: { value: 'Item 1' } });
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('Item 10')).toBeInTheDocument();
+    expect(screen.getByText('Item 19')).toBeInTheDocument();
+  });
+
+  it('paginates in readOnly mode the same as edit mode', () => {
+    render(<ItemList items={makeItems(30)} readOnly />);
+    expect(screen.getByLabelText('Pagination')).toBeInTheDocument();
+    expect(screen.queryByText('Item 26')).not.toBeInTheDocument();
+  });
+
+  it('adding items jumps to the new last page', () => {
+    const { rerender } = render(<ItemList items={makeItems(26)} readOnly />);
+    expect(screen.getByText('Item 25')).toBeInTheDocument();
+    expect(screen.queryByText('Item 26')).not.toBeInTheDocument();
+
+    rerender(<ItemList items={makeItems(27)} readOnly />);
+    expect(screen.queryByText('Item 1')).not.toBeInTheDocument();
+    expect(screen.getByText('Item 26')).toBeInTheDocument();
+    expect(screen.getByText('Item 27')).toBeInTheDocument();
+  });
+
+  it('still renders nothing when hideWhenEmpty is true and list is empty', () => {
+    const onItemsChange = vi.fn();
+    const { container } = render(
+      <ItemList items={[]} onItemsChange={onItemsChange} hideWhenEmpty />,
+    );
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('does not render the "Show more" collapse button anymore', () => {
+    render(<ItemList items={makeItems(15)} readOnly />);
+    expect(screen.queryByText(/show \d+ more/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/show less/i)).not.toBeInTheDocument();
   });
 });

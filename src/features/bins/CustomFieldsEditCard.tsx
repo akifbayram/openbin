@@ -1,4 +1,5 @@
 import { Input } from '@/components/ui/input';
+import { sectionHeader } from '@/lib/utils';
 import type { CustomField } from '@/types';
 
 interface CustomFieldsEditCardProps {
@@ -16,10 +17,7 @@ export function CustomFieldsEditCard({ fields, values, onChange }: CustomFieldsE
     <div className="space-y-4">
       {fields.map((field) => (
         <div key={field.id} className="space-y-1.5">
-          <label
-            htmlFor={`cf-${field.id}`}
-            className="text-[13px] text-[var(--text-secondary)]"
-          >
+          <label htmlFor={`cf-${field.id}`} className={sectionHeader}>
             {field.name}
           </label>
           <Input

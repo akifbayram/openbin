@@ -17,6 +17,14 @@ export function aiItemsToBinItems(items: AiSuggestedItem[]): BinItem[] {
   return items.map((i) => ({ id: clientItemId(), name: i.name, quantity: i.quantity ?? null }));
 }
 
+/** Parse a bare integer quantity string. Returns null for empty, non-numeric, or negative input. */
+export function parseBareQuantity(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const n = Number.parseInt(trimmed, 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 /** Parse human-typed quantity syntax from a single item string. */
 export function parseItemQuantity(raw: string): { name: string; quantity: number | null } {
   const s = raw.trim();

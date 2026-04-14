@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { ArrowRightLeft, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHorizontal, Pin, Printer, QrCode, Share2, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowRightLeft, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHorizontal, Palette, Pin, Printer, Share2, Sparkles, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -26,12 +26,11 @@ interface BinDetailToolbarProps {
   hasBinListContext: boolean;
   onAnalyze: () => void;
   onTogglePin: () => void;
+  onCustomize: () => void;
   onPrint: () => void;
   onDuplicate: () => void;
   onMove: () => void;
   onDelete: () => void;
-  isAdmin: boolean;
-  onChangeCode: () => void;
   onShare?: () => void;
   showShareButton: boolean;
   onSaveName: (name: string) => void;
@@ -54,12 +53,11 @@ export function BinDetailToolbar({
   hasBinListContext,
   onAnalyze,
   onTogglePin,
+  onCustomize,
   onPrint,
   onDuplicate,
   onMove,
   onDelete,
-  isAdmin,
-  onChangeCode,
   onShare,
   showShareButton,
   onSaveName,
@@ -121,7 +119,7 @@ export function BinDetailToolbar({
         </div>
       )}
 
-      <div className="min-w-0 flex-1 flex lg:justify-center">
+      <div className="min-w-0 flex-1 flex lg:justify-center items-center gap-2">
         {editingName ? (
           <input
             ref={inputRef}
@@ -174,6 +172,13 @@ export function BinDetailToolbar({
               </Button>
             </Tooltip>
           )}
+          {canEdit && (
+            <Tooltip content="Customize appearance" side="bottom">
+              <Button variant="ghost" size="icon" onClick={onCustomize} aria-label="Customize appearance">
+                <Palette className="h-[18px] w-[18px]" />
+              </Button>
+            </Tooltip>
+          )}
         </div>
 
         {/* More menu */}
@@ -206,27 +211,27 @@ export function BinDetailToolbar({
                   {bin.is_pinned ? 'Unpin' : 'Pin'}
                 </button>
               )}
-              {(showAiButton || canPin) && <div className="lg:hidden my-1 border-t border-[var(--border-flat)]" />}
+              {canEdit && (
+                <button type="button" role="menuitem" className={cn(menuItemBase, 'lg:hidden')} onClick={() => handleItem(onCustomize)}>
+                  <Palette className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  Customize appearance
+                </button>
+              )}
+              {(showAiButton || canPin || canEdit) && <div className="lg:hidden my-1 border-t border-[var(--border-flat)]" />}
+              <button type="button" role="menuitem" className={menuItemBase} onClick={() => handleItem(onPrint)}>
+                <Printer className="h-4 w-4 text-[var(--text-tertiary)]" />
+                Print label
+              </button>
               {canEdit && (
                 <button type="button" role="menuitem" className={menuItemBase} onClick={() => handleItem(onDuplicate)}>
                   <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Duplicate
                 </button>
               )}
-              <button type="button" role="menuitem" className={menuItemBase} onClick={() => handleItem(onPrint)}>
-                <Printer className="h-4 w-4 text-[var(--text-tertiary)]" />
-                Print Label
-              </button>
               {canEdit && otherLocations.length > 0 && (
                 <button type="button" role="menuitem" className={menuItemBase} onClick={() => handleItem(onMove)}>
                   <ArrowRightLeft className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Move
-                </button>
-              )}
-              {isAdmin && (
-                <button type="button" role="menuitem" className={menuItemBase} onClick={() => handleItem(onChangeCode)}>
-                  <QrCode className="h-4 w-4 text-[var(--text-tertiary)]" />
-                  Change Code
                 </button>
               )}
               {showShareButton && onShare && (

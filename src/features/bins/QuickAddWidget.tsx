@@ -17,6 +17,10 @@ interface QuickAddWidgetProps {
   onUpgrade?: () => void;
   dictation?: ReturnType<typeof useDictation>;
   canTranscribe?: boolean;
+  /** Visual treatment. `card` (default) is a standalone bordered card.
+   *  `inline` strips outer chrome so the widget can live inside another container
+   *  (e.g. as ItemList's footerSlot) and align to item-row geometry. */
+  variant?: 'card' | 'inline';
 }
 
 const QUICK_ADD_LABELS: LabelThreshold[] = [
@@ -26,13 +30,41 @@ const QUICK_ADD_LABELS: LabelThreshold[] = [
   [75, 'Almost done...'],
 ];
 
-export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictation, canTranscribe }: QuickAddWidgetProps) {
+export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictation, canTranscribe, variant = 'card' }: QuickAddWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isRecording = dictation?.state === 'recording';
+  const isInline = variant === 'inline';
+  // Sub-panel padding for expanded/preview states. In `card` variant the outer
+  // wrapper supplies padding; in `inline` we add it per-state to align with row inset.
+  const panelClass = isInline ? 'space-y-2 px-3.5 py-2.5' : 'space-y-2';
   return (
-    <div data-tour="quick-add" className="mt-3 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)]">
+    <div
+      data-tour="quick-add"
+      className={cn(
+        !isInline && 'mt-3 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)]',
+      )}
+    >
       {quickAdd.state === 'input' && (!dictation || dictation.state === 'idle' || isRecording) && (
-        <div className="row-tight">
+        <div className={cn('row-tight', isInline && 'px-3.5 py-1 hover:bg-[var(--bg-hover)] focus-within:bg-[var(--bg-hover)] transition-colors')}>
+          {isInline && (
+            <button
+              type="button"
+              tabIndex={-1}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                if (quickAdd.value.trim()) quickAdd.handleAdd();
+                inputRef.current?.focus();
+              }}
+              disabled={quickAdd.saving}
+              className={cn(
+                'shrink-0 w-8 flex items-center justify-center transition-colors disabled:opacity-50',
+                quickAdd.value.trim() ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]',
+              )}
+              aria-label="Add item"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          )}
           <Input
             ref={inputRef}
             value={quickAdd.value}
@@ -46,9 +78,12 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
             onPaste={quickAdd.handlePaste}
             placeholder="Add item..."
             disabled={isRecording}
-            className="h-7 border-0 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0 focus-visible:shadow-none"
+            className={cn(
+              'h-7 border-0 bg-transparent py-0 focus-visible:ring-0 focus-visible:shadow-none',
+              isInline ? 'px-0 text-[15px]' : 'px-0.5 text-base',
+            )}
           />
-          {!isRecording && quickAdd.value.trim() && (
+          {!isInline && !isRecording && quickAdd.value.trim() && (
             <Tooltip content="Add item">
               <button
                 type="button"
@@ -82,11 +117,17 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
       )}
 
       {dictation && dictation.state !== 'idle' && !isRecording && (
-        <DictationButton dictation={dictation} />
+        isInline ? (
+          <div className="px-3.5 py-2">
+            <DictationButton dictation={dictation} />
+          </div>
+        ) : (
+          <DictationButton dictation={dictation} />
+        )
       )}
 
       {(quickAdd.state === 'expanded' || quickAdd.state === 'processing') && (
-        <div className="space-y-2">
+        <div className={panelClass}>
           <textarea
             autoComplete="off"
             value={quickAdd.expandedText}
@@ -136,7 +177,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
       )}
 
       {quickAdd.state === 'preview' && quickAdd.structuredItems && (
-        <div className="space-y-2">
+        <div className={panelClass}>
           <div className="flex flex-wrap gap-1.5">
             {quickAdd.structuredItems.map((item, i) => {
               const checked = quickAdd.checked.get(i) !== false;

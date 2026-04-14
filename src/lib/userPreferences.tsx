@@ -50,7 +50,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   usage_tracking_manual_lookup: true,
   usage_tracking_view: false,
   usage_tracking_modify: false,
-  usage_granularity: 'monthly',
+  usage_granularity: 'daily',
 };
 
 const PREFERENCES_EVENT = 'user-preferences-changed';
