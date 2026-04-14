@@ -77,4 +77,13 @@ describe('SettingsLayout', () => {
     renderSettings('/settings/account');
     expect(screen.getByRole('navigation', { name: 'Settings' })).toBeTruthy();
   });
+
+  it('desktop: active nav link has aria-current="page"', () => {
+    setDesktop(true);
+    renderSettings('/settings/account');
+    const activeLink = screen.getByRole('link', { name: /account/i });
+    expect(activeLink.getAttribute('aria-current')).toBe('page');
+    const inactiveLink = screen.getByRole('link', { name: /preferences/i });
+    expect(inactiveLink.getAttribute('aria-current')).toBeNull();
+  });
 });

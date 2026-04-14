@@ -23,7 +23,7 @@ export function SettingsSection({
         {action}
       </div>
       {description && (
-        <p className="text-[13px] text-[var(--text-tertiary)] mb-3 mt-2">
+        <p className="text-[var(--text-sm)] text-[var(--text-tertiary)] mb-3 mt-2">
           {description}
         </p>
       )}

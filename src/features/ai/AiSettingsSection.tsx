@@ -41,6 +41,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   const { showToast } = useToast();
 
   const setup = useAiProviderSetup({ providerConfigs: settings?.providerConfigs });
+  const { setProvider, setApiKey, setModel, setEndpointUrl } = setup;
 
   const [customPrompt, setCustomPrompt] = useState('');
   const [commandPrompt, setCommandPrompt] = useState('');
@@ -59,10 +60,10 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   // Populate form from loaded settings
   useEffect(() => {
     if (settings) {
-      setup.setProvider(settings.provider);
-      setup.setApiKey(settings.apiKey);
-      setup.setModel(settings.model);
-      setup.setEndpointUrl(settings.endpointUrl || '');
+      setProvider(settings.provider);
+      setApiKey(settings.apiKey);
+      setModel(settings.model);
+      setEndpointUrl(settings.endpointUrl || '');
       setCustomPrompt(settings.customPrompt || '');
       setCommandPrompt(settings.commandPrompt || '');
       setQueryPrompt(settings.queryPrompt || '');
@@ -80,8 +81,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setTopP(settings.topP != null ? String(settings.topP) : '');
       setRequestTimeout(settings.requestTimeout != null ? String(settings.requestTimeout) : '');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, setup.setApiKey, setup.setEndpointUrl, setup.setModel, setup.setProvider]);
+  }, [settings, setProvider, setApiKey, setModel, setEndpointUrl]);
 
   async function handleTest() {
     setup.setTestResult(null);

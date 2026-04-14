@@ -8,7 +8,7 @@ interface SettingsSidebarProps {
 }
 
 const itemBase =
-  'flex items-center gap-2.5 rounded-[var(--radius-xs)] px-3 py-2 text-[14px] font-medium transition-colors';
+  'flex items-center gap-2.5 rounded-[var(--radius-xs)] px-3 py-2 text-[var(--text-base)] font-medium transition-colors';
 
 export function SettingsSidebar({ mainCategories, adminCategories }: SettingsSidebarProps) {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ export function SettingsSidebar({ mainCategories, adminCategories }: SettingsSid
       className="flex w-[220px] shrink-0 flex-col overflow-y-auto border-r border-[var(--border-flat)] bg-[var(--bg-input)]/50"
     >
       <div className="px-4 pt-5 pb-3">
-        <h1 className="text-[18px] font-bold text-[var(--text-primary)]">Settings</h1>
+        <h1 className="text-[var(--text-lg)] font-bold text-[var(--text-primary)]">Settings</h1>
       </div>
 
       <div className="flex flex-1 flex-col gap-0.5 px-2 pb-4">

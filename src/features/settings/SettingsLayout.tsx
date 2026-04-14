@@ -68,13 +68,13 @@ export function SettingsLayout() {
         <button
           type="button"
           onClick={() => navigate(backTo)}
-          className={cn('flex items-center justify-center rounded-[var(--radius-xs)] p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]', focusRing)}
+          className={cn('flex size-11 items-center justify-center rounded-[var(--radius-xs)] -ml-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]', focusRing)}
           aria-label="Back to settings"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         {pageLabel && (
-          <h1 className="text-[18px] font-bold text-[var(--text-primary)]">{pageLabel}</h1>
+          <h1 className="text-[var(--text-lg)] font-bold text-[var(--text-primary)]">{pageLabel}</h1>
         )}
       </div>
       <Outlet />

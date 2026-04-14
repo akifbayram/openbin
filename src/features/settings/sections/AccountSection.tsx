@@ -101,18 +101,24 @@ export function AccountSection() {
   useWarnOnUnload(profileDirty);
 
   useEffect(() => {
-    fetch('/api/auth/status')
+    const abort = new AbortController();
+    fetch('/api/auth/status', { signal: abort.signal })
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data.oauthProviders)) setOauthProviders(data.oauthProviders);
       })
       .catch(() => {});
 
-    apiFetch<{ results: { provider: string; email: string | null; created_at: string }[] }>('/api/auth/oauth/links')
+    apiFetch<{ results: { provider: string; email: string | null; created_at: string }[] }>(
+      '/api/auth/oauth/links',
+      { signal: abort.signal },
+    )
       .then((data) => setOauthLinks(data.results))
       .catch((err) => {
+        if (abort.signal.aborted) return;
         showToast({ message: getErrorMessage(err, 'Failed to load connected accounts'), variant: 'error' });
       });
+    return () => abort.abort();
   }, [showToast]);
 
   const passwordChecks = useMemo(() => computePasswordChecks(newPassword), [newPassword]);
@@ -287,10 +293,10 @@ export function AccountSection() {
                 type="button"
                 onClick={handleRemoveAvatar}
                 disabled={uploadingAvatar}
-                className="absolute -top-1.5 -right-1.5 z-10 h-6 w-6 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-flat)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors duration-150 disabled:opacity-50 opacity-0 group-hover:opacity-100 max-lg:opacity-100"
+                className="absolute -top-1 -right-1 z-10 h-8 w-8 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-flat)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors duration-150 disabled:opacity-50 opacity-0 group-hover:opacity-100 max-lg:opacity-100"
                 aria-label="Remove avatar"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
             <button
@@ -316,9 +322,9 @@ export function AccountSection() {
             </button>
           </div>
           <div className="min-w-0">
-            <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">{user.displayName || user.email}</p>
-            <p className="text-[13px] text-[var(--text-tertiary)]">{user.email}</p>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[12px] text-[var(--text-tertiary)]">
+            <p className="text-[var(--text-md)] font-semibold text-[var(--text-primary)] truncate">{user.displayName || user.email}</p>
+            <p className="text-[var(--text-sm)] text-[var(--text-tertiary)]">{user.email}</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[var(--text-xs)] text-[var(--text-tertiary)]">
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {memberSince}
@@ -353,7 +359,6 @@ export function AccountSection() {
                 const err = validateDisplayName(displayName);
                 if (err) setProfileErrors({ displayName: err });
               }}
-              placeholder="Your name"
               maxLength={100}
               required
               aria-invalid={!!profileErrors.displayName}
@@ -438,7 +443,7 @@ export function AccountSection() {
             {newPassword && <PasswordChecklist checks={passwordChecks} />}
 
             {passwordError && (
-              <p role="alert" className="text-[13px] text-[var(--destructive)]">{passwordError}</p>
+              <p role="alert" className="text-[var(--text-sm)] text-[var(--destructive)]">{passwordError}</p>
             )}
 
             <Button
@@ -461,17 +466,23 @@ export function AccountSection() {
               const providerLabel = provider === 'google' ? 'Google' : 'Apple';
               const canUnlink = oauthLinks.length > 1 || hasPassword;
 
+              const hintId = `${provider}-unlink-hint`;
               return (
-                <div key={provider} className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-active)] flex items-center justify-center">
+                <div key={provider} className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-active)] flex items-center justify-center shrink-0">
                       <Link2 className="h-4 w-4 text-[var(--text-secondary)]" />
                     </div>
-                    <div>
-                      <p className="text-[14px] font-medium text-[var(--text-primary)]">{providerLabel}</p>
-                      <p className="text-[12px] text-[var(--text-tertiary)]">
+                    <div className="min-w-0">
+                      <p className="text-[var(--text-base)] font-medium text-[var(--text-primary)]">{providerLabel}</p>
+                      <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">
                         {link ? (link.email || 'Connected') : 'Not connected'}
                       </p>
+                      {link && !canUnlink && (
+                        <p id={hintId} className="text-[var(--text-xs)] text-[var(--text-tertiary)] mt-0.5">
+                          Set a password to disconnect
+                        </p>
+                      )}
                     </div>
                   </div>
                   {link ? (
@@ -479,6 +490,7 @@ export function AccountSection() {
                       variant="ghost"
                       size="sm"
                       disabled={!canUnlink || unlinking === provider}
+                      aria-describedby={!canUnlink ? hintId : undefined}
                       onClick={async () => {
                         setUnlinking(provider);
                         try {
@@ -491,7 +503,6 @@ export function AccountSection() {
                           setUnlinking(null);
                         }
                       }}
-                      title={!canUnlink ? 'Set a password before disconnecting your last login method' : undefined}
                     >
                       {unlinking === provider ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2Off className="h-4 w-4 mr-1.5" />}
                       Disconnect
@@ -532,7 +543,7 @@ export function AccountSection() {
             <Tooltip content="Create API key" side="bottom">
               <Button
                 onClick={() => setCreateOpen(true)}
-                size="icon-sm"
+                size="icon"
                 aria-label="Create API key"
               >
                 <Plus className="h-4 w-4" />
@@ -541,7 +552,7 @@ export function AccountSection() {
           }
         >
           {keysLoading ? null : keys.length === 0 ? (
-            <p className="text-[13px] text-[var(--text-tertiary)] py-4 text-center">
+            <p className="text-[var(--text-sm)] text-[var(--text-tertiary)] py-4 text-center">
               No API keys yet. Create one to connect integrations.
             </p>
           ) : (
@@ -556,10 +567,10 @@ export function AccountSection() {
                       <Key className="h-4 w-4 text-[var(--text-secondary)]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[14px] font-medium text-[var(--text-primary)] truncate">
+                      <p className="text-[var(--text-base)] font-medium text-[var(--text-primary)] truncate">
                         {k.name || k.key_prefix}
                       </p>
-                      <p className="text-[12px] text-[var(--text-tertiary)]">
+                      <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">
                         {k.key_prefix}... &middot; Created {formatDate(k.created_at)}
                         {k.last_used_at ? ` \u00b7 Last used ${formatDate(k.last_used_at)}` : ''}
                       </p>
@@ -568,12 +579,12 @@ export function AccountSection() {
                   <Tooltip content="Revoke API key" side="bottom">
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon"
                       className="text-[var(--destructive)] shrink-0"
                       onClick={() => setRevokeId(k.id)}
                       aria-label="Revoke API key"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </Tooltip>
                 </div>
@@ -621,7 +632,6 @@ export function AccountSection() {
                   value={deletePassword}
                   onChange={(e) => setDeletePassword(e.target.value)}
                   placeholder="Password"
-                  autoFocus
                   required
                 />
               </div>
@@ -654,14 +664,15 @@ export function AccountSection() {
           {newKey ? (
             <div className="space-y-4">
               <div className="row">
-                <code className="flex-1 text-[13px] bg-[var(--bg-input)] px-3 py-2 rounded-[var(--radius-sm)] break-all select-all font-mono">
+                <code className="flex-1 text-[var(--text-sm)] bg-[var(--bg-input)] px-3 py-2 rounded-[var(--radius-sm)] break-all select-all font-mono">
                   {newKey}
                 </code>
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="icon"
                   className="shrink-0"
                   onClick={handleCopy}
+                  aria-label={copied ? 'Copied' : 'Copy API key'}
                 >
                   {copied ? <Check className="h-4 w-4 text-[var(--color-success)]" /> : <Copy className="h-4 w-4" />}
                 </Button>
@@ -681,7 +692,6 @@ export function AccountSection() {
                   value={keyName}
                   onChange={(e) => setKeyName(e.target.value)}
                   placeholder="e.g., Home Assistant, Alexa"
-                  autoFocus
                 />
               </div>
               <DialogFooter>

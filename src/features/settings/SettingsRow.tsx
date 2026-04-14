@@ -40,7 +40,7 @@ export function SettingsRow({
       <div className="flex-1 min-w-0">
         <div
           className={cn(
-            'text-[14px]',
+            'text-[var(--text-base)]',
             destructive
               ? 'text-[var(--destructive)]'
               : 'text-[var(--text-primary)]',
@@ -49,7 +49,7 @@ export function SettingsRow({
           {label}
         </div>
         {description && (
-          <div className="text-[13px] text-[var(--text-tertiary)]">
+          <div className="text-[var(--text-sm)] text-[var(--text-tertiary)]">
             {description}
           </div>
         )}

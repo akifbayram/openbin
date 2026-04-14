@@ -52,6 +52,7 @@ export function AiSection() {
   const { showToast } = useToast();
 
   const setup = useAiProviderSetup({ providerConfigs: settings?.providerConfigs });
+  const { setProvider, setApiKey, setModel, setEndpointUrl } = setup;
 
   const [customPrompt, setCustomPrompt] = useState('');
   const [commandPrompt, setCommandPrompt] = useState('');
@@ -70,10 +71,10 @@ export function AiSection() {
   // Populate form from loaded settings
   useEffect(() => {
     if (settings) {
-      setup.setProvider(settings.provider);
-      setup.setApiKey(settings.apiKey);
-      setup.setModel(settings.model);
-      setup.setEndpointUrl(settings.endpointUrl || '');
+      setProvider(settings.provider);
+      setApiKey(settings.apiKey);
+      setModel(settings.model);
+      setEndpointUrl(settings.endpointUrl || '');
       setCustomPrompt(settings.customPrompt || '');
       setCommandPrompt(settings.commandPrompt || '');
       setQueryPrompt(settings.queryPrompt || '');
@@ -91,8 +92,7 @@ export function AiSection() {
       setTopP(settings.topP != null ? String(settings.topP) : '');
       setRequestTimeout(settings.requestTimeout != null ? String(settings.requestTimeout) : '');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, setup.setApiKey, setup.setEndpointUrl, setup.setModel, setup.setProvider]);
+  }, [settings, setProvider, setApiKey, setModel, setEndpointUrl]);
 
   async function handleTest() {
     setup.setTestResult(null);
@@ -186,7 +186,7 @@ export function AiSection() {
     reorganization: { value: reorganizationPrompt, set: setReorganizationPrompt },
   };
   const V = ({ children }: { children: string }) => (
-    <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{children}</code>
+    <code className="text-[var(--text-xs)] px-1 py-0.5 rounded bg-[var(--bg-input)]">{children}</code>
   );
   const helpText: Record<PromptTab, React.ReactNode> = {
     analysis: <>Available variables: <V>{'{available_tags}'}</V>. Custom fields are appended automatically.</>,
@@ -243,14 +243,14 @@ export function AiSection() {
                 )}>
                   <SettingsSection label="Provider">
                     {settings === null && !touched && (
-                      <p className="text-[13px] text-[var(--text-secondary)] mb-3">
+                      <p className="text-[var(--text-sm)] text-[var(--text-secondary)] mb-3">
                         Connect an AI provider to unlock photo analysis, item extraction from text and voice, and natural language commands for managing your bins.
                       </p>
                     )}
 
                     {settings?.source === 'env' && (
                       <div className="mb-3 px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 border border-[var(--accent)]/20">
-                        <p className="text-[13px] text-[var(--text-secondary)]">
+                        <p className="text-[var(--text-sm)] text-[var(--text-secondary)]">
                           AI configured by server. Save your own settings to override.
                         </p>
                       </div>
@@ -266,7 +266,7 @@ export function AiSection() {
 
                       {/* API Key */}
                       <div className="space-y-1.5">
-                        <label htmlFor="ai-api-key" className="text-[13px] text-[var(--text-secondary)]">API Key</label>
+                        <label htmlFor="ai-api-key" className="text-[var(--text-sm)] text-[var(--text-secondary)]">API Key</label>
                         <div className="relative">
                           <Input
                             id="ai-api-key"
@@ -289,7 +289,7 @@ export function AiSection() {
 
                       {/* Model */}
                       <div className="space-y-1.5">
-                        <label htmlFor="ai-model" className="text-[13px] text-[var(--text-secondary)]">Model</label>
+                        <label htmlFor="ai-model" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Model</label>
                         <Input
                           id="ai-model"
                           value={setup.model}
@@ -301,7 +301,7 @@ export function AiSection() {
                       {/* Endpoint URL — only for openai-compatible */}
                       {setup.provider === 'openai-compatible' && (
                         <div className="space-y-1.5">
-                          <label htmlFor="ai-endpoint" className="text-[13px] text-[var(--text-secondary)]">Endpoint URL</label>
+                          <label htmlFor="ai-endpoint" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Endpoint URL</label>
                           <Input
                             id="ai-endpoint"
                             value={setup.endpointUrl}
@@ -313,7 +313,7 @@ export function AiSection() {
 
                       {/* Required fields hint */}
                       {touched && !setup.apiKey && !setup.model && (
-                        <p className="text-[12px] text-[var(--text-tertiary)]" role="alert">
+                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]" role="alert">
                           API key and model are required.
                         </p>
                       )}
@@ -361,23 +361,23 @@ export function AiSection() {
                         )}
                       />
                       {demoMode && (
-                        <p className="text-[12px] text-[var(--text-tertiary)] italic">Custom prompts are disabled for demo accounts.</p>
+                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)] italic">Custom prompts are disabled for demo accounts.</p>
                       )}
                       <Textarea
                         value={activePrompt.value}
                         onChange={(e) => activePrompt.set(e.target.value)}
                         placeholder={defaultPrompts?.[activePromptTab] ?? ''}
-                        className="font-mono text-[13px] min-h-[200px] resize-y"
+                        className="font-mono text-[var(--text-sm)] min-h-[200px] resize-y"
                         maxLength={10000}
                         disabled={demoMode}
                       />
                       <div className="row-spread">
-                        <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
+                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
                         {!demoMode && (activePrompt.value.trim() ? (
                           <button
                             type="button"
                             onClick={() => activePrompt.set('')}
-                            className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
+                            className="flex items-center gap-1 text-[var(--text-xs)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
                           >
                             <RotateCcw className="h-3 w-3" />
                             Reset to Default
@@ -386,7 +386,7 @@ export function AiSection() {
                           <button
                             type="button"
                             onClick={() => activePrompt.set(defaultPrompts?.[activePromptTab] ?? '')}
-                            className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
+                            className="text-[var(--text-xs)] text-[var(--accent)] hover:underline shrink-0 ml-2"
                           >
                             Load default to customize
                           </button>
@@ -397,9 +397,9 @@ export function AiSection() {
 
                   {/* Advanced AI Parameters */}
                   <SettingsSection label="Advanced">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <label htmlFor="ai-temperature" className="text-[13px] text-[var(--text-secondary)]">Temperature</label>
+                        <label htmlFor="ai-temperature" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Temperature</label>
                         <div className="relative">
                           <Input
                             id="ai-temperature"
@@ -418,10 +418,10 @@ export function AiSection() {
                             </button>
                           )}
                         </div>
-                        <p className="text-[11px] text-[var(--text-tertiary)]">0.0–2.0</p>
+                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">0.0–2.0</p>
                       </div>
                       <div className="space-y-1.5">
-                        <label htmlFor="ai-max-tokens" className="text-[13px] text-[var(--text-secondary)]">Max Tokens</label>
+                        <label htmlFor="ai-max-tokens" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Max Tokens</label>
                         <div className="relative">
                           <Input
                             id="ai-max-tokens"
@@ -440,10 +440,10 @@ export function AiSection() {
                             </button>
                           )}
                         </div>
-                        <p className="text-[11px] text-[var(--text-tertiary)]">100–16,000</p>
+                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">100–16,000</p>
                       </div>
                       <div className="space-y-1.5">
-                        <label htmlFor="ai-top-p" className="text-[13px] text-[var(--text-secondary)]">Top P</label>
+                        <label htmlFor="ai-top-p" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Top P</label>
                         <div className="relative">
                           <Input
                             id="ai-top-p"
@@ -462,10 +462,10 @@ export function AiSection() {
                             </button>
                           )}
                         </div>
-                        <p className="text-[11px] text-[var(--text-tertiary)]">0.0–1.0</p>
+                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">0.0–1.0</p>
                       </div>
                       <div className="space-y-1.5">
-                        <label htmlFor="ai-timeout" className="text-[13px] text-[var(--text-secondary)]">Request Timeout</label>
+                        <label htmlFor="ai-timeout" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Request Timeout</label>
                         <div className="relative">
                           <Input
                             id="ai-timeout"
@@ -484,17 +484,17 @@ export function AiSection() {
                             </button>
                           )}
                         </div>
-                        <p className="text-[11px] text-[var(--text-tertiary)]">10–300 seconds</p>
+                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">10–300 seconds</p>
                       </div>
                     </div>
                   </SettingsSection>
 
                   {/* Test result */}
                   {setup.testResult === 'success' && (
-                    <p className="text-[13px] text-[var(--color-success)] mb-3" aria-live="polite">Connected to {setup.model} successfully</p>
+                    <p className="text-[var(--text-sm)] text-[var(--color-success)] mb-3" aria-live="polite">Connected to {setup.model} successfully</p>
                   )}
                   {setup.testResult === 'error' && (
-                    <p className="text-[13px] text-[var(--destructive)] mb-3" role="alert">{testError}</p>
+                    <p className="text-[var(--text-sm)] text-[var(--destructive)] mb-3" role="alert">{testError}</p>
                   )}
 
                   {/* Test / Save / Remove buttons */}

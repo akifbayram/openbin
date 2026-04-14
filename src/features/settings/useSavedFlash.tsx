@@ -24,7 +24,7 @@ export function SavedBadge({ visible }: { visible: boolean }) {
     <span
       aria-live="polite"
       className={cn(
-        'inline-flex items-center gap-1 text-[12px] font-normal text-[var(--color-success)] transition-opacity duration-300',
+        'inline-flex items-center gap-1 text-[var(--text-xs)] font-normal text-[var(--color-success)] transition-opacity duration-300',
         visible ? 'opacity-100' : 'opacity-0',
       )}
     >

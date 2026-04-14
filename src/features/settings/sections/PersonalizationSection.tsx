@@ -46,7 +46,7 @@ export function PersonalizationSection() {
             const raw = settings[key];
             const parts = raw ? raw.split('|') : ['', ''];
             return (
-              <div key={key} className="grid grid-cols-2 gap-2">
+              <div key={key} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Input
                   value={parts[0] || ''}
                   onChange={(e) => {

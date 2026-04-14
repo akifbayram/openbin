@@ -27,13 +27,13 @@ export function AboutSection() {
       <SettingsSection label="Info">
         <div className="py-3 border-b border-[var(--border-subtle)]">
           <div className="flex items-baseline gap-2">
-            <p className="text-[15px] font-semibold text-[var(--text-primary)]">{settings.appName}</p>
-            <span className="text-[13px] text-[var(--text-tertiary)]">v{__APP_VERSION__}</span>
+            <p className="text-[var(--text-md)] font-semibold text-[var(--text-primary)]">{settings.appName}</p>
+            <span className="text-[var(--text-sm)] text-[var(--text-tertiary)]">v{__APP_VERSION__}</span>
           </div>
         </div>
         {activeLocation && (
           <div className="py-3 border-b border-[var(--border-subtle)]">
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-[var(--text-secondary)]">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[var(--text-sm)] text-[var(--text-secondary)]">
               <span>{binCount} {binCount !== 1 ? t.bins : t.bin}</span>
               {activeLocation.area_count != null && (
                 <span>{activeLocation.area_count} {activeLocation.area_count !== 1 ? t.areas : t.area}</span>
@@ -52,7 +52,7 @@ export function AboutSection() {
             href="https://github.com/akifbayram/openbin"
             target="_blank"
             rel="noopener noreferrer"
-            className={cn('inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors rounded-[var(--radius-xs)]', focusRing)}
+            className={cn('inline-flex items-center gap-1.5 text-[var(--text-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors rounded-[var(--radius-xs)]', focusRing)}
           >
             GitHub
             <ExternalLink className="h-3 w-3" />
@@ -63,7 +63,7 @@ export function AboutSection() {
               updatePreferences({ tour_completed: false, tour_version: 0 });
               navigate('/bins', { state: { startTour: true } });
             }}
-            className={cn('inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors rounded-[var(--radius-xs)]', focusRing)}
+            className={cn('inline-flex items-center gap-1.5 text-[var(--text-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors rounded-[var(--radius-xs)]', focusRing)}
           >
             <Sparkles className="h-3 w-3" />
             Replay Tour

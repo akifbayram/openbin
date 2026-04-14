@@ -23,15 +23,25 @@
 /* ─── Flat Material Design Tokens ─── */
 :root {
   --font-heading: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Typography scale */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 22px;
+
   --bg-base: #ffffff;
   --bg-sidebar: #ebebeb;
   --bg-elevated: #ffffff;
   --bg-flat: #ffffff;
   --bg-flat-heavy: #ffffff;
   --bg-popover: #ffffff;
-  --bg-input: #ffffff;
-  --bg-hover: #dcdcdc;
-  --bg-active: #e0e0e0;
+  --bg-input: #f7f7f7;
+  --bg-hover: #e8e8e8;
+  --bg-active: #d8d8d8;
   --border-flat: #e0e0e0;
   --border-subtle: #ececec;
   --text-primary: #1c1c1e;
@@ -68,9 +78,9 @@
   --ai-accent-hover: #4e1fd0;
   --accent-active: #4520b8;
   --destructive-active: #a81b1b;
-  --color-success: #34c759;
-  --color-success-soft: rgba(52, 199, 89, 0.12);
-  --color-success-ring: rgba(52, 199, 89, 0.25);
+  --color-success: #1d8338;
+  --color-success-soft: rgba(29, 131, 56, 0.12);
+  --color-success-ring: rgba(29, 131, 56, 0.25);
   --color-warning: #7c3aed;
   --color-warning-soft: rgba(124, 58, 237, 0.10);
   --color-warning-ring: rgba(124, 58, 237, 0.25);

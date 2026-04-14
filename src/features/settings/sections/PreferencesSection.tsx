@@ -64,7 +64,7 @@ function ItemPageSizeSelect({ value, onChange, ariaLabel }: ItemPageSizeSelectPr
       <button
         type="button"
         onClick={toggle}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] border border-[var(--border-flat)] text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] border border-[var(--border-flat)] text-[var(--text-sm)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
         aria-haspopup="listbox"
         aria-expanded={visible}
         aria-label={ariaLabel}
@@ -90,7 +90,7 @@ function ItemPageSizeSelect({ value, onChange, ariaLabel }: ItemPageSizeSelectPr
                 aria-selected={selected}
                 onClick={() => { onChange(opt); close(); }}
                 className={cn(
-                  'w-full flex items-center gap-2 px-3 py-1.5 text-[13px] transition-colors',
+                  'w-full flex items-center gap-2 px-3 py-1.5 text-[var(--text-sm)] transition-colors',
                   selected
                     ? 'text-[var(--text-primary)] bg-[var(--bg-hover)]'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
@@ -159,7 +159,7 @@ export function PreferencesSection() {
           description={
             <span>
               Press{' '}
-              <kbd className="inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-[var(--radius-sm)] bg-[var(--bg-input)] font-mono text-[11px] text-[var(--text-secondary)] leading-none">
+              <kbd className="inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-[var(--radius-sm)] bg-[var(--bg-input)] font-mono text-[var(--text-xs)] text-[var(--text-secondary)] leading-none">
                 ?
               </kbd>{' '}
               to view all shortcuts
@@ -248,7 +248,7 @@ export function PreferencesSection() {
           }
         />
 
-        <div className="grid grid-cols-2 gap-3 pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
           <FormField label="Recent bins shown" htmlFor="recentBinsCount">
             <Input
               id="recentBinsCount"

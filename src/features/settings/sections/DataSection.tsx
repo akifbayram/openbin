@@ -1,5 +1,5 @@
 import { Clock, Download, Trash2, Upload } from 'lucide-react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +20,17 @@ import { SettingsRow } from '../SettingsRow';
 import { SettingsSection } from '../SettingsSection';
 import { useDataSectionActions } from '../useDataSectionActions';
 
+const stepLabelClasses = 'text-[var(--text-sm)] font-medium text-[var(--text-tertiary)] uppercase tracking-wider';
+
+function StepLabel({ step, total, id, children }: { step: number; total: number; id?: string; children: ReactNode }) {
+  return (
+    <span id={id} className={stepLabelClasses}>
+      <span aria-hidden="true">{step}. </span>{children}
+      <span className="sr-only"> (step {step} of {total})</span>
+    </span>
+  );
+}
+
 function LocationPickerSection({
   locations,
   value,
@@ -32,7 +43,7 @@ function LocationPickerSection({
   if (locations.length <= 1) return null;
   return (
     <div className="space-y-2.5">
-      <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Location</span>
+      <span className={stepLabelClasses}>Location</span>
       <div className="max-h-40 overflow-y-auto">
         <LocationSelectList locations={locations} value={value} onChange={onChange} />
       </div>
@@ -153,7 +164,7 @@ export function DataSection() {
           <div className="space-y-5">
             <LocationPickerSection locations={locations} value={selectedLocationId} onChange={setSelectedLocationId} />
             <div className="space-y-2.5">
-              <span id="export-format-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
+              <span id="export-format-label" className={stepLabelClasses}>Format</span>
               <div className="flex flex-col gap-3" role="radiogroup" aria-labelledby="export-format-label">
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
@@ -165,7 +176,7 @@ export function DataSection() {
                   />
                   <div>
                     <span className="text-[var(--text-primary)]">Backup (ZIP)</span>
-                    <p className="text-[13px] text-[var(--text-tertiary)]">All data including photos</p>
+                    <p className="text-[var(--text-sm)] text-[var(--text-tertiary)]">All data including photos</p>
                   </div>
                 </label>
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -178,7 +189,7 @@ export function DataSection() {
                   />
                   <div>
                     <span className="text-[var(--text-primary)]">Backup (JSON)</span>
-                    <p className="text-[13px] text-[var(--text-tertiary)]">Data and settings, no photos</p>
+                    <p className="text-[var(--text-sm)] text-[var(--text-tertiary)]">Data and settings, no photos</p>
                   </div>
                 </label>
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -191,7 +202,7 @@ export function DataSection() {
                   />
                   <div>
                     <span className="text-[var(--text-primary)]">Spreadsheet (CSV)</span>
-                    <p className="text-[13px] text-[var(--text-tertiary)]">Open in Excel or Google Sheets</p>
+                    <p className="text-[var(--text-sm)] text-[var(--text-tertiary)]">Open in Excel or Google Sheets</p>
                   </div>
                 </label>
               </div>
@@ -222,7 +233,7 @@ export function DataSection() {
           <div className="space-y-5">
             <LocationPickerSection locations={locations} value={selectedLocationId} onChange={setSelectedLocationId} />
             <div className="space-y-2.5">
-              <span id="import-format-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">1. Format</span>
+              <StepLabel step={1} total={3} id="import-format-label">Format</StepLabel>
               <div className="flex flex-col gap-3" role="radiogroup" aria-labelledby="import-format-label">
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
@@ -234,7 +245,7 @@ export function DataSection() {
                   />
                   <div>
                     <span className="text-[var(--text-primary)]">Backup (ZIP)</span>
-                    <p className="text-[13px] text-[var(--text-tertiary)]">All data including photos</p>
+                    <p className="text-[var(--text-sm)] text-[var(--text-tertiary)]">All data including photos</p>
                   </div>
                 </label>
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -247,7 +258,7 @@ export function DataSection() {
                   />
                   <div>
                     <span className="text-[var(--text-primary)]">Backup (JSON)</span>
-                    <p className="text-[13px] text-[var(--text-tertiary)]">Data and settings, no photos</p>
+                    <p className="text-[var(--text-sm)] text-[var(--text-tertiary)]">Data and settings, no photos</p>
                   </div>
                 </label>
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -260,14 +271,14 @@ export function DataSection() {
                   />
                   <div>
                     <span className="text-[var(--text-primary)]">Spreadsheet (CSV)</span>
-                    <p className="text-[13px] text-[var(--text-tertiary)]">Bins and items from a spreadsheet</p>
+                    <p className="text-[var(--text-sm)] text-[var(--text-tertiary)]">Bins and items from a spreadsheet</p>
                   </div>
                 </label>
               </div>
             </div>
 
             <div className="space-y-2.5">
-              <span id="import-mode-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">2. Mode</span>
+              <StepLabel step={2} total={3} id="import-mode-label">Mode</StepLabel>
               <div className="flex flex-col gap-3" role="radiogroup" aria-labelledby="import-mode-label">
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
@@ -279,7 +290,7 @@ export function DataSection() {
                   />
                   <div>
                     <span className="text-[var(--text-primary)]">Merge</span>
-                    <p className="text-[13px] text-[var(--text-tertiary)]">Add new data, skip existing</p>
+                    <p className="text-[var(--text-sm)] text-[var(--text-tertiary)]">Add new data, skip existing</p>
                   </div>
                 </label>
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -292,7 +303,7 @@ export function DataSection() {
                   />
                   <div>
                     <span className="text-[var(--text-primary)]">Replace</span>
-                    <p className={cn('text-[13px]', importMode === 'replace' ? 'text-[var(--destructive)]' : 'text-[var(--text-tertiary)]')}>
+                    <p className={cn('text-[var(--text-sm)]', importMode === 'replace' ? 'text-[var(--destructive)]' : 'text-[var(--text-tertiary)]')}>
                       Delete all existing data first
                     </p>
                   </div>
@@ -301,12 +312,12 @@ export function DataSection() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">3. File</span>
+              <StepLabel step={3} total={3}>File</StepLabel>
               <Button variant="outline" onClick={handleImportFileClick} disabled={importing}>
                 {hasImportFile ? 'Change File' : 'Select File'}
               </Button>
               {dryRunPreview && (
-                <div className="max-h-48 overflow-y-auto space-y-1 text-[13px]">
+                <div className="max-h-48 overflow-y-auto space-y-1 text-[var(--text-sm)]">
                   {dryRunPreview.toCreate.map((b) => (
                     <div key={b.name} className="flex items-center gap-2 px-2 py-1 rounded-[var(--radius-xs)]">
                       <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-success)] shrink-0" />
@@ -324,7 +335,7 @@ export function DataSection() {
                 </div>
               )}
               {importSummary && (
-                <p className="text-[13px] text-[var(--text-secondary)]">{importSummary}</p>
+                <p className="text-[var(--text-sm)] text-[var(--text-secondary)]">{importSummary}</p>
               )}
             </div>
           </div>
