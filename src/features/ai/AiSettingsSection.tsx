@@ -13,12 +13,11 @@ import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage } from '@/lib/utils';
 import type { AiTaskGroup } from '@/types';
 import { AI_PROVIDERS, KEY_PLACEHOLDERS, MODEL_HINTS, TASK_GROUP_META } from './aiConstants';
+import { PROMPT_HELP_TEXT, type PromptTab } from './promptHelpText';
 import { TaskRoutingSection } from './TaskRoutingSection';
 import { useAiProviderSetup } from './useAiProviderSetup';
 import { deleteAiSettings, deleteTaskOverride, saveAiSettings, saveTaskOverride, testAiConnection, useAiSettings } from './useAiSettings';
 import { useDefaultPrompts } from './useDefaultPrompts';
-
-type PromptTab = 'analysis' | 'command' | 'query' | 'structure' | 'reorganization';
 
 const PROMPT_TAB_META = [
   { key: 'analysis', label: 'Photo Analysis', shortLabel: 'Photos' },
@@ -291,16 +290,6 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     structure: { value: structurePrompt, set: setStructurePrompt },
                     reorganization: { value: reorganizationPrompt, set: setReorganizationPrompt },
                   };
-                  const V = ({ children }: { children: string }) => (
-                    <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{children}</code>
-                  );
-                  const helpText: Record<PromptTab, React.ReactNode> = {
-                    analysis: <>Available variables: <V>{'{available_tags}'}</V>. Custom fields are appended automatically.</>,
-                    command: <>Inventory context (bins, items, areas, tags, colors, icons) is passed automatically. This prompt defines the instructions only.</>,
-                    query: <>Inventory context (bins, items, areas, tags) is passed automatically. This prompt defines the instructions only.</>,
-                    structure: <>Bin name and existing items are appended automatically. This prompt defines the extraction rules.</>,
-                    reorganization: <>Available variables: <V>{'{available_tags}'}</V> <V>{'{max_bins_instruction}'}</V> <V>{'{area_instruction}'}</V> <V>{'{strictness_instruction}'}</V> <V>{'{granularity_instruction}'}</V> <V>{'{duplicates_instruction}'}</V> <V>{'{ambiguous_instruction}'}</V> <V>{'{outliers_instruction}'}</V> <V>{'{items_per_bin_instruction}'}</V> <V>{'{notes_instruction}'}</V></>,
-                  };
                   const active = promptMap[activePromptTab];
                   return (
                     <Disclosure label="Custom Prompts">
@@ -334,7 +323,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           disabled={demoMode}
                         />
                         <div className="row-spread">
-                          <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
+                          <p className="text-[12px] text-[var(--text-tertiary)]">{PROMPT_HELP_TEXT[activePromptTab]}</p>
                           {!demoMode && (active.value.trim() ? (
                             <button
                               type="button"

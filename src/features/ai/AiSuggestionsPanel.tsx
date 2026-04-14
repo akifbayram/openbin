@@ -1,4 +1,4 @@
-import { Check, RefreshCw } from 'lucide-react';
+import { Check, RefreshCw, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -107,10 +107,13 @@ export function AiSuggestionsPanel({
   const anySelected = (acceptName && hasName) || (acceptItems && hasItems) || (acceptTags && hasTags) || (acceptNotes && hasNotes) || (acceptCustomFields && hasCustomFields);
 
   return (
-    <Card className="border-t-2 border-t-[var(--accent)]">
+    <Card>
       <CardContent className="space-y-4">
         <div>
-          <Label>AI Suggestions</Label>
+          <Label className="flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-[var(--accent)]" />
+            AI Suggestions
+          </Label>
           {isReanalysis ? (
             <div className="flex items-center gap-1.5 mt-1 text-[13px] text-[var(--accent)]">
               <RefreshCw className="h-3 w-3" />
@@ -125,10 +128,7 @@ export function AiSuggestionsPanel({
 
         {/* Name */}
         {hasName && (
-          <button type="button" onClick={() => setAcceptName(!acceptName)} className={cn(
-            'flex items-start gap-3 cursor-pointer text-left w-full',
-            nameDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
-          )}>
+          <button type="button" onClick={() => setAcceptName(!acceptName)} className="flex items-start gap-3 cursor-pointer text-left w-full">
             <span className={cn(
               'shrink-0 mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors',
               acceptName ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)] bg-transparent',
@@ -150,10 +150,7 @@ export function AiSuggestionsPanel({
 
         {/* Items */}
         {hasItems && (
-          <button type="button" onClick={() => setAcceptItems(!acceptItems)} className={cn(
-            'flex items-start gap-3 cursor-pointer text-left w-full',
-            itemsDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
-          )}>
+          <button type="button" onClick={() => setAcceptItems(!acceptItems)} className="flex items-start gap-3 cursor-pointer text-left w-full">
             <span className={cn(
               'shrink-0 mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors',
               acceptItems ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)] bg-transparent',
@@ -187,10 +184,7 @@ export function AiSuggestionsPanel({
 
         {/* Tags */}
         {hasTags && (
-          <button type="button" onClick={() => setAcceptTags(!acceptTags)} className={cn(
-            'flex items-start gap-3 cursor-pointer text-left w-full',
-            tagsDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
-          )}>
+          <button type="button" onClick={() => setAcceptTags(!acceptTags)} className="flex items-start gap-3 cursor-pointer text-left w-full">
             <span className={cn(
               'shrink-0 mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors',
               acceptTags ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)] bg-transparent',
@@ -220,10 +214,7 @@ export function AiSuggestionsPanel({
 
         {/* Notes */}
         {hasNotes && (
-          <button type="button" onClick={() => setAcceptNotes(!acceptNotes)} className={cn(
-            'flex items-start gap-3 cursor-pointer text-left w-full',
-            notesDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
-          )}>
+          <button type="button" onClick={() => setAcceptNotes(!acceptNotes)} className="flex items-start gap-3 cursor-pointer text-left w-full">
             <span className={cn(
               'shrink-0 mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors',
               acceptNotes ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)] bg-transparent',

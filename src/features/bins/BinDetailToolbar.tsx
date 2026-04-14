@@ -7,7 +7,7 @@ import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { useMenuKeyboard } from '@/lib/useMenuKeyboard';
 import { usePopover } from '@/lib/usePopover';
-import { cn } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
 import type { Bin, Location } from '@/types';
 
 interface BinDetailToolbarProps {
@@ -130,28 +130,39 @@ export function BinDetailToolbar({
               if (e.key === 'Enter') { e.preventDefault(); commitName(); }
               if (e.key === 'Escape') { e.preventDefault(); setNameValue(bin.name); setEditingName(false); }
             }}
+            aria-label="Bin name"
             className="w-full bg-transparent text-[17px] font-semibold text-[var(--text-primary)] leading-tight border-b border-b-[var(--accent)] outline-none focus-visible:border-b-2 placeholder:text-[var(--text-tertiary)] p-0"
             placeholder="Name..."
           />
         ) : (
-          // biome-ignore lint/a11y/noStaticElementInteractions: role and handlers are both gated on canEdit
-          <div
-            className={cn(
-              'row-tight min-w-0',
-              canEdit && 'cursor-text',
-              nameSaved && 'animate-save-flash',
-            )}
-            onClick={canEdit ? () => { setNameValue(bin.name); setEditingName(true); } : undefined}
-            role={canEdit ? 'button' : undefined}
-            tabIndex={canEdit ? 0 : undefined}
-            onKeyDown={canEdit ? (e) => { if (e.key === 'Enter') { setNameValue(bin.name); setEditingName(true); } } : undefined}
-          >
-            <BinIcon className="hidden lg:block h-5 w-5 text-[var(--text-secondary)] shrink-0" />
-            <span className="text-[17px] font-semibold text-[var(--text-primary)] leading-tight truncate">{bin.name}</span>
-            {bin.visibility === 'private' && (
-              <Lock className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
-            )}
-          </div>
+          <h1 className={cn('m-0 min-w-0 text-[17px] font-semibold leading-tight', nameSaved && 'animate-save-flash')}>
+            {(() => {
+              const inner = (
+                <>
+                  <BinIcon className="hidden lg:block h-5 w-5 text-[var(--text-secondary)] shrink-0" />
+                  <span className="text-[17px] text-[var(--text-primary)] truncate">{bin.name}</span>
+                  {bin.visibility === 'private' && (
+                    <Lock className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" aria-label="Private" />
+                  )}
+                </>
+              );
+              return canEdit ? (
+                <button
+                  type="button"
+                  onClick={() => { setNameValue(bin.name); setEditingName(true); }}
+                  className={cn(
+                    'row-tight min-w-0 w-full cursor-text text-left bg-transparent outline-none rounded-[var(--radius-xs)] font-semibold',
+                    focusRing,
+                  )}
+                  aria-label={`Edit name: ${bin.name}`}
+                >
+                  {inner}
+                </button>
+              ) : (
+                <span className="row-tight min-w-0">{inner}</span>
+              );
+            })()}
+          </h1>
         )}
       </div>
 

@@ -1,7 +1,7 @@
 import { generateObject } from 'ai';
 import type { AiProviderConfig } from './aiCaller.js';
 import { createPinnedFetch, mapSdkError, validateEndpointUrl } from './aiCaller.js';
-import { HARDENING_INSTRUCTION, resolvePrompt, validateAiOutput } from './aiSanitize.js';
+import { resolvePrompt, validateAiOutput, withHardening } from './aiSanitize.js';
 import { AiSuggestionsSchema } from './aiSchemas.js';
 import type { CustomFieldDef } from './customFieldHelpers.js';
 import { AI_CORRECTION_PROMPT, AI_REANALYSIS_PROMPT, DEFAULT_AI_PROMPT } from './defaultPrompts.js';
@@ -74,15 +74,15 @@ function stripTagPlaceholder(prompt: string): string {
 
 export function buildSystemPrompt(customPrompt?: string | null, isDemoUser?: boolean): string {
   const basePrompt = resolvePrompt(DEFAULT_AI_PROMPT, customPrompt, isDemoUser);
-  return stripTagPlaceholder(basePrompt) + HARDENING_INSTRUCTION;
+  return withHardening(stripTagPlaceholder(basePrompt));
 }
 
 export function buildCorrectionPrompt(): string {
-  return stripTagPlaceholder(AI_CORRECTION_PROMPT) + HARDENING_INSTRUCTION;
+  return withHardening(stripTagPlaceholder(AI_CORRECTION_PROMPT));
 }
 
 export function buildReanalysisPrompt(): string {
-  return stripTagPlaceholder(AI_REANALYSIS_PROMPT);
+  return withHardening(stripTagPlaceholder(AI_REANALYSIS_PROMPT));
 }
 
 /** Build the user-facing content parts for a reanalysis request (previous result JSON + instruction + images). */

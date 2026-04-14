@@ -92,7 +92,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => { quickAdd.handleAdd(); inputRef.current?.focus(); }}
                 disabled={quickAdd.saving}
-                className="shrink-0 flex items-center justify-center size-9 rounded-[var(--radius-lg)] text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50"
+                className="shrink-0 flex items-center justify-center size-11 rounded-[var(--radius-lg)] text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50"
                 aria-label="Add item"
               >
                 <Plus className="h-4 w-4" />
@@ -104,7 +104,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
               <button
                 type="button"
                 onClick={aiGated ? onUpgrade : quickAdd.handleAiClick}
-                className="shrink-0 flex items-center justify-center size-9 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
+                className="shrink-0 flex items-center justify-center size-11 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
                 aria-label="Add with AI"
               >
                 <Sparkles className="h-4 w-4" />

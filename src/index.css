@@ -523,12 +523,12 @@ body {
       rgba(255, 255, 255, 0.15) 1px,
       transparent 1px, transparent 20px
     );
-  animation: aiGridFade 8s ease-out forwards;
+  animation: aiGridFade 4s ease-out forwards;
 }
 
-/* Progressive denoise — blur decreases over 8s, never fully resolves */
+/* Progressive denoise — blur decreases over 4s, never fully resolves */
 .ai-photo-shimmer img {
-  animation: aiDenoise 8s ease-out forwards;
+  animation: aiDenoise 4s ease-out forwards;
 }
 
 @keyframes aiDenoise {

@@ -1,13 +1,13 @@
 import { Button } from '@/components/ui/button';
 import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
-import { needsLightText, resolveColor } from '@/lib/colorPalette';
+import { getContrastBw, resolveColor } from '@/lib/colorPalette';
 import { DEMO_BIN } from '../onboardingConstants';
 
 const demoBinPreset = resolveColor(DEMO_BIN.color);
 const demoBinBgCss = demoBinPreset?.bgCss;
 const demoBinBgHex = demoBinPreset?.bg ?? '#ffffff';
-const demoBinTextColor = needsLightText(demoBinBgHex) ? '#ffffff' : '#000000';
+const demoBinTextColor = getContrastBw(demoBinBgHex);
 const demoBinColors = { dark: demoBinTextColor, light: demoBinBgHex } as const;
 const demoBinContainerStyle = demoBinBgCss ? { background: demoBinBgCss } : undefined;
 const demoBinShortCodeStyle = { color: demoBinTextColor } as const;

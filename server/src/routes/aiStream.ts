@@ -96,7 +96,7 @@ streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAi
     system: buildQuerySysPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
     userContent: buildQueryUserMsg(question, context),
     priorMessages,
-    ...streamOpts(settings, { maxTokens: 4096 }),
+    ...streamOpts(settings, { maxTokens: 4096, temperature: 0.2 }),
   });
 }));
 
@@ -147,7 +147,7 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
       system: buildQuerySysPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
       userContent: buildQueryUserMsg(`${scopeNote}${text}`, queryContext),
       priorMessages,
-      ...streamOpts(settings, { maxTokens: 4096 }),
+      ...streamOpts(settings, { maxTokens: 4096, temperature: 0.2 }),
     });
   } else {
     const [{ settings, model }, context] = await Promise.all([
@@ -278,7 +278,7 @@ streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), check
 
   const correctionPreamble = buildContextPreamble(existingTags, customFieldDefs);
   const sanitizedCorrection = sanitizeForPrompt(correctionText);
-  const userMessage = `${correctionPreamble}<user_data type="previous_result" trust="none">\n${JSON.stringify(safePrevious, null, 2)}\n</user_data>\n\n<user_data type="correction" trust="none">\n${sanitizedCorrection}\n</user_data>`;
+  const userMessage = `${correctionPreamble}<previous_result>\n${JSON.stringify(safePrevious, null, 2)}\n</previous_result>\n\n<correction_feedback>\n${sanitizedCorrection}\n</correction_feedback>`;
 
   await pipeAiStreamToResponse(res, model, {
     system: buildCorrectionPrompt(),

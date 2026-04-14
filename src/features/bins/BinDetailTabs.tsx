@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { OptionGroup, type OptionGroupOption } from '@/components/ui/option-group';
 import type { useDictation } from '@/lib/useDictation';
 import type { Bin, CustomField, ItemCheckout, Photo } from '@/types';
@@ -57,17 +57,16 @@ export function BinDetailTabs({
   const [tab, setTab] = useState<BinDetailTab>(() => readInitialTab());
   const tabsId = useId();
 
-  const handleChange = (next: BinDetailTab) => {
+  const handleChange = useCallback((next: BinDetailTab) => {
     setTab(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // localStorage may be disabled (private mode, quota). Non-fatal.
     }
-  };
+  }, []);
 
   // 1–3 keyboard shortcuts to switch tabs
-  // biome-ignore lint/correctness/useExhaustiveDependencies: handleChange is defined inline each render but is stable in effect; no reactive deps needed
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
@@ -91,7 +90,7 @@ export function BinDetailTabs({
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [handleChange]);
 
   const options: OptionGroupOption<BinDetailTab>[] = [
     { key: 'contents', label: 'Contents' },

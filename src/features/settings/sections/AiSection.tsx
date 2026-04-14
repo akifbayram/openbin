@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { AI_PROVIDERS, KEY_PLACEHOLDERS, MODEL_HINTS, TASK_GROUP_META } from '@/features/ai/aiConstants';
+import { PROMPT_HELP_TEXT, type PromptTab } from '@/features/ai/promptHelpText';
 import { TaskRoutingSection } from '@/features/ai/TaskRoutingSection';
 import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
 import {
@@ -30,8 +31,6 @@ import { SettingsSection } from '../SettingsSection';
 const UpgradePrompt = __EE__
   ? lazy(() => import('@/ee/UpgradePrompt').then(m => ({ default: m.UpgradePrompt })))
   : (() => null) as React.FC<Record<string, unknown>>;
-
-type PromptTab = 'analysis' | 'command' | 'query' | 'structure' | 'reorganization';
 
 const PROMPT_TAB_META = [
   { key: 'analysis', label: 'Photo Analysis', shortLabel: 'Photos' },
@@ -184,16 +183,6 @@ export function AiSection() {
     query:     { value: queryPrompt,     set: setQueryPrompt },
     structure: { value: structurePrompt, set: setStructurePrompt },
     reorganization: { value: reorganizationPrompt, set: setReorganizationPrompt },
-  };
-  const V = ({ children }: { children: string }) => (
-    <code className="text-[var(--text-xs)] px-1 py-0.5 rounded bg-[var(--bg-input)]">{children}</code>
-  );
-  const helpText: Record<PromptTab, React.ReactNode> = {
-    analysis: <>Available variables: <V>{'{available_tags}'}</V>. Custom fields are appended automatically.</>,
-    command: <>Inventory context (bins, items, areas, tags, colors, icons) is passed automatically. This prompt defines the instructions only.</>,
-    query: <>Inventory context (bins, items, areas, tags) is passed automatically. This prompt defines the instructions only.</>,
-    structure: <>Bin name and existing items are appended automatically. This prompt defines the extraction rules.</>,
-    reorganization: <>Available variables: <V>{'{available_tags}'}</V> <V>{'{max_bins_instruction}'}</V> <V>{'{area_instruction}'}</V> <V>{'{strictness_instruction}'}</V> <V>{'{granularity_instruction}'}</V> <V>{'{duplicates_instruction}'}</V> <V>{'{ambiguous_instruction}'}</V> <V>{'{outliers_instruction}'}</V> <V>{'{items_per_bin_instruction}'}</V> <V>{'{notes_instruction}'}</V></>,
   };
   const activePrompt = promptMap[activePromptTab];
 
@@ -372,7 +361,7 @@ export function AiSection() {
                         disabled={demoMode}
                       />
                       <div className="row-spread">
-                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
+                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">{PROMPT_HELP_TEXT[activePromptTab]}</p>
                         {!demoMode && (activePrompt.value.trim() ? (
                           <button
                             type="button"

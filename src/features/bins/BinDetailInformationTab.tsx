@@ -83,7 +83,7 @@ export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformation
               {qrUrl && (
                 <img
                   src={qrUrl}
-                  alt="QR code"
+                  alt={`QR code for ${bin.name}`}
                   className="w-full h-full block"
                 />
               )}
@@ -121,11 +121,7 @@ export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformation
             <dd className="text-[var(--text-primary)]">{formatTimeAgo(bin.updated_at)}</dd>
 
             <dt className="text-[var(--text-tertiary)]">Last scanned</dt>
-            <dd
-              className={
-                lastScan ? 'text-[var(--text-primary)]' : 'text-[var(--text-quaternary)]'
-              }
-            >
+            <dd className="text-[var(--text-primary)]">
               {lastScan ? formatTimeAgo(lastScan.scannedAt) : 'Never'}
             </dd>
           </dl>

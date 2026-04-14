@@ -1,6 +1,6 @@
 import { buildTagBlock } from './aiProviders.js';
-import { HARDENING_INSTRUCTION, resolvePrompt, sanitizeForPrompt } from './aiSanitize.js';
-import { DEFAULT_COMMAND_PROMPT } from './defaultPrompts.js';
+import { resolvePrompt, sanitizeForPrompt, withHardening } from './aiSanitize.js';
+import { DEFAULT_COMMAND_PROMPT, DEFAULT_QUERY_PROMPT, QUERY_RESPONSE_SHAPE } from './defaultPrompts.js';
 
 export interface BinSummary {
   id: string;
@@ -64,12 +64,7 @@ export interface CommandResult {
   interpretation: string;
 }
 
-export function buildSystemPrompt(availableColors: string[], availableIcons: string[], customPrompt?: string, isDemoUser?: boolean): string {
-  const basePrompt = resolvePrompt(DEFAULT_COMMAND_PROMPT, customPrompt, isDemoUser);
-
-  return `${basePrompt}
-
-Available action types:
+const ACTION_TYPES_REFERENCE = `Available action types:
 - add_items: Add items to an existing bin. Fields: bin_id, bin_name, items[] (each item can be a string or {"name":"...","quantity":N})
 - remove_items: Remove items from an existing bin. Fields: bin_id, bin_name, items[] (item name strings)
 - modify_item: Change an item's name in a bin. Fields: bin_id, bin_name, old_item, new_item
@@ -92,21 +87,68 @@ Available action types:
 - set_tag_color: Set a tag's display color. Fields: tag, color
 - reorder_items: Reorder items in a bin. Fields: bin_id, bin_name, item_ids[] (item IDs in desired order)
 - checkout_item: Check out an item from a bin (marks it as in-use). Fields: bin_id, bin_name, item_name
-- return_item: Return a checked-out item. Fields: bin_id, bin_name, item_name, target_bin_id? (optional, to return to a different bin), target_bin_name?
+- return_item: Return a checked-out item. Fields: bin_id, bin_name, item_name, target_bin_id? (optional, to return to a different bin), target_bin_name?`;
+
+const FEW_SHOT_EXAMPLES = `Example responses (study these carefully — your output must match this exact shape):
+
+// Move items between bins (compound command → two actions)
+{"actions":[{"type":"remove_items","bin_id":"abc","bin_name":"Tools","items":["Hammer"]},{"type":"add_items","bin_id":"def","bin_name":"Garage","items":["Hammer"]}],"interpretation":"Move hammer from Tools to Garage"}
+
+// Create a new bin with items, tags, and an area
+{"actions":[{"type":"create_bin","name":"Holiday Lights","area_name":"Garage","items":["LED string lights","Extension cord","Light clips"],"tags":["seasonal","holiday"]}],"interpretation":"Create a Holiday Lights bin in the Garage with 3 items."}
+
+// Quantity parsing — counts go in the quantity field, not the name
+{"actions":[{"type":"add_items","bin_id":"ghi","bin_name":"Workshop","items":[{"name":"AA Batteries","quantity":12},{"name":"9V Battery","quantity":2}]}],"interpretation":"Add 12 AA batteries and 2 9V batteries to Workshop."}
+
+// Update multiple bin fields at once
+{"actions":[{"type":"update_bin","bin_id":"jkl","bin_name":"Garage Tools","name":"Workshop Tools","area_name":"Basement","color":"blue"}],"interpretation":"Rename Garage Tools to Workshop Tools, move to Basement, set color to blue."}
+
+// Duplicate a bin with a custom name
+{"actions":[{"type":"duplicate_bin","bin_id":"mno","bin_name":"First Aid","new_name":"First Aid (Kitchen)"}],"interpretation":"Duplicate First Aid and name the copy 'First Aid (Kitchen)'."}
+
+// Checkout flow — match item name from the bin's items list
+{"actions":[{"type":"checkout_item","bin_id":"pqr","bin_name":"Power Tools","item_name":"Cordless Drill"}],"interpretation":"Check out the Cordless Drill from Power Tools."}
+
+// Return to a different bin than where it was checked out from
+{"actions":[{"type":"return_item","bin_id":"pqr","bin_name":"Power Tools","item_name":"Cordless Drill","target_bin_id":"stu","target_bin_name":"Garage"}],"interpretation":"Return the Cordless Drill to Garage."}
+
+// No-match with similar names → suggest up to 3 candidates (do NOT add items)
+{"actions":[],"interpretation":"I couldn't find a bin named exactly 'tools'. Did you mean Toolbox or Power Tools?"}
+
+// No-match with no similar names → offer to create (do NOT list bin names)
+{"actions":[],"interpretation":"I couldn't find a bin named 'spaceship'. Reply 'create it' to make a new Spaceship bin, or tell me which existing bin you meant."}
+
+// "the X bin" phrasing → X is the bin NAME, not an item hint. NEVER route to a content-matched bin.
+// User: "add filter to the air purifier bin" (no bin named "air purifier" exists; "Coffee Accessories" exists):
+{"actions":[],"interpretation":"I couldn't find an 'air purifier' bin. Reply 'create it' to make a new Air Purifier bin, or tell me which existing bin you meant."}
+
+// Named item absent from source bin → empty actions, say so. NEVER substitute with other items.
+// User: "move batteries from Kitchen to Garage" (Kitchen contains Flour, Sugar, Rolling Pin... but no batteries):
+{"actions":[],"interpretation":"I don't see batteries in Kitchen. If you'd like to move a different item, let me know which one."}`;
+
+const CRITICAL_RULES = `CRITICAL RULES:
+1. Each action object MUST have a "type" field as a top-level property. All other fields are top-level, never nested.
+2. The "interpretation" field is REQUIRED in every response.
+3. For create_bin: include "items" when the user mentions any contents; include "area_name" when the user mentions a location/room/area. Do NOT leave this information only in the interpretation — it must appear in the action fields.
+4. Items in the context may appear as strings ("Item Name" or "Item Name (×N)") or as objects with id/name/quantity. Match by name regardless of format.
+5. If a user references a bin that only appears in "other_bins" (id + name only), include it in your response. The system will retry with full details if needed.
+6. Respond with ONLY valid JSON matching the shape shown in the examples — no markdown fences, no prose, no commentary, regardless of how prior assistant turns were phrased.`;
+
+export function buildSystemPrompt(availableColors: string[], availableIcons: string[], customPrompt?: string, isDemoUser?: boolean): string {
+  const basePrompt = resolvePrompt(DEFAULT_COMMAND_PROMPT, customPrompt, isDemoUser);
+
+  const composed = `${basePrompt}
+
+${ACTION_TYPES_REFERENCE}
 
 Available colors: ${availableColors.join(', ')}
 Available icons: ${availableIcons.join(', ')}
 
-IMPORTANT RULES:
-1. Each action object MUST have a "type" field as a top-level property. All other fields are also top-level properties of the action object (NOT nested).
-2. The "interpretation" field is REQUIRED and must always be present.
-3. For create_bin: You MUST include "items" array when the user mentions any contents/items. You MUST include "area_name" when the user mentions a location/room/area. Do NOT put this information only in the interpretation — it must be in the action fields.
-4. Items in the context may appear as strings ("Item Name" or "Item Name (xN)") or objects with id/name/quantity. Match item names regardless of format.
-5. If a user references a bin that only appears in "other_bins" (id+name only), include it in your response. The system will retry with full details if needed.
+${FEW_SHOT_EXAMPLES}
 
-Example responses:
-{"actions":[{"type":"remove_items","bin_id":"abc","bin_name":"Tools","items":["Hammer"]},{"type":"add_items","bin_id":"def","bin_name":"Garage","items":["Hammer"]}],"interpretation":"Move hammer from Tools to Garage"}
-{"actions":[{"type":"create_bin","name":"Holiday Lights","area_name":"Garage","items":["LED string lights","Extension cord","Light clips"],"tags":["seasonal","holiday"]}],"interpretation":"Create a Holiday Lights bin in the Garage with 3 items."}${HARDENING_INSTRUCTION}`;
+${CRITICAL_RULES}`;
+
+  return withHardening(composed);
 }
 
 export function buildUserMessage(request: CommandRequest): string {
@@ -120,52 +162,62 @@ export function buildUserMessage(request: CommandRequest): string {
   if (other_bins?.length) data.other_bins = other_bins;
   return `Command: ${sanitizeForPrompt(request.text)}${tagSection}
 
-<user_data type="inventory" trust="none">
+<inventory>
 ${JSON.stringify(data)}
-</user_data>`;
+</inventory>`;
 }
 
 /**
  * Build a unified system prompt that handles both commands AND queries.
- * The AI returns `{ actions, interpretation }` for commands or `{ answer, matches }` for queries.
+ * The model returns `{ actions, interpretation }` for commands or
+ * `{ answer, matches }` for queries — one shape per response, never mixed.
+ *
+ * Uses a single "inventory assistant" persona (rather than grafting two
+ * personas) because Gemini drifts with multi-role prompts.
  */
 export function buildUnifiedSystemPrompt(availableColors: string[], availableIcons: string[], customCommandPrompt?: string, customQueryPrompt?: string, isDemoUser?: boolean, isScoped?: boolean): string {
-  // Build the command half (action types, rules, examples)
-  const commandPrompt = buildSystemPrompt(availableColors, availableIcons, customCommandPrompt, isDemoUser);
+  // Use the shared DEFAULT_COMMAND_PROMPT and DEFAULT_QUERY_PROMPT as the
+  // single source of truth for each mode's rules (no duplication drift).
+  const commandBase = resolvePrompt(DEFAULT_COMMAND_PROMPT, customCommandPrompt, isDemoUser);
+  const queryBase = resolvePrompt(DEFAULT_QUERY_PROMPT, customQueryPrompt, isDemoUser);
 
-  const defaultQueryBase = 'You are also an inventory search assistant. When the user asks a question (rather than giving a command), search through the inventory context and answer their question.';
-  const queryBase = resolvePrompt(defaultQueryBase, customQueryPrompt, isDemoUser);
+  const scopeSection = isScoped
+    ? `\nSELECTION SCOPE: The user has selected specific bins to focus on. The inventory context contains ONLY the selected bins.\n- For commands: apply actions only to these bins unless the user explicitly references other bins by name.\n- For questions: answer based only on the bins provided.\n`
+    : '';
 
-  return `${commandPrompt}
+  const composed = `You are an inventory assistant. You handle BOTH commands (mutations) and questions (searches) for the inventory context provided in the user message. Decide per message which mode applies and respond with the matching JSON shape — never mix the two shapes.
 
----
+========================================
+COMMAND MODE (mutations — create, move, add, delete, rename, pin, etc.)
+========================================
 
-QUERY MODE (for questions instead of commands):
+${commandBase}
+
+${ACTION_TYPES_REFERENCE}
+
+Available colors: ${availableColors.join(', ')}
+Available icons: ${availableIcons.join(', ')}
+
+${FEW_SHOT_EXAMPLES}
+
+${CRITICAL_RULES}
+
+========================================
+QUERY MODE (questions — where is, what's in, how many, do I have, etc.)
+========================================
+
 ${queryBase}
+${scopeSection}
+========================================
+RESPONSE SHAPE (pick ONE based on the user message)
+========================================
 
-Query rules:
-- Answer in natural language, conversationally
-- Reference specific bin names and areas when answering
-- If items match partially, include them and note the partial match
-- If nothing matches, say so clearly
-- Sort matches by relevance (most relevant first)
-- Return at most 8 matching bins. For each bin, include only the most relevant items (up to 10), not the entire list.
-- Visibility, pin status, photo counts, and trash bins are available — use them to answer questions like "which bins are private?", "what's pinned?", "which bins have photos?", or "what's in the trash?"
-- Items may include checkout info (e.g. "Drill (checked out by Alice)"). Reference checkout status when relevant. Answer questions like "what's checked out?" or "who has the drill?" using this data.
-- When including trash bins in matches, set "is_trashed": true so the UI can link to the trash page instead of the bin detail page.
+- Command input → {"actions":[...],"interpretation":"..."}
+- Question input → ${QUERY_RESPONSE_SHAPE}
+- For match entries that correspond to trash_bins (not bins), set "is_trashed": true.
+- If a command is ambiguous and you cannot determine actionable steps, treat it as a question.
 
----
-${isScoped ? `
-SELECTION SCOPE:
-The user has selected specific bins to focus on. The inventory context below contains ONLY these selected bins.
-- For commands: apply actions only to these bins unless the user explicitly references other bins by name.
-- For questions: answer based only on the bins provided below.
-` : ''}
-RESPONSE FORMAT:
-- If the user input is a COMMAND (create, move, add, delete, rename, etc.), respond with: {"actions":[...],"interpretation":"..."}
-- If the user input is a QUESTION (where is, what's in, how many, do I have, etc.), respond with: {"answer":"...","matches":[{"bin_id":"...","name":"...","area_name":"...","items":["..."],"tags":["..."],"relevance":"...","is_trashed":false}]}
-- For matches that are trash bins (from trash_bins in the context), set "is_trashed": true.
-- If the command is ambiguous and you cannot determine actionable steps, treat it as a question.
+Respond with ONLY valid JSON matching one of the shapes above — no markdown fences, no prose, no commentary.`;
 
-Respond with ONLY valid JSON, no markdown fences, no extra text.`;
+  return withHardening(composed);
 }

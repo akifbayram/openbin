@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildColorKey,
   getApproxBgHex,
+  getContrastBw,
   getHueRange,
   HUE_RANGES,
   hexToHsl,
@@ -271,6 +272,32 @@ describe('colorPalette', () => {
 
     it('returns false for pure white', () => {
       expect(needsLightText('#FFFFFF')).toBe(false);
+    });
+  });
+
+  describe('getContrastBw', () => {
+    it('returns white for pure black', () => {
+      expect(getContrastBw('#000000')).toBe('#ffffff');
+    });
+
+    it('returns black for pure white', () => {
+      expect(getContrastBw('#FFFFFF')).toBe('#000000');
+    });
+
+    it('returns white for a dark brand color', () => {
+      expect(getContrastBw('#1C1C1E')).toBe('#ffffff');
+    });
+
+    it('returns black for a light brand color', () => {
+      expect(getContrastBw('#F2F2F7')).toBe('#000000');
+    });
+
+    it('returns white for a saturated red', () => {
+      expect(getContrastBw('#FF6B6B')).toBe('#ffffff');
+    });
+
+    it('returns black for yellow', () => {
+      expect(getContrastBw('#FFFF00')).toBe('#000000');
     });
   });
 

@@ -8,7 +8,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { useTerminology } from '@/lib/terminology';
-import { categoryHeader, cn, focusRing } from '@/lib/utils';
+import { cn, focusRing, sectionHeader } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { TagInput } from './TagInput';
 import type { useAutoSaveBin } from './useAutoSaveBin';
@@ -27,7 +27,7 @@ interface BinDetailRailProps {
 
 const META_FIELD = 'flex flex-col gap-1';
 const RAIL_ICON_BTN = cn(
-  'h-8 w-8 rounded-[var(--radius-xs)] flex items-center justify-center',
+  'h-11 w-11 rounded-[var(--radius-xs)] flex items-center justify-center',
   'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors',
   focusRing,
 );
@@ -79,7 +79,7 @@ export function BinDetailRail({
       <h2 className="sr-only">Bin details</h2>
 
       <div className={cn(META_FIELD, autoSave.savedFields.has('notes') && 'animate-save-flash')}>
-        <label htmlFor="detail-notes" className={categoryHeader}>Notes</label>
+        <label htmlFor="detail-notes" className={sectionHeader}>Notes</label>
         {canEdit ? (
           <Textarea
             id="detail-notes"
@@ -99,18 +99,15 @@ export function BinDetailRail({
             {bin.notes}
           </p>
         ) : (
-          <p className="text-[15px] text-[var(--text-quaternary)]">No notes</p>
+          <p className="text-[15px] text-[var(--text-tertiary)]">No notes</p>
         )}
       </div>
 
-      <div className="flex flex-col gap-4 pt-4 border-t border-[var(--border-subtle)]">
+      <div className="flex flex-col gap-4">
         <div className={META_FIELD}>
-          <span className={categoryHeader}>Code</span>
+          <span className={sectionHeader}>Code</span>
           <div className="flex items-center h-11 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] pl-3.5 pr-1 transition-colors focus-within:ring-2 focus-within:ring-[var(--accent)]">
-            <span
-              id="bin-short-code"
-              className="flex-1 font-mono text-[15px] tracking-[0.14em] text-[var(--text-primary)] select-all truncate"
-            >
+            <span className="flex-1 font-mono text-[15px] tracking-[0.14em] text-[var(--text-primary)] select-all truncate">
               {bin.short_code}
             </span>
             <div className="flex items-center gap-0.5 shrink-0">
@@ -145,7 +142,7 @@ export function BinDetailRail({
         </div>
 
         <div className={cn(META_FIELD, autoSave.savedFields.has('areaId') && 'animate-save-flash')}>
-          <span className={categoryHeader}>{t.Area}</span>
+          <span className={sectionHeader}>{t.Area}</span>
           {canEdit ? (
             <AreaPicker
               locationId={activeLocationId}
@@ -154,13 +151,13 @@ export function BinDetailRail({
             />
           ) : (
             <p className="text-[15px] text-[var(--text-primary)]">
-              {bin.area_name || <span className="text-[var(--text-quaternary)]">No area</span>}
+              {bin.area_name || <span className="text-[var(--text-tertiary)]">No area</span>}
             </p>
           )}
         </div>
 
         <div className={cn(META_FIELD, autoSave.savedFields.has('tags') && 'animate-save-flash')}>
-          <span className={categoryHeader}>Tags</span>
+          <span className={sectionHeader}>Tags</span>
           {canEdit ? (
             <TagInput
               tags={bin.tags}
@@ -181,13 +178,13 @@ export function BinDetailRail({
               ))}
             </div>
           ) : (
-            <p className="text-[15px] text-[var(--text-quaternary)]">No tags</p>
+            <p className="text-[15px] text-[var(--text-tertiary)]">No tags</p>
           )}
         </div>
 
         {canChangeVisibility && (
           <div className={cn(META_FIELD, autoSave.savedFields.has('visibility') && 'animate-save-flash')}>
-            <span className={categoryHeader}>Visibility</span>
+            <span className={sectionHeader}>Visibility</span>
             <VisibilityPicker
               value={bin.visibility}
               onChange={(v) => autoSave.saveVisibility(v)}

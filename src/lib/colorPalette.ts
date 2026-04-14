@@ -268,6 +268,11 @@ export function needsLightText(bgHex: string): boolean {
   return relativeLuminance(bgHex) < 0.4;
 }
 
+/** Return pure black or white, whichever contrasts against the given background. */
+export function getContrastBw(bgHex: string): '#000000' | '#ffffff' {
+  return needsLightText(bgHex) ? '#ffffff' : '#000000';
+}
+
 /** Return the approximate background hex for a preset, given the active theme. */
 export function getApproxBgHex(preset: ColorPreset, theme: 'light' | 'dark'): string {
   return theme === 'dark' ? preset.bgDark : preset.bg;

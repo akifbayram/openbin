@@ -1,5 +1,5 @@
-import { HARDENING_INSTRUCTION, resolvePrompt, sanitizeForPrompt } from './aiSanitize.js';
-import { DEFAULT_QUERY_PROMPT } from './defaultPrompts.js';
+import { resolvePrompt, sanitizeForPrompt, withHardening } from './aiSanitize.js';
+import { DEFAULT_QUERY_PROMPT, QUERY_RESPONSE_SHAPE } from './defaultPrompts.js';
 
 export interface QueryMatch {
   bin_id: string;
@@ -37,9 +37,14 @@ export interface InventoryContext {
 export function buildSystemPrompt(customPrompt?: string, isDemoUser?: boolean): string {
   const basePrompt = resolvePrompt(DEFAULT_QUERY_PROMPT, customPrompt, isDemoUser);
 
-  return `${basePrompt}
+  const composed = `${basePrompt}
 
-IMPORTANT: The "answer" and "matches" fields are both REQUIRED. If no bins match, return an empty matches array.${HARDENING_INSTRUCTION}`;
+OUTPUT SHAPE:
+${QUERY_RESPONSE_SHAPE}
+
+The "answer" and "matches" fields are both REQUIRED. If no bins match, return an empty matches array.`;
+
+  return withHardening(composed);
 }
 
 export function buildUserMessage(question: string, context: InventoryContext): string {
@@ -48,7 +53,7 @@ export function buildUserMessage(question: string, context: InventoryContext): s
   if (other_bins?.length) data.other_bins = other_bins;
   return `Question: ${sanitizeForPrompt(question)}
 
-<user_data type="inventory" trust="none">
+<inventory>
 ${JSON.stringify(data)}
-</user_data>`;
+</inventory>`;
 }

@@ -78,7 +78,7 @@ export function DictationButton({ dictation }: DictationButtonProps) {
         <button
           type="button"
           onClick={start}
-          className="shrink-0 flex items-center justify-center size-9 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
+          className="shrink-0 flex items-center justify-center size-11 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
           aria-label="Dictate items"
         >
           <Mic className="h-4 w-4" />
@@ -95,7 +95,7 @@ export function DictationButton({ dictation }: DictationButtonProps) {
           <button
             type="button"
             onClick={stop}
-            className="relative flex items-center justify-center size-9 rounded-full bg-[var(--destructive)] text-[var(--text-on-accent)] hover:bg-[var(--destructive-hover)] active:bg-[var(--destructive-active)] transition-colors"
+            className="relative flex items-center justify-center size-11 rounded-full bg-[var(--destructive)] text-[var(--text-on-accent)] hover:bg-[var(--destructive-hover)] active:bg-[var(--destructive-active)] transition-colors"
             aria-label="Stop recording"
           >
             <span className="absolute inset-[-3px] rounded-full bg-[var(--destructive)]/25 animate-pulse motion-reduce:animate-none" />

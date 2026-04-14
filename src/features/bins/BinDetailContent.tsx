@@ -62,10 +62,10 @@ export function BinDetailContent({
   onClearSuggestions,
 }: BinDetailContentProps) {
   return (
-    <div className="grid xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-6">
+    <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6">
       <div className="min-w-0">
         {aiError && (
-          <div className="border-t-2 border-t-[var(--destructive)] py-3 mb-4">
+          <div className="rounded-[var(--radius-sm)] bg-[var(--destructive-soft)] px-4 py-3 mb-4">
             <p className="text-[14px] text-[var(--destructive)]">{aiError}</p>
             <button
               type="button"
@@ -78,19 +78,21 @@ export function BinDetailContent({
         )}
 
         {suggestions && (
-          <div className="mb-4">
-            <AiSuggestionsPanel
-              suggestions={suggestions}
-              previousResult={previousResult}
-              currentName={bin.name}
-              currentItems={bin.items}
-              currentTags={bin.tags}
-              currentNotes={bin.notes}
-              customFieldDefs={customFields}
-              currentCustomFields={bin.custom_fields}
-              onApply={onApplySuggestions}
-              onDismiss={onClearSuggestions}
-            />
+          <div className="ai-correction-enter mb-4">
+            <div>
+              <AiSuggestionsPanel
+                suggestions={suggestions}
+                previousResult={previousResult}
+                currentName={bin.name}
+                currentItems={bin.items}
+                currentTags={bin.tags}
+                currentNotes={bin.notes}
+                customFieldDefs={customFields}
+                currentCustomFields={bin.custom_fields}
+                onApply={onApplySuggestions}
+                onDismiss={onClearSuggestions}
+              />
+            </div>
           </div>
         )}
 
@@ -110,7 +112,7 @@ export function BinDetailContent({
         />
       </div>
 
-      <div className="mt-6 xl:mt-0 xl:sticky xl:top-6 xl:self-start xl:bg-[var(--bg-sidebar)] xl:border xl:border-[var(--border-subtle)] xl:rounded-[var(--radius-lg)] xl:p-5">
+      <div className="mt-6 lg:mt-0 lg:sticky lg:top-6 lg:self-start lg:bg-[var(--bg-sidebar)] lg:border lg:border-[var(--border-subtle)] lg:rounded-[var(--radius-lg)] lg:p-5">
         <BinDetailRail
           bin={bin}
           autoSave={autoSave}
