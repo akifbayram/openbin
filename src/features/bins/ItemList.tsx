@@ -1,4 +1,4 @@
-import { PackageMinus, Trash2, Undo2, X } from 'lucide-react';
+import { PackageMinus, Undo2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { SearchInput } from '@/components/ui/search-input';
@@ -34,7 +34,6 @@ interface ItemListProps {
 }
 
 type SortColumn = '' | 'name' | 'qty';
-const SWIPE_THRESHOLD = 80;
 
 function compareByName(a: BinItem, b: BinItem): number {
   return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
@@ -63,195 +62,113 @@ function sortBinItems(items: BinItem[], column: SortColumn, direction: SortDirec
 interface ItemRowProps {
   text: string;
   quantity: number | null;
-  isEditing: boolean;
   saved?: boolean;
   checkoutButton?: React.ReactNode;
-  onStartEdit: () => void;
   onSave: (value: string, quantity: number | null) => void;
-  onCancel: () => void;
   onDelete: () => void;
 }
 
-function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit, onSave, onCancel, onDelete }: ItemRowProps) {
+function ItemRow({ text, quantity, saved, checkoutButton, onSave, onDelete }: ItemRowProps) {
   const [editValue, setEditValue] = useState(text);
   const [qtyDraft, setQtyDraft] = useState(quantity != null ? String(quantity) : '');
-  // Sync on prop change during render (React 18 idiom) — avoids the one-frame
-  // stale paint that `useEffect` would introduce after a server round-trip.
-  const prevQtyRef = useRef(quantity);
-  if (quantity !== prevQtyRef.current) {
-    prevQtyRef.current = quantity;
-    setQtyDraft(quantity != null ? String(quantity) : '');
-  }
+  // "committed" tracks the last reconciled value — used as the Escape-revert target,
+  // the save-diff baseline, and the sentinel for detecting prop changes from the server.
+  const committedNameRef = useRef(text);
+  const committedQtyRef = useRef(quantity);
 
-  const [swipeX, setSwipeX] = useState(0);
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  const swipingRef = useRef(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const rowRef = useRef<HTMLDivElement>(null);
-
-  function handleStartEdit() {
+  if (text !== committedNameRef.current) {
+    committedNameRef.current = text;
     setEditValue(text);
-    setQtyDraft(quantity != null ? String(quantity) : '');
-    onStartEdit();
-    requestAnimationFrame(() => {
-      const el = inputRef.current;
-      if (el) {
-        el.focus();
-        el.style.height = 'auto';
-        el.style.height = `${el.scrollHeight}px`;
-      }
-    });
   }
+  if (quantity !== committedQtyRef.current) {
+    committedQtyRef.current = quantity;
+    setQtyDraft(quantity != null ? String(quantity) : '');
+  }
+
+  const rowRef = useRef<HTMLDivElement>(null);
 
   function handleSave() {
     const trimmed = editValue.trim();
     const parsed = parseBareQuantity(qtyDraft);
-    const finalQty = parsed != null && parsed >= 1 ? parsed : (qtyDraft.trim() === '' ? null : quantity);
-    if (trimmed && (trimmed !== text || finalQty !== quantity)) {
-      onSave(trimmed, finalQty);
-    } else {
-      onCancel();
-    }
-  }
-
-  function handleTouchStart(e: React.TouchEvent) {
-    if (isEditing) return;
-    const touch = e.touches[0];
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
-    swipingRef.current = false;
-  }
-
-  function handleTouchMove(e: React.TouchEvent) {
-    if (isEditing || !touchStartRef.current) return;
-    const touch = e.touches[0];
-    const dx = touch.clientX - touchStartRef.current.x;
-    const dy = touch.clientY - touchStartRef.current.y;
-
-    if (!swipingRef.current && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      swipingRef.current = true;
-    }
-
-    if (swipingRef.current) {
-      setSwipeX(Math.min(0, dx));
-    }
-  }
-
-  function handleTouchEnd() {
-    if (!touchStartRef.current) return;
-    if (swipingRef.current && swipeX < -SWIPE_THRESHOLD) {
-      onDelete();
-    }
-    setSwipeX(0);
-    touchStartRef.current = null;
-    swipingRef.current = false;
+    const finalQty = parsed != null && parsed >= 1
+      ? parsed
+      : (qtyDraft.trim() === '' ? null : committedQtyRef.current);
+    if (!trimmed) return;
+    if (trimmed === committedNameRef.current && finalQty === committedQtyRef.current) return;
+    committedNameRef.current = trimmed;
+    committedQtyRef.current = finalQty;
+    onSave(trimmed, finalQty);
   }
 
   return (
-    <div className="relative overflow-hidden">
-      <div
-        className="absolute inset-y-0 right-0 flex items-center justify-end gap-1.5 px-4 text-white text-[13px] font-medium"
-        style={{ width: Math.max(0, -swipeX), backgroundColor: swipeX < 0 ? 'var(--destructive)' : undefined }}
-      >
-        {-swipeX > SWIPE_THRESHOLD / 2 && (
-          <>
-            <Trash2 className="h-3.5 w-3.5 shrink-0" />
-            <span className="shrink-0">Delete</span>
-          </>
-        )}
-      </div>
-
-      <div
-        ref={rowRef}
+    <div
+      ref={rowRef}
+      className={cn(
+        'group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors',
+        saved && 'animate-save-flash'
+      )}
+    >
+      <input
+        value={qtyDraft}
+        onChange={(e) => setQtyDraft(e.target.value.replace(/[^0-9]/g, ''))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            (e.target as HTMLElement).blur();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setQtyDraft(committedQtyRef.current != null ? String(committedQtyRef.current) : '');
+            (e.target as HTMLElement).blur();
+          }
+        }}
+        onBlur={() => {
+          requestAnimationFrame(() => {
+            if (!rowRef.current?.contains(document.activeElement)) handleSave();
+          });
+        }}
+        placeholder="—"
         className={cn(
-          'relative row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors touch-pan-y',
-          !isEditing && 'group',
-          saved && 'animate-save-flash'
+          'shrink-0 w-8 text-center text-[13px] tabular-nums bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]',
+          qtyDraft.trim() ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'
         )}
-        style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 0.2s ease' : 'none' }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <input
-          value={qtyDraft}
-          onChange={(e) => setQtyDraft(e.target.value.replace(/[^0-9]/g, ''))}
-          onKeyDown={(e) => {
-            if (isEditing) {
-              if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
-              else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-            } else if (e.key === 'Enter') {
-              e.preventDefault();
-              (e.target as HTMLElement).blur();
-            }
-          }}
-          onBlur={() => {
-            if (isEditing) {
-              requestAnimationFrame(() => {
-                if (!rowRef.current?.contains(document.activeElement)) handleSave();
-              });
-            } else {
-              const parsed = parseBareQuantity(qtyDraft);
-              if (parsed !== quantity) onSave(text, parsed);
-            }
-          }}
-          placeholder="—"
-          className={cn(
-            'shrink-0 w-8 text-center text-[13px] tabular-nums bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]',
-            qtyDraft.trim() ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'
-          )}
-          inputMode="numeric"
-          aria-label="Quantity"
-        />
+        inputMode="numeric"
+        aria-label="Quantity"
+      />
 
-        {isEditing ? (
-          <div className="flex-1 min-w-0">
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={editValue}
-              onChange={(e) => {
-                setEditValue(e.target.value);
-                e.target.style.height = 'auto';
-                e.target.style.height = `${e.target.scrollHeight}px`;
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave(); }
-                else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-              }}
-              onBlur={() => { requestAnimationFrame(() => { if (!rowRef.current?.contains(document.activeElement)) handleSave(); }); }}
-              className="w-full bg-transparent text-[15px] text-[var(--text-primary)] leading-relaxed outline-none resize-none"
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onTouchEnd={(e) => { if (!swipingRef.current) { e.preventDefault(); handleStartEdit(); } }}
-            onClick={handleStartEdit}
-            className="flex-1 min-w-0 text-left text-[15px] text-[var(--text-primary)] leading-relaxed cursor-text"
-          >
-            {text}
-          </button>
-        )}
+      <textarea
+        rows={1}
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            (e.target as HTMLElement).blur();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setEditValue(committedNameRef.current);
+            (e.target as HTMLElement).blur();
+          }
+        }}
+        onBlur={() => {
+          requestAnimationFrame(() => {
+            if (!rowRef.current?.contains(document.activeElement)) handleSave();
+          });
+        }}
+        className="flex-1 min-w-0 bg-transparent text-[15px] text-[var(--text-primary)] leading-relaxed outline-none resize-none [field-sizing:content] min-h-[1.5em]"
+        aria-label="Item name"
+      />
 
-        {isEditing ? (
-          // Spacer keeps row width stable while action buttons are hidden during edit.
-          <div className="size-9 shrink-0" />
-        ) : (
-          <>
-            {checkoutButton}
-            <Tooltip content="Remove item">
-              <button
-                type="button"
-                onClick={onDelete}
-                className={rowAction}
-                aria-label="Remove item"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </Tooltip>
-          </>
-        )}
-      </div>
+      {checkoutButton}
+      <Tooltip content="Remove item">
+        <button
+          type="button"
+          onClick={onDelete}
+          className={rowAction}
+          aria-label="Remove item"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </Tooltip>
     </div>
   );
 }
@@ -305,7 +222,6 @@ function ReadOnlyRow({ item }: { item: BinItem }) {
 }
 
 export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, checkouts = [], onItemsChange, headerExtra, footerSlot }: ItemListProps) {
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<SortColumn>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { showToast } = useToast();
@@ -412,7 +328,6 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
   }, [items, localItems, viewMode, binId, onItemsChange, showToast]);
 
   async function handleSaveEdit(itemId: string, value: string, quantity: number | null) {
-    setEditingId(null);
     const next = effectiveItems.map((i) => (i.id === itemId ? { ...i, name: value, quantity } : i));
     if (onItemsChange) {
       onItemsChange(next);
@@ -591,11 +506,8 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
                         <ItemRow
                           text={item.name}
                           quantity={item.quantity}
-                          isEditing={editingId === item.id}
                           saved={savedIds.has(item.id)}
-                          onStartEdit={() => setEditingId(item.id)}
                           onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
-                          onCancel={() => setEditingId(null)}
                           onDelete={() => handleDelete(item.id)}
                           checkoutButton={binId ? (
                             <Tooltip content="Check out">

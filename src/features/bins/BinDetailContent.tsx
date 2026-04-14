@@ -110,19 +110,17 @@ export function BinDetailContent({
         />
       </div>
 
-      <div className="mt-6 xl:mt-0 xl:sticky xl:top-6 xl:self-start">
-        <div className="bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] p-5">
-          <BinDetailRail
-            bin={bin}
-            autoSave={autoSave}
-            canEdit={canEdit}
-            canChangeVisibility={canChangeVisibility}
-            canChangeCode={canChangeCode}
-            onChangeCode={onChangeCode}
-            allTags={allTags}
-            activeLocationId={activeLocationId}
-          />
-        </div>
+      <div className="mt-6 xl:mt-0 xl:sticky xl:top-6 xl:self-start xl:bg-[var(--bg-sidebar)] xl:border xl:border-[var(--border-subtle)] xl:rounded-[var(--radius-lg)] xl:p-5">
+        <BinDetailRail
+          bin={bin}
+          autoSave={autoSave}
+          canEdit={canEdit}
+          canChangeVisibility={canChangeVisibility}
+          canChangeCode={canChangeCode}
+          onChangeCode={onChangeCode}
+          allTags={allTags}
+          activeLocationId={activeLocationId}
+        />
       </div>
     </div>
   );

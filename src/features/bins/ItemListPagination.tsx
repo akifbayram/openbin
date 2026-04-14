@@ -38,7 +38,7 @@ export function ItemListPagination({
       className="flex items-center justify-between gap-3 px-3.5 py-1.5 border-t border-[var(--border-subtle)] bg-[var(--bg-hover)]"
     >
       <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">
-        Showing {rangeStart}&ndash;{rangeEnd} of {totalCount} {itemLabel}
+        {rangeStart}&ndash;{rangeEnd} of {totalCount} {itemLabel}
       </span>
 
       <div className="flex items-center gap-0.5">

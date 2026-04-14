@@ -15,7 +15,7 @@ interface UsageHeatmapProps {
   onDayClick?: (date: string) => void;
 }
 
-const CELL_SIZE = 11;
+const CELL_SIZE = 10;
 const CELL_GAP = 3;
 const CELL_STEP = CELL_SIZE + CELL_GAP;
 const OPACITY_BY_STEP = [0, 0.22, 0.48, 0.82];
@@ -87,7 +87,7 @@ function cellBoxStyle(intensity: Intensity, fill?: boolean): React.CSSProperties
 
 function cellClassName(interactive: boolean, fill?: boolean, highlight?: boolean): string {
   return cn(
-    'rounded-[2px]',
+    'rounded-full',
     CELL_TRANSITION,
     interactive && [
       'cursor-pointer border-0 p-0',
@@ -448,7 +448,7 @@ export function UsageHeatmapSkeleton() {
                 <div
                   // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton, never reordered
                   key={i}
-                  className="rounded-[2px] animate-pulse motion-reduce:animate-none"
+                  className="rounded-full animate-pulse motion-reduce:animate-none"
                   style={{ backgroundColor: 'var(--border-subtle)', width: CELL_SIZE, height: CELL_SIZE }}
                 />
               ))}
