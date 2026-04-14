@@ -1,4 +1,3 @@
-import { relativeLuminance } from '@/lib/colorPalette';
 import type { Bin } from '@/types';
 import { parsePaddingPt } from './pdfUnits';
 
@@ -58,14 +57,6 @@ export function computeNameFontSize(input: NameFontSizeInput): NameFontSizeResul
   const iconSizePt = fontSizePt * ICON_SCALE;
 
   return { fontSizePt, iconSizePt };
-}
-
-/**
- * Return black or white text color for readable contrast on the given background.
- * Uses W3C relative luminance with a threshold tuned for print readability.
- */
-export function computeContrastFg(bgHex: string): '#FFFFFF' | '#000000' {
-  return relativeLuminance(bgHex) > 0.179 ? '#000000' : '#FFFFFF';
 }
 
 /** Collapse 4-sided CSS padding into a single max value in points. */

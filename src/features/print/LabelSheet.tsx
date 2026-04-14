@@ -3,7 +3,7 @@ import { batchGenerateQRDataURLs } from '@/lib/qr';
 import type { Bin } from '@/types';
 import { LabelCell } from './LabelCell';
 import type { LabelFormat } from './labelFormats';
-import { buildColorMap, computeLabelsPerPage, computePageSize, DEFAULT_LABEL_FORMAT, getLabelFormat } from './labelFormats';
+import { buildColorMap, computeCellBleed, computeLabelsPerPage, computePageSize, computeRowsPerPage, DEFAULT_LABEL_FORMAT, getLabelFormat } from './labelFormats';
 import type { LabelDirection, QrStyleOptions } from './usePrintSettings';
 import { isDefaultQrStyle } from './usePrintSettings';
 
@@ -74,6 +74,7 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
   }
 
   const perPage = computeLabelsPerPage(labelFormat);
+  const rowsPerPage = computeRowsPerPage(labelFormat);
   const pages: Bin[][] = [];
   for (let i = 0; i < bins.length; i += perPage) {
     pages.push(bins.slice(i, i + perPage));
@@ -104,24 +105,32 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
             style={{
               gridTemplateColumns: `repeat(${labelFormat.columns}, ${labelFormat.cellWidth})`,
               gridAutoRows: labelFormat.cellHeight,
+              columnGap: labelFormat.columnGap ?? 0,
+              rowGap: labelFormat.rowGap ?? 0,
             }}
           >
-            {pageBins.map((bin) => (
-              <LabelCell
-                key={bin.id}
-                bin={bin}
-                qrDataUrl={qrMap.get(bin.id) ?? ''}
-                format={labelFormat}
-                labelDirection={labelDirection}
-                showColorSwatch={showColorSwatch}
-                iconSize={iconSize}
-                showQrCode={showQrCode}
-                showBinName={showBinName}
-                showIcon={showIcon}
-                showBinCode={showBinCode}
-                textAlign={textAlign}
-              />
-            ))}
+            {pageBins.map((bin, binIdx) => {
+              const row = Math.floor(binIdx / labelFormat.columns);
+              const col = binIdx % labelFormat.columns;
+              const bleed = computeCellBleed(labelFormat, row, col, rowsPerPage);
+              return (
+                <LabelCell
+                  key={bin.id}
+                  bin={bin}
+                  qrDataUrl={qrMap.get(bin.id) ?? ''}
+                  format={labelFormat}
+                  labelDirection={labelDirection}
+                  showColorSwatch={showColorSwatch}
+                  iconSize={iconSize}
+                  showQrCode={showQrCode}
+                  showBinName={showBinName}
+                  showIcon={showIcon}
+                  showBinCode={showBinCode}
+                  textAlign={textAlign}
+                  bleed={bleed}
+                />
+              );
+            })}
           </div>
         </div>
       ))}

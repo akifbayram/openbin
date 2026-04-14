@@ -1,6 +1,6 @@
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
-import { computeLabelsPerPage, computePageSize } from './labelFormats';
+import { computeCellBleed, computeLabelsPerPage, computePageSize, computeRowsPerPage } from './labelFormats';
 import { NameCell } from './NameCell';
 import { computeUniformFontSize, maxPaddingPt } from './nameCardLayout';
 
@@ -25,6 +25,7 @@ export function NameSheet({ bins, format, showIcon, showColor, sizingMode, fontS
     : undefined;
 
   const perPage = computeLabelsPerPage(format);
+  const rowsPerPage = computeRowsPerPage(format);
   const pages: Bin[][] = [];
   for (let i = 0; i < bins.length; i += perPage) {
     pages.push(bins.slice(i, i + perPage));
@@ -55,21 +56,29 @@ export function NameSheet({ bins, format, showIcon, showColor, sizingMode, fontS
             style={{
               gridTemplateColumns: `repeat(${format.columns}, ${format.cellWidth})`,
               gridAutoRows: format.cellHeight,
+              columnGap: format.columnGap ?? 0,
+              rowGap: format.rowGap ?? 0,
             }}
           >
-            {pageBins.map((bin) => (
-              <NameCell
-                key={bin.id}
-                bin={bin}
-                format={format}
-                showIcon={showIcon}
-                showColor={showColor}
-                cellWPt={cellWPt}
-                cellHPt={cellHPt}
-                paddingPt={paddingPt}
-                overrideFontSizePt={uniformFontSizePt}
-              />
-            ))}
+            {pageBins.map((bin, binIdx) => {
+              const row = Math.floor(binIdx / format.columns);
+              const col = binIdx % format.columns;
+              const bleed = computeCellBleed(format, row, col, rowsPerPage);
+              return (
+                <NameCell
+                  key={bin.id}
+                  bin={bin}
+                  format={format}
+                  showIcon={showIcon}
+                  showColor={showColor}
+                  cellWPt={cellWPt}
+                  cellHPt={cellHPt}
+                  paddingPt={paddingPt}
+                  overrideFontSizePt={uniformFontSizePt}
+                  bleed={bleed}
+                />
+              );
+            })}
           </div>
         </div>
       ))}

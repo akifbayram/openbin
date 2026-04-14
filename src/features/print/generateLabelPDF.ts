@@ -1,9 +1,10 @@
 import { resolveColor } from '@/lib/colorPalette';
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
-import { computeLabelsPerPage, computePageSize } from './labelFormats';
+import { computeCellBleed, computeLabelsPerPage, computePageSize, computeRowsPerPage, getColumnGap, getRowGap } from './labelFormats';
 import type { LabelLayoutResult } from './labelLayout';
 import { computeLabelLayout } from './labelLayout';
+import { setFillHex } from './pdfColor';
 import { parsePaddingPt, toInches } from './pdfUnits';
 import type { LabelOptions } from './usePrintSettings';
 
@@ -26,25 +27,6 @@ function truncateToWidth(doc: JsPDF, text: string, maxWidth: number): string {
     truncated = truncated.slice(0, -1);
   }
   return `${truncated}\u2026`;
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  return [
-    parseInt(h.substring(0, 2), 16),
-    parseInt(h.substring(2, 4), 16),
-    parseInt(h.substring(4, 6), 16),
-  ];
-}
-
-function setFillHex(doc: JsPDF, hex: string): void {
-  const [r, g, b] = hexToRgb(hex);
-  doc.setFillColor(r, g, b);
-}
-
-function setTextHex(doc: JsPDF, hex: string): void {
-  const [r, g, b] = hexToRgb(hex);
-  doc.setTextColor(r, g, b);
 }
 
 /** Draw icon overlay in the center of a QR code with a square background. */
@@ -84,7 +66,10 @@ function drawQrBlock(
 
   if (p.hasIcon) {
     const iconDataUrl = p.iconMap.get(p.bin.icon);
-    if (iconDataUrl) drawIconOverlay(doc, iconDataUrl, qrX, qrY, p.qrSize, p.colorPreset?.bg);
+    if (iconDataUrl) {
+      const iconBg = layout.useColoredCell ? p.colorPreset?.bg : undefined;
+      drawIconOverlay(doc, iconDataUrl, qrX, qrY, p.qrSize, iconBg);
+    }
   }
 
   if (layout.codeUnderQr) {
@@ -114,6 +99,9 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
   const marginLeft = parseFloat(format.pageMarginLeft);
   const cellW = parseFloat(format.cellWidth);
   const cellH = parseFloat(format.cellHeight);
+  const colGap = getColumnGap(format);
+  const rowGap = getRowGap(format);
+  const rowsPerPage = computeRowsPerPage(format);
   const pad = parsePaddingPt(format.padding);
   const padIn = { top: pad.top / 72, right: pad.right / 72, bottom: pad.bottom / 72, left: pad.left / 72 };
   const gapIn = 4 / 72;
@@ -128,8 +116,8 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
       const col = binIdx % format.columns;
       const row = Math.floor(binIdx / format.columns);
 
-      const cellX = marginLeft + col * cellW;
-      const cellY = marginTop + row * cellH;
+      const cellX = marginLeft + col * (cellW + colGap);
+      const cellY = marginTop + row * (cellH + rowGap);
       const contentX = cellX + padIn.left;
       const contentY = cellY + padIn.top;
       const contentW = cellW - padIn.left - padIn.right;
@@ -141,7 +129,7 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
       const layout = computeLabelLayout({
         format,
         hasQrData: !!qrDataUrl,
-        hasColor: !!bin.color,
+        hasColor: !!colorPreset,
         hasCode: !!bin.short_code,
         hasIcon: !!bin.icon,
         labelDirection: labelOptions.labelDirection,
@@ -152,12 +140,23 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
         showColorSwatch: labelOptions.showColorSwatch,
       });
 
+      if (layout.useColoredCell && colorPreset) {
+        const bleed = computeCellBleed(format, row, col, rowsPerPage);
+        setFillHex(doc, colorPreset.bg);
+        doc.rect(
+          cellX - bleed.left,
+          cellY - bleed.top,
+          cellW + bleed.left + bleed.right,
+          cellH + bleed.top + bleed.bottom,
+          'F',
+        );
+      }
+
       const p: DrawLabelParams = {
         bin, contentX, contentY, contentW, contentH,
         qrSize: layout.qrSizePt / 72, qrDataUrl: (labelOptions.showQrCode && qrDataUrl) ? qrDataUrl : null,
         hasIcon: labelOptions.showIcon, iconMap, iconSizeIn,
         colorPreset, labelOptions, gapIn,
-        cardRadiusIn: layout.cardRadiusPt / 72,
       };
 
       if (layout.isPortrait) {
@@ -185,7 +184,6 @@ interface DrawLabelParams {
   colorPreset: ReturnType<typeof resolveColor>;
   labelOptions: LabelOptions;
   gapIn: number;
-  cardRadiusIn: number;
 }
 
 /** Measure the natural width of text column elements (inches). */
@@ -213,29 +211,9 @@ function computeCenterOffset(contentW: number, leftBlockW: number, gap: number, 
 
 function drawLandscapeLabel(doc: JsPDF, p: DrawLabelParams, layout: LabelLayoutResult) {
   const isLeftAligned = p.labelOptions.textAlign === 'left';
-  const cardPadIn = layout.cardPaddingPt / 72;
   const codeHeightIn = layout.codeUnderQr ? layout.qrCodeFontSizePt / 72 : 0;
 
-  if (layout.mode === 'colored-card' && p.qrDataUrl) {
-    const cardW = p.qrSize + cardPadIn * 2;
-    const cardH = p.qrSize + codeHeightIn + cardPadIn * 2;
-    const cardY = p.contentY + (p.contentH - cardH) / 2;
-
-    const textNaturalW = measureTextBlockWidth(doc, p, layout, true);
-    const offsetX = isLeftAligned ? 0 : computeCenterOffset(p.contentW, cardW, p.gapIn, textNaturalW);
-    const baseX = p.contentX + offsetX;
-
-    if (p.colorPreset) {
-      setFillHex(doc, p.colorPreset.bg);
-      doc.roundedRect(baseX, cardY, cardW, cardH, p.cardRadiusIn, p.cardRadiusIn, 'F');
-    }
-
-    drawQrBlock(doc, p, layout, baseX + cardPadIn, cardY + cardPadIn);
-
-    const textX = baseX + cardW + p.gapIn;
-    const textW = Math.min(textNaturalW, p.contentW - cardW - p.gapIn);
-    drawTextColumn(doc, p, layout, textX, textW, false, undefined, true);
-  } else if (layout.mode === 'plain-qr' && p.qrDataUrl) {
+  if (layout.mode === 'plain-qr' && p.qrDataUrl) {
     const blockH = p.qrSize + codeHeightIn;
     const textNaturalW = measureTextBlockWidth(doc, p, layout, layout.codeUnderQr);
     const offsetX = isLeftAligned ? 0 : computeCenterOffset(p.contentW, p.qrSize, p.gapIn, textNaturalW);
@@ -277,24 +255,8 @@ function drawPortraitLabel(doc: JsPDF, p: DrawLabelParams, layout: LabelLayoutRe
   let currentY = p.contentY;
   const isLeftAligned = p.labelOptions.textAlign === 'left';
   const centered = !isLeftAligned;
-  const cardPadIn = layout.cardPaddingPt / 72;
-  const codeHeightIn = layout.codeUnderQr ? layout.qrCodeFontSizePt / 72 : 0;
 
-  if (layout.mode === 'colored-card' && p.qrDataUrl) {
-    const cardW = p.qrSize + cardPadIn * 2;
-    const cardH = p.qrSize + codeHeightIn + cardPadIn * 2;
-    const cardX = isLeftAligned ? p.contentX : p.contentX + (p.contentW - cardW) / 2;
-
-    if (p.colorPreset) {
-      setFillHex(doc, p.colorPreset.bg);
-      doc.roundedRect(cardX, currentY, cardW, cardH, p.cardRadiusIn, p.cardRadiusIn, 'F');
-    }
-
-    drawQrBlock(doc, p, layout, cardX + cardPadIn, currentY + cardPadIn);
-    currentY += cardH + 2 / 72;
-
-    drawTextColumn(doc, p, layout, p.contentX, p.contentW, centered, currentY, true);
-  } else if (layout.mode === 'plain-qr' && p.qrDataUrl) {
+  if (layout.mode === 'plain-qr' && p.qrDataUrl) {
     const qrX = isLeftAligned ? p.contentX : p.contentX + (p.contentW - p.qrSize) / 2;
 
     drawQrBlock(doc, p, layout, qrX, currentY);
@@ -321,14 +283,9 @@ function drawPortraitLabel(doc: JsPDF, p: DrawLabelParams, layout: LabelLayoutRe
 }
 
 /** Draw the short code centered under the QR image. */
-function drawCodeUnderQr(doc: JsPDF, code: string, qrX: number, codeY: number, qrSizeIn: number, fontSizePt: number, color?: string) {
+function drawCodeUnderQr(doc: JsPDF, code: string, qrX: number, codeY: number, qrSizeIn: number, fontSizePt: number) {
   doc.setFont('courier', 'bold');
   doc.setFontSize(fontSizePt);
-  if (color) {
-    setTextHex(doc, color);
-  } else {
-    doc.setTextColor(0, 0, 0);
-  }
   const cellWidthIn = (fontSizePt * 0.8) / 72;
   const totalCodeW = code.length * cellWidthIn;
   const startX = qrX + (qrSizeIn - totalCodeW) / 2 + cellWidthIn / 2;
@@ -336,7 +293,6 @@ function drawCodeUnderQr(doc: JsPDF, code: string, qrX: number, codeY: number, q
   for (let i = 0; i < code.length; i++) {
     doc.text(code[i], startX + i * cellWidthIn, baselineY, { align: 'center' });
   }
-  doc.setTextColor(0, 0, 0);
 }
 
 function drawTextColumn(
@@ -349,9 +305,7 @@ function drawTextColumn(
   startY?: number,
   codeDrawnUnderQr = false,
 ) {
-  const barHeightIn = layout.swatchBarHeightPt / 72;
-  const elements: { type: 'swatch' | 'code' | 'name'; height: number }[] = [];
-  if (layout.showSwatchBar && p.colorPreset) elements.push({ type: 'swatch', height: barHeightIn });
+  const elements: { type: 'code' | 'name'; height: number }[] = [];
   if (p.labelOptions.showBinCode && p.bin.short_code && !codeDrawnUnderQr) elements.push({ type: 'code', height: layout.codeFontSizePt / 72 });
   if (p.labelOptions.showBinName) elements.push({ type: 'name', height: layout.nameFontSizePt / 72 });
 
@@ -369,12 +323,7 @@ function drawTextColumn(
   const anchorX = centered ? textX + textW / 2 : textX;
 
   for (const el of elements) {
-    if (el.type === 'swatch' && p.colorPreset) {
-      setFillHex(doc, p.colorPreset.bg);
-      const swatchX = centered ? textX + (textW - textW) / 2 : textX;
-      doc.roundedRect(swatchX, curY, textW, barHeightIn, 1 / 72, 1 / 72, 'F');
-      curY += barHeightIn + lineGap;
-    } else if (el.type === 'code') {
+    if (el.type === 'code') {
       doc.setFont('courier', 'bold');
       doc.setFontSize(layout.codeFontSizePt);
       const code = p.bin.short_code;

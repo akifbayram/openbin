@@ -10,13 +10,14 @@
 
 .label-sheet {
   display: grid;
-  gap: 0;
   color: black;
 }
 
 .label-cell {
   box-sizing: border-box;
   overflow: hidden;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 .label-name {
@@ -46,16 +47,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.color-swatch-print {
-  print-color-adjust: exact;
-  -webkit-print-color-adjust: exact;
-}
-
-.label-qr-card {
-  print-color-adjust: exact;
-  -webkit-print-color-adjust: exact;
 }
 
 /* ─── QR Style Range Slider ─── */

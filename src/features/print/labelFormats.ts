@@ -19,9 +19,58 @@ export interface LabelFormat {
   pageMarginBottom: string;
   pageMarginLeft: string;
   pageMarginRight: string;
+  /** Horizontal gutter between columns (inches). Defaults to 0. */
+  columnGap?: string;
+  /** Vertical gutter between rows (inches). Defaults to 0. */
+  rowGap?: string;
   orientation?: 'landscape' | 'portrait';
   pageWidth?: number; // inches; defaults to computed tight-fit
   pageHeight?: number; // inches; defaults to 11 (US Letter)
+}
+
+export function getColumnGap(format: LabelFormat): number {
+  return format.columnGap ? parseFloat(format.columnGap) : 0;
+}
+
+export function getRowGap(format: LabelFormat): number {
+  return format.rowGap ? parseFloat(format.rowGap) : 0;
+}
+
+export interface CellBleed {
+  /** Inches of bleed extending past each edge of the label. */
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export const ZERO_BLEED: CellBleed = { top: 0, right: 0, bottom: 0, left: 0 };
+
+/**
+ * Compute per-edge color bleed (in inches) for a label at grid position (row, col).
+ *
+ * Edges adjacent to another cell bleed into half the inter-cell gap, so that
+ * two neighbors meet exactly in the middle — safe regardless of their colors.
+ * Edges at the grid boundary bleed into the full page margin for maximum
+ * tolerance against printer feed misalignment.
+ *
+ * When an inter-cell gap is 0 (labels touch), bleed on that side is 0 to avoid
+ * overwriting a neighbor's cell.
+ */
+export function computeCellBleed(
+  format: LabelFormat,
+  row: number,
+  col: number,
+  rowsPerPage: number,
+): CellBleed {
+  const colGap = getColumnGap(format);
+  const rowGap = getRowGap(format);
+  return {
+    top: row === 0 ? parseFloat(format.pageMarginTop) : rowGap / 2,
+    bottom: row === rowsPerPage - 1 ? parseFloat(format.pageMarginBottom) : rowGap / 2,
+    left: col === 0 ? parseFloat(format.pageMarginLeft) : colGap / 2,
+    right: col === format.columns - 1 ? parseFloat(format.pageMarginRight) : colGap / 2,
+  };
 }
 
 export function getOrientation(fmt: LabelFormat): 'landscape' | 'portrait' {
@@ -59,7 +108,7 @@ export const LABEL_FORMATS: LabelFormat[] = [
     key: 'avery-5160',
     name: 'Avery 5160',
     columns: 3,
-    cellWidth: '2.633in',
+    cellWidth: '2.625in',
     cellHeight: '1in',
     qrSize: '0.66in',
     padding: '2pt 4pt',
@@ -68,8 +117,9 @@ export const LABEL_FORMATS: LabelFormat[] = [
     codeFontSize: '14pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
-    pageMarginLeft: '0.3in',
-    pageMarginRight: '0.3in',
+    pageMarginLeft: '0.15625in',
+    pageMarginRight: '0.15625in',
+    columnGap: '0.15625in',
     pageWidth: 8.5,
     pageHeight: 11,
   },
@@ -77,7 +127,7 @@ export const LABEL_FORMATS: LabelFormat[] = [
     key: 'avery-5163',
     name: 'Avery 5163',
     columns: 2,
-    cellWidth: '4.083in',
+    cellWidth: '4in',
     cellHeight: '2in',
     qrSize: '1.4in',
     padding: '6pt 12pt',
@@ -86,8 +136,9 @@ export const LABEL_FORMATS: LabelFormat[] = [
     codeFontSize: '18pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
-    pageMarginLeft: '0.167in',
-    pageMarginRight: '0.167in',
+    pageMarginLeft: '0.15625in',
+    pageMarginRight: '0.15625in',
+    columnGap: '0.1875in',
     pageWidth: 8.5,
     pageHeight: 11,
   },
@@ -133,7 +184,7 @@ export const LABEL_FORMATS: LabelFormat[] = [
     key: 'avery-5164',
     name: 'Avery 5164 / 6464',
     columns: 2,
-    cellWidth: '4.094in',
+    cellWidth: '4in',
     cellHeight: '3.3333in',
     qrSize: '1.5in',
     padding: '6pt 12pt',
@@ -142,8 +193,9 @@ export const LABEL_FORMATS: LabelFormat[] = [
     codeFontSize: '18pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
-    pageMarginLeft: '0.156in',
-    pageMarginRight: '0.156in',
+    pageMarginLeft: '0.15625in',
+    pageMarginRight: '0.15625in',
+    columnGap: '0.1875in',
     pageWidth: 8.5,
     pageHeight: 11,
   },
@@ -160,8 +212,9 @@ export const LABEL_FORMATS: LabelFormat[] = [
     codeFontSize: '20pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
-    pageMarginLeft: '0.75in',
-    pageMarginRight: '0.75in',
+    pageMarginLeft: '0.5in',
+    pageMarginRight: '0.5in',
+    columnGap: '0.5in',
     orientation: 'portrait',
     pageWidth: 8.5,
     pageHeight: 11,
@@ -264,8 +317,17 @@ export function applyOrientation(
   const newMarginLeft = format.pageMarginTop;
   const newMarginRight = format.pageMarginBottom;
 
+  // Swap gaps: columnGap ↔ rowGap when orientation flips
+  const newColumnGap = format.rowGap;
+  const newRowGap = format.columnGap;
+
   const availableWidth = newPageWidth - parseFloat(newMarginLeft) - parseFloat(newMarginRight);
-  const newColumns = Math.max(1, Math.floor(availableWidth / parseFloat(newCellWidth) + EPS));
+  const newColGapValue = newColumnGap ? parseFloat(newColumnGap) : 0;
+  const cellW = parseFloat(newCellWidth);
+  const pitchW = cellW + newColGapValue;
+  const newColumns = pitchW > 0
+    ? Math.max(1, Math.floor((availableWidth + newColGapValue) / pitchW + EPS))
+    : 1;
 
   return {
     ...format,
@@ -279,13 +341,21 @@ export function applyOrientation(
     pageMarginBottom: newMarginBottom,
     pageMarginLeft: newMarginLeft,
     pageMarginRight: newMarginRight,
+    columnGap: newColumnGap,
+    rowGap: newRowGap,
   };
 }
 
 export function computeRowsPerPage(format: LabelFormat): number {
   const pageHeight = format.pageHeight ?? PAGE_HEIGHT_INCHES;
   const available = pageHeight - parseFloat(format.pageMarginTop) - parseFloat(format.pageMarginBottom);
-  return Math.max(1, Math.floor(available / parseFloat(format.cellHeight) + EPS));
+  const cellH = parseFloat(format.cellHeight);
+  const rowGap = getRowGap(format);
+  const pitch = cellH + rowGap;
+  if (pitch <= 0) return 1;
+  // n rows fit when n*cellH + (n-1)*rowGap ≤ available
+  // → n ≤ (available + rowGap) / pitch
+  return Math.max(1, Math.floor((available + rowGap) / pitch + EPS));
 }
 
 export function computeLabelsPerPage(format: LabelFormat): number {
@@ -294,8 +364,18 @@ export function computeLabelsPerPage(format: LabelFormat): number {
 
 export function computePageSize(format: LabelFormat): { width: number; height: number } {
   const rows = computeRowsPerPage(format);
-  const computedWidth = parseFloat(format.pageMarginLeft) + format.columns * parseFloat(format.cellWidth) + parseFloat(format.pageMarginRight);
-  const computedHeight = parseFloat(format.pageMarginTop) + rows * parseFloat(format.cellHeight) + parseFloat(format.pageMarginBottom);
+  const colGap = getColumnGap(format);
+  const rowGap = getRowGap(format);
+  const computedWidth =
+    parseFloat(format.pageMarginLeft)
+    + format.columns * parseFloat(format.cellWidth)
+    + Math.max(0, format.columns - 1) * colGap
+    + parseFloat(format.pageMarginRight);
+  const computedHeight =
+    parseFloat(format.pageMarginTop)
+    + rows * parseFloat(format.cellHeight)
+    + Math.max(0, rows - 1) * rowGap
+    + parseFloat(format.pageMarginBottom);
   return {
     width: format.pageWidth ?? computedWidth,
     height: format.pageHeight ?? computedHeight,

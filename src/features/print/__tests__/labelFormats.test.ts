@@ -4,6 +4,7 @@ import type { LabelFormat } from '../labelFormats';
 import {
   applyOrientation,
   buildColorMap,
+  computeCellBleed,
   computeCodeFontSize,
   computeLabelsPerPage,
   computePageSize,
@@ -113,6 +114,33 @@ describe('applyOrientation', () => {
     expect(restored.pageWidth).toBe(fmt.pageWidth);
     expect(restored.pageHeight).toBe(fmt.pageHeight);
   });
+
+  it('swaps columnGap and rowGap when flipping orientation', () => {
+    const fmt = makeFormat({ columnGap: '0.5in', rowGap: '0.1in' });
+    const flipped = applyOrientation(fmt, 'portrait');
+    expect(flipped.columnGap).toBe('0.1in');
+    expect(flipped.rowGap).toBe('0.5in');
+  });
+
+  it('accounts for columnGap when recomputing columns after flip', () => {
+    const fmt = makeFormat({
+      columns: 2,
+      cellWidth: '3.5in',
+      cellHeight: '5in',
+      columnGap: '0.5in',
+      pageMarginLeft: '0.5in',
+      pageMarginRight: '0.5in',
+      pageMarginTop: '0.5in',
+      pageMarginBottom: '0.5in',
+      pageWidth: 8.5,
+      pageHeight: 11,
+      orientation: 'portrait',
+    });
+    const flipped = applyOrientation(fmt, 'landscape');
+    // After flip: newCellWidth = 5in, newPageWidth = 11, newMargins(L/R) = 0.5, newColGap = 0
+    // avail = 11 - 0.5 - 0.5 = 10; floor(10/5) = 2 columns.
+    expect(flipped.columns).toBe(2);
+  });
 });
 
 describe('computeRowsPerPage', () => {
@@ -141,6 +169,19 @@ describe('computeRowsPerPage', () => {
     });
     // Available = 10, rows = floor(10/3.3333) = 3
     expect(computeRowsPerPage(fmt)).toBe(3);
+  });
+
+  it('accounts for rowGap between rows', () => {
+    const fmt = makeFormat({
+      cellHeight: '2in',
+      rowGap: '0.5in',
+      pageHeight: 11,
+      pageMarginTop: '0.5in',
+      pageMarginBottom: '0.5in',
+    });
+    // Available = 10. n rows fit when n*2 + (n-1)*0.5 ≤ 10.
+    // n=4 → 8 + 1.5 = 9.5 ✓; n=5 → 10 + 2 = 12 ✗. Answer: 4.
+    expect(computeRowsPerPage(fmt)).toBe(4);
   });
 });
 
@@ -194,6 +235,154 @@ describe('computePageSize', () => {
     // rows depend on default page height (11) - margins = 10, floor(10/3) = 3
     // height = 0.5 + 3*3 + 0.5 = 10
     expect(height).toBeCloseTo(10, 2);
+  });
+
+  it('includes columnGap and rowGap in tight-fit width/height', () => {
+    const fmt = makeFormat({
+      columns: 2,
+      cellWidth: '3.5in',
+      cellHeight: '5in',
+      columnGap: '0.5in',
+      rowGap: '0in',
+      pageMarginLeft: '0.5in',
+      pageMarginRight: '0.5in',
+      pageMarginTop: '0.5in',
+      pageMarginBottom: '0.5in',
+      pageWidth: undefined,
+      pageHeight: undefined,
+    });
+    const { width, height } = computePageSize(fmt);
+    // width = 0.5 + 2*3.5 + 1*0.5 + 0.5 = 8.5
+    expect(width).toBeCloseTo(8.5, 3);
+    // rows = 2, height = 0.5 + 2*5 + 1*0 + 0.5 = 11
+    expect(height).toBeCloseTo(11, 3);
+  });
+});
+
+describe('computeCellBleed', () => {
+  it('avery-5168 corner label bleeds into full page margin + half column gap', () => {
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5168')!;
+    // 2×2 grid; cell (0,0) is top-left corner.
+    const b = computeCellBleed(fmt, 0, 0, 2);
+    expect(b.top).toBeCloseTo(0.5, 6); // full top margin
+    expect(b.left).toBeCloseTo(0.5, 6); // full left margin
+    expect(b.right).toBeCloseTo(0.25, 6); // half 0.5" column gap
+    expect(b.bottom).toBeCloseTo(0, 6); // rowGap=0 between rows 0 and 1
+  });
+
+  it('avery-5168 bottom-right label bleeds into bottom+right margins and half gap', () => {
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5168')!;
+    const b = computeCellBleed(fmt, 1, 1, 2);
+    expect(b.top).toBeCloseTo(0, 6);
+    expect(b.left).toBeCloseTo(0.25, 6);
+    expect(b.right).toBeCloseTo(0.5, 6);
+    expect(b.bottom).toBeCloseTo(0.5, 6);
+  });
+
+  it('avery-5160 interior label bleeds half column gap, no row bleed', () => {
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5160')!;
+    // Middle column, middle row: all four edges are adjacent to other cells.
+    const b = computeCellBleed(fmt, 4, 1, 10);
+    expect(b.top).toBeCloseTo(0, 6); // rowGap=0
+    expect(b.bottom).toBeCloseTo(0, 6);
+    expect(b.left).toBeCloseTo(0.15625 / 2, 6);
+    expect(b.right).toBeCloseTo(0.15625 / 2, 6);
+  });
+
+  it('avery-5160 top-row edge label bleeds into top margin', () => {
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5160')!;
+    const b = computeCellBleed(fmt, 0, 0, 10);
+    expect(b.top).toBeCloseTo(0.5, 6);
+    expect(b.left).toBeCloseTo(0.15625, 6);
+    expect(b.bottom).toBeCloseTo(0, 6);
+    expect(b.right).toBeCloseTo(0.15625 / 2, 6);
+  });
+
+  it('adjacent-cell bleeds sum to the full gap (no overlap, no seam)', () => {
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5168')!;
+    const left = computeCellBleed(fmt, 0, 0, 2);
+    const right = computeCellBleed(fmt, 0, 1, 2);
+    expect(left.right + right.left).toBeCloseTo(0.5, 6); // = columnGap
+  });
+
+  it('single-cell format bleeds into all four page margins', () => {
+    const fmt = makeFormat({
+      columns: 1,
+      cellWidth: '6in',
+      cellHeight: '4in',
+      pageWidth: 6.5,
+      pageHeight: 5,
+      pageMarginTop: '0.5in',
+      pageMarginBottom: '0.5in',
+      pageMarginLeft: '0.25in',
+      pageMarginRight: '0.25in',
+    });
+    const b = computeCellBleed(fmt, 0, 0, 1);
+    expect(b.top).toBeCloseTo(0.5, 6);
+    expect(b.bottom).toBeCloseTo(0.5, 6);
+    expect(b.left).toBeCloseTo(0.25, 6);
+    expect(b.right).toBeCloseTo(0.25, 6);
+  });
+});
+
+describe('Avery preset alignment', () => {
+  it('avery-5168 tight-fit matches 8.5×11 with 0.5" column gap', () => {
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5168')!;
+    expect(fmt.columnGap).toBe('0.5in');
+    expect(fmt.pageMarginLeft).toBe('0.5in');
+    expect(fmt.pageMarginRight).toBe('0.5in');
+    expect(computeLabelsPerPage(fmt)).toBe(4);
+    // Verify manual reconstruction adds to page size
+    const colGap = parseFloat(fmt.columnGap ?? '0in');
+    const reconstructedWidth =
+      parseFloat(fmt.pageMarginLeft) + fmt.columns * parseFloat(fmt.cellWidth)
+      + (fmt.columns - 1) * colGap + parseFloat(fmt.pageMarginRight);
+    expect(reconstructedWidth).toBeCloseTo(8.5, 3);
+  });
+
+  it('avery-5160 tight-fit matches 8.5×11 with 5/32" column gap', () => {
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5160')!;
+    expect(fmt.cellWidth).toBe('2.625in');
+    expect(fmt.columnGap).toBe('0.15625in');
+    expect(computeLabelsPerPage(fmt)).toBe(30);
+    const colGap = parseFloat(fmt.columnGap ?? '0in');
+    const reconstructedWidth =
+      parseFloat(fmt.pageMarginLeft) + fmt.columns * parseFloat(fmt.cellWidth)
+      + (fmt.columns - 1) * colGap + parseFloat(fmt.pageMarginRight);
+    expect(reconstructedWidth).toBeCloseTo(8.5, 3);
+  });
+
+  it('avery-5163 tight-fit matches 8.5×11 with 3/16" column gap', () => {
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5163')!;
+    expect(fmt.cellWidth).toBe('4in');
+    expect(fmt.columnGap).toBe('0.1875in');
+    expect(computeLabelsPerPage(fmt)).toBe(10);
+    const colGap = parseFloat(fmt.columnGap ?? '0in');
+    const reconstructedWidth =
+      parseFloat(fmt.pageMarginLeft) + fmt.columns * parseFloat(fmt.cellWidth)
+      + (fmt.columns - 1) * colGap + parseFloat(fmt.pageMarginRight);
+    expect(reconstructedWidth).toBeCloseTo(8.5, 3);
+  });
+
+  it('avery-5164 tight-fit matches 8.5×11 with 3/16" column gap', () => {
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5164')!;
+    expect(fmt.cellWidth).toBe('4in');
+    expect(fmt.columnGap).toBe('0.1875in');
+    expect(computeLabelsPerPage(fmt)).toBe(6);
+    const colGap = parseFloat(fmt.columnGap ?? '0in');
+    const reconstructedWidth =
+      parseFloat(fmt.pageMarginLeft) + fmt.columns * parseFloat(fmt.cellWidth)
+      + (fmt.columns - 1) * colGap + parseFloat(fmt.pageMarginRight);
+    expect(reconstructedWidth).toBeCloseTo(8.5, 3);
   });
 });
 

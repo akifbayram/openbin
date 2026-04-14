@@ -1,8 +1,9 @@
 import { resolveColor } from '@/lib/colorPalette';
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
-import { computeLabelsPerPage, computePageSize } from './labelFormats';
-import { computeContrastFg, computeNameFontSize, computeUniformFontSize, ICON_GAP_RATIO, ICON_SCALE, maxPaddingPt, NAME_CARD_NEUTRAL_BG } from './nameCardLayout';
+import { computeCellBleed, computeLabelsPerPage, computePageSize, computeRowsPerPage, getColumnGap, getRowGap } from './labelFormats';
+import { computeNameFontSize, computeUniformFontSize, ICON_GAP_RATIO, ICON_SCALE, maxPaddingPt, NAME_CARD_NEUTRAL_BG } from './nameCardLayout';
+import { setFillHex } from './pdfColor';
 import type { NameCardOptions } from './usePrintSettings';
 
 type JsPDF = import('jspdf').jsPDF;
@@ -12,25 +13,6 @@ interface GenerateNamePDFParams {
   format: LabelFormat;
   nameCardOptions: NameCardOptions;
   iconMap: Map<string, string>;
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  return [
-    parseInt(h.substring(0, 2), 16),
-    parseInt(h.substring(2, 4), 16),
-    parseInt(h.substring(4, 6), 16),
-  ];
-}
-
-function setFillHex(doc: JsPDF, hex: string): void {
-  const [r, g, b] = hexToRgb(hex);
-  doc.setFillColor(r, g, b);
-}
-
-function setTextHex(doc: JsPDF, hex: string): void {
-  const [r, g, b] = hexToRgb(hex);
-  doc.setTextColor(r, g, b);
 }
 
 /** Truncate text to fit within maxWidth, adding ellipsis if needed. */
@@ -65,6 +47,9 @@ export async function generateNamePDF(params: GenerateNamePDFParams): Promise<Bl
   const marginLeft = parseFloat(format.pageMarginLeft);
   const cellW = parseFloat(format.cellWidth);
   const cellH = parseFloat(format.cellHeight);
+  const colGap = getColumnGap(format);
+  const rowGap = getRowGap(format);
+  const rowsPerPage = computeRowsPerPage(format);
   const paddingPt = maxPaddingPt(format.padding);
   const padIn = paddingPt / 72;
   const cellWPt = cellW * 72;
@@ -85,8 +70,8 @@ export async function generateNamePDF(params: GenerateNamePDFParams): Promise<Bl
       const col = binIdx % format.columns;
       const row = Math.floor(binIdx / format.columns);
 
-      const cellX = marginLeft + col * cellW;
-      const cellY = marginTop + row * cellH;
+      const cellX = marginLeft + col * (cellW + colGap);
+      const cellY = marginTop + row * (cellH + rowGap);
       const contentX = cellX + padIn;
       const contentY = cellY + padIn;
       const contentW = cellW - 2 * padIn;
@@ -94,13 +79,17 @@ export async function generateNamePDF(params: GenerateNamePDFParams): Promise<Bl
 
       const displayName = bin.name || bin.short_code;
       const colorPreset = nameCardOptions.showColor && bin.color ? resolveColor(bin.color) : undefined;
-      const bgColor = colorPreset?.bg;
-      const textColor = bgColor ? computeContrastFg(bgColor) : '#000000';
       const hasIcon = nameCardOptions.showIcon && !!bin.icon;
 
-      // Draw background (bin color or neutral fallback)
-      setFillHex(doc, bgColor ?? NAME_CARD_NEUTRAL_BG);
-      doc.rect(cellX, cellY, cellW, cellH, 'F');
+      const bleed = computeCellBleed(format, row, col, rowsPerPage);
+      setFillHex(doc, colorPreset?.bg ?? NAME_CARD_NEUTRAL_BG);
+      doc.rect(
+        cellX - bleed.left,
+        cellY - bleed.top,
+        cellW + bleed.left + bleed.right,
+        cellH + bleed.top + bleed.bottom,
+        'F',
+      );
 
       // Compute font size
       const { fontSizePt, iconSizePt } = uniformFontSizePt != null
@@ -115,10 +104,8 @@ export async function generateNamePDF(params: GenerateNamePDFParams): Promise<Bl
       const iconDataUrl = hasIcon ? iconMap.get(bin.icon) : undefined;
       const iconWidth = iconDataUrl ? iconSizeIn + gapIn : 0;
 
-      // Compute text position
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(fontSizePt);
-      setTextHex(doc, textColor);
 
       const truncatedName = truncateToWidth(doc, displayName, contentW - iconWidth);
       const textW = doc.getTextWidth(truncatedName);

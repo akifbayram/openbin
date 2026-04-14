@@ -9,7 +9,6 @@ import { Switch } from '@/components/ui/switch';
 import { HueGradientPicker } from '@/features/bins/ColorPicker';
 import { buildColorKey, hexToHsl, resolveColor, SHADE_COUNT } from '@/lib/colorPalette';
 import { cn } from '@/lib/utils';
-import { CARD_PAD_RATIO, CARD_RADIUS_RATIO } from './pdfConstants';
 import type { QrStyleOptions } from './usePrintSettings';
 import { DEFAULT_QR_STYLE, isDefaultQrStyle } from './usePrintSettings';
 
@@ -50,9 +49,8 @@ interface QrStyleCardProps {
 }
 
 const QR_PREVIEW_SIZE = 140;
-const QR_PREVIEW_PAD = Math.round(QR_PREVIEW_SIZE * CARD_PAD_RATIO);
-const QR_PREVIEW_OUTER = QR_PREVIEW_SIZE + QR_PREVIEW_PAD * 2;
-const QR_PREVIEW_RADIUS = Math.round(QR_PREVIEW_OUTER * CARD_RADIUS_RATIO);
+const QR_PREVIEW_PAD = 6;
+const QR_PREVIEW_RADIUS = 4;
 
 function MiniPreview({ style }: { style: QrStyleOptions }) {
   const [dataUrl, setDataUrl] = useState<string>('');

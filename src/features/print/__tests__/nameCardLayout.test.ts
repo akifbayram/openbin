@@ -1,23 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeContrastFg, computeNameFontSize } from '../nameCardLayout';
-
-describe('computeContrastFg', () => {
-  it('returns black for light backgrounds', () => {
-    expect(computeContrastFg('#FFFFFF')).toBe('#000000');
-    expect(computeContrastFg('#F2F2F7')).toBe('#000000');
-    expect(computeContrastFg('#C8E6C9')).toBe('#000000');
-  });
-
-  it('returns white for dark backgrounds', () => {
-    expect(computeContrastFg('#000000')).toBe('#FFFFFF');
-    expect(computeContrastFg('#1C1C1E')).toBe('#FFFFFF');
-    expect(computeContrastFg('#1B5E20')).toBe('#FFFFFF');
-  });
-
-  it('returns black for medium-light backgrounds', () => {
-    expect(computeContrastFg('#BBDEFB')).toBe('#000000');
-  });
-});
+import { computeNameFontSize } from '../nameCardLayout';
 
 describe('computeNameFontSize', () => {
   it('returns larger font for short names', () => {

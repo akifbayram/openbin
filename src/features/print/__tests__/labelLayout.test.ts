@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LABEL_FORMATS } from '../labelFormats';
 import type { LabelLayoutInput } from '../labelLayout';
 import { computeLabelLayout } from '../labelLayout';
-import { CARD_PAD_MIN_PT, CARD_PAD_RATIO, CARD_RADIUS_RATIO, MONO_CODE_WIDTH_EMS, SWATCH_BAR_HEIGHT_RATIO, SWATCH_BAR_MIN_PT } from '../pdfConstants';
+import { MONO_CODE_WIDTH_EMS } from '../pdfConstants';
 
 // biome-ignore lint/style/noNonNullAssertion: test assertion
 const avery5160 = LABEL_FORMATS.find((f) => f.key === 'avery-5160')!;
@@ -27,22 +27,14 @@ function makeInput(overrides?: Partial<LabelLayoutInput>): LabelLayoutInput {
 
 describe('computeLabelLayout', () => {
   describe('mode determination', () => {
-    it('returns colored-card when color swatch and QR are both enabled', () => {
+    it('returns plain-qr when QR is available', () => {
       const result = computeLabelLayout(makeInput());
-      expect(result.mode).toBe('colored-card');
-      expect(result.useColoredCard).toBe(true);
+      expect(result.mode).toBe('plain-qr');
     });
 
-    it('returns plain-qr when QR enabled but color swatch disabled', () => {
+    it('returns plain-qr when color swatch is disabled but QR is on', () => {
       const result = computeLabelLayout(makeInput({ showColorSwatch: false }));
       expect(result.mode).toBe('plain-qr');
-      expect(result.useColoredCard).toBe(false);
-    });
-
-    it('returns colored-card even when bin has no color (card renders without fill)', () => {
-      const result = computeLabelLayout(makeInput({ hasColor: false }));
-      expect(result.mode).toBe('colored-card');
-      expect(result.useColoredCard).toBe(true);
     });
 
     it('returns icon-only when QR disabled and icon enabled', () => {
@@ -63,6 +55,35 @@ describe('computeLabelLayout', () => {
     it('returns icon-only when no QR data and icon enabled with showQrCode off', () => {
       const result = computeLabelLayout(makeInput({ hasQrData: false, showQrCode: false }));
       expect(result.mode).toBe('icon-only');
+    });
+  });
+
+  describe('useColoredCell', () => {
+    it('is true when showColorSwatch and hasColor are both true', () => {
+      const result = computeLabelLayout(makeInput());
+      expect(result.useColoredCell).toBe(true);
+    });
+
+    it('is true even in icon-only mode when showColorSwatch and hasColor are true', () => {
+      const result = computeLabelLayout(makeInput({ showQrCode: false }));
+      expect(result.mode).toBe('icon-only');
+      expect(result.useColoredCell).toBe(true);
+    });
+
+    it('is true even in text-only mode when showColorSwatch and hasColor are true', () => {
+      const result = computeLabelLayout(makeInput({ showQrCode: false, showIcon: false }));
+      expect(result.mode).toBe('text-only');
+      expect(result.useColoredCell).toBe(true);
+    });
+
+    it('is false when bin has no color', () => {
+      const result = computeLabelLayout(makeInput({ hasColor: false }));
+      expect(result.useColoredCell).toBe(false);
+    });
+
+    it('is false when showColorSwatch is disabled', () => {
+      const result = computeLabelLayout(makeInput({ showColorSwatch: false }));
+      expect(result.useColoredCell).toBe(false);
     });
   });
 
@@ -110,74 +131,10 @@ describe('computeLabelLayout', () => {
     });
   });
 
-  describe('card padding', () => {
-    it('computes card padding from QR size with minimum', () => {
-      const result = computeLabelLayout(makeInput());
-      const expected = Math.max(CARD_PAD_MIN_PT, result.qrSizePt * CARD_PAD_RATIO);
-      // Card padding should be clamped to fit within content area
-      expect(result.cardPaddingPt).toBeLessThanOrEqual(expected);
-      expect(result.cardPaddingPt).toBeGreaterThan(0);
-    });
-
-    it('uses minimum pad when cell is small', () => {
-      const smallFormat = { ...avery5160, qrSize: '0.01in', cellHeight: '0.5in' };
-      const result = computeLabelLayout(makeInput({ format: smallFormat }));
-      // With a small cell, QR stays small and minimum padding applies
-      expect(result.cardPaddingPt).toBeLessThanOrEqual(CARD_PAD_MIN_PT);
-    });
-  });
-
-  describe('card border radius', () => {
-    it('computes radius from cell dimensions', () => {
-      const result = computeLabelLayout(makeInput());
-      const cellWPt = parseFloat(avery5160.cellWidth) * 72;
-      const cellHPt = parseFloat(avery5160.cellHeight) * 72;
-      const expected = Math.min(cellWPt, cellHPt) * CARD_RADIUS_RATIO;
-      expect(result.cardRadiusPt).toBeCloseTo(expected, 4);
-    });
-  });
-
   describe('qrCodeFontSizePt', () => {
     it('computes from QR size divided by MONO_CODE_WIDTH_EMS', () => {
       const result = computeLabelLayout(makeInput());
       expect(result.qrCodeFontSizePt).toBeCloseTo(result.qrSizePt / MONO_CODE_WIDTH_EMS, 4);
-    });
-  });
-
-  describe('swatchBarHeightPt', () => {
-    it('computes from name font size with minimum', () => {
-      const result = computeLabelLayout(makeInput());
-      const nameFontSizePt = parseFloat(avery5160.nameFontSize);
-      const expected = Math.max(SWATCH_BAR_MIN_PT, nameFontSizePt * SWATCH_BAR_HEIGHT_RATIO);
-      expect(result.swatchBarHeightPt).toBeCloseTo(expected, 4);
-    });
-  });
-
-  describe('showSwatchBar', () => {
-    it('is false in colored-card mode even with color', () => {
-      const result = computeLabelLayout(makeInput());
-      expect(result.mode).toBe('colored-card');
-      expect(result.showSwatchBar).toBe(false);
-    });
-
-    it('is true in plain-qr mode with color and swatch enabled', () => {
-      // Color swatch disabled means no colored card, but showSwatchBar also needs showColorSwatch
-      // Let's use: hasColor true, showColorSwatch true, but no QR data so it falls to icon/text mode
-      // Actually for plain-qr mode with swatch: need showColorSwatch=false so mode=plain-qr,
-      // but then showSwatchBar also requires showColorSwatch=true...
-      // showSwatchBar = hasColor && showColorSwatch && !useColoredCard
-      // For plain-qr with swatch bar, we need hasQrData=true, showQrCode=true (so QR visible),
-      // showColorSwatch=true but that makes useColoredCard=true...
-      // Actually the swatch bar shows when the bin has color but we're NOT in colored-card mode.
-      // This happens when e.g. showColorSwatch=true but hasQrData=false (no QR available).
-      const result = computeLabelLayout(makeInput({ hasQrData: false }));
-      expect(result.mode).not.toBe('colored-card');
-      expect(result.showSwatchBar).toBe(true);
-    });
-
-    it('is false when bin has no color', () => {
-      const result = computeLabelLayout(makeInput({ hasColor: false, showColorSwatch: false }));
-      expect(result.showSwatchBar).toBe(false);
     });
   });
 
@@ -211,12 +168,17 @@ describe('computeLabelLayout', () => {
       const contentW = parseFloat(avery5168.cellWidth) * 72 - pad.left - pad.right;
       expect(result.qrSizePt).toBeLessThanOrEqual(contentW);
     });
+
+    it('QR uses a substantial portion of portrait cell height', () => {
+      const result = computeLabelLayout(makeInput({ format: avery5168 }));
+      const cellH = parseFloat(avery5168.cellHeight) * 72;
+      expect(result.qrSizePt).toBeGreaterThan(cellH * 0.5);
+    });
   });
 
-  describe('all 6 mode × orientation combinations', () => {
+  describe('mode × orientation combinations', () => {
     const modes: [string, Partial<LabelLayoutInput>][] = [
-      ['colored-card', {}],
-      ['plain-qr', { showColorSwatch: false }],
+      ['plain-qr', {}],
       ['icon-only', { showQrCode: false }],
     ];
 
