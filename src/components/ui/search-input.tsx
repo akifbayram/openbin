@@ -16,7 +16,7 @@ const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
     return (
       <div
         className={cn(
-          'flex min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 min-h-11 py-1.5 ring-1 ring-inset ring-[var(--border-flat)] transition-all duration-200',
+          'flex min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 min-h-11 py-1.5 ring-1 ring-inset ring-[var(--border-flat)] transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)]',
           containerClassName,
         )}
       >

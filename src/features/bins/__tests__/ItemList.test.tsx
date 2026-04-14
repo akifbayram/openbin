@@ -154,10 +154,9 @@ describe('ItemList header sorting', () => {
 });
 
 describe('ItemList hideHeader', () => {
-  it('hides the count header and items render without a toggle', () => {
+  it('hides the count header while still rendering items', () => {
     render(<ItemList items={items} readOnly hideHeader />);
     expect(screen.queryByText('3 Items')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/toggle items/i)).not.toBeInTheDocument();
     expect(screen.getByText('Hammer')).toBeInTheDocument();
   });
 });

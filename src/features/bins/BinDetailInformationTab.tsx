@@ -120,7 +120,7 @@ export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformation
             <dt className="text-[var(--text-tertiary)]">Updated</dt>
             <dd className="text-[var(--text-primary)]">{formatTimeAgo(bin.updated_at)}</dd>
 
-            <dt className="text-[var(--text-tertiary)]">Scanned</dt>
+            <dt className="text-[var(--text-tertiary)]">Last scanned</dt>
             <dd
               className={
                 lastScan ? 'text-[var(--text-primary)]' : 'text-[var(--text-quaternary)]'

@@ -28,6 +28,12 @@ interface OptionGroupProps<K extends string> {
   variant?: 'radio' | 'tabs';
   /** Required when variant="tabs" for screen-reader navigation */
   'aria-label'?: string;
+  /**
+   * Optional stable id prefix for tab buttons (tabs variant). When provided,
+   * each tab gets id="{idPrefix}-tab-{key}", allowing callers to link a
+   * matching tabpanel via aria-labelledby.
+   */
+  idPrefix?: string;
 }
 
 export function OptionGroup<K extends string>({
@@ -41,6 +47,7 @@ export function OptionGroup<K extends string>({
   className,
   variant = 'radio',
   'aria-label': ariaLabel,
+  idPrefix,
 }: OptionGroupProps<K>) {
   const containerRadius = 'rounded-[var(--radius-md)]';
   const segmentRadius = 'rounded-[var(--radius-xs)]';
@@ -114,6 +121,7 @@ export function OptionGroup<K extends string>({
           // biome-ignore lint/a11y/useAriaPropsSupportedByRole: role is dynamic (tab or radio); aria-selected/aria-checked are set conditionally
           <button
             key={opt.key}
+            id={isTabs && idPrefix ? `${idPrefix}-tab-${opt.key}` : undefined}
             ref={(el) => {
               setButtonRef(opt.key)(el);
               buttonMap.current.set(opt.key, el);

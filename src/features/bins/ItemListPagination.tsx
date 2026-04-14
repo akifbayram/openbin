@@ -30,7 +30,7 @@ export function ItemListPagination({
   const pages = getPageNumbers(page, totalPages);
 
   const navBtn =
-    'flex items-center justify-center h-7 w-7 rounded-[var(--radius-xs)] transition-colors';
+    'flex items-center justify-center h-7 w-7 rounded-[var(--radius-xs)] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]';
 
   return (
     <nav
@@ -51,7 +51,7 @@ export function ItemListPagination({
             navBtn,
             page <= 1
               ? 'text-[var(--text-tertiary)] cursor-not-allowed opacity-40'
-              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-active)]',
           )}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -72,10 +72,10 @@ export function ItemListPagination({
                 aria-label={`Page ${p}`}
                 aria-current={p === page ? 'page' : undefined}
                 className={cn(
-                  'flex items-center justify-center h-7 min-w-7 px-1.5 rounded-[var(--radius-xs)] text-[12px] font-medium tabular-nums transition-colors',
+                  'flex items-center justify-center h-7 min-w-7 px-1.5 rounded-[var(--radius-xs)] text-[12px] font-medium tabular-nums transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
                   p === page
                     ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-flat)]'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-active)]',
                 )}
               >
                 {p}
@@ -98,7 +98,7 @@ export function ItemListPagination({
             navBtn,
             page >= totalPages
               ? 'text-[var(--text-tertiary)] cursor-not-allowed opacity-40'
-              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-active)]',
           )}
         >
           <ChevronRight className="h-3.5 w-3.5" />

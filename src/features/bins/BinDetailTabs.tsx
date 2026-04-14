@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { OptionGroup, type OptionGroupOption } from '@/components/ui/option-group';
 import type { useDictation } from '@/lib/useDictation';
 import type { Bin, CustomField, ItemCheckout, Photo } from '@/types';
@@ -55,6 +55,7 @@ export function BinDetailTabs({
   checkouts,
 }: BinDetailTabsProps) {
   const [tab, setTab] = useState<BinDetailTab>(() => readInitialTab());
+  const tabsId = useId();
 
   const handleChange = (next: BinDetailTab) => {
     setTab(next);
@@ -107,8 +108,15 @@ export function BinDetailTabs({
         size="lg"
         variant="tabs"
         aria-label="Bin sections"
+        idPrefix={tabsId}
       />
-      <div key={tab} className="pt-4 motion-safe:animate-fade-in">
+      <div
+        key={tab}
+        role="tabpanel"
+        id={`${tabsId}-panel-${tab}`}
+        aria-labelledby={`${tabsId}-tab-${tab}`}
+        className="pt-4 motion-safe:animate-fade-in"
+      >
         {tab === 'contents' && (
           <BinDetailContentsTab
             bin={bin}

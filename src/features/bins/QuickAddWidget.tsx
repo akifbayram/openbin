@@ -34,6 +34,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
   const inputRef = useRef<HTMLInputElement>(null);
   const isRecording = dictation?.state === 'recording';
   const isInline = variant === 'inline';
+  const hasValue = quickAdd.value.trim().length > 0;
   // Sub-panel padding for expanded/preview states. In `card` variant the outer
   // wrapper supplies padding; in `inline` we add it per-state to align with row inset.
   const panelClass = isInline ? 'space-y-2 px-3.5 py-2.5' : 'space-y-2';
@@ -52,13 +53,13 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
               tabIndex={-1}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
-                if (quickAdd.value.trim()) quickAdd.handleAdd();
+                if (hasValue) quickAdd.handleAdd();
                 inputRef.current?.focus();
               }}
               disabled={quickAdd.saving}
               className={cn(
                 'shrink-0 w-8 flex items-center justify-center transition-colors disabled:opacity-50',
-                quickAdd.value.trim() ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]',
+                hasValue ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]',
               )}
               aria-label="Add item"
             >
@@ -83,7 +84,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
               isInline ? 'px-0 text-[15px]' : 'px-0.5 text-base',
             )}
           />
-          {!isInline && !isRecording && quickAdd.value.trim() && (
+          {!isInline && !isRecording && hasValue && (
             <Tooltip content="Add item">
               <button
                 type="button"

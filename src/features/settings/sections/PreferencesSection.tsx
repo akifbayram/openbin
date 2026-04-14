@@ -1,5 +1,5 @@
 import { Check, ChevronsUpDown, Monitor, Moon, Sun } from 'lucide-react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import type { OptionGroupOption } from '@/components/ui/option-group';
@@ -35,21 +35,29 @@ const themeOptions: OptionGroupOption<ThemePreference>[] = [
   { key: 'auto', label: 'Auto', icon: Monitor },
 ];
 
-function formatPageSizeLabel(v: PageSizeValue, entityLabel: string): string {
-  return v === 'all' ? `All on one page` : `${v} per ${entityLabel}`;
+function formatPageSizeLabel(v: PageSizeValue): string {
+  return v === 'all' ? 'All on one page' : `${v} per page`;
 }
 
 interface ItemPageSizeSelectProps {
   value: PageSizeValue;
   onChange: (v: PageSizeValue) => void;
   ariaLabel: string;
-  entityLabel: string;
 }
 
-function ItemPageSizeSelect({ value, onChange, ariaLabel, entityLabel }: ItemPageSizeSelectProps) {
-  const { visible, animating, close, toggle } = usePopover();
+function ItemPageSizeSelect({ value, onChange, ariaLabel }: ItemPageSizeSelectProps) {
+  const { visible, animating, isOpen, close, toggle } = usePopover();
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, close);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') close();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [isOpen, close]);
 
   return (
     <div className="relative" ref={ref}>
@@ -61,7 +69,7 @@ function ItemPageSizeSelect({ value, onChange, ariaLabel, entityLabel }: ItemPag
         aria-expanded={visible}
         aria-label={ariaLabel}
       >
-        <span className="tabular-nums">{formatPageSizeLabel(value, entityLabel)}</span>
+        <span className="tabular-nums">{formatPageSizeLabel(value)}</span>
         <ChevronsUpDown className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
       </button>
       {visible && (
@@ -89,7 +97,7 @@ function ItemPageSizeSelect({ value, onChange, ariaLabel, entityLabel }: ItemPag
                 )}
               >
                 <Check className={cn('h-3.5 w-3.5 shrink-0', selected ? 'text-[var(--accent)]' : 'invisible')} />
-                <span className="tabular-nums">{formatPageSizeLabel(opt, entityLabel)}</span>
+                <span className="tabular-nums">{formatPageSizeLabel(opt)}</span>
               </button>
             );
           })}
@@ -134,13 +142,12 @@ export function PreferencesSection() {
       <SettingsSection label="Display">
         <SettingsRow
           label={`Items per ${t.bin} page`}
-          description={`How many items are shown before pagination kicks in. "All on one page" disables pagination.`}
+          description={`Number of items shown before pagination. Select "All on one page" to disable.`}
           control={
             <ItemPageSizeSelect
               value={itemPageSize}
               onChange={setItemPageSize}
               ariaLabel={`Items per ${t.bin} page`}
-              entityLabel="page"
             />
           }
         />

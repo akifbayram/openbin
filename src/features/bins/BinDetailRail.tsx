@@ -8,7 +8,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { useTerminology } from '@/lib/terminology';
-import { cn, focusRing, sectionHeader } from '@/lib/utils';
+import { categoryHeader, cn, focusRing } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { TagInput } from './TagInput';
 import type { useAutoSaveBin } from './useAutoSaveBin';
@@ -79,7 +79,7 @@ export function BinDetailRail({
       <h2 className="sr-only">Bin details</h2>
 
       <div className={cn(META_FIELD, autoSave.savedFields.has('notes') && 'animate-save-flash')}>
-        <label htmlFor="detail-notes" className={sectionHeader}>Notes</label>
+        <label htmlFor="detail-notes" className={categoryHeader}>Notes</label>
         {canEdit ? (
           <Textarea
             id="detail-notes"
@@ -103,96 +103,98 @@ export function BinDetailRail({
         )}
       </div>
 
-      <div className={META_FIELD}>
-        <span className={sectionHeader}>Code</span>
-        <div className="flex items-center h-11 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] pl-3.5 pr-1 transition-colors focus-within:ring-2 focus-within:ring-[var(--accent)]">
-          <span
-            id="bin-short-code"
-            className="flex-1 font-mono text-[15px] tracking-[0.14em] text-[var(--text-primary)] select-all truncate"
-          >
-            {bin.short_code}
-          </span>
-          <div className="flex items-center gap-0.5 shrink-0">
-            <Tooltip content={copied ? 'Copied!' : 'Copy code'}>
-              <button
-                type="button"
-                onClick={handleCopyCode}
-                aria-label="Copy code"
-                className={RAIL_ICON_BTN}
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-[var(--color-success)]" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </button>
-            </Tooltip>
-            {canChangeCode && (
-              <Tooltip content="Change code">
+      <div className="flex flex-col gap-4 pt-4 border-t border-[var(--border-subtle)]">
+        <div className={META_FIELD}>
+          <span className={categoryHeader}>Code</span>
+          <div className="flex items-center h-11 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] pl-3.5 pr-1 transition-colors focus-within:ring-2 focus-within:ring-[var(--accent)]">
+            <span
+              id="bin-short-code"
+              className="flex-1 font-mono text-[15px] tracking-[0.14em] text-[var(--text-primary)] select-all truncate"
+            >
+              {bin.short_code}
+            </span>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <Tooltip content={copied ? 'Copied!' : 'Copy code'}>
                 <button
                   type="button"
-                  onClick={onChangeCode}
-                  aria-label="Change code"
+                  onClick={handleCopyCode}
+                  aria-label="Copy code"
                   className={RAIL_ICON_BTN}
                 >
-                  <Pencil className="h-4 w-4" />
+                  {copied ? (
+                    <Check className="h-4 w-4 text-[var(--color-success)]" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
                 </button>
               </Tooltip>
-            )}
+              {canChangeCode && (
+                <Tooltip content="Change code">
+                  <button
+                    type="button"
+                    onClick={onChangeCode}
+                    aria-label="Change code"
+                    className={RAIL_ICON_BTN}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </Tooltip>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className={cn(META_FIELD, autoSave.savedFields.has('areaId') && 'animate-save-flash')}>
-        <span className={sectionHeader}>{t.Area}</span>
-        {canEdit ? (
-          <AreaPicker
-            locationId={activeLocationId}
-            value={bin.area_id}
-            onChange={(areaId) => autoSave.saveAreaId(areaId)}
-          />
-        ) : (
-          <p className="text-[14px] text-[var(--text-primary)]">
-            {bin.area_name || <span className="text-[var(--text-quaternary)]">No area</span>}
-          </p>
-        )}
-      </div>
-
-      <div className={cn(META_FIELD, autoSave.savedFields.has('tags') && 'animate-save-flash')}>
-        <span className={sectionHeader}>Tags</span>
-        {canEdit ? (
-          <TagInput
-            tags={bin.tags}
-            onChange={(tags) => autoSave.saveTags(tags)}
-            suggestions={allTags}
-          />
-        ) : hasTags ? (
-          <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-            {bin.tags.map((tag) => (
-              <Badge
-                key={tag}
-                variant="secondary"
-                style={getTagStyle(tag)}
-                onClick={() => navigate(`/bins?tags=${encodeURIComponent(tag)}`)}
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        ) : (
-          <p className="text-[14px] text-[var(--text-quaternary)]">No tags</p>
-        )}
-      </div>
-
-      {canChangeVisibility && (
-        <div className={cn(META_FIELD, autoSave.savedFields.has('visibility') && 'animate-save-flash')}>
-          <span className={sectionHeader}>Visibility</span>
-          <VisibilityPicker
-            value={bin.visibility}
-            onChange={(v) => autoSave.saveVisibility(v)}
-          />
+        <div className={cn(META_FIELD, autoSave.savedFields.has('areaId') && 'animate-save-flash')}>
+          <span className={categoryHeader}>{t.Area}</span>
+          {canEdit ? (
+            <AreaPicker
+              locationId={activeLocationId}
+              value={bin.area_id}
+              onChange={(areaId) => autoSave.saveAreaId(areaId)}
+            />
+          ) : (
+            <p className="text-[15px] text-[var(--text-primary)]">
+              {bin.area_name || <span className="text-[var(--text-quaternary)]">No area</span>}
+            </p>
+          )}
         </div>
-      )}
+
+        <div className={cn(META_FIELD, autoSave.savedFields.has('tags') && 'animate-save-flash')}>
+          <span className={categoryHeader}>Tags</span>
+          {canEdit ? (
+            <TagInput
+              tags={bin.tags}
+              onChange={(tags) => autoSave.saveTags(tags)}
+              suggestions={allTags}
+            />
+          ) : hasTags ? (
+            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+              {bin.tags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  style={getTagStyle(tag)}
+                  onClick={() => navigate(`/bins?tags=${encodeURIComponent(tag)}`)}
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[15px] text-[var(--text-quaternary)]">No tags</p>
+          )}
+        </div>
+
+        {canChangeVisibility && (
+          <div className={cn(META_FIELD, autoSave.savedFields.has('visibility') && 'animate-save-flash')}>
+            <span className={categoryHeader}>Visibility</span>
+            <VisibilityPicker
+              value={bin.visibility}
+              onChange={(v) => autoSave.saveVisibility(v)}
+            />
+          </div>
+        )}
+      </div>
     </section>
   );
 }

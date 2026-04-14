@@ -12,9 +12,9 @@ export function CustomFieldsViewCard({ fields, values }: CustomFieldsViewCardPro
   return (
     <div className="space-y-4">
       {populated.map((field) => (
-        <div key={field.id}>
+        <div key={field.id} className="space-y-1.5">
           <p className={sectionHeader}>{field.name}</p>
-          <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">{values[field.id]}</p>
+          <p className="text-[15px] text-[var(--text-primary)]">{values[field.id]}</p>
         </div>
       ))}
     </div>
