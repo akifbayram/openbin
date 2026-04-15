@@ -26,7 +26,11 @@ RUN npm prune --omit=dev
 
 # ── Stage 3: Runtime ─────────────────────────
 FROM node:22-alpine
-RUN apk upgrade --no-cache && apk add --no-cache postgresql-client \
+# Bust the apk upgrade layer on every CI run so security patches land
+# (otherwise BuildKit reuses a stale layer and Trivy flags old CVEs).
+ARG APK_UPGRADE_BUST=0
+RUN : "apk-upgrade-bust=${APK_UPGRADE_BUST}" \
+    && apk upgrade --no-cache && apk add --no-cache postgresql-client \
     && npm cache clean --force && rm -rf /usr/local/lib/node_modules/npm
 WORKDIR /app
 COPY --chown=node:node --from=server-builder /app/package.json /app/package-lock.json* ./

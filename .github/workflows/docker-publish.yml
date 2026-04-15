@@ -56,6 +56,7 @@ jobs:
           build-args: |
             BUILD_EDITION=selfhosted
             BUILD_VERSION=${{ github.ref_name }}
+            APK_UPGRADE_BUST=${{ github.run_id }}
           cache-from: type=gha,scope=selfhosted
           cache-to: type=gha,mode=max,scope=selfhosted
 
@@ -100,6 +101,7 @@ jobs:
           build-args: |
             BUILD_EDITION=cloud
             BUILD_VERSION=${{ github.ref_name }}
+            APK_UPGRADE_BUST=${{ github.run_id }}
           cache-from: type=gha,scope=cloud
           cache-to: type=gha,mode=max,scope=cloud
 
