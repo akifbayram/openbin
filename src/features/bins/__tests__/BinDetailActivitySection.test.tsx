@@ -157,4 +157,25 @@ describe('BinDetailActivitySection', () => {
     expect(screen.queryByText('User 5')).toBeNull();
     expect(screen.getByRole('button', { name: /show all/i })).toBeInTheDocument();
   });
+
+  it('renders changed-field chips for merged update entries', () => {
+    const e: ActivityLogEntry = {
+      ...entry(0),
+      action: 'update',
+      changes: {
+        notes: { old: 'A', new: 'B' },
+        tags: { old: [], new: ['y'] },
+      },
+    };
+    mockUseBinActivity.mockReturnValue({
+      entries: [e],
+      isLoading: false, isLoadingMore: false, hasMore: false,
+      error: null, loadMore: vi.fn(),
+    });
+
+    renderWithRouter(<BinDetailActivitySection binId="bin-1" />);
+
+    expect(screen.getByText('notes')).toBeInTheDocument();
+    expect(screen.getByText('tags')).toBeInTheDocument();
+  });
 });
