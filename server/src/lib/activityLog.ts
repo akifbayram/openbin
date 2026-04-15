@@ -31,6 +31,10 @@ export function mergeBinChanges(existing: Changes, incoming: Changes): Changes {
       const existingOld = (merged[key]?.old as string[] | undefined) ?? [];
       const incomingOld = (incoming[key].old as string[] | undefined) ?? [];
       merged[key] = { old: [...existingOld, ...incomingOld], new: merged[key]?.new ?? null };
+    } else {
+      // Scalar / tag array / other fields: keep earliest old, adopt latest new.
+      const existingOld = Object.prototype.hasOwnProperty.call(merged, key) ? merged[key].old : incoming[key].old;
+      merged[key] = { old: existingOld, new: incoming[key].new };
     }
   }
   return merged;
