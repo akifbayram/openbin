@@ -1,12 +1,11 @@
 import { AlertTriangle, Clock } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
-import { SkeletonList } from '@/components/ui/skeleton-list';
+import { ActivityTableSkeleton } from '@/features/activity/ActivityTableSkeleton';
 import { ActivityTableView } from '@/features/activity/ActivityTableView';
-import { sectionHeader } from '@/lib/utils';
+import { sectionHeader, sectionHeaderRow } from '@/lib/utils';
 import { useBinActivity } from './useBinActivity';
 
 const PREVIEW_COUNT = 5;
@@ -19,18 +18,21 @@ export function BinDetailActivitySection({ binId }: BinDetailActivitySectionProp
   const [expanded, setExpanded] = useState(false);
   const { entries, isLoading, isLoadingMore, hasMore, error, loadMore } = useBinActivity(binId);
 
-  const visible = expanded ? entries : entries.slice(0, PREVIEW_COUNT);
-  const canExpand = entries.length > PREVIEW_COUNT || hasMore;
+  const previewEntries = useMemo(
+    () => (expanded ? entries : entries.slice(0, PREVIEW_COUNT)),
+    [expanded, entries],
+  );
+  const hasHiddenEntries = entries.length > PREVIEW_COUNT || hasMore;
 
   return (
     <section>
-      <header className="flex items-baseline justify-between mb-4">
+      <header className={sectionHeaderRow}>
         <h3 className={sectionHeader}>Activity</h3>
-        {canExpand && !isLoading && !error && (
+        {hasHiddenEntries && !isLoading && !error && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => setExpanded((prev) => !prev)}
             aria-expanded={expanded}
           >
             {expanded ? 'Show less' : 'View all'}
@@ -40,19 +42,7 @@ export function BinDetailActivitySection({ binId }: BinDetailActivitySectionProp
 
       <Crossfade
         isLoading={isLoading && entries.length === 0}
-        skeleton={
-          <div className="flat-card rounded-[var(--radius-lg)] overflow-hidden">
-            <SkeletonList count={3}>
-              {() => (
-                <div className="px-3 py-2.5 border-b border-[var(--border-subtle)] flex items-center gap-3">
-                  <Skeleton className="h-6 w-6 rounded-full shrink-0" />
-                  <Skeleton className="h-4 flex-[2]" />
-                  <Skeleton className="h-4 w-20 shrink-0" />
-                </div>
-              )}
-            </SkeletonList>
-          </div>
-        }
+        skeleton={<ActivityTableSkeleton count={3} />}
       >
         {error ? (
           <EmptyState
@@ -68,11 +58,10 @@ export function BinDetailActivitySection({ binId }: BinDetailActivitySectionProp
           />
         ) : (
           <ActivityTableView
-            entries={visible}
+            entries={previewEntries}
             hasMore={expanded && hasMore}
             isLoadingMore={isLoadingMore}
             loadMore={loadMore}
-            searchQuery=""
             currentEntityId={binId}
           />
         )}

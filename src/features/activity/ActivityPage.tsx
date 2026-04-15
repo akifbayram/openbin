@@ -3,12 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
-import { SkeletonList } from '@/components/ui/skeleton-list';
 import { SettingsPageHeader } from '@/features/settings/SettingsPageHeader';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import { ActivityFilterBar } from './ActivityFilterBar';
+import { ActivityTableSkeleton } from './ActivityTableSkeleton';
 import { ActivityTableView } from './ActivityTableView';
 import type { EntityTypeFilter } from './activityHelpers';
 import { getActionLabel } from './activityHelpers';
@@ -78,23 +77,7 @@ export function ActivityPage() {
 
       <Crossfade
         isLoading={(isLoading || permissionsLoading) && entries.length === 0}
-        skeleton={
-          <div>
-            <div className="flat-card rounded-[var(--radius-lg)] overflow-hidden">
-              <div className="h-9 bg-[var(--bg-hover)] border-b border-[var(--border-subtle)]" />
-              <SkeletonList count={8}>
-                {() => (
-                  <div className="px-3 py-2.5 border-b border-[var(--border-subtle)] flex items-center gap-3">
-                    <Skeleton className="h-6 w-6 rounded-full shrink-0" />
-                    <Skeleton className="h-4 flex-[2]" />
-                    <Skeleton className="h-4 flex-1 hidden md:block" />
-                    <Skeleton className="h-4 w-24 shrink-0" />
-                  </div>
-                )}
-              </SkeletonList>
-            </div>
-          </div>
-        }
+        skeleton={<ActivityTableSkeleton count={8} withHeader />}
       >
         {error ? (
           <EmptyState

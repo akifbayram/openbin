@@ -5,7 +5,7 @@ import { resolveColor } from '@/lib/colorPalette';
 import { formatTimeAgo } from '@/lib/formatTime';
 import { resolveIcon } from '@/lib/iconMap';
 import { generateQRDataURL } from '@/lib/qr';
-import { sectionHeader } from '@/lib/utils';
+import { sectionHeader, sectionHeaderRow } from '@/lib/utils';
 import type { Bin, ItemCheckout } from '@/types';
 import { BinDetailActivitySection } from './BinDetailActivitySection';
 
@@ -13,8 +13,6 @@ interface BinDetailInformationTabProps {
   bin: Bin;
   checkouts?: ItemCheckout[];
 }
-
-const SECTION_HEAD = 'flex items-baseline justify-between mb-4';
 
 const QR_FG = '#000';
 const QR_BG_FALLBACK = '#fff';
@@ -61,14 +59,14 @@ export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformation
   return (
     <div className="flex flex-col gap-8">
       <section>
-        <header className={SECTION_HEAD}>
+        <header className={sectionHeaderRow}>
           <h3 className={sectionHeader}>Usage</h3>
         </header>
         <BinUsageSection binId={bin.id} />
       </section>
 
       <section>
-        <header className={SECTION_HEAD}>
+        <header className={sectionHeaderRow}>
           <h3 className={sectionHeader}>Details</h3>
         </header>
         <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-start md:gap-8">
@@ -133,7 +131,7 @@ export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformation
 
       {openCheckouts.length > 0 && (
         <section>
-          <header className={SECTION_HEAD}>
+          <header className={sectionHeaderRow}>
             <h3 className={sectionHeader}>Checked out</h3>
             <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">
               {openCheckouts.length}

@@ -12,8 +12,8 @@ export function useBinActivity(binId: string | undefined, pageSize = 20) {
       ? `/api/locations/${encodeURIComponent(activeLocationId)}/activity?entity_type=bin&entity_id=${encodeURIComponent(binId)}`
       : null;
 
-  const { items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore } =
+  const { items, isLoading, isLoadingMore, hasMore, error, loadMore } =
     usePaginatedList<ActivityLogEntry>(basePath, REFRESH_EVENTS, pageSize);
 
-  return { entries: items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore };
+  return { entries: items, isLoading, isLoadingMore, hasMore, error, loadMore };
 }

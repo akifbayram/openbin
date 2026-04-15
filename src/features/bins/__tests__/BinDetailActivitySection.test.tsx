@@ -43,7 +43,7 @@ beforeEach(() => {
 describe('BinDetailActivitySection', () => {
   it('renders a loading skeleton when loading and no entries yet', () => {
     mockUseBinActivity.mockReturnValue({
-      entries: [], totalCount: 0,
+      entries: [],
       isLoading: true, isLoadingMore: false, hasMore: false,
       error: null, loadMore: vi.fn(),
     });
@@ -56,7 +56,7 @@ describe('BinDetailActivitySection', () => {
 
   it('renders empty state when there are no entries', () => {
     mockUseBinActivity.mockReturnValue({
-      entries: [], totalCount: 0,
+      entries: [],
       isLoading: false, isLoadingMore: false, hasMore: false,
       error: null, loadMore: vi.fn(),
     });
@@ -68,7 +68,7 @@ describe('BinDetailActivitySection', () => {
 
   it('renders error state when hook returns error', () => {
     mockUseBinActivity.mockReturnValue({
-      entries: [], totalCount: 0,
+      entries: [],
       isLoading: false, isLoadingMore: false, hasMore: false,
       error: 'Network failure', loadMore: vi.fn(),
     });
@@ -82,7 +82,7 @@ describe('BinDetailActivitySection', () => {
   it('caps the preview at 5 entries and hides the Load More sentinel', () => {
     const entries = Array.from({ length: 10 }, (_, i) => entry(i));
     mockUseBinActivity.mockReturnValue({
-      entries, totalCount: 10,
+      entries,
       isLoading: false, isLoadingMore: false, hasMore: false,
       error: null, loadMore: vi.fn(),
     });
@@ -98,7 +98,7 @@ describe('BinDetailActivitySection', () => {
     const user = userEvent.setup();
     const entries = Array.from({ length: 10 }, (_, i) => entry(i));
     mockUseBinActivity.mockReturnValue({
-      entries, totalCount: 10,
+      entries,
       isLoading: false, isLoadingMore: false, hasMore: false,
       error: null, loadMore: vi.fn(),
     });
@@ -116,7 +116,7 @@ describe('BinDetailActivitySection', () => {
   it('"View all" is shown when hasMore is true even if loaded entries <= 5', () => {
     const entries = Array.from({ length: 3 }, (_, i) => entry(i));
     mockUseBinActivity.mockReturnValue({
-      entries, totalCount: 50,
+      entries,
       isLoading: false, isLoadingMore: false, hasMore: true,
       error: null, loadMore: vi.fn(),
     });
@@ -129,7 +129,7 @@ describe('BinDetailActivitySection', () => {
   it('hides "View all" when entries <= 5 and there is no more', () => {
     const entries = Array.from({ length: 3 }, (_, i) => entry(i));
     mockUseBinActivity.mockReturnValue({
-      entries, totalCount: 3,
+      entries,
       isLoading: false, isLoadingMore: false, hasMore: false,
       error: null, loadMore: vi.fn(),
     });
@@ -144,7 +144,7 @@ describe('BinDetailActivitySection', () => {
     const user = userEvent.setup();
     const entries = Array.from({ length: 10 }, (_, i) => entry(i));
     mockUseBinActivity.mockReturnValue({
-      entries, totalCount: 10,
+      entries,
       isLoading: false, isLoadingMore: false, hasMore: false,
       error: null, loadMore: vi.fn(),
     });

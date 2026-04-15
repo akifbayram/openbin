@@ -81,6 +81,9 @@ export const categoryHeader =
 /** Settings section header: 13px semibold in primary text color. */
 export const sectionHeader = 'text-[var(--text-sm)] font-semibold text-[var(--text-primary)]';
 
+/** Section header row: baseline-aligned title on the left, actions on the right. */
+export const sectionHeaderRow = 'flex items-baseline justify-between mb-4';
+
 /** Inline icon-button: 36px tap target, flex-centered. */
 export const iconButton = 'shrink-0 flex items-center justify-center size-9';
 

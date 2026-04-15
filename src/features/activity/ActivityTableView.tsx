@@ -17,11 +17,11 @@ interface ActivityTableViewProps {
   hasMore: boolean;
   isLoadingMore: boolean;
   loadMore: () => void;
-  searchQuery: string;
+  searchQuery?: string;
   currentEntityId?: string;
 }
 
-export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, searchQuery, currentEntityId }: ActivityTableViewProps) {
+export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, searchQuery = '', currentEntityId }: ActivityTableViewProps) {
   const navigate = useNavigate();
   const t = useTerminology();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());

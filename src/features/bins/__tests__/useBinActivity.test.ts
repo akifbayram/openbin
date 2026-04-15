@@ -115,6 +115,5 @@ describe('useBinActivity', () => {
     const { result } = renderHook(() => useBinActivity('bin-abc'));
 
     expect(result.current.entries).toEqual(mockEntries);
-    expect(result.current.totalCount).toBe(1);
   });
 });
