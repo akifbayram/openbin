@@ -32,7 +32,7 @@ import { Table, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
-import { getErrorMessage, relativeTime } from '@/lib/utils';
+import { formatBytes, getErrorMessage, relativeTime } from '@/lib/utils';
 import {
   fetchMaintenanceStatus,
   fetchSystemHealth,
@@ -47,13 +47,6 @@ import {
 type Tab = 'system' | 'audit' | 'locations';
 
 const PAGE_SIZE = 25;
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
 
 function formatUptime(seconds: number): string {
   const d = Math.floor(seconds / 86400);

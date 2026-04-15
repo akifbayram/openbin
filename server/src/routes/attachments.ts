@@ -17,10 +17,9 @@ type MemberRole = 'admin' | 'member' | 'viewer';
 
 const router = Router();
 
-router.use((_req, res, next) => {
+router.use((_req, _res, next) => {
   if (!config.attachmentsEnabled) {
-    res.status(404).json({ error: 'NOT_FOUND', message: 'Endpoint not found' });
-    return;
+    throw new NotFoundError('Endpoint not found');
   }
   next();
 });

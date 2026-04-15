@@ -67,6 +67,7 @@ export function BinDetailFilesTab({ binId, photos, canEdit }: BinDetailFilesTabP
           )}
           <AttachmentsList
             binId={binId}
+            attachments={attachments}
             canUpload={canEdit && !attachmentsGated}
             canDelete={canEdit}
           />

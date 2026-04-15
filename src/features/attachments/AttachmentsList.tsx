@@ -6,13 +6,12 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useAuth } from '@/lib/auth';
 import { formatTimeAgo } from '@/lib/formatTime';
 import { usePermissions } from '@/lib/usePermissions';
-import { focusRing, getErrorMessage } from '@/lib/utils';
+import { focusRing, formatBytes, getErrorMessage } from '@/lib/utils';
 import type { Attachment } from '@/types';
 import {
   deleteAttachment,
   getAttachmentDownloadUrl,
   uploadAttachment,
-  useAttachments,
 } from './useAttachments';
 
 const MAX_MB = 5;
@@ -49,34 +48,31 @@ const ACCEPT_ATTR = [...ACCEPTED_EXTENSIONS, ...ACCEPTED_MIME_TYPES].join(',');
 const ACCEPTED_EXTENSIONS_SET = new Set(ACCEPTED_EXTENSIONS);
 const ACCEPTED_TYPES_HINT = 'PDF, Word, Excel, PowerPoint, text, CSV, JSON, ODF, ZIP, 7z, tar, gz';
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function extOf(filename: string): string {
+  const idx = filename.lastIndexOf('.');
+  if (idx <= 0 || idx === filename.length - 1) return '';
+  return filename.slice(idx).toLowerCase();
 }
 
-function getExtension(filename: string): string {
-  const idx = filename.lastIndexOf('.');
-  if (idx <= 0 || idx === filename.length - 1) return 'FILE';
-  return filename.slice(idx + 1).toUpperCase().slice(0, 5);
+function getExtensionLabel(filename: string): string {
+  const ext = extOf(filename);
+  return ext ? ext.slice(1).toUpperCase().slice(0, 5) : 'FILE';
 }
 
 function isAcceptedFile(filename: string): boolean {
-  const idx = filename.lastIndexOf('.');
-  if (idx <= 0) return false;
-  return ACCEPTED_EXTENSIONS_SET.has(filename.slice(idx).toLowerCase());
+  return ACCEPTED_EXTENSIONS_SET.has(extOf(filename));
 }
 
 interface AttachmentsListProps {
   binId: string;
+  attachments: Attachment[];
   canUpload: boolean;
   canDelete: boolean;
 }
 
-export function AttachmentsList({ binId, canUpload, canDelete }: AttachmentsListProps) {
+export function AttachmentsList({ binId, attachments, canUpload, canDelete }: AttachmentsListProps) {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
-  const { attachments } = useAttachments(binId);
   const { showToast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploadingCount, setUploadingCount] = useState(0);
@@ -143,7 +139,7 @@ export function AttachmentsList({ binId, canUpload, canDelete }: AttachmentsList
             <div className="flex h-14 w-12 flex-shrink-0 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-xs)] border border-[var(--border-subtle)]">
               <FileText className="h-5 w-5 text-[var(--text-secondary)]" aria-hidden="true" />
               <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
-                {getExtension(a.filename)}
+                {getExtensionLabel(a.filename)}
               </span>
             </div>
             <div className="min-w-0 flex-1 text-left">
