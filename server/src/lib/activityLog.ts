@@ -67,6 +67,74 @@ function mergeItemsRenamed(existing: Diff | undefined, incoming: Diff): Diff {
   return incoming;
 }
 
+function jsonEqual(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * Remove change-fields whose values net out to no-op:
+ *  - scalar/array fields where old and new are deep-equal
+ *  - items_added / items_removed intersections (foo added then removed, or vice versa)
+ *  - items_renamed entries where old === new (object or array form)
+ *  - items_quantity where qty did not change
+ *
+ * Returns a new object; input is not mutated.
+ */
+export function cancelReverts(changes: Changes): Changes {
+  const out: Changes = { ...changes };
+
+  // items_added ∩ items_removed cancellation
+  if (out.items_added && out.items_removed) {
+    const addedArr = (out.items_added.new as string[] | null) ?? [];
+    const removedArr = (out.items_removed.old as string[] | null) ?? [];
+    const both = new Set(addedArr.filter((x) => removedArr.includes(x)));
+    if (both.size > 0) {
+      const nextAdded = addedArr.filter((x) => !both.has(x));
+      const nextRemoved = removedArr.filter((x) => !both.has(x));
+      if (nextAdded.length === 0) delete out.items_added;
+      else out.items_added = { old: null, new: nextAdded };
+      if (nextRemoved.length === 0) delete out.items_removed;
+      else out.items_removed = { old: nextRemoved, new: null };
+    }
+  }
+
+  // Other keys: per-key revert handling.
+  for (const key of Object.keys(out)) {
+    const diff = out[key];
+    if (!diff) {
+      delete out[key];
+      continue;
+    }
+
+    if (key === 'items_added' || key === 'items_removed') continue; // already handled
+
+    if (key === 'items_renamed') {
+      if (Array.isArray(diff.new)) {
+        const entries = (diff.new as Array<{ old: string; new: string }>).filter((e) => e.old !== e.new);
+        if (entries.length === 0) delete out[key];
+        else out[key] = { old: null, new: entries };
+      } else if (typeof diff.old === 'string' && typeof diff.new === 'string' && diff.old === diff.new) {
+        delete out[key];
+      }
+      continue;
+    }
+
+    if (key === 'items_quantity') {
+      const oldQty = (diff.old as { qty?: number } | null | undefined)?.qty;
+      const newQty = (diff.new as { qty?: number } | null | undefined)?.qty;
+      if (oldQty === newQty) delete out[key];
+      continue;
+    }
+
+    // Scalar / array fields
+    if (jsonEqual(diff.old, diff.new)) {
+      delete out[key];
+    }
+  }
+
+  return out;
+}
+
 /** Merge incoming change fields into an existing changes object. Pure. */
 export function mergeBinChanges(existing: Changes, incoming: Changes): Changes {
   const merged: Changes = { ...existing };
@@ -83,57 +151,58 @@ export function mergeBinChanges(existing: Changes, incoming: Changes): Changes {
       merged[key] = mergeItemsRenamed(merged[key], incoming[key]);
     } else if (key === 'items_quantity') {
       merged[key] = {
-        old: Object.prototype.hasOwnProperty.call(merged, key) ? merged[key].old : incoming[key].old,
+        old: Object.hasOwn(merged, key) ? merged[key].old : incoming[key].old,
         new: incoming[key].new,
       };
     } else {
       // Scalar / tag array / other fields: keep earliest old, adopt latest new.
-      const existingOld = Object.prototype.hasOwnProperty.call(merged, key) ? merged[key].old : incoming[key].old;
+      const existingOld = Object.hasOwn(merged, key) ? merged[key].old : incoming[key].old;
       merged[key] = { old: existingOld, new: incoming[key].new };
     }
   }
   return merged;
 }
 
-const MERGEABLE_FIELDS = new Set(['items_added', 'items_removed']);
 const MERGE_WINDOW_SECONDS = 120;
 
 /**
- * Check if all keys in a changes object are mergeable item fields.
- */
-function isMergeableChanges(changes: Record<string, { old: unknown; new: unknown }>): boolean {
-  const keys = Object.keys(changes);
-  return keys.length > 0 && keys.every(k => MERGEABLE_FIELDS.has(k));
-}
-
-/**
- * Try to merge a new activity entry into a recent existing one.
- * Returns true if merged (caller should skip INSERT).
+ * Try to merge a new bin-update activity entry into a recent existing one.
+ * Returns true if handled (caller should skip INSERT).
+ *
+ * Note: the SELECT + UPDATE/DELETE here is not atomic across concurrent
+ * same-user PUTs on the same bin. Worst case is two rows instead of one —
+ * acceptable; same behavior as before this extension.
  */
 async function tryMerge(opts: LogActivityOptions): Promise<boolean> {
-  if (!opts.changes || !isMergeableChanges(opts.changes)) return false;
+  // Only bin updates with a changes payload merge.
+  if (opts.action !== 'update' || opts.entityType !== 'bin' || !opts.changes) {
+    return false;
+  }
 
-  const result = await query<{ id: string; changes: Record<string, { old: unknown; new: unknown }> }>(
+  const result = await query<{ id: string; changes: Changes | null }>(
     `SELECT id, changes FROM activity_log
      WHERE user_id = $1 AND action = $2 AND entity_type = $3 AND entity_id = $4
        AND location_id = $5 AND ${d.nullableEq('auth_method', '$6')}
        AND created_at > ${d.secondsAgo(MERGE_WINDOW_SECONDS)}
      ORDER BY created_at DESC LIMIT 1`,
-    [opts.userId, opts.action, opts.entityType, opts.entityId ?? null, opts.locationId, opts.authMethod ?? null]
+    [opts.userId, opts.action, opts.entityType, opts.entityId ?? null, opts.locationId, opts.authMethod ?? null],
   );
 
   if (result.rows.length === 0) return false;
 
   const existing = result.rows[0];
-  if (!existing.changes || !isMergeableChanges(existing.changes)) return false;
+  const merged = cancelReverts(mergeBinChanges(existing.changes ?? {}, opts.changes));
 
-  const merged = mergeBinChanges(existing.changes, opts.changes);
+  if (Object.keys(merged).length === 0) {
+    await query('DELETE FROM activity_log WHERE id = $1', [existing.id]);
+    return true;
+  }
 
+  // Advance created_at to "now" so the merged row reflects the most recent edit time.
   await query(
     `UPDATE activity_log SET changes = $1, created_at = ${d.now()}, entity_name = $2 WHERE id = $3`,
-    [JSON.stringify(merged), opts.entityName ?? null, existing.id]
+    [JSON.stringify(merged), opts.entityName ?? null, existing.id],
   );
-
   return true;
 }
 
@@ -141,8 +210,10 @@ async function tryMerge(opts: LogActivityOptions): Promise<boolean> {
  * Insert an activity log entry and auto-prune old entries.
  * Fire-and-forget — errors are logged but never thrown.
  *
- * Item additions/removals within a 2-minute window on the same bin
- * are merged into a single entry to reduce noise.
+ * Bin updates from the same user on the same bin within a 2-minute window
+ * are merged into a single entry (all fields, not just items). If the merged
+ * changes net to nothing (revert cancellation), the existing row is deleted.
+ * See `tryMerge` for details.
  */
 export async function logActivity(opts: LogActivityOptions): Promise<void> {
   try {
