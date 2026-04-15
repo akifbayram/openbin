@@ -10,7 +10,7 @@ import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import type { ActivityLogEntry } from '@/types';
 import { ActivityRowDetail } from './ActivityRowDetail';
-import { getActionBadgeLabel, getActionColor, getActionIcon, getEntityDescription } from './activityHelpers';
+import { getActionBadgeLabel, getActionColor, getActionIcon, getChangedFieldLabels, getEntityDescription } from './activityHelpers';
 
 interface ActivityTableViewProps {
   entries: ActivityLogEntry[];
@@ -20,6 +20,10 @@ interface ActivityTableViewProps {
   searchQuery?: string;
   currentEntityId?: string;
 }
+
+const MAX_CHIPS = 4;
+const CHIP_CLASS =
+  'text-[11px] px-1.5 py-0.5 rounded-[var(--radius-xs)] bg-[var(--bg-elevated)] text-[var(--text-tertiary)] whitespace-nowrap';
 
 export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, searchQuery = '', currentEntityId }: ActivityTableViewProps) {
   const navigate = useNavigate();
@@ -57,6 +61,11 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
             entry.action !== 'permanent_delete' &&
             entry.action !== 'delete';
           const detailId = `activity-detail-${entry.id}`;
+          const chipLabels = getChangedFieldLabels(entry, t);
+          const overflow = Math.max(0, chipLabels.length - MAX_CHIPS);
+          const chips = overflow > 0
+            ? [...chipLabels.slice(0, MAX_CHIPS), `+${overflow} more`]
+            : chipLabels;
 
           return (
             <div key={entry.id}>
@@ -95,12 +104,23 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
                 </div>
 
                 <div className="flex-[2] min-w-0">
-                  <p className="text-[13px] text-[var(--text-primary)] truncate">
-                    <span className="lg:hidden font-medium truncate max-w-[10rem]" title={entry.display_name}>
-                      <Highlight text={entry.display_name} query={searchQuery} />
-                    </span>{' '}
-                    <Highlight text={getEntityDescription(entry, t)} query={searchQuery} />
-                  </p>
+                  <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
+                    <p className="text-[13px] text-[var(--text-primary)] min-w-0">
+                      <span className="lg:hidden font-medium truncate max-w-[10rem]" title={entry.display_name}>
+                        <Highlight text={entry.display_name} query={searchQuery} />
+                      </span>{' '}
+                      <Highlight text={getEntityDescription(entry, t)} query={searchQuery} />
+                    </p>
+                    {chips.map((label, i) => (
+                      <span
+                        // biome-ignore lint/suspicious/noArrayIndexKey: chips are derived deterministically from `entry.changes` each render; no identity to track across reorders
+                        key={i}
+                        className={CHIP_CLASS}
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="hidden lg:flex flex-1 min-w-0 items-center gap-1.5">

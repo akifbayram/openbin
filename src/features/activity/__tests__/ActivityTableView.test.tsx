@@ -95,4 +95,77 @@ describe('ActivityTableView', () => {
 
     expect(await screen.findByRole('button', { name: /view bin/i })).toBeInTheDocument();
   });
+
+  it('renders chips for each changed field on a bin update entry', () => {
+    const entry = makeEntry({
+      action: 'update',
+      entity_id: 'bin-123',
+      changes: {
+        notes: { old: 'A', new: 'B' },
+        tags: { old: [], new: ['x'] },
+        color: { old: 'red', new: 'blue' },
+      },
+    });
+    renderWithRouter(
+      <ActivityTableView
+        entries={[entry]}
+        hasMore={false}
+        isLoadingMore={false}
+        loadMore={() => {}}
+        searchQuery=""
+      />,
+    );
+
+    expect(screen.getByText('notes')).toBeInTheDocument();
+    expect(screen.getByText('tags')).toBeInTheDocument();
+    expect(screen.getByText('color')).toBeInTheDocument();
+  });
+
+  it('caps chips at 4 and appends a "+N more" overflow chip', () => {
+    const entry = makeEntry({
+      action: 'update',
+      entity_id: 'bin-123',
+      changes: {
+        name: { old: 'a', new: 'b' },
+        notes: { old: 'x', new: 'y' },
+        tags: { old: [], new: ['t'] },
+        icon: { old: 'i1', new: 'i2' },
+        color: { old: 'red', new: 'blue' },
+        visibility: { old: 'location', new: 'private' },
+      },
+    });
+    renderWithRouter(
+      <ActivityTableView
+        entries={[entry]}
+        hasMore={false}
+        isLoadingMore={false}
+        loadMore={() => {}}
+        searchQuery=""
+      />,
+    );
+
+    expect(screen.getByText('name')).toBeInTheDocument();
+    expect(screen.getByText('notes')).toBeInTheDocument();
+    expect(screen.getByText('tags')).toBeInTheDocument();
+    expect(screen.getByText('icon')).toBeInTheDocument();
+    expect(screen.getByText('+2 more')).toBeInTheDocument();
+    expect(screen.queryByText('color')).toBeNull();
+    expect(screen.queryByText('visibility')).toBeNull();
+  });
+
+  it('renders no chips for a non-update entry', () => {
+    const entry = makeEntry({ action: 'create', entity_id: 'bin-123', changes: null });
+    renderWithRouter(
+      <ActivityTableView
+        entries={[entry]}
+        hasMore={false}
+        isLoadingMore={false}
+        loadMore={() => {}}
+        searchQuery=""
+      />,
+    );
+
+    expect(screen.queryByText('notes')).toBeNull();
+    expect(screen.queryByText('tags')).toBeNull();
+  });
 });

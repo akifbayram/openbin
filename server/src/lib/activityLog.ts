@@ -26,22 +26,17 @@ type RenameEntry = { old: string; new: string };
  *   - Legacy chain: `{ old: string, new: string }` — a single rename collapsed across a chain.
  *   - Array form:   `{ old: null, new: RenameEntry[] }` — multiple unrelated renames preserved as separate entries.
  *
- * The client's `renderChangeDiff` must handle both shapes (Task 7). `RenameEntry` is file-local;
- * the client uses its own equivalent type.
+ * The client's `renderChangeDiff` must handle both shapes.
  */
 function mergeItemsRenamed(existing: Diff | undefined, incoming: Diff): Diff {
-  // No prior rename — keep the incoming legacy object shape.
   if (!existing) return incoming;
 
   const incomingPair = { old: String(incoming.old), new: String(incoming.new) };
 
-  // Existing is a legacy {old, new} object.
   if (typeof existing.old === 'string' && typeof existing.new === 'string') {
-    // Chain: existing.new === incoming.old → collapse.
     if (existing.new === incomingPair.old) {
       return { old: existing.old, new: incomingPair.new };
     }
-    // Non-chain: upgrade to array form.
     return {
       old: null,
       new: [
@@ -51,7 +46,6 @@ function mergeItemsRenamed(existing: Diff | undefined, incoming: Diff): Diff {
     };
   }
 
-  // Existing is already an array: chain against the last entry or append.
   if (Array.isArray(existing.new)) {
     const arr = existing.new as RenameEntry[];
     const last = arr[arr.length - 1];
@@ -62,8 +56,8 @@ function mergeItemsRenamed(existing: Diff | undefined, incoming: Diff): Diff {
     return { old: null, new: [...arr, incomingPair] };
   }
 
-  // Fallback: unrecognised `existing` shape (e.g. data from a future schema or corruption).
-  // We replace it with the incoming rename — bounded data loss for this one field only.
+  // Unrecognised `existing` shape (future schema / corruption): replace rather than throw —
+  // bounded data loss for this one field beats dropping the entire merge.
   return incoming;
 }
 
@@ -156,6 +150,7 @@ export function mergeBinChanges(existing: Changes, incoming: Changes): Changes {
       };
     } else {
       // Scalar / tag array / other fields: keep earliest old, adopt latest new.
+      // `Object.hasOwn` (not `merged[key]?.old ?? ...`) to preserve explicit `undefined` olds.
       const existingOld = Object.hasOwn(merged, key) ? merged[key].old : incoming[key].old;
       merged[key] = { old: existingOld, new: incoming[key].new };
     }
@@ -174,7 +169,6 @@ const MERGE_WINDOW_SECONDS = 120;
  * acceptable; same behavior as before this extension.
  */
 async function tryMerge(opts: LogActivityOptions): Promise<boolean> {
-  // Only bin updates with a changes payload merge.
   if (opts.action !== 'update' || opts.entityType !== 'bin' || !opts.changes) {
     return false;
   }
@@ -217,9 +211,7 @@ async function tryMerge(opts: LogActivityOptions): Promise<boolean> {
  */
 export async function logActivity(opts: LogActivityOptions): Promise<void> {
   try {
-    if (await tryMerge(opts)) {
-      // Merged into existing entry — skip INSERT, still prune
-    } else {
+    if (!(await tryMerge(opts))) {
       await query(
         `INSERT INTO activity_log (id, location_id, user_id, user_name, action, entity_type, entity_id, entity_name, changes, auth_method, api_key_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,

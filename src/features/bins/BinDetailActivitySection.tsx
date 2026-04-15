@@ -1,5 +1,5 @@
 import { AlertTriangle, Clock } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -9,6 +9,7 @@ import { sectionHeader, sectionHeaderRow } from '@/lib/utils';
 import { useBinActivity } from './useBinActivity';
 
 const PREVIEW_COUNT = 5;
+const EXPANDED_PAGE_SIZE = 20;
 
 interface BinDetailActivitySectionProps {
   binId: string;
@@ -16,12 +17,12 @@ interface BinDetailActivitySectionProps {
 
 export function BinDetailActivitySection({ binId }: BinDetailActivitySectionProps) {
   const [expanded, setExpanded] = useState(false);
-  const { entries, isLoading, isLoadingMore, hasMore, error, loadMore } = useBinActivity(binId);
-
-  const previewEntries = useMemo(
-    () => (expanded ? entries : entries.slice(0, PREVIEW_COUNT)),
-    [expanded, entries],
+  const { entries, isLoading, isLoadingMore, hasMore, error, loadMore } = useBinActivity(
+    binId,
+    expanded ? EXPANDED_PAGE_SIZE : PREVIEW_COUNT,
   );
+
+  const visibleEntries = expanded ? entries : entries.slice(0, PREVIEW_COUNT);
   const hasHiddenEntries = entries.length > PREVIEW_COUNT || hasMore;
 
   return (
@@ -35,30 +36,32 @@ export function BinDetailActivitySection({ binId }: BinDetailActivitySectionProp
             onClick={() => setExpanded((prev) => !prev)}
             aria-expanded={expanded}
           >
-            {expanded ? 'Show less' : 'View all'}
+            {expanded ? 'Show less' : 'Show all'}
           </Button>
         )}
       </header>
 
       <Crossfade
         isLoading={isLoading && entries.length === 0}
-        skeleton={<ActivityTableSkeleton count={3} />}
+        skeleton={<ActivityTableSkeleton count={PREVIEW_COUNT} />}
       >
         {error ? (
           <EmptyState
             icon={AlertTriangle}
             title="Failed to load activity"
             subtitle={error}
+            compact
           />
         ) : entries.length === 0 ? (
           <EmptyState
             icon={Clock}
             title="No activity yet"
             subtitle="Changes to this bin will appear here"
+            compact
           />
         ) : (
           <ActivityTableView
-            entries={previewEntries}
+            entries={visibleEntries}
             hasMore={expanded && hasMore}
             isLoadingMore={isLoadingMore}
             loadMore={loadMore}

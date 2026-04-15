@@ -84,44 +84,7 @@ export function getActionLabel(entry: ActivityLogEntry, t: Terminology): string 
 
   if (entity_type === 'bin') {
     if (action === 'create') return `created ${t.bin} ${name}`;
-    if (action === 'update') {
-      const c = entry.changes;
-      if (c) {
-        const keys = Object.keys(c);
-        const itemOnly = keys.every(
-          (k) => k === 'items_added' || k === 'items_removed' || k === 'items_renamed' || k === 'items',
-        );
-        if (itemOnly) {
-          const added = c.items_added ? (c.items_added.new as string[]) : [];
-          const removed = c.items_removed ? (c.items_removed.old as string[]) : [];
-          const renamed = c.items_renamed ? c.items_renamed : null;
-          let legacyAdded: string[] = [];
-          let legacyRemoved: string[] = [];
-          if (c.items && Array.isArray(c.items.old) && Array.isArray(c.items.new)) {
-            legacyAdded = (c.items.new as string[]).filter((i) => !(c.items.old as string[]).includes(i));
-            legacyRemoved = (c.items.old as string[]).filter((i) => !(c.items.new as string[]).includes(i));
-          }
-          const allAdded = [...added, ...legacyAdded];
-          const allRemoved = [...removed, ...legacyRemoved];
-          if (renamed && !allAdded.length && !allRemoved.length) {
-            return `renamed ${String(renamed.old ?? '')} to ${String(renamed.new ?? '')} in ${t.bin} ${name}`;
-          }
-          if (allAdded.length && !allRemoved.length) {
-            return `added ${allAdded.join(', ')} to ${t.bin} ${name}`;
-          }
-          if (allRemoved.length && !allAdded.length) {
-            return `removed ${allRemoved.join(', ')} from ${t.bin} ${name}`;
-          }
-          if (allAdded.length && allRemoved.length) {
-            return `added ${allAdded.join(', ')} and removed ${allRemoved.join(', ')} in ${t.bin} ${name}`;
-          }
-          if (c.items && !allAdded.length && !allRemoved.length) {
-            return `reordered items in ${t.bin} ${name}`;
-          }
-        }
-      }
-      return `updated ${t.bin} ${name}`;
-    }
+    if (action === 'update') return `updated ${t.bin} ${name}`;
     if (action === 'delete') return `deleted ${t.bin} ${name}`;
     if (action === 'restore') return `restored ${t.bin} ${name}`;
     if (action === 'permanent_delete') return `permanently deleted ${t.bin} ${name}`;
@@ -242,7 +205,9 @@ export function getEntityDescription(entry: ActivityLogEntry, t: Terminology): s
   return `${entity_type} ${name}`;
 }
 
-const SCALAR_LABEL_MAP: Record<string, string> = {
+type ScalarField = 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'visibility' | 'card_style';
+
+const SCALAR_LABEL_MAP: Record<ScalarField, string> = {
   name: 'name',
   notes: 'notes',
   tags: 'tags',
@@ -263,7 +228,6 @@ export function getChangedFieldLabels(entry: ActivityLogEntry, t: Terminology): 
     if (field === 'location' || field === 'area_id') continue;
 
     if (field === 'area') {
-      // Handled here (not via SCALAR_LABEL_MAP) because the label is terminology-aware.
       labels.push(t.area);
       continue;
     }
@@ -297,7 +261,7 @@ export function getChangedFieldLabels(entry: ActivityLogEntry, t: Terminology): 
 
     if (field === 'items') continue; // legacy reorder — no chip
 
-    const scalar = SCALAR_LABEL_MAP[field];
+    const scalar = SCALAR_LABEL_MAP[field as ScalarField];
     if (scalar) labels.push(scalar);
   }
 

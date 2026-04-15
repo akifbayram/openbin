@@ -3,7 +3,7 @@ import { Events } from '@/lib/eventBus';
 import { usePaginatedList } from '@/lib/usePaginatedList';
 import type { ActivityLogEntry } from '@/types';
 
-const REFRESH_EVENTS = [Events.BINS, Events.PHOTOS, Events.ATTACHMENTS, Events.CHECKOUTS];
+const REFRESH_EVENTS = [Events.BINS];
 
 export function useBinActivity(binId: string | undefined, pageSize = 20) {
   const { activeLocationId } = useAuth();

@@ -147,36 +147,36 @@ describe('getActionLabel', () => {
     expect(getActionLabel(entry({ action: 'update' }), t)).toBe('updated bin "Box"');
   });
 
-  it('bin update with items_added', () => {
+  it('bin update with items_added falls through to generic label', () => {
     const e = entry({
       action: 'update',
       changes: { items_added: { old: null, new: ['Cable'] } },
     });
-    expect(getActionLabel(e, t)).toBe('added Cable to bin "Box"');
+    expect(getActionLabel(e, t)).toBe('updated bin "Box"');
   });
 
-  it('bin update with items_removed', () => {
+  it('bin update with items_removed falls through to generic label', () => {
     const e = entry({
       action: 'update',
       changes: { items_removed: { old: ['Cable'], new: null } },
     });
-    expect(getActionLabel(e, t)).toBe('removed Cable from bin "Box"');
+    expect(getActionLabel(e, t)).toBe('updated bin "Box"');
   });
 
-  it('bin update with items_renamed', () => {
+  it('bin update with items_renamed falls through to generic label', () => {
     const e = entry({
       action: 'update',
       changes: { items_renamed: { old: 'Old', new: 'New' } },
     });
-    expect(getActionLabel(e, t)).toBe('renamed Old to New in bin "Box"');
+    expect(getActionLabel(e, t)).toBe('updated bin "Box"');
   });
 
-  it('bin update with items reorder', () => {
+  it('bin update with items reorder falls through to generic label', () => {
     const e = entry({
       action: 'update',
       changes: { items: { old: ['A', 'B'], new: ['B', 'A'] } },
     });
-    expect(getActionLabel(e, t)).toBe('reordered items in bin "Box"');
+    expect(getActionLabel(e, t)).toBe('updated bin "Box"');
   });
 
   it('bin delete', () => {

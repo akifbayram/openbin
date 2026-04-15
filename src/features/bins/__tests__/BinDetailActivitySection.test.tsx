@@ -51,7 +51,7 @@ describe('BinDetailActivitySection', () => {
     renderWithRouter(<BinDetailActivitySection binId="bin-1" />);
 
     expect(screen.getByRole('heading', { name: /activity/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /view all/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /show all/i })).toBeNull();
   });
 
   it('renders empty state when there are no entries', () => {
@@ -94,7 +94,7 @@ describe('BinDetailActivitySection', () => {
     expect(screen.queryByText('User 5')).toBeNull();
   });
 
-  it('shows "View all" when there are more than 5 entries and reveals remaining on click', async () => {
+  it('shows "Show all" when there are more than 5 entries and reveals remaining on click', async () => {
     const user = userEvent.setup();
     const entries = Array.from({ length: 10 }, (_, i) => entry(i));
     mockUseBinActivity.mockReturnValue({
@@ -105,7 +105,7 @@ describe('BinDetailActivitySection', () => {
 
     renderWithRouter(<BinDetailActivitySection binId="bin-1" />);
 
-    const viewAll = screen.getByRole('button', { name: /view all/i });
+    const viewAll = screen.getByRole('button', { name: /show all/i });
     await user.click(viewAll);
 
     expect(screen.getAllByText('User 5').length).toBeGreaterThan(0);
@@ -113,7 +113,7 @@ describe('BinDetailActivitySection', () => {
     expect(screen.getByRole('button', { name: /show less/i })).toBeInTheDocument();
   });
 
-  it('"View all" is shown when hasMore is true even if loaded entries <= 5', () => {
+  it('"Show all" is shown when hasMore is true even if loaded entries <= 5', () => {
     const entries = Array.from({ length: 3 }, (_, i) => entry(i));
     mockUseBinActivity.mockReturnValue({
       entries,
@@ -123,10 +123,10 @@ describe('BinDetailActivitySection', () => {
 
     renderWithRouter(<BinDetailActivitySection binId="bin-1" />);
 
-    expect(screen.getByRole('button', { name: /view all/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /show all/i })).toBeInTheDocument();
   });
 
-  it('hides "View all" when entries <= 5 and there is no more', () => {
+  it('hides "Show all" when entries <= 5 and there is no more', () => {
     const entries = Array.from({ length: 3 }, (_, i) => entry(i));
     mockUseBinActivity.mockReturnValue({
       entries,
@@ -136,7 +136,7 @@ describe('BinDetailActivitySection', () => {
 
     renderWithRouter(<BinDetailActivitySection binId="bin-1" />);
 
-    expect(screen.queryByRole('button', { name: /view all/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /show all/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /show less/i })).toBeNull();
   });
 
@@ -151,10 +151,10 @@ describe('BinDetailActivitySection', () => {
 
     renderWithRouter(<BinDetailActivitySection binId="bin-1" />);
 
-    await user.click(screen.getByRole('button', { name: /view all/i }));
+    await user.click(screen.getByRole('button', { name: /show all/i }));
     await user.click(screen.getByRole('button', { name: /show less/i }));
 
     expect(screen.queryByText('User 5')).toBeNull();
-    expect(screen.getByRole('button', { name: /view all/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /show all/i })).toBeInTheDocument();
   });
 });

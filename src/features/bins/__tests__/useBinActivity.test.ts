@@ -45,7 +45,7 @@ describe('useBinActivity', () => {
 
     expect(mockUsePaginatedList).toHaveBeenCalledWith(
       '/api/locations/loc-1/activity?entity_type=bin&entity_id=bin-abc',
-      [Events.BINS, Events.PHOTOS, Events.ATTACHMENTS, Events.CHECKOUTS],
+      [Events.BINS],
       20,
     );
   });
