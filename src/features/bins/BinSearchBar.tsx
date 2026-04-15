@@ -1,8 +1,9 @@
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DismissibleBadge } from '@/components/ui/dismissible-badge';
+import { SearchInput } from '@/components/ui/search-input';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { Terminology } from '@/lib/terminology';
 import type { Area } from '@/types';
@@ -35,11 +36,19 @@ export function BinSearchBar({
   onOpenFilter,
   t,
 }: BinSearchBarProps) {
+  const showClear = hasBadges || Boolean(search);
   return (
     <div className="flex items-center gap-2.5">
-      {/* Unified search bar with inline filter badges */}
-      <div className="flex flex-1 min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 min-h-10 py-1.5 ring-2 ring-[var(--accent)] transition-all duration-200">
-        <Search className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+      <SearchInput
+        data-shortcut-search
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder={`Search ${t.bins}...`}
+        aria-label={`Search ${t.bins}`}
+        containerClassName="flex-1"
+        onClear={showClear ? clearAll : undefined}
+        clearLabel={hasBadges ? 'Clear search and filters' : 'Clear search'}
+      >
         {hasBadges && (
           <div className="row-tight overflow-x-auto scrollbar-hide min-w-0 shrink">
             {filters.tags.map((tag) => (
@@ -86,24 +95,7 @@ export function BinSearchBar({
             )}
           </div>
         )}
-        <input
-          data-shortcut-search
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={`Search ${t.bins}...`}
-          className="flex-1 min-w-[80px] bg-transparent text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none"
-        />
-        {(hasBadges || search) && (
-          <button
-            type="button"
-            onClick={clearAll}
-            aria-label="Clear all filters"
-            className="p-1 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
+      </SearchInput>
       <Tooltip content="Filter" side="bottom">
         <Button
           variant="secondary"

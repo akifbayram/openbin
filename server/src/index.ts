@@ -25,6 +25,7 @@ import aiRoutes from './routes/ai.js';
 import { streamRouter as aiStreamRoutes } from './routes/aiStream.js';
 import apiKeysRoutes from './routes/apiKeys.js';
 import areasRoutes from './routes/areas.js';
+import attachmentsRoutes from './routes/attachments.js';
 import authRoutes from './routes/auth.js';
 import avatarRoutes from './routes/avatar.js';
 import { batchRoutes } from './routes/batch.js';
@@ -151,6 +152,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/bins', binItemsRoutes);
   app.use('/api/bins', itemCheckoutsRoutes);
   app.use('/api/photos', photosRoutes);
+  app.use('/api', attachmentsRoutes);
   app.use('/api/tag-colors', tagColorsRoutes);
   app.use('/api/print-settings', printSettingsRoutes);
   app.use('/api/user-preferences', userPreferencesRoutes);

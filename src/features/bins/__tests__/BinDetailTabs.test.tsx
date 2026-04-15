@@ -8,8 +8,8 @@ vi.mock('@/lib/auth', () => ({ useAuth: vi.fn(() => ({ activeLocationId: 'loc-1'
 vi.mock('../BinDetailContentsTab', () => ({
   BinDetailContentsTab: () => <div data-testid="tab-contents">contents</div>,
 }));
-vi.mock('../BinDetailPhotosTab', () => ({
-  BinDetailPhotosTab: () => <div data-testid="tab-photos">photos</div>,
+vi.mock('../BinDetailFilesTab', () => ({
+  BinDetailFilesTab: () => <div data-testid="tab-files">files</div>,
 }));
 vi.mock('../BinDetailInformationTab', () => ({
   BinDetailInformationTab: () => <div data-testid="tab-information">information</div>,
@@ -53,14 +53,14 @@ describe('BinDetailTabs', () => {
   it('defaults to Contents tab', () => {
     render(<BinDetailTabs {...baseProps} />);
     expect(screen.getByTestId('tab-contents')).toBeInTheDocument();
-    expect(screen.queryByTestId('tab-photos')).toBeNull();
+    expect(screen.queryByTestId('tab-files')).toBeNull();
   });
 
   it('switches tabs and persists the selection', () => {
     render(<BinDetailTabs {...baseProps} />);
-    fireEvent.click(screen.getByRole('tab', { name: /photos/i }));
-    expect(screen.getByTestId('tab-photos')).toBeInTheDocument();
-    expect(localStorage.getItem('openbin-detail-tab')).toBe('photos');
+    fireEvent.click(screen.getByRole('tab', { name: /files/i }));
+    expect(screen.getByTestId('tab-files')).toBeInTheDocument();
+    expect(localStorage.getItem('openbin-detail-tab')).toBe('files');
   });
 
   it('restores persisted tab on mount', () => {
@@ -86,19 +86,31 @@ describe('BinDetailTabs', () => {
     expect(screen.getByTestId('tab-contents')).toBeInTheDocument();
   });
 
+  it('remaps legacy persisted "photos" value to files', () => {
+    localStorage.setItem('openbin-detail-tab', 'photos');
+    render(<BinDetailTabs {...baseProps} />);
+    expect(screen.getByTestId('tab-files')).toBeInTheDocument();
+  });
+
+  it('remaps legacy persisted "attachments" value to files', () => {
+    localStorage.setItem('openbin-detail-tab', 'attachments');
+    render(<BinDetailTabs {...baseProps} />);
+    expect(screen.getByTestId('tab-files')).toBeInTheDocument();
+  });
+
   it('switches tabs via arrow keys', () => {
     render(<BinDetailTabs {...baseProps} />);
     const contents = screen.getByRole('tab', { name: /contents/i });
     contents.focus();
     fireEvent.keyDown(contents, { key: 'ArrowRight' });
-    expect(screen.getByTestId('tab-photos')).toBeInTheDocument();
-    expect(localStorage.getItem('openbin-detail-tab')).toBe('photos');
+    expect(screen.getByTestId('tab-files')).toBeInTheDocument();
+    expect(localStorage.getItem('openbin-detail-tab')).toBe('files');
   });
 
   it('switches tabs via number key 2', () => {
     render(<BinDetailTabs {...baseProps} />);
     fireEvent.keyDown(window, { key: '2' });
-    expect(screen.getByTestId('tab-photos')).toBeInTheDocument();
+    expect(screen.getByTestId('tab-files')).toBeInTheDocument();
   });
 
   it('switches to Information tab via number key 3', () => {
@@ -107,7 +119,7 @@ describe('BinDetailTabs', () => {
     expect(screen.getByTestId('tab-information')).toBeInTheDocument();
   });
 
-  it('does not bind number key 4 (Appearance tab removed)', () => {
+  it('does not bind number key 4 (no fourth tab)', () => {
     render(<BinDetailTabs {...baseProps} />);
     fireEvent.keyDown(window, { key: '4' });
     // Should remain on Contents

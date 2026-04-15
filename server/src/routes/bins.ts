@@ -3,6 +3,7 @@ import path from 'node:path';
 import { Router } from 'express';
 import { d, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { cleanupBinAttachments } from '../lib/attachmentsCleanup.js';
 import { getMemberRole, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
 import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinItems } from '../lib/binUpdateHelpers.js';
@@ -416,16 +417,24 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
   const { locationId, name: binName } = deletedAccess;
   await requireAdmin(locationId, req.user!.id, 'permanently delete bins');
 
-  // Get photos to delete from disk
-  const photosResult = await query<{ storage_path: string; thumb_path: string | null }>(
-    'SELECT storage_path, thumb_path FROM photos WHERE bin_id = $1',
-    [id]
-  );
+  // Snapshot disk paths before the DB delete cascades the rows away.
+  const [photosResult, attachmentsResult] = await Promise.all([
+    query<{ storage_path: string; thumb_path: string | null }>(
+      'SELECT storage_path, thumb_path FROM photos WHERE bin_id = $1',
+      [id],
+    ),
+    query<{ storage_path: string }>(
+      'SELECT storage_path FROM attachments WHERE bin_id = $1',
+      [id],
+    ),
+  ]);
 
-  // Hard delete (cascades to photos in DB)
   await query('DELETE FROM bins WHERE id = $1', [id]);
 
-  await cleanupBinPhotos(id, photosResult.rows);
+  await Promise.all([
+    cleanupBinPhotos(id, photosResult.rows),
+    cleanupBinAttachments(id, attachmentsResult.rows),
+  ]);
 
   logRouteActivity(req, { entityType: 'bin', locationId, action: 'permanent_delete', entityId: id, entityName: binName });
 

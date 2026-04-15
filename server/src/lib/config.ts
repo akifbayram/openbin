@@ -146,6 +146,9 @@ export const config = Object.freeze({
   uploadQuotaDemoMb: 5,
   uploadQuotaGlobalDemoMb: 50,
 
+  // Non-image file attachments on bins (off by default; gated at the route layer)
+  attachmentsEnabled: parseBool(process.env.ATTACHMENTS_ENABLED, false),
+
   // AI API key encryption (separate from JWT to avoid single point of compromise)
   aiEncryptionKey: process.env.AI_ENCRYPTION_KEY || null,
 

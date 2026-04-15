@@ -116,6 +116,17 @@ CREATE TABLE IF NOT EXISTS photos (
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS attachments (
+  id            TEXT PRIMARY KEY,
+  bin_id        TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
+  filename      TEXT NOT NULL,
+  mime_type     TEXT NOT NULL,
+  size          INTEGER NOT NULL,
+  storage_path  TEXT NOT NULL,
+  created_by    TEXT NOT NULL REFERENCES users(id),
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS tag_colors (
   id            TEXT PRIMARY KEY,
   location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
@@ -295,6 +306,7 @@ CREATE INDEX IF NOT EXISTS idx_bins_area_id ON bins(area_id);
 CREATE INDEX IF NOT EXISTS idx_bins_deleted_at ON bins(location_id, deleted_at);
 CREATE INDEX IF NOT EXISTS idx_bins_visibility ON bins(location_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_photos_bin_id ON photos(bin_id);
+CREATE INDEX IF NOT EXISTS idx_attachments_bin_id ON attachments(bin_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
 CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status);

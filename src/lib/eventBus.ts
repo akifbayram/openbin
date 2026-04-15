@@ -12,6 +12,7 @@ export const Events = {
   PLAN: 'plan-changed',
   CHECKOUTS: 'checkouts-changed',
   BIN_USAGE: 'bin-usage-changed',
+  ATTACHMENTS: 'attachments-changed',
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

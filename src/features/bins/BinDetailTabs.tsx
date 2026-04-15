@@ -3,24 +3,31 @@ import { OptionGroup, type OptionGroupOption } from '@/components/ui/option-grou
 import type { useDictation } from '@/lib/useDictation';
 import type { Bin, CustomField, ItemCheckout, Photo } from '@/types';
 import { BinDetailContentsTab } from './BinDetailContentsTab';
+import { BinDetailFilesTab } from './BinDetailFilesTab';
 import { BinDetailInformationTab } from './BinDetailInformationTab';
-import { BinDetailPhotosTab } from './BinDetailPhotosTab';
 import type { useAutoSaveBin } from './useAutoSaveBin';
 import type { useQuickAdd } from './useQuickAdd';
 
-export type BinDetailTab = 'contents' | 'photos' | 'information';
+export type BinDetailTab = 'contents' | 'files' | 'information';
 
 const STORAGE_KEY = 'openbin-detail-tab';
 
+const TAB_OPTIONS: OptionGroupOption<BinDetailTab>[] = [
+  { key: 'contents', label: 'Contents' },
+  { key: 'files', label: 'Files' },
+  { key: 'information', label: 'Info' },
+];
+
 function isTab(v: string | null): v is BinDetailTab {
-  return v === 'contents' || v === 'photos' || v === 'information';
+  return v === 'contents' || v === 'files' || v === 'information';
 }
 
 function readInitialTab(): BinDetailTab {
   if (typeof window === 'undefined') return 'contents';
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  // Map legacy 'appearance' value to 'contents' (appearance moved to a dialog)
+  // Remap legacy stored values so users with old localStorage don't land on a dead tab.
   if (stored === 'appearance') return 'contents';
+  if (stored === 'photos' || stored === 'attachments') return 'files';
   if (isTab(stored)) return stored;
   return 'contents';
 }
@@ -66,7 +73,6 @@ export function BinDetailTabs({
     }
   }, []);
 
-  // 1–3 keyboard shortcuts to switch tabs
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
@@ -78,30 +84,20 @@ export function BinDetailTabs({
         return;
       if (target.isContentEditable) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const map: Record<string, BinDetailTab> = {
-        '1': 'contents',
-        '2': 'photos',
-        '3': 'information',
-      };
-      const next = map[e.key];
-      if (!next) return;
+      if (!/^[1-9]$/.test(e.key)) return;
+      const idx = Number(e.key);
+      if (idx < 1 || idx > TAB_OPTIONS.length) return;
       e.preventDefault();
-      handleChange(next);
+      handleChange(TAB_OPTIONS[idx - 1].key);
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [handleChange]);
 
-  const options: OptionGroupOption<BinDetailTab>[] = [
-    { key: 'contents', label: 'Contents' },
-    { key: 'photos', label: 'Photos' },
-    { key: 'information', label: 'Info' },
-  ];
-
   return (
     <div>
       <OptionGroup
-        options={options}
+        options={TAB_OPTIONS}
         value={tab}
         onChange={handleChange}
         size="lg"
@@ -131,8 +127,8 @@ export function BinDetailTabs({
             checkouts={checkouts}
           />
         )}
-        {tab === 'photos' && (
-          <BinDetailPhotosTab binId={bin.id} photos={photos} canEdit={canEdit} />
+        {tab === 'files' && (
+          <BinDetailFilesTab binId={bin.id} photos={photos} canEdit={canEdit} />
         )}
         {tab === 'information' && (
           <BinDetailInformationTab bin={bin} checkouts={checkouts} />

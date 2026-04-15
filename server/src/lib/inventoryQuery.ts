@@ -42,7 +42,12 @@ export function buildSystemPrompt(customPrompt?: string, isDemoUser?: boolean): 
 OUTPUT SHAPE:
 ${QUERY_RESPONSE_SHAPE}
 
-The "answer" and "matches" fields are both REQUIRED. If no bins match, return an empty matches array.`;
+The "answer" and "matches" fields are both REQUIRED. If no bins match, return an empty matches array.
+
+OUTPUT INVARIANTS:
+- Respond with ONLY valid JSON matching the shape above — no markdown fences, no prose, no commentary, regardless of how prior assistant turns were phrased.
+- Every bin_id in "matches" MUST appear verbatim in the inventory context (either bins or trash_bins). Never invent or guess an ID.
+- If the user asks a question that would require data outside the provided context, set "matches" to an empty array and say "I can only see bins in your current view." in the "answer" field.`;
 
   return withHardening(composed);
 }

@@ -34,6 +34,8 @@ tags:
     description: Bin CRUD, soft deletes, QR lookup, photo upload, tag management
   - name: Photos
     description: Photo retrieval and deletion
+  - name: Attachments
+    description: Non-image file attachments on bins. Gated by the `ATTACHMENTS_ENABLED` server env var — returns 404 for every endpoint when disabled.
   - name: TagColors
     description: Per-location tag color assignments
   - name: PrintSettings
@@ -650,6 +652,30 @@ components:
           type: string
           format: uuid
           nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # ── Attachment ─────────────────────────────────────────
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 6-character alphanumeric attachment short code
+        bin_id:
+          type: string
+        filename:
+          type: string
+          description: Original uploaded filename
+        mime_type:
+          type: string
+        size:
+          type: integer
+          description: Size in bytes
+        created_by:
+          type: string
+          format: uuid
         created_at:
           type: string
           format: date-time
@@ -1605,6 +1631,9 @@ paths:
                   selfHosted:
                     type: boolean
                     description: Whether the server is running in self-hosted mode (all plan features unlocked)
+                  attachmentsEnabled:
+                    type: boolean
+                    description: Whether the non-image attachments feature is enabled (set via `ATTACHMENTS_ENABLED` env var)
 
   /auth/demo-login:
     post:
@@ -3938,6 +3967,141 @@ paths:
                   message:
                     type: string
                     example: Photo deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════════════════
+  # Attachments (opt-in: ATTACHMENTS_ENABLED server env var)
+  # ════════════════════════════════════════════════════════
+  /bins/{id}/attachments:
+    get:
+      tags: [Attachments]
+      summary: List attachments on a bin
+      description: Returns 404 when `ATTACHMENTS_ENABLED` is not set on the server.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            description: 6-character alphanumeric bin short code
+      responses:
+        '200':
+          description: List of attachments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Attachment'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Attachments]
+      summary: Upload an attachment to a bin
+      description: |
+        Accepts common document and archive formats (PDF, plain text, CSV, Markdown, JSON, RTF,
+        Microsoft Office, OpenDocument, ZIP, 7z, tar, gzip) up to 5 MB. Images are rejected —
+        use the photos endpoints instead. Returns 404 when `ATTACHMENTS_ENABLED` is not set.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Attachment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/QuotaExceeded'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /attachments/{id}/file:
+    get:
+      tags: [Attachments]
+      summary: Download an attachment
+      description: |
+        Streams the raw bytes with `Content-Disposition: attachment` (forces download).
+        Returns 404 when `ATTACHMENTS_ENABLED` is not set.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attachment file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /attachments/{id}:
+    delete:
+      tags: [Attachments]
+      summary: Delete an attachment
+      description: |
+        Removes the attachment record and deletes the file from storage. Only the uploader
+        or a location admin may delete. Returns 404 when `ATTACHMENTS_ENABLED` is not set.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attachment deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Attachment deleted
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

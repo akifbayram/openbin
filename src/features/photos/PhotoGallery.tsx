@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
-import { cn, getErrorMessage } from '@/lib/utils';
+import { cn, focusRing, getErrorMessage } from '@/lib/utils';
 import type { Photo } from '@/types';
 import { compressImage } from './compressImage';
 import { DeletePhotoDialog } from './DeletePhotoDialog';
@@ -13,6 +13,21 @@ import { PhotoLightbox } from './PhotoLightbox';
 import { addPhoto, deletePhoto, getPhotoThumbUrl, notifyPhotosChanged, usePhotos } from './usePhotos';
 
 const UPLOAD_CONCURRENCY = 3;
+
+// Must stay in sync with PHOTO_MIME_TYPES in server/src/lib/uploadConfig.ts.
+const ACCEPTED_PHOTO_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+const ACCEPTED_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ACCEPT_PHOTO_ATTR = [...ACCEPTED_PHOTO_EXTENSIONS, ...ACCEPTED_PHOTO_MIME_TYPES].join(',');
+const ACCEPTED_PHOTO_EXT_SET = new Set(ACCEPTED_PHOTO_EXTENSIONS);
+const ACCEPTED_PHOTO_MIME_SET = new Set(ACCEPTED_PHOTO_MIME_TYPES);
+const ACCEPTED_PHOTO_HINT = 'JPEG, PNG, WebP, GIF';
+
+function isAcceptedPhoto(file: File): boolean {
+  if (file.type && ACCEPTED_PHOTO_MIME_SET.has(file.type)) return true;
+  const idx = file.name.lastIndexOf('.');
+  if (idx <= 0) return false;
+  return ACCEPTED_PHOTO_EXT_SET.has(file.name.slice(idx).toLowerCase());
+}
 
 interface PhotoGalleryProps {
   binId: string;
@@ -29,8 +44,25 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
 
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files) return;
-    const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
-    if (imageFiles.length === 0) return;
+    const rejected: string[] = [];
+    const imageFiles: File[] = [];
+    for (const file of Array.from(files)) {
+      if (isAcceptedPhoto(file)) {
+        imageFiles.push(file);
+      } else {
+        rejected.push(file.name);
+      }
+    }
+    if (rejected.length > 0) {
+      showToast({
+        message: `${rejected.length === 1 ? `"${rejected[0]}" is not a supported image type` : `${rejected.length} files have unsupported types`}. Allowed: ${ACCEPTED_PHOTO_HINT}.`,
+        variant: 'error',
+      });
+    }
+    if (imageFiles.length === 0) {
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
 
     setUploadingCount(imageFiles.length);
     let errorCount = 0;
@@ -88,11 +120,16 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
               type="button"
               onClick={() => setLightboxIndex(index)}
               aria-label={`View ${photo.filename}`}
-              className="block w-20 h-20 rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-input)] snap-start"
+              className={cn(
+                'block w-20 h-20 rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-input)] snap-start',
+                focusRing,
+              )}
             >
               <img
                 src={getPhotoThumbUrl(photo.id)}
                 alt={photo.filename}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
             </button>
@@ -110,29 +147,35 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
           </div>
         ))}
         {uploadingCount > 0 && Array.from({ length: uploadingCount }, (_, i) => (
-          <div
+          <output
             // biome-ignore lint/suspicious/noArrayIndexKey: identical stateless placeholders
             key={i}
+            aria-live="polite"
             className="flex items-center justify-center w-20 h-20 flex-shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-input)] snap-start"
           >
-            <Loader2 className="h-5 w-5 animate-spin text-[var(--text-tertiary)]" />
-          </div>
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--text-tertiary)]" aria-hidden="true" />
+          </output>
         ))}
         {/* Add photo button */}
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          aria-label="Add photo"
-          className="flex flex-col items-center justify-center w-20 h-20 flex-shrink-0 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors snap-start"
-        >
-          <Plus className="h-6 w-6" />
-          <span className="text-[11px] mt-1 font-medium">Add Photo</span>
-        </button>
+        <Tooltip content={ACCEPTED_PHOTO_HINT}>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            aria-label={`Add photo. Allowed types: ${ACCEPTED_PHOTO_HINT}.`}
+            className={cn(
+              'flex flex-col items-center justify-center w-20 h-20 flex-shrink-0 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] transition-colors duration-150 hover:border-[var(--accent)] hover:text-[var(--accent)] snap-start',
+              focusRing,
+            )}
+          >
+            <Plus className="h-5 w-5" aria-hidden="true" />
+            <span className="mt-0.5 text-[11px] font-medium">Add Photo</span>
+          </button>
+        </Tooltip>
       </div>
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={ACCEPT_PHOTO_ATTR}
         multiple
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}

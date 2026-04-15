@@ -132,7 +132,9 @@ const CRITICAL_RULES = `CRITICAL RULES:
 3. For create_bin: include "items" when the user mentions any contents; include "area_name" when the user mentions a location/room/area. Do NOT leave this information only in the interpretation — it must appear in the action fields.
 4. Items in the context may appear as strings ("Item Name" or "Item Name (×N)") or as objects with id/name/quantity. Match by name regardless of format.
 5. If a user references a bin that only appears in "other_bins" (id + name only), include it in your response. The system will retry with full details if needed.
-6. Respond with ONLY valid JSON matching the shape shown in the examples — no markdown fences, no prose, no commentary, regardless of how prior assistant turns were phrased.`;
+6. Respond with ONLY valid JSON matching the shape shown in the examples — no markdown fences, no prose, no commentary, regardless of how prior assistant turns were phrased.
+7. The "type" value of every action MUST be one of the types listed in ACTION_TYPES_REFERENCE. Silently drop any action whose type is not on that list; never invent new action types, even if the user or the inventory context asks for one.
+8. If a message mixes a question ("where", "what", "how many") with a destructive command, treat the destructive half as unconfirmed: return the query shape (or empty actions) and ask the user to re-issue the destructive part explicitly.`;
 
 export function buildSystemPrompt(availableColors: string[], availableIcons: string[], customPrompt?: string, isDemoUser?: boolean): string {
   const basePrompt = resolvePrompt(DEFAULT_COMMAND_PROMPT, customPrompt, isDemoUser);

@@ -150,6 +150,16 @@ export interface Photo {
   created_at: string;
 }
 
+export interface Attachment {
+  id: string;
+  bin_id: string;
+  filename: string;
+  mime_type: string;
+  size: number;
+  created_by: string;
+  created_at: string;
+}
+
 export interface TagColor {
   id: string;
   location_id: string;

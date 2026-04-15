@@ -6,6 +6,42 @@ import { v4 as uuidv4 } from 'uuid';
 import { config } from './config.js';
 import { ValidationError } from './httpErrors.js';
 
+export const MAX_ATTACHMENT_SIZE_MB = 5;
+export const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_SIZE_MB * 1024 * 1024;
+
+// Document/archive MIME types accepted by the attachments feature. Images
+// are intentionally excluded — they belong in the photos feature.
+const ATTACHMENT_MIME_TYPES = new Set<string>([
+  'application/pdf',
+  'text/plain',
+  'text/csv',
+  'text/markdown',
+  'application/json',
+  'application/rtf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation',
+  'application/zip',
+  'application/x-7z-compressed',
+  'application/x-tar',
+  'application/gzip',
+]);
+
+// Extension fallback — browsers often report empty or octet-stream MIME
+// for less-common types like .md, so we accept by extension too.
+const ATTACHMENT_EXTENSIONS = new Set<string>([
+  '.pdf', '.txt', '.csv', '.md', '.json', '.rtf',
+  '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.odt', '.ods', '.odp',
+  '.zip', '.7z', '.tar', '.gz',
+]);
+
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
 const PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -140,6 +176,20 @@ export const demoMemoryPhotoUpload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only JPEG, PNG, WebP, and GIF images are allowed'));
+    }
+  },
+});
+
+/** Multer config for non-image bin attachments (docs/archives, 5 MB cap). */
+export const attachmentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_ATTACHMENT_BYTES },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (ATTACHMENT_MIME_TYPES.has(file.mimetype) || ATTACHMENT_EXTENSIONS.has(ext)) {
+      cb(null, true);
+    } else {
+      cb(new ValidationError('File type not allowed'));
     }
   },
 });

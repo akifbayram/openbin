@@ -45,6 +45,7 @@ router.get('/status', async (_req, res) => {
     demoMode: config.demoMode,
     qrPayloadMode: config.qrPayloadMode,
     selfHosted: config.selfHosted,
+    attachmentsEnabled: config.attachmentsEnabled,
     oauthProviders: getOAuthProviders(),
   };
   if (config.qrPayloadMode === 'url' && config.baseUrl) {

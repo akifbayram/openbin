@@ -9,10 +9,12 @@ interface SearchInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
   children?: ReactNode;
   /** Show a clear button and call this when clicked */
   onClear?: () => void;
+  /** aria-label for the clear button (default: "Clear search") */
+  clearLabel?: string;
 }
 
 const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
-  ({ containerClassName, className, children, onClear, ...props }, ref) => {
+  ({ containerClassName, className, children, onClear, clearLabel = 'Clear search', ...props }, ref) => {
     return (
       <div
         className={cn(
@@ -35,7 +37,7 @@ const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
           <button
             type="button"
             onClick={onClear}
-            aria-label="Clear search"
+            aria-label={clearLabel}
             className="p-2 -mr-1 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0 flex items-center justify-center"
           >
             <X className="h-4 w-4" />
