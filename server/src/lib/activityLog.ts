@@ -16,6 +16,26 @@ export interface LogActivityOptions {
   apiKeyId?: string;
 }
 
+export type Diff = { old: unknown; new: unknown };
+export type Changes = Record<string, Diff>;
+
+/** Merge incoming change fields into an existing changes object. Pure. */
+export function mergeBinChanges(existing: Changes, incoming: Changes): Changes {
+  const merged: Changes = { ...existing };
+  for (const key of Object.keys(incoming)) {
+    if (key === 'items_added') {
+      const existingNew = (merged[key]?.new as string[] | undefined) ?? [];
+      const incomingNew = (incoming[key].new as string[] | undefined) ?? [];
+      merged[key] = { old: merged[key]?.old ?? null, new: [...existingNew, ...incomingNew] };
+    } else if (key === 'items_removed') {
+      const existingOld = (merged[key]?.old as string[] | undefined) ?? [];
+      const incomingOld = (incoming[key].old as string[] | undefined) ?? [];
+      merged[key] = { old: [...existingOld, ...incomingOld], new: merged[key]?.new ?? null };
+    }
+  }
+  return merged;
+}
+
 const MERGEABLE_FIELDS = new Set(['items_added', 'items_removed']);
 const MERGE_WINDOW_SECONDS = 120;
 
@@ -48,19 +68,7 @@ async function tryMerge(opts: LogActivityOptions): Promise<boolean> {
   const existing = result.rows[0];
   if (!existing.changes || !isMergeableChanges(existing.changes)) return false;
 
-  // Merge arrays
-  const merged: Record<string, { old: unknown; new: unknown }> = { ...existing.changes };
-  for (const key of Object.keys(opts.changes)) {
-    if (key === 'items_added') {
-      const existingNew = (merged[key]?.new as string[] | undefined) ?? [];
-      const incomingNew = (opts.changes[key].new as string[] | undefined) ?? [];
-      merged[key] = { old: merged[key]?.old ?? null, new: [...existingNew, ...incomingNew] };
-    } else if (key === 'items_removed') {
-      const existingOld = (merged[key]?.old as string[] | undefined) ?? [];
-      const incomingOld = (opts.changes[key].old as string[] | undefined) ?? [];
-      merged[key] = { old: [...existingOld, ...incomingOld], new: merged[key]?.new ?? null };
-    }
-  }
+  const merged = mergeBinChanges(existing.changes, opts.changes);
 
   await query(
     `UPDATE activity_log SET changes = $1, created_at = ${d.now()}, entity_name = $2 WHERE id = $3`,
