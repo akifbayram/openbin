@@ -7,6 +7,7 @@ import {
   getActionColor,
   getActionIcon,
   getActionLabel,
+  getChangedFieldLabels,
   renderChangeDiff,
 } from '../activityHelpers';
 
@@ -412,5 +413,135 @@ describe('getActionBadgeLabel', () => {
   });
   it('capitalizes unknown action', () => {
     expect(getActionBadgeLabel('some_action')).toBe('Some action');
+  });
+});
+
+describe('getChangedFieldLabels', () => {
+  it('returns [] for non-update actions', () => {
+    expect(getChangedFieldLabels(entry({ action: 'create' }), t)).toEqual([]);
+    expect(getChangedFieldLabels(entry({ action: 'delete' }), t)).toEqual([]);
+  });
+
+  it('returns [] for update with no changes', () => {
+    expect(getChangedFieldLabels(entry({ action: 'update', changes: null }), t)).toEqual([]);
+  });
+
+  it('labels scalar fields verbatim', () => {
+    const e = entry({
+      action: 'update',
+      changes: {
+        name: { old: 'a', new: 'b' },
+        notes: { old: '', new: 'x' },
+        tags: { old: [], new: ['y'] },
+        icon: { old: 'i1', new: 'i2' },
+        color: { old: 'red', new: 'blue' },
+        visibility: { old: 'location', new: 'private' },
+      },
+    });
+    expect(getChangedFieldLabels(e, t)).toEqual(['name', 'notes', 'tags', 'icon', 'color', 'visibility']);
+  });
+
+  it('labels card_style as "style"', () => {
+    const e = entry({
+      action: 'update',
+      changes: { card_style: { old: '{}', new: '{"variant":"border"}' } },
+    });
+    expect(getChangedFieldLabels(e, t)).toEqual(['style']);
+  });
+
+  it('uses terminology for area', () => {
+    const e = entry({
+      action: 'update',
+      changes: { area: { old: 'Kitchen', new: 'Garage' } },
+    });
+    const customTerminology = { ...t, area: 'zone' };
+    expect(getChangedFieldLabels(e, customTerminology)).toEqual(['zone']);
+  });
+
+  it('labels items_added with plural count', () => {
+    const e = entry({
+      action: 'update',
+      changes: { items_added: { old: null, new: ['a', 'b', 'c'] } },
+    });
+    expect(getChangedFieldLabels(e, t)).toEqual(['+3 items']);
+  });
+
+  it('labels items_added singular when count is 1', () => {
+    const e = entry({
+      action: 'update',
+      changes: { items_added: { old: null, new: ['a'] } },
+    });
+    expect(getChangedFieldLabels(e, t)).toEqual(['+1 item']);
+  });
+
+  it('labels items_removed singular and plural', () => {
+    const one = entry({
+      action: 'update',
+      changes: { items_removed: { old: ['a'], new: null } },
+    });
+    expect(getChangedFieldLabels(one, t)).toEqual(['\u22121 item']);
+
+    const many = entry({
+      action: 'update',
+      changes: { items_removed: { old: ['a', 'b'], new: null } },
+    });
+    expect(getChangedFieldLabels(many, t)).toEqual(['\u22122 items']);
+  });
+
+  it('combines +N items and −M items into two chips', () => {
+    const e = entry({
+      action: 'update',
+      changes: {
+        items_added: { old: null, new: ['a', 'b'] },
+        items_removed: { old: ['c'], new: null },
+      },
+    });
+    expect(getChangedFieldLabels(e, t)).toEqual(['+2 items', '\u22121 item']);
+  });
+
+  it('labels legacy items_renamed object as "renamed item"', () => {
+    const e = entry({
+      action: 'update',
+      changes: { items_renamed: { old: 'A', new: 'B' } },
+    });
+    expect(getChangedFieldLabels(e, t)).toEqual(['renamed item']);
+  });
+
+  it('labels array-form items_renamed with count', () => {
+    const e = entry({
+      action: 'update',
+      changes: {
+        items_renamed: {
+          old: null,
+          new: [
+            { old: 'A', new: 'B' },
+            { old: 'X', new: 'Y' },
+          ],
+        },
+      },
+    });
+    expect(getChangedFieldLabels(e, t)).toEqual(['renamed 2 items']);
+  });
+
+  it('labels array-form items_renamed with singular when array has exactly one entry', () => {
+    // Array form with length 1 occurs when cancelReverts filters a 2-entry array down to 1.
+    const e = entry({
+      action: 'update',
+      changes: {
+        items_renamed: {
+          old: null,
+          new: [{ old: 'A', new: 'B' }],
+        },
+      },
+    });
+    expect(getChangedFieldLabels(e, t)).toEqual(['renamed item']);
+  });
+
+  it('labels items_quantity as "quantity"', () => {
+    const e = entry({
+      action: 'update',
+      changes: { items_quantity: { old: { name: 'x', qty: 1 }, new: { name: 'x', qty: 2 } } },
+    });
+    expect(getChangedFieldLabels(e, t)).toEqual(['quantity']);
   });
 });

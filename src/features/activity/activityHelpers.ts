@@ -234,3 +234,65 @@ export function getEntityDescription(entry: ActivityLogEntry, t: Terminology): s
   }
   return `${entity_type} ${name}`;
 }
+
+const SCALAR_LABEL_MAP: Record<string, string> = {
+  name: 'name',
+  notes: 'notes',
+  tags: 'tags',
+  icon: 'icon',
+  color: 'color',
+  visibility: 'visibility',
+  card_style: 'style',
+};
+
+export function getChangedFieldLabels(entry: ActivityLogEntry, t: Terminology): string[] {
+  if (entry.action !== 'update' || entry.entity_type !== 'bin' || !entry.changes) {
+    return [];
+  }
+
+  const labels: string[] = [];
+
+  for (const [field, diff] of Object.entries(entry.changes)) {
+    if (field === 'location' || field === 'area_id') continue;
+
+    if (field === 'area') {
+      // Handled here (not via SCALAR_LABEL_MAP) because the label is terminology-aware.
+      labels.push(t.area);
+      continue;
+    }
+
+    if (field === 'items_added') {
+      const n = Array.isArray(diff.new) ? diff.new.length : 0;
+      if (n > 0) labels.push(`+${n} item${n === 1 ? '' : 's'}`);
+      continue;
+    }
+
+    if (field === 'items_removed') {
+      const n = Array.isArray(diff.old) ? (diff.old as unknown[]).length : 0;
+      if (n > 0) labels.push(`\u2212${n} item${n === 1 ? '' : 's'}`);
+      continue;
+    }
+
+    if (field === 'items_renamed') {
+      if (Array.isArray(diff.new)) {
+        const n = diff.new.length;
+        if (n > 0) labels.push(n === 1 ? 'renamed item' : `renamed ${n} items`);
+      } else {
+        labels.push('renamed item');
+      }
+      continue;
+    }
+
+    if (field === 'items_quantity') {
+      labels.push('quantity');
+      continue;
+    }
+
+    if (field === 'items') continue; // legacy reorder — no chip
+
+    const scalar = SCALAR_LABEL_MAP[field];
+    if (scalar) labels.push(scalar);
+  }
+
+  return labels;
+}
