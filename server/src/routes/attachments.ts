@@ -11,6 +11,7 @@ import { generateShortCode } from '../lib/shortCode.js';
 import { storage } from '../lib/storage.js';
 import { attachmentUpload, MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_SIZE_MB } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
+import { requirePro } from '../middleware/requirePlan.js';
 
 type MemberRole = 'admin' | 'member' | 'viewer';
 
@@ -89,7 +90,7 @@ router.get('/bins/:id/attachments', asyncHandler(async (req, res) => {
   res.json({ results: result.rows, count: result.rows.length });
 }));
 
-router.post('/bins/:id/attachments', asyncHandler(async (req, res, next) => {
+router.post('/bins/:id/attachments', requirePro(), asyncHandler(async (req, res, next) => {
   const cl = req.headers['content-length'];
   if (cl && Number(cl) > MAX_ATTACHMENT_BYTES + 1024) {
     throw new QuotaExceededError('PAYLOAD_TOO_LARGE', `Upload exceeds ${MAX_ATTACHMENT_SIZE_MB} MB limit`);
