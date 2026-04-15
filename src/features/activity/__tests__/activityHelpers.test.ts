@@ -366,6 +366,24 @@ describe('renderChangeDiff', () => {
     expect(result?.[0]).toEqual({ field: 'name', old: 'A', new: 'B' });
     expect(result?.[1]).toEqual({ field: '+ items', old: '', new: 'Cable' });
   });
+
+  it('returns one diff entry per rename when items_renamed is in array form', () => {
+    const e = entry({
+      changes: {
+        items_renamed: {
+          old: null,
+          new: [
+            { old: 'A', new: 'B' },
+            { old: 'X', new: 'Y' },
+          ],
+        },
+      },
+    });
+    expect(renderChangeDiff(e)).toEqual([
+      { field: 'renamed', old: 'A', new: 'B' },
+      { field: 'renamed', old: 'X', new: 'Y' },
+    ]);
+  });
 });
 
 describe('getActionBadgeLabel', () => {

@@ -194,11 +194,18 @@ export function renderChangeDiff(entry: ActivityLogEntry): { field: string; old:
     }
   }
   if (c.items_renamed) {
-    itemDiffs.push({
-      field: 'renamed',
-      old: String(c.items_renamed.old ?? ''),
-      new: String(c.items_renamed.new ?? ''),
-    });
+    const renamed = c.items_renamed;
+    if (Array.isArray(renamed.new)) {
+      for (const pair of renamed.new as Array<{ old: string; new: string }>) {
+        itemDiffs.push({ field: 'renamed', old: String(pair.old), new: String(pair.new) });
+      }
+    } else {
+      itemDiffs.push({
+        field: 'renamed',
+        old: String(renamed.old ?? ''),
+        new: String(renamed.new ?? ''),
+      });
+    }
   }
 
   const allDiffs = [...fieldDiffs, ...itemDiffs];
