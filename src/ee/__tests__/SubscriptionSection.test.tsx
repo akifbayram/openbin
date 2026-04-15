@@ -30,7 +30,7 @@ import { SubscriptionSection } from '../SubscriptionSection';
 
 const BASE_FEATURES = {
   ai: true, apiKeys: false, customFields: false, fullExport: true,
-  reorganize: true, binSharing: false, maxBins: 100, maxLocations: 1,
+  reorganize: true, binSharing: false, attachments: false, maxBins: 100, maxLocations: 1,
   maxPhotoStorageMb: 100, maxMembersPerLocation: 1, activityRetentionDays: 30,
   aiCreditsPerMonth: 25,
 };

@@ -15,6 +15,7 @@ vi.mock('../lib/config.js', () => ({
       freeFullExport: false,
       freeReorganize: false,
       freeBinSharing: false,
+      freeAttachments: false,
       freeMaxBins: 10,
       freeMaxLocations: 1,
       freeMaxStorageMb: 0,
@@ -27,6 +28,7 @@ vi.mock('../lib/config.js', () => ({
       plusFullExport: true,
       plusReorganize: true,
       plusBinSharing: false,
+      plusAttachments: false,
       plusMaxBins: 100,
       plusMaxLocations: 1,
       plusMaxStorageMb: 100,
@@ -78,6 +80,7 @@ const DEFAULT_PLAN_LIMITS = {
   freeFullExport: false,
   freeReorganize: false as const,
   freeBinSharing: false as const,
+  freeAttachments: false,
   freeMaxBins: 10 as number | null,
   freeMaxLocations: 1 as number | null,
   freeMaxStorageMb: 0,
@@ -90,6 +93,7 @@ const DEFAULT_PLAN_LIMITS = {
   plusFullExport: true,
   plusReorganize: true,
   plusBinSharing: false,
+  plusAttachments: false,
   plusMaxBins: 100 as number | null,
   plusMaxLocations: 1 as number | null,
   plusMaxStorageMb: 100 as number | null,
@@ -229,6 +233,7 @@ describe('getFeatureMap()', () => {
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(true);
+    expect(features.attachments).toBe(true);
     expect(features.maxBins).toBe(1000);
     expect(features.maxLocations).toBe(10);
     expect(features.maxPhotoStorageMb).toBe(1024);
@@ -246,6 +251,7 @@ describe('getFeatureMap()', () => {
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(false);
+    expect(features.attachments).toBe(false);
     expect(features.maxBins).toBe(100);
     expect(features.maxLocations).toBe(1);
     expect(features.maxPhotoStorageMb).toBe(100);
@@ -263,6 +269,7 @@ describe('getFeatureMap()', () => {
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(true);
+    expect(features.attachments).toBe(true);
     expect(features.maxBins).toBe(null);
     expect(features.maxLocations).toBe(null);
     expect(features.maxPhotoStorageMb).toBe(null);
@@ -330,6 +337,30 @@ describe('getFeatureMap() with custom plan limits', () => {
     expect(features.maxPhotoStorageMb).toBe(null);
     expect(features.maxMembersPerLocation).toBe(null);
     expect(features.activityRetentionDays).toBe(null);
+  });
+
+  it('exposes attachments: true for Plus when plusAttachments is enabled in config', () => {
+    setConfig({
+      selfHosted: false,
+      planLimits: {
+        ...DEFAULT_PLAN_LIMITS,
+        plusAttachments: true,
+      },
+    });
+    const features = getFeatureMap(Plan.PLUS);
+    expect(features.attachments).toBe(true);
+  });
+
+  it('exposes attachments: true for Free when freeAttachments is enabled in config', () => {
+    setConfig({
+      selfHosted: false,
+      planLimits: {
+        ...DEFAULT_PLAN_LIMITS,
+        freeAttachments: true,
+      },
+    });
+    const features = getFeatureMap(Plan.FREE);
+    expect(features.attachments).toBe(true);
   });
 });
 

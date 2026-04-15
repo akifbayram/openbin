@@ -302,6 +302,7 @@ export interface PlanFeatures {
   fullExport: boolean;
   reorganize: boolean;
   binSharing: boolean;
+  attachments: boolean;
   maxBins: number | null;
   maxLocations: number | null;
   maxPhotoStorageMb: number | null;

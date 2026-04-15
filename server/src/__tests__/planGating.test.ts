@@ -56,7 +56,7 @@ function mockProUser() {
   vi.mocked(hasAiAccess).mockReturnValue(true);
   vi.mocked(getUserFeatures).mockResolvedValue({
     ai: true, apiKeys: true, customFields: true, fullExport: true,
-    reorganize: true, binSharing: true, maxBins: null, maxLocations: null,
+    reorganize: true, binSharing: true, attachments: true, maxBins: null, maxLocations: null,
     maxPhotoStorageMb: null, maxMembersPerLocation: null, activityRetentionDays: null,
     aiCreditsPerMonth: null,
   });
@@ -80,7 +80,7 @@ function mockFreeUser() {
   vi.mocked(hasAiAccess).mockReturnValue(true);
   vi.mocked(getUserFeatures).mockResolvedValue({
     ai: true, apiKeys: false, customFields: false, fullExport: false,
-    reorganize: false, binSharing: false, maxBins: 10, maxLocations: 1,
+    reorganize: false, binSharing: false, attachments: false, maxBins: 10, maxLocations: 1,
     maxPhotoStorageMb: 0, maxMembersPerLocation: 1, activityRetentionDays: 7,
     aiCreditsPerMonth: 10,
   });

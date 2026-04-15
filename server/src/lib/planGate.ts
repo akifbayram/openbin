@@ -33,6 +33,7 @@ export interface PlanFeatures {
   fullExport: boolean;
   reorganize: boolean;
   binSharing: boolean;
+  attachments: boolean;
   maxBins: number | null;
   maxLocations: number | null;
   maxPhotoStorageMb: number | null;
@@ -108,6 +109,7 @@ const UNRESTRICTED: PlanFeatures = {
   fullExport: true,
   reorganize: true,
   binSharing: true,
+  attachments: true,
   maxBins: null,
   maxLocations: null,
   maxPhotoStorageMb: null,
@@ -138,6 +140,7 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
       fullExport: pl.plusFullExport,
       reorganize: pl.plusReorganize,
       binSharing: pl.plusBinSharing,
+      attachments: pl.plusAttachments,
       maxBins: pl.plusMaxBins,
       maxLocations: pl.plusMaxLocations,
       maxPhotoStorageMb: pl.plusMaxStorageMb,
@@ -154,6 +157,7 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
     fullExport: pl.freeFullExport,
     reorganize: pl.freeReorganize,
     binSharing: pl.freeBinSharing,
+    attachments: pl.freeAttachments,
     maxBins: pl.freeMaxBins,
     maxLocations: pl.freeMaxLocations,
     maxPhotoStorageMb: pl.freeMaxStorageMb,
