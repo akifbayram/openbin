@@ -19,6 +19,54 @@ export interface LogActivityOptions {
 export type Diff = { old: unknown; new: unknown };
 export type Changes = Record<string, Diff>;
 
+type RenameEntry = { old: string; new: string };
+
+/**
+ * Merge two `items_renamed` diffs. Two possible output shapes:
+ *   - Legacy chain: `{ old: string, new: string }` — a single rename collapsed across a chain.
+ *   - Array form:   `{ old: null, new: RenameEntry[] }` — multiple unrelated renames preserved as separate entries.
+ *
+ * The client's `renderChangeDiff` must handle both shapes (Task 7). `RenameEntry` is file-local;
+ * the client uses its own equivalent type.
+ */
+function mergeItemsRenamed(existing: Diff | undefined, incoming: Diff): Diff {
+  // No prior rename — keep the incoming legacy object shape.
+  if (!existing) return incoming;
+
+  const incomingPair = { old: String(incoming.old), new: String(incoming.new) };
+
+  // Existing is a legacy {old, new} object.
+  if (typeof existing.old === 'string' && typeof existing.new === 'string') {
+    // Chain: existing.new === incoming.old → collapse.
+    if (existing.new === incomingPair.old) {
+      return { old: existing.old, new: incomingPair.new };
+    }
+    // Non-chain: upgrade to array form.
+    return {
+      old: null,
+      new: [
+        { old: existing.old, new: existing.new },
+        incomingPair,
+      ],
+    };
+  }
+
+  // Existing is already an array: chain against the last entry or append.
+  if (Array.isArray(existing.new)) {
+    const arr = existing.new as RenameEntry[];
+    const last = arr[arr.length - 1];
+    if (last && last.new === incomingPair.old) {
+      const updated = [...arr.slice(0, -1), { old: last.old, new: incomingPair.new }];
+      return { old: null, new: updated };
+    }
+    return { old: null, new: [...arr, incomingPair] };
+  }
+
+  // Fallback: unrecognised `existing` shape (e.g. data from a future schema or corruption).
+  // We replace it with the incoming rename — bounded data loss for this one field only.
+  return incoming;
+}
+
 /** Merge incoming change fields into an existing changes object. Pure. */
 export function mergeBinChanges(existing: Changes, incoming: Changes): Changes {
   const merged: Changes = { ...existing };
@@ -31,6 +79,13 @@ export function mergeBinChanges(existing: Changes, incoming: Changes): Changes {
       const existingOld = (merged[key]?.old as string[] | undefined) ?? [];
       const incomingOld = (incoming[key].old as string[] | undefined) ?? [];
       merged[key] = { old: [...existingOld, ...incomingOld], new: merged[key]?.new ?? null };
+    } else if (key === 'items_renamed') {
+      merged[key] = mergeItemsRenamed(merged[key], incoming[key]);
+    } else if (key === 'items_quantity') {
+      merged[key] = {
+        old: Object.prototype.hasOwnProperty.call(merged, key) ? merged[key].old : incoming[key].old,
+        new: incoming[key].new,
+      };
     } else {
       // Scalar / tag array / other fields: keep earliest old, adopt latest new.
       const existingOld = Object.prototype.hasOwnProperty.call(merged, key) ? merged[key].old : incoming[key].old;

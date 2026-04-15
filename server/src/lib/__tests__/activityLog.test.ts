@@ -58,4 +58,87 @@ describe('mergeBinChanges', () => {
       color: { old: undefined, new: 'green' },
     });
   });
+
+  it('passes through items_renamed unchanged when there is no prior entry', () => {
+    const existing = {};
+    const incoming = { items_renamed: { old: 'A', new: 'B' } };
+    expect(mergeBinChanges(existing, incoming)).toEqual({
+      items_renamed: { old: 'A', new: 'B' },
+    });
+  });
+
+  it('collapses a rename chain A->B then B->C to A->C', () => {
+    const existing = { items_renamed: { old: 'A', new: 'B' } };
+    const incoming = { items_renamed: { old: 'B', new: 'C' } };
+    expect(mergeBinChanges(existing, incoming)).toEqual({
+      items_renamed: { old: 'A', new: 'C' },
+    });
+  });
+
+  it('upgrades items_renamed to an array when not a chain', () => {
+    const existing = { items_renamed: { old: 'X', new: 'Y' } };
+    const incoming = { items_renamed: { old: 'P', new: 'Q' } };
+    expect(mergeBinChanges(existing, incoming)).toEqual({
+      items_renamed: {
+        old: null,
+        new: [
+          { old: 'X', new: 'Y' },
+          { old: 'P', new: 'Q' },
+        ],
+      },
+    });
+  });
+
+  it('appends to an existing items_renamed array on a new non-chain rename', () => {
+    const existing = {
+      items_renamed: {
+        old: null,
+        new: [
+          { old: 'X', new: 'Y' },
+          { old: 'P', new: 'Q' },
+        ],
+      },
+    };
+    const incoming = { items_renamed: { old: 'M', new: 'N' } };
+    expect(mergeBinChanges(existing, incoming)).toEqual({
+      items_renamed: {
+        old: null,
+        new: [
+          { old: 'X', new: 'Y' },
+          { old: 'P', new: 'Q' },
+          { old: 'M', new: 'N' },
+        ],
+      },
+    });
+  });
+
+  it('chains a new rename against the last entry in an items_renamed array', () => {
+    const existing = {
+      items_renamed: {
+        old: null,
+        new: [
+          { old: 'X', new: 'Y' },
+          { old: 'P', new: 'Q' },
+        ],
+      },
+    };
+    const incoming = { items_renamed: { old: 'Q', new: 'R' } };
+    expect(mergeBinChanges(existing, incoming)).toEqual({
+      items_renamed: {
+        old: null,
+        new: [
+          { old: 'X', new: 'Y' },
+          { old: 'P', new: 'R' },
+        ],
+      },
+    });
+  });
+
+  it('merges items_quantity preserving earliest old snapshot', () => {
+    const existing = { items_quantity: { old: { name: 'bolt', qty: 5 }, new: { name: 'bolt', qty: 10 } } };
+    const incoming = { items_quantity: { old: { name: 'bolt', qty: 10 }, new: { name: 'bolt', qty: 15 } } };
+    expect(mergeBinChanges(existing, incoming)).toEqual({
+      items_quantity: { old: { name: 'bolt', qty: 5 }, new: { name: 'bolt', qty: 15 } },
+    });
+  });
 });
