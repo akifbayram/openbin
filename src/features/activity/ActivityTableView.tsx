@@ -18,9 +18,10 @@ interface ActivityTableViewProps {
   isLoadingMore: boolean;
   loadMore: () => void;
   searchQuery: string;
+  currentEntityId?: string;
 }
 
-export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, searchQuery }: ActivityTableViewProps) {
+export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, searchQuery, currentEntityId }: ActivityTableViewProps) {
   const navigate = useNavigate();
   const t = useTerminology();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -52,6 +53,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
           const isClickable =
             entry.entity_type === 'bin' &&
             entry.entity_id &&
+            entry.entity_id !== currentEntityId &&
             entry.action !== 'permanent_delete' &&
             entry.action !== 'delete';
           const detailId = `activity-detail-${entry.id}`;

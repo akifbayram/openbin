@@ -7,6 +7,7 @@ import { resolveIcon } from '@/lib/iconMap';
 import { generateQRDataURL } from '@/lib/qr';
 import { sectionHeader } from '@/lib/utils';
 import type { Bin, ItemCheckout } from '@/types';
+import { BinDetailActivitySection } from './BinDetailActivitySection';
 
 interface BinDetailInformationTabProps {
   bin: Bin;
@@ -127,6 +128,8 @@ export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformation
           </dl>
         </div>
       </section>
+
+      <BinDetailActivitySection binId={bin.id} />
 
       {openCheckouts.length > 0 && (
         <section>
