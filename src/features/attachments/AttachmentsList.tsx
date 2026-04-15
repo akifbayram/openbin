@@ -69,10 +69,11 @@ function isAcceptedFile(filename: string): boolean {
 
 interface AttachmentsListProps {
   binId: string;
-  canEdit: boolean;
+  canUpload: boolean;
+  canDelete: boolean;
 }
 
-export function AttachmentsList({ binId, canEdit }: AttachmentsListProps) {
+export function AttachmentsList({ binId, canUpload, canDelete }: AttachmentsListProps) {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
   const { attachments } = useAttachments(binId);
@@ -127,7 +128,7 @@ export function AttachmentsList({ binId, canEdit }: AttachmentsListProps) {
     }
   }, [showToast]);
 
-  const canDelete = (a: Attachment) => isAdmin || a.created_by === user?.id;
+  const isOwnerOrAdmin = (a: Attachment) => isAdmin || a.created_by === user?.id;
 
   return (
     <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
@@ -157,7 +158,7 @@ export function AttachmentsList({ binId, canEdit }: AttachmentsListProps) {
               </p>
             </div>
           </a>
-          {canEdit && canDelete(a) && (
+          {canDelete && isOwnerOrAdmin(a) && (
             <Tooltip content="Delete attachment">
               <Button
                 variant="ghost"
@@ -183,7 +184,7 @@ export function AttachmentsList({ binId, canEdit }: AttachmentsListProps) {
           <span className="text-[var(--text-xs)] text-[var(--text-tertiary)]">Uploading…</span>
         </output>
       ))}
-      {canEdit && (
+      {canUpload && (
         <Tooltip content={`${ACCEPTED_TYPES_HINT} · up to ${MAX_MB} MB`}>
           <button
             type="button"
@@ -196,7 +197,7 @@ export function AttachmentsList({ binId, canEdit }: AttachmentsListProps) {
           </button>
         </Tooltip>
       )}
-      {canEdit && (
+      {canUpload && (
         <input
           ref={inputRef}
           type="file"
