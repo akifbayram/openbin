@@ -31,26 +31,28 @@ function makeContext(overrides: Partial<TourContext> = {}): TourContext {
 }
 
 describe('filterSteps', () => {
-  it('returns all 10 steps for writer + AI configured', () => {
+  it('returns all 11 steps for writer + AI configured', () => {
     const ctx = makeContext();
     const filtered = filterSteps(TOUR_STEPS, ctx);
-    expect(filtered).toHaveLength(10);
+    expect(filtered).toHaveLength(11);
   });
 
-  it('returns 8 steps for writer without AI (skips photo-to-bin and reorganize)', () => {
+  it('returns 8 steps for writer without AI (skips voice-input, photo-to-bin, reorganize)', () => {
     const ctx = makeContext({ aiEnabled: false });
     const filtered = filterSteps(TOUR_STEPS, ctx);
     expect(filtered).toHaveLength(8);
     const ids = filtered.map((s) => s.id);
+    expect(ids).not.toContain('voice-input');
     expect(ids).not.toContain('photo-to-bin');
     expect(ids).not.toContain('reorganize');
   });
 
-  it('returns 7 steps for viewer (skips photo-to-bin, quick-add, reorganize)', () => {
+  it('returns 8 steps for viewer (keeps voice-input; skips photo-to-bin, quick-add, reorganize)', () => {
     const ctx = makeContext({ canWrite: false });
     const filtered = filterSteps(TOUR_STEPS, ctx);
-    expect(filtered).toHaveLength(7);
+    expect(filtered).toHaveLength(8);
     const ids = filtered.map((s) => s.id);
+    expect(ids).toContain('voice-input');
     expect(ids).not.toContain('photo-to-bin');
     expect(ids).not.toContain('quick-add');
     expect(ids).not.toContain('reorganize');
@@ -65,14 +67,15 @@ describe('filterSteps', () => {
     expect(ids).not.toContain('bin-tabs');
   });
 
-  it('viewer with no bins sees 5 steps', () => {
+  it('viewer with no bins sees 6 steps', () => {
     const ctx = makeContext({ canWrite: false, firstBinId: null });
     const filtered = filterSteps(TOUR_STEPS, ctx);
-    expect(filtered).toHaveLength(5);
+    expect(filtered).toHaveLength(6);
     const ids = filtered.map((s) => s.id);
     expect(ids).toEqual([
       'dashboard-overview',
       'ask-ai',
+      'voice-input',
       'scan-qr',
       'print-mode',
       'cta',
@@ -114,9 +117,16 @@ describe('filterSteps', () => {
 });
 
 describe('resolveSelector', () => {
-  it('returns Ask AI selector when AI is enabled', () => {
-    const ctx = makeContext({ aiEnabled: true });
+  it('returns Ask AI header selector when AI is enabled on desktop', () => {
+    const ctx = makeContext({ aiEnabled: true, isMobile: false });
     expect(resolveSelector(findStep('ask-ai'), ctx)).toBe('button[aria-label="Ask AI"]');
+  });
+
+  it('scopes Ask AI to BottomNav on mobile', () => {
+    const ctx = makeContext({ aiEnabled: true, isMobile: true });
+    expect(resolveSelector(findStep('ask-ai'), ctx)).toBe(
+      'nav[aria-label="Main navigation"] button[aria-label="Ask AI"]',
+    );
   });
 
   it('falls back to Scan button when AI is not enabled', () => {
@@ -127,6 +137,11 @@ describe('resolveSelector', () => {
   it('uses data-tour selector for photo-to-bin', () => {
     const ctx = makeContext();
     expect(resolveSelector(findStep('photo-to-bin'), ctx)).toBe('[data-tour="photo-to-bin"]');
+  });
+
+  it('uses data-tour selector for voice-input', () => {
+    const ctx = makeContext();
+    expect(resolveSelector(findStep('voice-input'), ctx)).toBe('[data-tour="voice-input"]');
   });
 
   it('uses data-tour selector for dashboard-overview', () => {
@@ -177,12 +192,22 @@ describe('resolveRoute', () => {
     const ctx = makeContext({ isMobile: false });
     expect(resolveRoute(findStep('photo-to-bin'), ctx)).toBe('/');
   });
+
+  it('returns /ask for voice-input on mobile', () => {
+    const ctx = makeContext({ isMobile: true });
+    expect(resolveRoute(findStep('voice-input'), ctx)).toBe('/ask');
+  });
+
+  it('returns / for voice-input on desktop', () => {
+    const ctx = makeContext({ isMobile: false });
+    expect(resolveRoute(findStep('voice-input'), ctx)).toBe('/');
+  });
 });
 
 describe('resolveTitle', () => {
   it('returns dynamic title with terminology for bin-qr', () => {
     const ctx = makeContext();
-    expect(resolveTitle(findStep('bin-qr'), ctx)).toBe('Every bin has a QR code');
+    expect(resolveTitle(findStep('bin-qr'), ctx)).toBe('Every bin has a scannable code');
   });
 
   it('returns AI title when AI is enabled', () => {

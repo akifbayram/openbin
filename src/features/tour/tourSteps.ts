@@ -62,8 +62,14 @@ export const TOUR_STEPS: TourStep[] = [
   // 2. Ask AI — flagship AI feature
   {
     id: 'ask-ai',
-    selector: (ctx) =>
-      ctx.aiEnabled ? 'button[aria-label="Ask AI"]' : 'button[aria-label="Scan QR code"]',
+    selector: (ctx) => {
+      if (!ctx.aiEnabled) return 'button[aria-label="Scan QR code"]';
+      // Mobile: header button is hidden (lg:inline-flex); target the BottomNav Ask AI button.
+      // Desktop: header button is first in DOM and visible.
+      return ctx.isMobile
+        ? 'nav[aria-label="Main navigation"] button[aria-label="Ask AI"]'
+        : 'button[aria-label="Ask AI"]';
+    },
     placement: 'bottom',
     title: (ctx) => (ctx.aiEnabled ? 'Ask AI anything' : `Find your ${ctx.terminology.bins}`),
     body: (ctx) => {
@@ -74,10 +80,31 @@ export const TOUR_STEPS: TourStep[] = [
       return `Ask where something is, or tell it what to do — AI can create, edit, and find ${ctx.terminology.bins}. Try ${shortcut}.`;
     },
     route: '/',
-    mobilePlacement: 'bottom',
+    mobilePlacement: 'top',
   },
 
-  // 3. Photo-to-bin — flagship AI creation flow
+  // 3. Voice input — hands-free capture inside the Ask AI composer
+  {
+    id: 'voice-input',
+    selector: '[data-tour="voice-input"]',
+    placement: 'top',
+    title: 'Talk to it',
+    body: (ctx) =>
+      `Tap the mic to dictate instead of typing. Describe a shelf out loud and the ${ctx.terminology.bin} gets written up for you.`,
+    route: (ctx) => (ctx.isMobile ? '/ask' : '/'),
+    condition: (ctx) => ctx.aiEnabled,
+    beforeShow: async (ctx) => {
+      if (ctx.isMobile) return;
+      ctx.openCommandInput();
+      await delay(400);
+    },
+    onLeave: (ctx) => {
+      if (!ctx.isMobile) ctx.closeCommandInput();
+    },
+    mobilePlacement: 'top',
+  },
+
+  // 4. Photo-to-bin — flagship AI creation flow
   {
     id: 'photo-to-bin',
     selector: '[data-tour="photo-to-bin"]',
@@ -110,25 +137,16 @@ export const TOUR_STEPS: TourStep[] = [
     mobilePlacement: 'bottom',
   },
 
-  // 5. Bin detail — QR section in the rail
+  // 5. Bin detail — short code + notes/area/tags in the rail
   {
     id: 'bin-qr',
     selector: '[data-tour="qr-section"]',
     placement: 'top',
-    title: (ctx) => `Every ${ctx.terminology.bin} has a QR code`,
+    title: (ctx) => `Every ${ctx.terminology.bin} has a scannable code`,
     body: (ctx) =>
-      `Print this label and stick it on your ${ctx.terminology.bin}. Anyone with access to this ${ctx.terminology.location} can scan to see what's inside.`,
+      `This 6-character code is also a printable QR. Stick a label on the ${ctx.terminology.bin} — anyone in this ${ctx.terminology.location} can scan or type it to see what's inside.`,
     route: (ctx) => (ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/'),
     condition: (ctx) => ctx.firstBinId !== null,
-    beforeShow: async () => {
-      const toggle = document.querySelector<HTMLButtonElement>(
-        '[data-tour="qr-section"] button[aria-expanded="false"]',
-      );
-      if (toggle) {
-        toggle.click();
-        await delay(250);
-      }
-    },
     mobilePlacement: 'top',
   },
 
