@@ -1,3 +1,4 @@
+import { formatKeys } from '@/lib/shortcuts';
 import type { Terminology } from '@/lib/terminology';
 
 // Bump this when tour content changes to re-trigger for returning users
@@ -69,7 +70,7 @@ export const TOUR_STEPS: TourStep[] = [
       if (!ctx.aiEnabled) {
         return `Use the search bar to find ${ctx.terminology.bins} by name, tag, or contents. Scan a QR label to jump straight to one.`;
       }
-      const shortcut = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '\u2318J' : 'Ctrl+J';
+      const [shortcut] = formatKeys('mod+j');
       return `Ask where something is, or tell it what to do — AI can create, edit, and find ${ctx.terminology.bins}. Try ${shortcut}.`;
     },
     route: '/',
