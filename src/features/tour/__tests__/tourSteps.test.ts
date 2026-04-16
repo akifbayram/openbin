@@ -37,22 +37,22 @@ describe('filterSteps', () => {
     expect(filtered).toHaveLength(10);
   });
 
-  it('returns 8 steps for writer without AI (skips snap-to-create and reorganize)', () => {
+  it('returns 8 steps for writer without AI (skips photo-to-bin and reorganize)', () => {
     const ctx = makeContext({ aiEnabled: false });
     const filtered = filterSteps(TOUR_STEPS, ctx);
     expect(filtered).toHaveLength(8);
     const ids = filtered.map((s) => s.id);
-    expect(ids).not.toContain('snap-to-create');
+    expect(ids).not.toContain('photo-to-bin');
     expect(ids).not.toContain('reorganize');
   });
 
-  it('returns 7 steps for viewer (skips quick-add, snap-to-create, reorganize)', () => {
+  it('returns 7 steps for viewer (skips photo-to-bin, quick-add, reorganize)', () => {
     const ctx = makeContext({ canWrite: false });
     const filtered = filterSteps(TOUR_STEPS, ctx);
     expect(filtered).toHaveLength(7);
     const ids = filtered.map((s) => s.id);
+    expect(ids).not.toContain('photo-to-bin');
     expect(ids).not.toContain('quick-add');
-    expect(ids).not.toContain('snap-to-create');
     expect(ids).not.toContain('reorganize');
   });
 
@@ -60,27 +60,29 @@ describe('filterSteps', () => {
     const ctx = makeContext({ firstBinId: null });
     const filtered = filterSteps(TOUR_STEPS, ctx);
     const ids = filtered.map((s) => s.id);
-    expect(ids).not.toContain('qr-section');
+    expect(ids).not.toContain('bin-qr');
     expect(ids).not.toContain('quick-add');
+    expect(ids).not.toContain('bin-tabs');
   });
 
-  it('viewer with no bins sees 6 steps', () => {
+  it('viewer with no bins sees 5 steps', () => {
     const ctx = makeContext({ canWrite: false, firstBinId: null });
     const filtered = filterSteps(TOUR_STEPS, ctx);
-    expect(filtered).toHaveLength(6);
+    expect(filtered).toHaveLength(5);
     const ids = filtered.map((s) => s.id);
-    expect(ids).toContain('ask-ai');
-    expect(ids).toContain('scan-qr');
-    expect(ids).toContain('print-labels');
-    expect(ids).toContain('print-names');
-    expect(ids).toContain('print-items');
-    expect(ids).toContain('cta');
+    expect(ids).toEqual([
+      'dashboard-overview',
+      'ask-ai',
+      'scan-qr',
+      'print-mode',
+      'cta',
+    ]);
   });
 
-  it('first step is always ask-ai', () => {
+  it('first step is always dashboard-overview', () => {
     const ctx = makeContext();
     const filtered = filterSteps(TOUR_STEPS, ctx);
-    expect(filtered[0].id).toBe('ask-ai');
+    expect(filtered[0].id).toBe('dashboard-overview');
   });
 
   it('last step is always cta', () => {
@@ -93,14 +95,15 @@ describe('filterSteps', () => {
     const ctx = makeContext();
     const filtered = filterSteps(TOUR_STEPS, ctx);
     const routes = filtered.map((s) => resolveRoute(s, ctx));
-    // Verify we don't return to a route we already left
+    // Verify we don't return to a route we already left. The final cta step
+    // returning to `/` is expected and exempt.
     const visited = new Set<string>();
     let prev = '';
     let backtracks = 0;
-    for (const route of routes) {
+    for (let i = 0; i < routes.length; i++) {
+      const route = routes[i];
       if (route !== prev && visited.has(route)) {
-        // Returning to /bins at the end for scan-qr and cta is expected
-        if (route === '/bins') continue;
+        if (route === '/' && i === routes.length - 1) continue;
         backtracks++;
       }
       visited.add(route);
@@ -121,33 +124,65 @@ describe('resolveSelector', () => {
     expect(resolveSelector(findStep('ask-ai'), ctx)).toBe('button[aria-label="Scan QR code"]');
   });
 
-  it('uses data-tour selector for snap-to-create', () => {
+  it('uses data-tour selector for photo-to-bin', () => {
     const ctx = makeContext();
-    expect(resolveSelector(findStep('snap-to-create'), ctx)).toBe('[data-tour="photo-buttons"]');
+    expect(resolveSelector(findStep('photo-to-bin'), ctx)).toBe('[data-tour="photo-to-bin"]');
+  });
+
+  it('uses data-tour selector for dashboard-overview', () => {
+    const ctx = makeContext();
+    expect(resolveSelector(findStep('dashboard-overview'), ctx)).toBe(
+      '[data-tour="dashboard-overview"]',
+    );
+  });
+
+  it('uses data-tour selector for bin-tabs', () => {
+    const ctx = makeContext();
+    expect(resolveSelector(findStep('bin-tabs'), ctx)).toBe('[data-tour="bin-tabs"]');
   });
 });
 
 describe('resolveRoute', () => {
-  it('returns bin detail route with firstBinId', () => {
+  it('returns bin detail route with firstBinId for bin-qr', () => {
     const ctx = makeContext({ firstBinId: 'xyz789' });
-    expect(resolveRoute(findStep('qr-section'), ctx)).toBe('/bin/xyz789');
+    expect(resolveRoute(findStep('bin-qr'), ctx)).toBe('/bin/xyz789');
   });
 
-  it('returns /bins for static routes', () => {
+  it('returns bin detail route with firstBinId for bin-tabs', () => {
+    const ctx = makeContext({ firstBinId: 'xyz789' });
+    expect(resolveRoute(findStep('bin-tabs'), ctx)).toBe('/bin/xyz789');
+  });
+
+  it('returns / for dashboard-overview', () => {
     const ctx = makeContext();
-    expect(resolveRoute(findStep('ask-ai'), ctx)).toBe('/bins');
+    expect(resolveRoute(findStep('dashboard-overview'), ctx)).toBe('/');
+  });
+
+  it('returns / for ask-ai', () => {
+    const ctx = makeContext();
+    expect(resolveRoute(findStep('ask-ai'), ctx)).toBe('/');
   });
 
   it('returns /reorganize for reorganize step', () => {
     const ctx = makeContext();
     expect(resolveRoute(findStep('reorganize'), ctx)).toBe('/reorganize');
   });
+
+  it('returns /ask for photo-to-bin on mobile', () => {
+    const ctx = makeContext({ isMobile: true });
+    expect(resolveRoute(findStep('photo-to-bin'), ctx)).toBe('/ask');
+  });
+
+  it('returns / for photo-to-bin on desktop', () => {
+    const ctx = makeContext({ isMobile: false });
+    expect(resolveRoute(findStep('photo-to-bin'), ctx)).toBe('/');
+  });
 });
 
 describe('resolveTitle', () => {
-  it('returns dynamic title with terminology', () => {
+  it('returns dynamic title with terminology for bin-qr', () => {
     const ctx = makeContext();
-    expect(resolveTitle(findStep('qr-section'), ctx)).toBe('Bin QR code');
+    expect(resolveTitle(findStep('bin-qr'), ctx)).toBe('Every bin has a QR code');
   });
 
   it('returns AI title when AI is enabled', () => {
@@ -165,13 +200,13 @@ describe('resolveBody', () => {
   it('adapts body for AI-enabled user', () => {
     const ctx = makeContext({ aiEnabled: true, canWrite: true });
     const body = resolveBody(findStep('ask-ai'), ctx);
-    expect(body).toContain('add batteries');
+    expect(body).toContain('Ask where something is');
   });
 
   it('adapts body for non-AI user', () => {
     const ctx = makeContext({ aiEnabled: false });
     const body = resolveBody(findStep('ask-ai'), ctx);
-    expect(body).toContain('Scan a QR label');
+    expect(body).toContain('search bar');
   });
 
   it('CTA body adapts for writer + AI', () => {
@@ -186,7 +221,23 @@ describe('resolveBody', () => {
     expect(body).toContain('replay this tour');
   });
 
-  it('uses custom terminology in body text', () => {
+  it('dashboard-overview body uses bins terminology', () => {
+    const ctx = makeContext({
+      terminology: { ...DEFAULT_TERMINOLOGY, bin: 'container', bins: 'containers' },
+    });
+    const body = resolveBody(findStep('dashboard-overview'), ctx);
+    expect(body).toContain('containers');
+  });
+
+  it('bin-tabs body uses bin terminology', () => {
+    const ctx = makeContext({
+      terminology: { ...DEFAULT_TERMINOLOGY, bin: 'container', bins: 'containers' },
+    });
+    const body = resolveBody(findStep('bin-tabs'), ctx);
+    expect(body).toContain('container');
+  });
+
+  it('uses custom terminology in ask-ai body', () => {
     const ctx = makeContext({
       terminology: { ...DEFAULT_TERMINOLOGY, bin: 'container', bins: 'containers' },
     });
