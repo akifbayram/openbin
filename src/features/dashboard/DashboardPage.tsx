@@ -120,7 +120,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="page-content-wide">
+    <div className="page-content-wide" data-tour="dashboard-overview">
       <PageHeader
         title="Dashboard"
         actions={
