@@ -102,6 +102,15 @@
   }
 }
 
+/* Outline the content element, not the wrapper — the bleed layer would cover it. */
+@media screen {
+  .label-cell,
+  .name-cell {
+    border-radius: var(--radius-md);
+    border: 2px dashed rgba(0, 0, 0, 0.33);
+  }
+}
+
 /* ─── Name Cards ─── */
 .name-cell {
   box-sizing: border-box;
@@ -205,8 +214,8 @@
 }
 
 .item-sheet-qr {
-  width: 1in;
-  height: 1in;
+  width: 0.5in;
+  height: 0.5in;
   display: block;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
