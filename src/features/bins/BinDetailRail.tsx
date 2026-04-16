@@ -75,7 +75,7 @@ export function BinDetailRail({
   }
 
   return (
-    <section className="flex flex-col gap-4" data-tour="qr-section">
+    <section className="flex flex-col gap-4" data-tour="bin-qr">
       <h2 className="sr-only">Bin details</h2>
 
       <div className={cn(META_FIELD, autoSave.savedFields.has('notes') && 'animate-save-flash')}>

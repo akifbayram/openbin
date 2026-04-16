@@ -46,6 +46,11 @@ function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }
 
+// Shared route resolvers (used by multiple steps)
+const askRoute = (ctx: TourContext) => (ctx.isMobile ? '/ask' : '/');
+const binDetailRoute = (ctx: TourContext) =>
+  ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/';
+
 export const TOUR_STEPS: TourStep[] = [
   // 1. Dashboard overview — orient user on landing page
   {
@@ -91,7 +96,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'Talk to it',
     body: (ctx) =>
       `Tap the mic to dictate instead of typing. Describe a shelf out loud and the ${ctx.terminology.bin} gets written up for you.`,
-    route: (ctx) => (ctx.isMobile ? '/ask' : '/'),
+    route: askRoute,
     condition: (ctx) => ctx.aiEnabled,
     beforeShow: async (ctx) => {
       if (ctx.isMobile) return;
@@ -112,7 +117,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: (ctx) => `Create a ${ctx.terminology.bin} from a photo`,
     body: (ctx) =>
       `Snap a photo of a shelf, drawer, or container. AI identifies what's inside and creates a ${ctx.terminology.bin} for you — items, tags, and notes included.`,
-    route: (ctx) => (ctx.isMobile ? '/ask' : '/'),
+    route: askRoute,
     condition: (ctx) => ctx.canWrite && ctx.aiEnabled,
     beforeShow: async (ctx) => {
       if (ctx.isMobile) return;
@@ -125,7 +130,7 @@ export const TOUR_STEPS: TourStep[] = [
     mobilePlacement: 'top',
   },
 
-  // 4. Scan QR / search
+  // 5. Scan QR / search
   {
     id: 'scan-qr',
     selector: 'button[aria-label="Scan QR code"]',
@@ -137,20 +142,20 @@ export const TOUR_STEPS: TourStep[] = [
     mobilePlacement: 'bottom',
   },
 
-  // 5. Bin detail — short code + notes/area/tags in the rail
+  // 6. Bin detail — short code + notes/area/tags in the rail
   {
     id: 'bin-qr',
-    selector: '[data-tour="qr-section"]',
+    selector: '[data-tour="bin-qr"]',
     placement: 'top',
     title: (ctx) => `Every ${ctx.terminology.bin} has a scannable code`,
     body: (ctx) =>
       `This 6-character code is also a printable QR. Stick a label on the ${ctx.terminology.bin} — anyone in this ${ctx.terminology.location} can scan or type it to see what's inside.`,
-    route: (ctx) => (ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/'),
+    route: binDetailRoute,
     condition: (ctx) => ctx.firstBinId !== null,
     mobilePlacement: 'top',
   },
 
-  // 6. Bin detail — quick add
+  // 7. Bin detail — quick add
   {
     id: 'quick-add',
     selector: '[data-tour="quick-add"]',
@@ -160,12 +165,12 @@ export const TOUR_STEPS: TourStep[] = [
       ctx.aiEnabled
         ? `Type "3 screwdrivers, a tape measure, some nails" and tap the spark icon — AI parses it into items with quantities.`
         : `Type an item name and press Enter. Paste a comma-separated list to add several at once.`,
-    route: (ctx) => (ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/'),
+    route: binDetailRoute,
     condition: (ctx) => ctx.canWrite && ctx.firstBinId !== null,
     mobilePlacement: 'top',
   },
 
-  // 7. Bin detail — tab bar (Contents / Files / Info)
+  // 8. Bin detail — tab bar (Contents / Files / Info)
   {
     id: 'bin-tabs',
     selector: '[data-tour="bin-tabs"]',
@@ -173,12 +178,12 @@ export const TOUR_STEPS: TourStep[] = [
     title: "See what's happening",
     body: (ctx) =>
       `Switch tabs for files, a usage heatmap, and activity history — so you know when this ${ctx.terminology.bin} was last opened and what changed.`,
-    route: (ctx) => (ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/'),
+    route: binDetailRoute,
     condition: (ctx) => ctx.firstBinId !== null,
     mobilePlacement: 'bottom',
   },
 
-  // 8. Print modes (labels / names / item list)
+  // 9. Print modes (labels / names / item list)
   {
     id: 'print-mode',
     selector: '[data-tour="print-mode"]',
@@ -204,7 +209,7 @@ export const TOUR_STEPS: TourStep[] = [
     mobilePlacement: 'bottom',
   },
 
-  // 9. AI Reorganize
+  // 10. AI Reorganize
   {
     id: 'reorganize',
     selector: '[data-tour="reorganize-submit"]',
@@ -217,7 +222,7 @@ export const TOUR_STEPS: TourStep[] = [
     mobilePlacement: 'top',
   },
 
-  // 10. CTA — call to action
+  // 11. CTA — call to action
   {
     id: 'cta',
     selector: (ctx) => {
