@@ -55,15 +55,36 @@ export interface LabelOptions {
 export type PrintMode = 'labels' | 'names' | 'items';
 
 export interface ItemListOptions {
+  // Header
+  showQrCode: boolean;
+  showIcon: boolean;
+  showAreaPath: boolean;
+  showBinCode: boolean;
+  showItemCount: boolean;
+
+  // Content
   showCheckboxes: boolean;
   showQuantity: boolean;
-  showBinCode: boolean;
+  showNotesColumn: boolean;
+  showBinNotes: boolean;
+
+  // Layout
+  zebraStripes: boolean;
+  blankRowCount: number;
 }
 
 export const DEFAULT_ITEM_LIST_OPTIONS: ItemListOptions = {
+  showQrCode: true,
+  showIcon: true,
+  showAreaPath: true,
+  showBinCode: true,
+  showItemCount: true,
   showCheckboxes: true,
   showQuantity: true,
-  showBinCode: true,
+  showNotesColumn: true,
+  showBinNotes: true,
+  zebraStripes: true,
+  blankRowCount: 5,
 };
 
 export interface NameCardOptions {
