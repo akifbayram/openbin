@@ -149,6 +149,15 @@ export async function savePrintSettings(settings: PrintSettings): Promise<void> 
   await apiFetch('/api/print-settings', { method: 'PUT', body: settings });
 }
 
+export function mergeLoadedSettings(data: Partial<PrintSettings>): PrintSettings {
+  return {
+    ...DEFAULT_PRINT_SETTINGS,
+    ...data,
+    itemListOptions: { ...DEFAULT_ITEM_LIST_OPTIONS, ...(data.itemListOptions ?? {}) },
+    nameCardOptions: { ...DEFAULT_NAME_CARD_OPTIONS, ...(data.nameCardOptions ?? {}) },
+  };
+}
+
 export function usePrintSettings() {
   const [settings, setSettings] = useState<PrintSettings>(DEFAULT_PRINT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
@@ -173,7 +182,7 @@ export function usePrintSettings() {
         const data = await apiFetch<PrintSettings | null>('/api/print-settings');
         if (cancelled) return;
         if (data) {
-          setSettings({ ...DEFAULT_PRINT_SETTINGS, ...data });
+          setSettings(mergeLoadedSettings(data));
         }
       } catch {
         // Network or server error — keep defaults
@@ -186,7 +195,7 @@ export function usePrintSettings() {
 
     function onChanged() {
       apiFetch<PrintSettings>('/api/print-settings')
-        .then((data) => { if (!cancelled) setSettings({ ...DEFAULT_PRINT_SETTINGS, ...data }); })
+        .then((data) => { if (!cancelled) setSettings(mergeLoadedSettings(data)); })
         .catch(() => {});
     }
 
