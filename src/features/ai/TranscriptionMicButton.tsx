@@ -52,6 +52,7 @@ export function TranscriptionMicButton({ transcription, className }: Transcripti
           className,
         )}
         aria-label="Voice input"
+        data-tour="voice-input"
       >
         <Mic className="h-5 w-5" />
       </button>
