@@ -41,6 +41,7 @@ export function ItemSheet({
   useEffect(() => {
     if (!showQrCode || bins.length === 0) {
       setQrMap(new Map());
+      setLoading(false);
       return;
     }
     let cancelled = false;

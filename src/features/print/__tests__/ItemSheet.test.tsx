@@ -190,6 +190,18 @@ describe('ItemSheet table', () => {
     expect(screen.queryByText('Notes')).toBeNull();
   });
 
+  it('renders the Qty column header when showQuantity is true', async () => {
+    render(<ItemSheet {...baseProps} />);
+    await waitFor(() => expect(screen.getByText('Gloves')).toBeTruthy());
+    expect(screen.getByText('Qty')).toBeTruthy();
+  });
+
+  it('omits the Qty column header when showQuantity is false', async () => {
+    render(<ItemSheet {...baseProps} showQuantity={false} />);
+    await waitFor(() => expect(screen.getByText('Gloves')).toBeTruthy());
+    expect(screen.queryByText('Qty')).toBeNull();
+  });
+
   it('applies zebra class to odd rows when zebraStripes is true', async () => {
     render(<ItemSheet {...baseProps} />);
     await waitFor(() => expect(screen.getByText('Gloves')).toBeTruthy());
