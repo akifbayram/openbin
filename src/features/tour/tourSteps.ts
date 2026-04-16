@@ -1,7 +1,7 @@
 import type { Terminology } from '@/lib/terminology';
 
 // Bump this when tour content changes to re-trigger for returning users
-export const TOUR_VERSION = 1;
+export const TOUR_VERSION = 2;
 
 export type Placement = 'top' | 'bottom' | 'left' | 'right';
 
@@ -46,62 +46,78 @@ function delay(ms: number) {
 }
 
 export const TOUR_STEPS: TourStep[] = [
-  // 1. Ask AI — flagship AI feature
+  // 1. Dashboard overview — orient user on landing page
+  {
+    id: 'dashboard-overview',
+    selector: '[data-tour="dashboard-overview"]',
+    placement: 'bottom',
+    title: 'Welcome home',
+    body: (ctx) =>
+      `Your dashboard surfaces pinned ${ctx.terminology.bins}, recent scans, and an activity heatmap so you can see what's moving.`,
+    route: '/',
+    mobilePlacement: 'bottom',
+  },
+
+  // 2. Ask AI — flagship AI feature
   {
     id: 'ask-ai',
     selector: (ctx) =>
       ctx.aiEnabled ? 'button[aria-label="Ask AI"]' : 'button[aria-label="Scan QR code"]',
     placement: 'bottom',
-    title: (ctx) => (ctx.aiEnabled ? 'Ask AI anything' : 'Find your bins'),
-    body: (ctx) =>
-      ctx.aiEnabled
-        ? `Try "add batteries to the kitchen ${ctx.terminology.bin}" or "which ${ctx.terminology.bins} have tools?"`
-        : `Scan a QR label to jump straight to a ${ctx.terminology.bin}, or use the search bar to find ${ctx.terminology.bins} by name, tag, or contents.`,
-    route: '/bins',
+    title: (ctx) => (ctx.aiEnabled ? 'Ask AI anything' : `Find your ${ctx.terminology.bins}`),
+    body: (ctx) => {
+      if (!ctx.aiEnabled) {
+        return `Use the search bar to find ${ctx.terminology.bins} by name, tag, or contents. Scan a QR label to jump straight to one.`;
+      }
+      const shortcut = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '\u2318J' : 'Ctrl+J';
+      return `Ask where something is, or tell it what to do — AI can create, edit, and find ${ctx.terminology.bins}. Try ${shortcut}.`;
+    },
+    route: '/',
     mobilePlacement: 'bottom',
   },
 
-  // 2. Snap to Create — hidden gem (same route, opens dialog)
+  // 3. Photo-to-bin — flagship AI creation flow
   {
-    id: 'snap-to-create',
-    selector: '[data-tour="photo-buttons"]',
-    placement: 'bottom',
-    title: (ctx) => `Photo to ${ctx.terminology.bin}`,
+    id: 'photo-to-bin',
+    selector: '[data-tour="photo-to-bin"]',
+    placement: 'top',
+    title: (ctx) => `Create a ${ctx.terminology.bin} from a photo`,
     body: (ctx) =>
-      `Take a photo of a ${ctx.terminology.bin}, shelf, or drawer. The AI assistant figures out what's there and creates a ${ctx.terminology.bin} for you.`,
-    route: '/bins',
+      `Snap a photo of a shelf, drawer, or container. AI identifies what's inside and creates a ${ctx.terminology.bin} for you — items, tags, and notes included.`,
+    route: (ctx) => (ctx.isMobile ? '/ask' : '/'),
     condition: (ctx) => ctx.canWrite && ctx.aiEnabled,
     beforeShow: async (ctx) => {
+      if (ctx.isMobile) return;
       ctx.openCommandInput();
       await delay(400);
     },
     onLeave: (ctx) => {
-      ctx.closeCommandInput();
+      if (!ctx.isMobile) ctx.closeCommandInput();
     },
     mobilePlacement: 'top',
   },
 
-  // 3. Scan QR (same route — all /bins stops grouped together before navigating away)
+  // 4. Scan QR / search
   {
     id: 'scan-qr',
     selector: 'button[aria-label="Scan QR code"]',
     placement: 'bottom',
-    title: 'Scan a QR code',
+    title: 'Scan or search',
     body: (ctx) =>
-      `Point your camera at a label to jump to that ${ctx.terminology.bin}, or type the 6-character code.`,
-    route: '/bins',
+      `Point your camera at a label to jump straight to that ${ctx.terminology.bin}, or type its 6-character code.`,
+    route: '/',
     mobilePlacement: 'bottom',
   },
 
-  // 4. Bin detail — QR code
+  // 5. Bin detail — QR section in the rail
   {
-    id: 'qr-section',
+    id: 'bin-qr',
     selector: '[data-tour="qr-section"]',
     placement: 'top',
-    title: (ctx) => `${ctx.terminology.Bin} QR code`,
+    title: (ctx) => `Every ${ctx.terminology.bin} has a QR code`,
     body: (ctx) =>
-      `Print this label and stick it on your ${ctx.terminology.bin}. Anyone can scan it to see what's inside.`,
-    route: (ctx) => (ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/bins'),
+      `Print this label and stick it on your ${ctx.terminology.bin}. Anyone with access to this ${ctx.terminology.location} can scan to see what's inside.`,
+    route: (ctx) => (ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/'),
     condition: (ctx) => ctx.firstBinId !== null,
     beforeShow: async () => {
       const toggle = document.querySelector<HTMLButtonElement>(
@@ -115,112 +131,71 @@ export const TOUR_STEPS: TourStep[] = [
     mobilePlacement: 'top',
   },
 
-  // 5. Quick Add — AI item entry (same route as above)
+  // 6. Bin detail — quick add
   {
     id: 'quick-add',
     selector: '[data-tour="quick-add"]',
     placement: 'top',
-    title: 'Quick add items',
+    title: 'Add items fast',
     body: (ctx) =>
       ctx.aiEnabled
-        ? `Type "3 screwdrivers, a tape measure, some nails" and tap the sparkle button. The AI assistant parses it into items with quantities.`
-        : `Type an item name and press Enter, or paste a list. With AI connected, you can describe items naturally.`,
-    route: (ctx) => (ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/bins'),
+        ? `Type "3 screwdrivers, a tape measure, some nails" and tap the spark icon — AI parses it into items with quantities.`
+        : `Type an item name and press Enter. Paste a comma-separated list to add several at once.`,
+    route: (ctx) => (ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/'),
     condition: (ctx) => ctx.canWrite && ctx.firstBinId !== null,
     mobilePlacement: 'top',
   },
 
-  // 6. AI Reorganize
+  // 7. Bin detail — tab bar (Contents / Files / Info)
+  {
+    id: 'bin-tabs',
+    selector: '[data-tour="bin-tabs"]',
+    placement: 'bottom',
+    title: "See what's happening",
+    body: (ctx) =>
+      `Switch tabs for files, a usage heatmap, and activity history — so you know when this ${ctx.terminology.bin} was last opened and what changed.`,
+    route: (ctx) => (ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/'),
+    condition: (ctx) => ctx.firstBinId !== null,
+    mobilePlacement: 'bottom',
+  },
+
+  // 8. Print modes (labels / names / item list)
+  {
+    id: 'print-mode',
+    selector: '[data-tour="print-mode"]',
+    placement: 'bottom',
+    title: 'Print labels, names, or item lists',
+    body: (ctx) =>
+      `Pick a format: QR labels for scanning, name cards for quick identification, or a full item checklist for inventory counts on your ${ctx.terminology.bins}.`,
+    route: (ctx) => {
+      const ids = ctx.binIds.slice(0, 6);
+      return ids.length > 0 ? `/print?ids=${ids.join(',')}` : '/print';
+    },
+    beforeShow: async () => {
+      const { savePrintSettings, DEFAULT_PRINT_SETTINGS, DEFAULT_LABEL_OPTIONS } =
+        await import('@/features/print/usePrintSettings');
+      await savePrintSettings({
+        ...DEFAULT_PRINT_SETTINGS,
+        formatKey: 'avery-5163',
+        labelOptions: { ...DEFAULT_LABEL_OPTIONS, showBinName: false },
+      });
+      window.dispatchEvent(new Event('print-settings-changed'));
+      await delay(300);
+    },
+    mobilePlacement: 'bottom',
+  },
+
+  // 9. AI Reorganize
   {
     id: 'reorganize',
     selector: '[data-tour="reorganize-submit"]',
     placement: 'left',
     title: 'Reorganize with AI',
     body: (ctx) =>
-      `Pick a few ${ctx.terminology.bins} and the AI assistant will suggest how to regroup them. Good for splitting overstuffed ${ctx.terminology.bins} or combining similar ${ctx.terminology.bins}.`,
+      `Pick a few ${ctx.terminology.bins} and AI suggests how to regroup them — good for splitting overstuffed ${ctx.terminology.bins} or merging similar ones.`,
     route: '/reorganize',
     condition: (ctx) => ctx.canWrite && ctx.aiEnabled,
     mobilePlacement: 'top',
-  },
-
-  // 7. Print labels
-  {
-    id: 'print-labels',
-    selector: '[data-tour="print-preview"]',
-    placement: 'left',
-    title: 'Print labels',
-    body: (ctx) =>
-      `Select ${ctx.terminology.bins}, pick a label style, and download a PDF. Print and stick them on the real thing.`,
-    route: (ctx) => {
-      const ids = ctx.binIds.slice(0, 6);
-      return ids.length > 0 ? `/print?ids=${ids.join(',')}` : '/print';
-    },
-    beforeShow: async () => {
-      const { savePrintSettings, DEFAULT_PRINT_SETTINGS, DEFAULT_LABEL_OPTIONS } =
-        await import('@/features/print/usePrintSettings');
-      await savePrintSettings({
-        ...DEFAULT_PRINT_SETTINGS,
-        formatKey: 'avery-5163',
-        labelOptions: { ...DEFAULT_LABEL_OPTIONS, showBinName: false },
-      });
-      window.dispatchEvent(new Event('print-settings-changed'));
-      await delay(300);
-    },
-    mobilePlacement: 'top',
-  },
-
-  // 8. Print name cards
-  {
-    id: 'print-names',
-    selector: '[data-tour="print-mode"]',
-    placement: 'bottom',
-    title: 'Print name cards',
-    body: (ctx) =>
-      `Just the name, icon, and color — quick visual tags for your ${ctx.terminology.bins}.`,
-    route: (ctx) => {
-      const ids = ctx.binIds.slice(0, 6);
-      return ids.length > 0 ? `/print?ids=${ids.join(',')}` : '/print';
-    },
-    beforeShow: async () => {
-      const { savePrintSettings, DEFAULT_PRINT_SETTINGS, DEFAULT_LABEL_OPTIONS } =
-        await import('@/features/print/usePrintSettings');
-      await savePrintSettings({
-        ...DEFAULT_PRINT_SETTINGS,
-        formatKey: 'avery-5163',
-        labelOptions: { ...DEFAULT_LABEL_OPTIONS, showBinName: false },
-        printMode: 'names',
-      });
-      window.dispatchEvent(new Event('print-settings-changed'));
-      await delay(300);
-    },
-    mobilePlacement: 'bottom',
-  },
-
-  // 9. Print item list
-  {
-    id: 'print-items',
-    selector: '[data-tour="print-mode"]',
-    placement: 'bottom',
-    title: 'Print item list',
-    body: (ctx) =>
-      `A checklist of everything inside your ${ctx.terminology.bins} — useful for inventory counts.`,
-    route: (ctx) => {
-      const ids = ctx.binIds.slice(0, 6);
-      return ids.length > 0 ? `/print?ids=${ids.join(',')}` : '/print';
-    },
-    beforeShow: async () => {
-      const { savePrintSettings, DEFAULT_PRINT_SETTINGS, DEFAULT_LABEL_OPTIONS } =
-        await import('@/features/print/usePrintSettings');
-      await savePrintSettings({
-        ...DEFAULT_PRINT_SETTINGS,
-        formatKey: 'avery-5163',
-        labelOptions: { ...DEFAULT_LABEL_OPTIONS, showBinName: false },
-        printMode: 'items',
-      });
-      window.dispatchEvent(new Event('print-settings-changed'));
-      await delay(300);
-    },
-    mobilePlacement: 'bottom',
   },
 
   // 10. CTA — call to action
@@ -235,12 +210,12 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'That was the tour',
     body: (ctx) => {
       if (ctx.canWrite && ctx.aiEnabled)
-        return `Try "create a ${ctx.terminology.bin} for kitchen utensils" to get started. You can replay this from Settings.`;
+        return `Try "create a ${ctx.terminology.bin} for kitchen utensils" to get started. You can replay this tour from Settings.`;
       if (ctx.canWrite)
         return `Create your next ${ctx.terminology.bin} to get going. You can replay this tour from Settings.`;
       return `You can replay this tour anytime from Settings.`;
     },
-    route: '/bins',
+    route: '/',
     mobilePlacement: 'bottom',
     buttonLabel: (ctx) => {
       if (ctx.canWrite && ctx.aiEnabled) return 'Try it';
