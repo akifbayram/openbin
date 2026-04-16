@@ -133,23 +133,14 @@ export function PrintPage() {
           )}
 
           {printMode === 'labels' && (
-            <>
-              <LabelOptionsCard
-                labelOptions={labelOptions}
-                onUpdateOption={handleUpdateLabelOption}
-                copies={copies}
-                onUpdateCopies={updateCopies}
-                expanded={ui.optionsExpanded}
-                onExpandedChange={ui.setOptionsExpanded}
-              />
-
-              <QrStyleCard
-                qrStyle={qrStyle}
-                onUpdateStyle={handleUpdateQrStyle}
-                expanded={ui.qrStyleExpanded}
-                onExpandedChange={ui.setQrStyleExpanded}
-              />
-            </>
+            <LabelOptionsCard
+              labelOptions={labelOptions}
+              onUpdateOption={handleUpdateLabelOption}
+              copies={copies}
+              onUpdateCopies={updateCopies}
+              expanded={ui.optionsExpanded}
+              onExpandedChange={ui.setOptionsExpanded}
+            />
           )}
 
           {printMode === 'names' && (
@@ -169,6 +160,15 @@ export function PrintPage() {
               onUpdate={handleUpdateItemListOption}
               expanded={ui.itemListOptionsExpanded}
               onExpandedChange={ui.setItemListOptionsExpanded}
+            />
+          )}
+
+          {(printMode === 'labels' || printMode === 'items') && (
+            <QrStyleCard
+              qrStyle={qrStyle}
+              onUpdateStyle={handleUpdateQrStyle}
+              expanded={ui.qrStyleExpanded}
+              onExpandedChange={ui.setQrStyleExpanded}
             />
           )}
         </div>

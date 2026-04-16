@@ -225,6 +225,8 @@ export function usePrintPageActions() {
 
   const itemSheetProps = {
     bins: selection.selectedBins,
+    areas,
+    qrStyle,
     ...itemListOptions,
   };
 

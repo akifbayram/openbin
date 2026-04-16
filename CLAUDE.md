@@ -2,11 +2,13 @@
 
 ## Project Overview
 
-Bin-centric inventory with intelligence. Multi-user web app for organizing physical storage bins with QR codes and photo recognition. Data persists in SQLite via Express API.
+AI-powered bin inventory. Multi-user web app where AI does the organizing work: photo recognition identifies bin contents, chat answers "where is X," and bulk reorganization suggests how to restructure your storage. QR codes and manual entry are supported, but the product is built around AI as the primary interface. Data persists in SQLite (or PostgreSQL) via Express API.
 
 **Data model**: Location → Area → **Bin** → Items. The bin is the core entity — not individual items. Items exist only inside a bin (name + optional quantity, no independent identity). Custom fields, photos, tags, and QR codes all attach to bins. This is a "what's in this container" tool, not an asset tracker.
 
-**Core flows**: Register/login -> Create/join location -> Create bin -> Print QR label -> Scan to find contents.
+**AI capabilities**: Photo-to-bin suggestions (name + items + tags + custom fields), turn-based Ask AI chat, AI-powered bulk reorganize, per-task provider overrides (vision / quickText / deepText). Supported providers: OpenAI, Anthropic, Gemini, OpenAI-compatible (incl. Ollama).
+
+**Core flows**: Register/login → Create/join location → Snap photo or create bin → Print QR label → Scan or ask AI to find contents.
 
 ## Architecture
 

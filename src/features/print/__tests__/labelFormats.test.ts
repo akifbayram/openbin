@@ -372,6 +372,21 @@ describe('Avery preset alignment', () => {
     expect(reconstructedWidth).toBeCloseTo(8.5, 3);
   });
 
+  it('avery-5444 tight-fit matches 4×6 with 1" row gap', () => {
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5444')!;
+    expect(fmt.cellWidth).toBe('4in');
+    expect(fmt.cellHeight).toBe('2in');
+    expect(fmt.rowGap).toBe('1in');
+    expect(computeLabelsPerPage(fmt)).toBe(2);
+    // 0.5 top + 2 label + 1 rowGap + 2 label + 0.5 bottom = 6
+    const rowGap = parseFloat(fmt.rowGap ?? '0in');
+    const reconstructedHeight =
+      parseFloat(fmt.pageMarginTop) + 2 * parseFloat(fmt.cellHeight)
+      + rowGap + parseFloat(fmt.pageMarginBottom);
+    expect(reconstructedHeight).toBeCloseTo(6, 3);
+  });
+
   it('avery-5164 tight-fit matches 8.5×11 with 3/16" column gap', () => {
     // biome-ignore lint/style/noNonNullAssertion: test assertion
     const fmt = LABEL_FORMATS.find((f) => f.key === 'avery-5164')!;

@@ -102,6 +102,15 @@
   }
 }
 
+/* Outline the content element, not the wrapper — the bleed layer would cover it. */
+@media screen {
+  .label-cell,
+  .name-cell {
+    border-radius: var(--radius-md);
+    border: 2px dashed rgba(0, 0, 0, 0.33);
+  }
+}
+
 /* ─── Name Cards ─── */
 .name-cell {
   box-sizing: border-box;
@@ -133,23 +142,99 @@
   padding-top: 1em;
 }
 
-.item-sheet-header {
-  display: flex;
-  align-items: baseline;
+.item-sheet-header-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 0.75em;
+  align-items: start;
   margin-bottom: 0.5em;
+}
+
+.item-sheet-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  min-width: 0;
+}
+
+.item-sheet-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-width: 0;
+}
+
+.item-sheet-icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20pt;
+  height: 20pt;
+  border-radius: 3pt;
+  flex-shrink: 0;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.item-sheet-icon-glyph {
+  width: 14pt;
+  height: 14pt;
+  color: #111;
 }
 
 .item-sheet-bin-name {
   font-size: 14pt;
   font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.item-sheet-header-meta-row {
+  display: flex;
+  gap: 0.75em;
+  align-items: baseline;
+  font-size: 9.5pt;
+  color: #666;
+}
+
+.item-sheet-area-path {
+  font-family: ui-monospace, monospace;
+}
+
+.item-sheet-item-count {
+  font-weight: 600;
+}
+
+.item-sheet-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
+  flex-shrink: 0;
+}
+
+.item-sheet-qr {
+  width: 0.5in;
+  height: 0.5in;
+  display: block;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 .item-sheet-bin-code {
-  font-size: 10pt;
+  font-size: 9pt;
   font-family: ui-monospace, monospace;
   color: #666;
   letter-spacing: 0.1em;
+}
+
+.item-sheet-bin-notes {
+  font-size: 10.5pt;
+  font-style: italic;
+  color: #444;
+  margin: 0 0 0.6em 0;
+  padding: 0.3em 0.6em;
+  border-left: 2px solid #bbb;
 }
 
 .item-sheet-empty {
@@ -180,6 +265,12 @@
   border-bottom: 1px solid #ddd;
 }
 
+.item-sheet-table .item-sheet-zebra {
+  background: #f5f5f5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
 .item-sheet-checkbox-col {
   width: 1.5em;
   text-align: center;
@@ -200,6 +291,19 @@
 
 .item-sheet-name-col {
   text-align: left;
+}
+
+.item-sheet-notes-col {
+  width: 30%;
+  border-left: 1px solid #ccc;
+}
+
+.item-sheet-blank-row td {
+  height: 1.8em;
+}
+
+.item-sheet-blank-row .item-sheet-name-col {
+  border-bottom: 1px solid #888;
 }
 
 @media print {

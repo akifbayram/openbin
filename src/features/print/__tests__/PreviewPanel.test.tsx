@@ -54,7 +54,7 @@ describe('PreviewPanel scaling', () => {
     onDownloadPDF: vi.fn(),
     labelSheetProps: { bins: [] as Bin[] } as React.ComponentProps<typeof import('../LabelSheet').LabelSheet>,
     printMode: 'labels' as const,
-    itemSheetProps: { bins: [] as Bin[] } as React.ComponentProps<typeof import('../ItemSheet').ItemSheet>,
+    itemSheetProps: { bins: [] as Bin[], areas: [], qrStyle: undefined } as unknown as React.ComponentProps<typeof import('../ItemSheet').ItemSheet>,
     nameSheetProps: { bins: [] as Bin[], format: undefined } as unknown as React.ComponentProps<typeof import('../NameSheet').NameSheet>,
   };
 
