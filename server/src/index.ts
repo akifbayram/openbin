@@ -7,6 +7,7 @@ import express from 'express';
 import multer from 'multer';
 import { query } from './db.js';
 import { config } from './lib/config.js';
+import { csrfProtect } from './lib/csrf.js';
 import { HttpError, OverLimitError, PlanRestrictedError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
 import { createLogger } from './lib/logger.js';
@@ -96,6 +97,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());
+  app.use(csrfProtect);
   app.use(requestLogger);
 
   // Health check (no auth, no rate limit)

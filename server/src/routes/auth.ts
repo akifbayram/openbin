@@ -266,13 +266,14 @@ router.post('/login', asyncHandler(async (req, res) => {
 
   const user = result.rows[0];
 
-  // Social-only users have no password
+  // Social-only users have no password — return generic credentials error to
+  // avoid leaking that the account exists. Run a dummy bcrypt to equalize timing.
   if (!user.password_hash) {
+    await bcrypt.compare(password, '$2b$12$000000000000000000000uVjKPCGJcotDu8bMahKn7VoPxpL0Wi');
     log.warn(`Login failed: no password set for "${email}" (social-only account)`);
     query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)',
       [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
-    res.status(401).json({ error: 'NO_PASSWORD', message: 'This account uses social login. Sign in with Google or Apple, or set a password from account settings.' });
-    return;
+    throw new UnauthorizedError('Invalid email or password');
   }
 
   const valid = await bcrypt.compare(password, user.password_hash);
@@ -287,9 +288,11 @@ router.post('/login', asyncHandler(async (req, res) => {
     throw new UnauthorizedError('Invalid email or password');
   }
   if (user.suspended_at) {
+    // Generic credentials error — gating on suspended status would let an
+    // attacker enumerate which emails belong to suspended cloud accounts.
     log.warn(`Login failed: suspended user "${email}"`);
     query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)', [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
-    throw new ForbiddenError('This account has been suspended');
+    throw new UnauthorizedError('Invalid email or password');
   }
   if (user.force_password_change) {
     log.info(`Login blocked: force password change required for "${email}"`);

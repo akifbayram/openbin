@@ -173,13 +173,11 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
   const { temperature: rawTemp, maxTokens: rawMaxTokens, topP: rawTopP, requestTimeout: rawTimeout } = req.body;
 
   if (!provider || !apiKey || !model) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'provider, apiKey, and model are required' });
-    return;
+    throw new ValidationError('provider, apiKey, and model are required');
   }
 
   if (!(VALID_PROVIDERS as readonly string[]).includes(provider)) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Invalid provider' });
-    return;
+    throw new ValidationError('Invalid provider');
   }
 
   for (const [field, value] of [['customPrompt', customPrompt], ['commandPrompt', commandPrompt], ['queryPrompt', queryPrompt], ['structurePrompt', structurePrompt], ['reorganizationPrompt', reorganizationPrompt]] as const) {
@@ -191,26 +189,22 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
   // Validate advanced AI parameters
   const finalTemperature = rawTemp != null ? Number(rawTemp) : null;
   if (finalTemperature != null && (Number.isNaN(finalTemperature) || finalTemperature < 0 || finalTemperature > 2)) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'temperature must be between 0 and 2' });
-    return;
+    throw new ValidationError('temperature must be between 0 and 2');
   }
 
   const finalMaxTokens = rawMaxTokens != null ? Math.round(Number(rawMaxTokens)) : null;
   if (finalMaxTokens != null && (Number.isNaN(finalMaxTokens) || finalMaxTokens < 100 || finalMaxTokens > 16000)) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'maxTokens must be between 100 and 16000' });
-    return;
+    throw new ValidationError('maxTokens must be between 100 and 16000');
   }
 
   const finalTopP = rawTopP != null ? Number(rawTopP) : null;
   if (finalTopP != null && (Number.isNaN(finalTopP) || finalTopP < 0 || finalTopP > 1)) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'topP must be between 0 and 1' });
-    return;
+    throw new ValidationError('topP must be between 0 and 1');
   }
 
   const finalTimeout = rawTimeout != null ? Math.round(Number(rawTimeout)) : null;
   if (finalTimeout != null && (Number.isNaN(finalTimeout) || finalTimeout < 10 || finalTimeout > 300)) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'requestTimeout must be between 10 and 300 seconds' });
-    return;
+    throw new ValidationError('requestTimeout must be between 10 and 300 seconds');
   }
 
   const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
@@ -388,8 +382,7 @@ router.post('/test', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRou
   const { provider, apiKey, model, endpointUrl } = req.body;
 
   if (!provider || !apiKey || !model) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'provider, apiKey, and model are required' });
-    return;
+    throw new ValidationError('provider, apiKey, and model are required');
   }
 
   // Mock mode: return success without calling any provider

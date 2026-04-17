@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { User } from '@/types';
-import { ApiError, apiFetch } from './api';
+import { ApiError, apiFetch, tryRefresh } from './api';
 import { STORAGE_KEYS } from './storageKeys';
 
 interface AuthState {
@@ -80,8 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (err instanceof ApiError && err.status === 401 && hadSession) {
           // Access cookie expired but user had a prior session — try refresh
           try {
-            const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' });
-            if (!cancelled && res.ok) {
+            const refreshed = await tryRefresh();
+            if (!cancelled && refreshed) {
               const data = await apiFetch<User & { activeLocationId?: string | null; demoMode?: boolean }>(
                 '/api/auth/me',
                 { timeout: 8000, skipRefresh: true },

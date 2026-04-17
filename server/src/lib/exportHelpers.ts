@@ -3,7 +3,6 @@ import path from 'node:path';
 import type { TxQueryFn } from '../db.js';
 import { d, generateUuid, isUniqueViolation, query } from '../db.js';
 import { VALID_ROLES } from './adminHelpers.js';
-import { isLocationAdmin } from './binAccess.js';
 import { BIN_SELECT_COLS } from './binQueries.js';
 import { config } from './config.js';
 import { replaceCustomFieldValues } from './customFieldHelpers.js';

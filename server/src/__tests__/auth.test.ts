@@ -31,6 +31,22 @@ function getAccessCookie(res: request.Response): string | undefined {
   return parseCookies(res)['openbin-access'];
 }
 
+function getCsrfCookie(res: request.Response): string | undefined {
+  return parseCookies(res)['openbin-csrf'];
+}
+
+/** Send a cookie-authed mutation with the matching CSRF token attached. */
+function cookiePost(path: string, opts: { refresh?: string; access?: string; csrf?: string }) {
+  const cookies: string[] = [];
+  if (opts.refresh) cookies.push(`openbin-refresh=${opts.refresh}`);
+  if (opts.access) cookies.push(`openbin-access=${opts.access}`);
+  if (opts.csrf) cookies.push(`openbin-csrf=${opts.csrf}`);
+  const req = request(app).post(path);
+  if (cookies.length) req.set('Cookie', cookies);
+  if (opts.csrf) req.set('X-CSRF-Token', opts.csrf);
+  return req;
+}
+
 describe('POST /api/auth/register', () => {
   it('registers a new user', async () => {
     const res = await request(app)
@@ -225,11 +241,10 @@ describe('POST /api/auth/refresh', () => {
       .send({ email: 'refreshuser@test.local', password: 'StrongPass1!', displayName: 'Refresh User' });
 
     const refreshCookie = getRefreshCookie(regRes);
+    const csrfCookie = getCsrfCookie(regRes);
     expect(refreshCookie).toBeDefined();
 
-    const res = await request(app)
-      .post('/api/auth/refresh')
-      .set('Cookie', `openbin-refresh=${refreshCookie}`);
+    const res = await cookiePost('/api/auth/refresh', { refresh: refreshCookie, csrf: csrfCookie });
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Token refreshed');
@@ -247,9 +262,12 @@ describe('POST /api/auth/refresh', () => {
   });
 
   it('returns 401 for invalid refresh token', async () => {
-    const res = await request(app)
-      .post('/api/auth/refresh')
-      .set('Cookie', 'openbin-refresh=invalid-token');
+    // Use a real CSRF cookie so we exercise the refresh-token validation path,
+    // not the CSRF gate (CSRF behavior is covered by csrf.test.ts).
+    const { user, password } = await createTestUser(app);
+    const loginRes = await request(app).post('/api/auth/login').send({ email: user.email, password });
+    const csrf = getCsrfCookie(loginRes)!;
+    const res = await cookiePost('/api/auth/refresh', { refresh: 'invalid-token', csrf });
 
     expect(res.status).toBe(401);
   });
@@ -260,25 +278,21 @@ describe('POST /api/auth/refresh', () => {
       .send({ email: 'replayuser@test.local', password: 'StrongPass1!', displayName: 'Replay User' });
 
     const originalRefresh = getRefreshCookie(regRes)!;
+    const originalCsrf = getCsrfCookie(regRes)!;
 
     // First rotation — succeeds
-    const firstRotation = await request(app)
-      .post('/api/auth/refresh')
-      .set('Cookie', `openbin-refresh=${originalRefresh}`);
+    const firstRotation = await cookiePost('/api/auth/refresh', { refresh: originalRefresh, csrf: originalCsrf });
     expect(firstRotation.status).toBe(200);
 
     const newRefresh = getRefreshCookie(firstRotation)!;
+    const newCsrf = getCsrfCookie(firstRotation)!;
 
     // Replay the original token — should fail and revoke family
-    const replay = await request(app)
-      .post('/api/auth/refresh')
-      .set('Cookie', `openbin-refresh=${originalRefresh}`);
+    const replay = await cookiePost('/api/auth/refresh', { refresh: originalRefresh, csrf: originalCsrf });
     expect(replay.status).toBe(401);
 
     // The new token from first rotation should also be revoked now
-    const afterReplay = await request(app)
-      .post('/api/auth/refresh')
-      .set('Cookie', `openbin-refresh=${newRefresh}`);
+    const afterReplay = await cookiePost('/api/auth/refresh', { refresh: newRefresh, csrf: newCsrf });
     expect(afterReplay.status).toBe(401);
   });
 });
@@ -290,18 +304,15 @@ describe('POST /api/auth/logout', () => {
       .send({ email: 'logoutuser@test.local', password: 'StrongPass1!', displayName: 'Logout User' });
 
     const refreshCookie = getRefreshCookie(regRes)!;
+    const csrfCookie = getCsrfCookie(regRes)!;
 
-    const logoutRes = await request(app)
-      .post('/api/auth/logout')
-      .set('Cookie', `openbin-refresh=${refreshCookie}`);
+    const logoutRes = await cookiePost('/api/auth/logout', { refresh: refreshCookie, csrf: csrfCookie });
 
     expect(logoutRes.status).toBe(200);
     expect(logoutRes.body.message).toBe('Logged out');
 
     // Refresh token should no longer work
-    const refreshRes = await request(app)
-      .post('/api/auth/refresh')
-      .set('Cookie', `openbin-refresh=${refreshCookie}`);
+    const refreshRes = await cookiePost('/api/auth/refresh', { refresh: refreshCookie, csrf: csrfCookie });
     expect(refreshRes.status).toBe(401);
   });
 
@@ -327,6 +338,7 @@ describe('POST /api/auth/logout-all', () => {
       .send({ email: 'logoutall@test.local', password: 'StrongPass1!' });
 
     const secondRefresh = getRefreshCookie(loginRes)!;
+    const secondCsrf = getCsrfCookie(loginRes)!;
 
     // Logout all
     const logoutRes = await request(app)
@@ -336,9 +348,7 @@ describe('POST /api/auth/logout-all', () => {
     expect(logoutRes.status).toBe(200);
 
     // Second session's refresh should be revoked
-    const refreshRes = await request(app)
-      .post('/api/auth/refresh')
-      .set('Cookie', `openbin-refresh=${secondRefresh}`);
+    const refreshRes = await cookiePost('/api/auth/refresh', { refresh: secondRefresh, csrf: secondCsrf });
     expect(refreshRes.status).toBe(401);
   });
 });
@@ -388,6 +398,7 @@ describe('PUT /api/auth/password', () => {
 
     const token = getAccessCookie(regRes)!;
     const refreshCookie = getRefreshCookie(regRes)!;
+    const csrfCookie = getCsrfCookie(regRes)!;
 
     const res = await request(app)
       .put('/api/auth/password')
@@ -397,9 +408,7 @@ describe('PUT /api/auth/password', () => {
     expect(res.status).toBe(200);
 
     // Old refresh token should be revoked
-    const refreshRes = await request(app)
-      .post('/api/auth/refresh')
-      .set('Cookie', `openbin-refresh=${refreshCookie}`);
+    const refreshRes = await cookiePost('/api/auth/refresh', { refresh: refreshCookie, csrf: csrfCookie });
     expect(refreshRes.status).toBe(401);
 
     // Verify new password works

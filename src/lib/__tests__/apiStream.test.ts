@@ -14,6 +14,7 @@ vi.mock('../api', () => ({
     }
   },
   tryRefresh: vi.fn(),
+  readCsrfTokenFromCookie: vi.fn(() => null),
 }));
 
 import { ApiError, tryRefresh } from '../api';

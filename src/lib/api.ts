@@ -1,6 +1,21 @@
 import { Events, notify } from '@/lib/eventBus';
 
 const API_BASE = '';
+const CSRF_COOKIE = 'openbin-csrf';
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/** Read the openbin-csrf cookie value (non-httpOnly so JS can mirror it into a header). */
+export function readCsrfTokenFromCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  const prefix = `${CSRF_COOKIE}=`;
+  for (const part of document.cookie.split('; ')) {
+    if (part.startsWith(prefix)) {
+      try { return decodeURIComponent(part.slice(prefix.length)); }
+      catch { return part.slice(prefix.length); }
+    }
+  }
+  return null;
+}
 
 export class ApiError extends Error {
   status: number;
@@ -29,9 +44,13 @@ export async function tryRefresh(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
     try {
+      const headers: Record<string, string> = {};
+      const csrf = readCsrfTokenFromCookie();
+      if (csrf) headers['X-CSRF-Token'] = csrf;
       const res = await fetch(`${API_BASE}/api/auth/refresh`, {
         method: 'POST',
         credentials: 'same-origin',
+        headers,
       });
       return res.ok;
     } catch {
@@ -58,6 +77,12 @@ async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boole
     for (const [k, v] of Object.entries(provided)) {
       headers[k] = v;
     }
+  }
+
+  const method = (options.method ?? 'GET').toUpperCase();
+  if (UNSAFE_METHODS.has(method) && !headers['X-CSRF-Token']) {
+    const csrf = readCsrfTokenFromCookie();
+    if (csrf) headers['X-CSRF-Token'] = csrf;
   }
 
   let controller: AbortController | undefined;

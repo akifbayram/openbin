@@ -118,7 +118,7 @@ describe('OAuth routes', () => {
     expect(res.status).toBe(404);
   });
 
-  it('login returns hint for social-only user', async () => {
+  it('login returns generic credentials error for social-only user (no enumeration)', async () => {
     const { user } = await findOrCreateOAuthUser({
       provider: 'google',
       providerUserId: `no-password-test-${Date.now()}`,
@@ -129,7 +129,8 @@ describe('OAuth routes', () => {
       .post('/api/auth/login')
       .send({ email: user.email, password: 'anything' });
     expect(res.status).toBe(401);
-    expect(res.body.error).toBe('NO_PASSWORD');
+    expect(res.body.error).toBe('UNAUTHORIZED');
+    expect(res.body.message).toBe('Invalid email or password');
   });
 
   it('GET /api/auth/me includes hasPassword', async () => {

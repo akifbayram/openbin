@@ -43,9 +43,9 @@ class LocalStorage implements StorageBackend {
     const filePath = safePath(this.basePath, key);
     if (!filePath) return;
     try {
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      fs.unlinkSync(filePath);
     } catch {
-      // Ignore deletion errors
+      // Ignore deletion errors (including ENOENT)
     }
   }
 

@@ -26,13 +26,13 @@ export async function cleanupBinPhotos(
 
   // Remove empty bin directory (local storage only)
   if (config.storageBackend !== 's3') {
-    try {
-      const binDir = safePath(PHOTO_STORAGE_PATH, binId);
-      if (binDir && fs.existsSync(binDir)) {
+    const binDir = safePath(PHOTO_STORAGE_PATH, binId);
+    if (binDir) {
+      try {
         fs.rmdirSync(binDir);
+      } catch {
+        // Ignore directory cleanup errors (including ENOENT and ENOTEMPTY)
       }
-    } catch {
-      // Ignore directory cleanup errors
     }
   }
 }

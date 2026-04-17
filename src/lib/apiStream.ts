@@ -1,4 +1,4 @@
-import { ApiError, tryRefresh } from './api';
+import { ApiError, readCsrfTokenFromCookie, tryRefresh } from './api';
 import { Events, notify } from './eventBus';
 
 export interface StreamDeltaEvent {
@@ -40,6 +40,8 @@ export async function* apiStream(
   const isFormData = options.body instanceof FormData;
   const headers: Record<string, string> = { Accept: 'text/event-stream' };
   if (!isFormData) headers['Content-Type'] = 'application/json';
+  const csrf = readCsrfTokenFromCookie();
+  if (csrf) headers['X-CSRF-Token'] = csrf;
 
   const res = await fetch(path, {
     method: 'POST',
