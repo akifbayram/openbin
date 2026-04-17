@@ -4,7 +4,6 @@ import { d, isUniqueViolation, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { attachmentStoragePath } from '../lib/attachmentsCleanup.js';
 import { requireMemberOrAbove, verifyBinAccess } from '../lib/binAccess.js';
-import { config } from '../lib/config.js';
 import { ForbiddenError, NotFoundError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { generateShortCode } from '../lib/shortCode.js';
@@ -16,13 +15,6 @@ import { requirePro } from '../middleware/requirePlan.js';
 type MemberRole = 'admin' | 'member' | 'viewer';
 
 const router = Router();
-
-router.use((_req, _res, next) => {
-  if (!config.attachmentsEnabled) {
-    throw new NotFoundError('Endpoint not found');
-  }
-  next();
-});
 
 router.use(authenticate);
 
