@@ -1,7 +1,23 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ConversationThread } from '../ConversationThread';
 import type { Turn } from '../conversationTurns';
+
+vi.mock('@/lib/usePermissions', () => ({
+  usePermissions: () => ({ canWrite: false }),
+}));
+
+vi.mock('@/components/ui/toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
+vi.mock('@/features/items/itemActions', () => ({
+  checkoutItemSafe: vi.fn().mockResolvedValue({ ok: true }),
+  removeItemSafe: vi.fn().mockResolvedValue({ ok: true }),
+  renameItemSafe: vi.fn().mockResolvedValue({ ok: true }),
+  updateQuantitySafe: vi.fn().mockResolvedValue({ ok: true, quantity: null }),
+}));
 
 vi.mock('@/lib/terminology', () => ({
   useTerminology: () => ({
@@ -66,7 +82,11 @@ describe('ConversationThread', () => {
       kind: 'ai-query-result', id: 'q1',
       queryResult: { answer: 'Yes', matches: [] },
     }];
-    render(<ConversationThread turns={turns} {...handlers} />);
+    render(
+      <MemoryRouter>
+        <ConversationThread turns={turns} {...handlers} />
+      </MemoryRouter>,
+    );
     expect(screen.getByText('Yes')).toBeDefined();
   });
 

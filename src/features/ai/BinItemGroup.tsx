@@ -5,10 +5,11 @@ import type { QueryMatch } from './useInventoryQuery';
 
 interface BinItemGroupProps {
   match: QueryMatch;
+  canWrite: boolean;
   onBinClick: (binId: string, isTrashed?: boolean) => void;
 }
 
-export function BinItemGroup({ match, onBinClick }: BinItemGroupProps) {
+export function BinItemGroup({ match, canWrite, onBinClick }: BinItemGroupProps) {
   const hasItems = match.items.length > 0;
   return (
     <div className={cn(flatCard, 'overflow-hidden rounded-[var(--radius-sm)]')}>
@@ -24,7 +25,13 @@ export function BinItemGroup({ match, onBinClick }: BinItemGroupProps) {
         <ul className="border-t border-[var(--border-subtle)]">
           {match.items.map((item) => (
             <li key={item.id}>
-              <ItemRow item={item} binId={match.bin_id} />
+              <ItemRow
+                item={item}
+                binId={match.bin_id}
+                canWrite={canWrite}
+                isTrashed={!!match.is_trashed}
+                onOpenBin={(id) => onBinClick(id, match.is_trashed)}
+              />
             </li>
           ))}
         </ul>
