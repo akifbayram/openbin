@@ -16,7 +16,7 @@ type MemberRole = 'admin' | 'member' | 'viewer';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(['/bins/:id/attachments', '/attachments/:id', '/attachments/:id/file'], authenticate);
 
 interface AttachmentAccess {
   binId: string;
