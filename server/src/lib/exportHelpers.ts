@@ -1,19 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { v4 as uuidv4 } from 'uuid';
 import type { TxQueryFn } from '../db.js';
 import { d, generateUuid, isUniqueViolation, query } from '../db.js';
+import { VALID_ROLES } from './adminHelpers.js';
+import { isLocationAdmin } from './binAccess.js';
+import { BIN_SELECT_COLS } from './binQueries.js';
 import { config } from './config.js';
 import { replaceCustomFieldValues } from './customFieldHelpers.js';
 import { createLogger } from './logger.js';
 import { isPathSafe, safePath } from './pathSafety.js';
 import { generateShortCode } from './shortCode.js';
 import { storage } from './storage.js';
+import { MIME_TO_EXT, validateFileBuffer } from './uploadConfig.js';
 
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
-const ALLOWED_PHOTO_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_MIME_TYPES = new Set(Object.keys(MIME_TO_EXT));
+const ALLOWED_PHOTO_EXTS = new Set(Object.values(MIME_TO_EXT));
 
 export interface ExportBin {
   id: string;
@@ -105,34 +108,29 @@ export interface ExportData {
   members?: ExportMember[];
 }
 
+async function fetchBinsForExport(locationId: string, userId: string | undefined, trashed: boolean) {
+  const visibilityFilter = userId
+    ? `AND (b.visibility = 'location' OR b.created_by = $2)`
+    : '';
+  const params = userId ? [locationId, userId] : [locationId];
+  const deletedFilter = trashed ? 'IS NOT NULL' : 'IS NULL';
+  const orderCol = trashed ? 'b.deleted_at' : 'b.updated_at';
+  const result = await query(
+    `SELECT ${BIN_SELECT_COLS()}, b.deleted_at
+     FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+     WHERE b.location_id = $1 AND b.deleted_at ${deletedFilter} ${visibilityFilter}
+     ORDER BY ${orderCol} DESC`,
+    params,
+  );
+  return result.rows;
+}
+
 /**
  * Fetch all non-deleted bins for a location, joined with area names.
  * When userId is provided, private bins are filtered to only include the user's own.
  */
 export async function fetchLocationBins(locationId: string, userId?: string) {
-  const visibilityFilter = userId
-    ? `AND (b.visibility = 'location' OR b.created_by = $2)`
-    : '';
-  const params = userId ? [locationId, userId] : [locationId];
-  const result = await query(
-    `SELECT b.id, b.short_code, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
-       COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))}
-         FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
-       b.notes, b.tags, b.icon, b.color, b.card_style, b.visibility,
-       COALESCE((SELECT ${d.jsonGroupObject('bcfv.field_id', 'bcfv.value')} FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
-       b.created_by, b.created_at, b.updated_at
-     FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-     WHERE b.location_id = $1 AND b.deleted_at IS NULL ${visibilityFilter}
-     ORDER BY b.updated_at DESC`,
-    params
-  );
-  return result.rows;
-}
-
-/** Extract item names from the items column (handles both string[] and {name}[] formats). */
-export function extractItemNames(items: unknown): string[] {
-  if (!Array.isArray(items)) return [];
-  return items.map((i: string | { name: string }) => typeof i === 'string' ? i : i.name);
+  return fetchBinsForExport(locationId, userId, false);
 }
 
 /** Extract items with optional quantity from the items column. */
@@ -145,34 +143,6 @@ export function extractItemsWithQuantity(items: unknown): Array<string | { name:
   });
 }
 
-/** Load photos for a bin and convert to base64. */
-export async function loadBinPhotosBase64(binId: string): Promise<ExportPhoto[]> {
-  const photosResult = await query(
-    'SELECT id, filename, mime_type, storage_path, created_by, created_at FROM photos WHERE bin_id = $1',
-    [binId]
-  );
-
-  const exportPhotos: ExportPhoto[] = [];
-  for (const photo of photosResult.rows) {
-    try {
-      if (await storage.exists(photo.storage_path)) {
-        const data = await storage.read(photo.storage_path);
-        exportPhotos.push({
-          id: photo.id,
-          filename: photo.filename,
-          mimeType: photo.mime_type,
-          data: data.toString('base64'),
-          createdBy: photo.created_by || undefined,
-          createdAt: photo.created_at || undefined,
-        });
-      }
-    } catch {
-      // Skip photos that can't be read
-    }
-  }
-  return exportPhotos;
-}
-
 /** Load photo metadata for a bin (no file data). */
 export async function loadBinPhotoMeta(binId: string) {
   const result = await query(
@@ -180,6 +150,28 @@ export async function loadBinPhotoMeta(binId: string) {
     [binId]
   );
   return result.rows;
+}
+
+/** Load photos for a bin and convert to base64. */
+export async function loadBinPhotosBase64(binId: string): Promise<ExportPhoto[]> {
+  const rows = await loadBinPhotoMeta(binId);
+  const exportPhotos: ExportPhoto[] = [];
+  for (const photo of rows) {
+    try {
+      const data = await storage.read(photo.storage_path);
+      exportPhotos.push({
+        id: photo.id,
+        filename: photo.filename,
+        mimeType: photo.mime_type,
+        data: data.toString('base64'),
+        createdBy: photo.created_by || undefined,
+        createdAt: photo.created_at || undefined,
+      });
+    } catch {
+      // Missing/unreadable files are skipped — export continues with remaining photos.
+    }
+  }
+  return exportPhotos;
 }
 
 /**
@@ -281,7 +273,8 @@ export async function insertBinWithShortCode(
   const q = tx ?? query;
   const id = generateUuid();
   const validCode = bin.shortCode && /^[A-Z0-9]{4,8}$/.test(bin.shortCode) ? bin.shortCode : undefined;
-  for (let attempt = 0; attempt <= 10; attempt++) {
+  const maxAttempts = 10;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const shortCode = attempt === 0 && validCode ? validCode : generateShortCode(bin.name);
     try {
       await q(
@@ -294,10 +287,7 @@ export async function insertBinWithShortCode(
       }
       return id;
     } catch (err: unknown) {
-      if (isUniqueViolation(err) && attempt < 10) {
-        continue;
-      }
-      throw err;
+      if (!isUniqueViolation(err)) throw err;
     }
   }
   throw new Error('Failed to generate unique short code');
@@ -423,28 +413,9 @@ export function mapCustomFieldsToIds(
   return mapped;
 }
 
-/**
- * Fetch all soft-deleted bins for a location.
- * Same shape as fetchLocationBins but with deleted_at included.
- */
+/** Fetch all soft-deleted bins for a location. Same shape as fetchLocationBins but with deleted_at. */
 export async function fetchTrashedBins(locationId: string, userId?: string) {
-  const visibilityFilter = userId
-    ? `AND (b.visibility = 'location' OR b.created_by = $2)`
-    : '';
-  const params = userId ? [locationId, userId] : [locationId];
-  const result = await query(
-    `SELECT b.id, b.short_code, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
-       COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))}
-         FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
-       b.notes, b.tags, b.icon, b.color, b.card_style, b.visibility,
-       COALESCE((SELECT ${d.jsonGroupObject('bcfv.field_id', 'bcfv.value')} FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
-       b.created_by, b.deleted_at, b.created_at, b.updated_at
-     FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-     WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL ${visibilityFilter}
-     ORDER BY b.deleted_at DESC`,
-    params
-  );
-  return result.rows;
+  return fetchBinsForExport(locationId, userId, true);
 }
 
 /** Fetch location settings for export. */
@@ -561,15 +532,24 @@ export async function resolveCreatedBy(createdBy: string | undefined, locationId
   return result.rows.length > 0 ? createdBy : fallbackUserId;
 }
 
+async function loadExistingUserIds(q: TxQueryFn, userIds: string[]): Promise<Set<string>> {
+  const unique = Array.from(new Set(userIds.filter(Boolean)));
+  if (unique.length === 0) return new Set();
+  const result = await q<{ id: string }>(
+    `SELECT id FROM users WHERE id IN (${unique.map((_, i) => `$${i + 1}`).join(',')})`,
+    unique,
+  );
+  return new Set(result.rows.map(r => r.id));
+}
+
 /** Import pinned bins. */
 export async function importPinnedBins(pins: ExportPinnedBin[], oldToNewBinId: Map<string, string>, tx?: TxQueryFn): Promise<number> {
   const q = tx ?? query;
+  const existingUsers = await loadExistingUserIds(q, pins.map(p => p.userId));
   let count = 0;
   for (const pin of pins) {
     const newBinId = oldToNewBinId.get(pin.binId);
-    if (!newBinId) continue;
-    const userExists = await q<{ id: string }>('SELECT id FROM users WHERE id = $1', [pin.userId]);
-    if (userExists.rows.length === 0) continue;
+    if (!newBinId || !existingUsers.has(pin.userId)) continue;
     try {
       await q(
         d.insertOrIgnore(`INSERT INTO pinned_bins (user_id, bin_id, position, created_at) VALUES ($1, $2, $3, ${d.now()})`),
@@ -577,7 +557,7 @@ export async function importPinnedBins(pins: ExportPinnedBin[], oldToNewBinId: M
       );
       count++;
     } catch {
-      // Skip on constraint violations
+      // Empty catch: insertOrIgnore still races with concurrent writers on SQLite.
     }
   }
   return count;
@@ -586,11 +566,10 @@ export async function importPinnedBins(pins: ExportPinnedBin[], oldToNewBinId: M
 /** Import saved views for existing users. */
 export async function importSavedViews(views: ExportSavedView[], tx?: TxQueryFn): Promise<number> {
   const q = tx ?? query;
+  const existingUsers = await loadExistingUserIds(q, views.map(v => v.userId));
   let count = 0;
   for (const view of views) {
-    if (!view.name) continue;
-    const userExists = await q<{ id: string }>('SELECT id FROM users WHERE id = $1', [view.userId]);
-    if (userExists.rows.length === 0) continue;
+    if (!view.name || !existingUsers.has(view.userId)) continue;
     const dup = await q<{ id: string }>(
       'SELECT id FROM saved_views WHERE user_id = $1 AND name = $2',
       [view.userId, view.name]
@@ -608,12 +587,11 @@ export async function importSavedViews(views: ExportSavedView[], tx?: TxQueryFn)
 /** Import location members for existing users. */
 export async function importMembers(locationId: string, members: ExportMember[], tx?: TxQueryFn): Promise<number> {
   const q = tx ?? query;
+  const existingUsers = await loadExistingUserIds(q, members.map(m => m.userId));
   let count = 0;
   for (const m of members) {
-    if (!m.userId) continue;
-    const role = ['admin', 'member', 'viewer'].includes(m.role) ? m.role : 'member';
-    const userExists = await q<{ id: string }>('SELECT id FROM users WHERE id = $1', [m.userId]);
-    if (userExists.rows.length === 0) continue;
+    if (!m.userId || !existingUsers.has(m.userId)) continue;
+    const role = (VALID_ROLES as readonly string[]).includes(m.role) ? m.role : 'member';
     try {
       await q(
         d.insertOrIgnore('INSERT INTO location_members (id, location_id, user_id, role, joined_at) VALUES ($1, $2, $3, $4, $5)'),
@@ -621,7 +599,7 @@ export async function importMembers(locationId: string, members: ExportMember[],
       );
       count++;
     } catch {
-      // Skip on constraint violations
+      // Empty catch: insertOrIgnore still races with concurrent writers on SQLite.
     }
   }
   return count;
@@ -645,65 +623,56 @@ export async function replaceCleanup(locationId: string, tx?: TxQueryFn): Promis
   }
 }
 
-/**
- * Check if a user is an admin of a location.
- */
-export async function isLocationAdminCheck(locationId: string, userId: string): Promise<boolean> {
-  const row = await query<{ role: string }>(
-    'SELECT role FROM location_members WHERE location_id = $1 AND user_id = $2',
-    [locationId, userId]
-  );
-  return row.rows.length > 0 && row.rows[0].role === 'admin';
-}
-
-/** Check magic bytes to verify buffer is an allowed image type (JPEG, PNG, WebP, GIF). */
-function isAllowedImageBuffer(buf: Buffer): boolean {
-  if (buf.length < 12) return false;
-  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return true; // JPEG
-  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return true; // PNG
-  if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46
-    && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return true; // WebP
-  if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38) return true; // GIF
-  return false;
-}
-
 /** Import photos from base64 data into storage. */
 export async function importPhotos(binId: string, locationId: string, photos: ExportPhoto[], userId: string, tx?: TxQueryFn): Promise<{ imported: number; skipped: number }> {
   const q = tx ?? query;
   let imported = 0;
   let skipped = 0;
+  let dirEnsured = false;
+  const creatorCache = new Map<string | undefined, string>();
+
   for (const photo of photos) {
     const buffer = Buffer.from(photo.data, 'base64');
-    if (buffer.length > 10 * 1024 * 1024) { skipped++; continue; } // Skip oversized photos
-    if (!isAllowedImageBuffer(buffer)) { skipped++; continue; } // Skip files with invalid magic bytes
+    if (buffer.length > 10 * 1024 * 1024) { skipped++; continue; }
+    try {
+      await validateFileBuffer(buffer);
+    } catch {
+      skipped++;
+      continue;
+    }
 
-    const photoId = uuidv4();
+    const photoId = generateUuid();
     const photoExt = path.extname(photo.filename || '').toLowerCase();
-    const safeExt = ALLOWED_PHOTO_EXTS.includes(photoExt) ? photoExt : '.jpg';
+    const safeExt = ALLOWED_PHOTO_EXTS.has(photoExt) ? photoExt : '.jpg';
     const safeFilename = `${photoId}${safeExt}`;
     const storagePath = path.join(binId, safeFilename);
 
     const safeOriginalName = path.basename(photo.filename || 'photo').slice(0, 255);
-    const safeMimeType = ALLOWED_MIME_TYPES.includes(photo.mimeType) ? photo.mimeType : 'image/jpeg';
+    const safeMimeType = ALLOWED_MIME_TYPES.has(photo.mimeType) ? photo.mimeType : 'image/jpeg';
 
     if (config.storageBackend === 's3') {
-      // S3: async upload, fire-and-forget within transaction context
+      // Fire-and-forget: awaiting inside the import transaction would block the txn on network I/O.
       storage.upload(storagePath, buffer, safeMimeType).catch((err) => {
         const log = createLogger('photo-import');
         log.error(`Failed to upload ${storagePath} to S3:`, err);
       });
     } else {
-      // Local: synchronous file write
       const fullPath = path.join(PHOTO_STORAGE_PATH, storagePath);
       if (!isPathSafe(fullPath, PHOTO_STORAGE_PATH)) { skipped++; continue; }
-
-      const dir = safePath(PHOTO_STORAGE_PATH, binId);
-      if (!dir) { skipped++; continue; }
-      fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(fullPath, buffer);
+      if (!dirEnsured) {
+        const dir = safePath(PHOTO_STORAGE_PATH, binId);
+        if (!dir) { skipped++; continue; }
+        await fs.promises.mkdir(dir, { recursive: true });
+        dirEnsured = true;
+      }
+      await fs.promises.writeFile(fullPath, buffer);
     }
 
-    const resolvedPhotoCreator = await resolveCreatedBy(photo.createdBy, locationId, userId, tx);
+    let resolvedPhotoCreator = creatorCache.get(photo.createdBy);
+    if (!resolvedPhotoCreator) {
+      resolvedPhotoCreator = await resolveCreatedBy(photo.createdBy, locationId, userId, tx);
+      creatorCache.set(photo.createdBy, resolvedPhotoCreator);
+    }
     await q(
       `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,

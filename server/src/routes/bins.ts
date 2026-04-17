@@ -13,7 +13,7 @@ import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/custo
 import { ForbiddenError, NotFoundError, OverLimitError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import { assertLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
+import { assertLocationWritable, assertPhotoStorageAllowedTx, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { getUserUsageTrackingPrefs, recordBinUsage } from '../lib/recordBinUsage.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
@@ -28,6 +28,12 @@ import { requireCleanFile } from '../middleware/malwareScan.js';
 const router = Router();
 
 router.use(authenticate);
+
+async function throwPhotoOverLimit(userId: string, message: string): Promise<never> {
+  const planInfo = await getUserPlanInfo(userId);
+  const upgradeUrl = planInfo ? await generateUpgradeUrl(userId, planInfo.email) : null;
+  throw new OverLimitError(message, upgradeUrl);
+}
 
 // POST /api/bins — create bin
 router.post('/', asyncHandler(async (req, res) => {
@@ -452,43 +458,41 @@ router.post('/:id/photos', asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Validate bin access before multer writes file to disk
   const binId = req.params.id;
-  const access = await verifyBinAccess(binId, req.user!.id);
+  const userId = req.user!.id;
+
+  // Fire independent reads in parallel: bin access, per-bin photo count, user plan features.
+  const [access, countResult, photoFeatures] = await Promise.all([
+    verifyBinAccess(binId, userId),
+    query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM photos WHERE bin_id = $1', [binId]),
+    getUserFeatures(userId),
+  ]);
+
   if (!access) {
     throw new NotFoundError('Bin not found');
   }
-  await requireMemberOrAbove(access.locationId, req.user!.id, 'upload photos');
-
-  await assertLocationWritable(access.locationId);
-
-  res.locals.binAccess = access;
-
-  // Per-bin photo count limit (always enforced)
-  const countResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM photos WHERE bin_id = $1', [binId]);
   if (countResult.rows[0].cnt >= config.maxPhotosPerBin) {
     throw new QuotaExceededError('BIN_PHOTO_LIMIT', `Maximum ${config.maxPhotosPerBin} photos per bin`);
   }
 
-  // Per-user storage quotas (plan limit + demo limit share one query)
-  const photoFeatures = await getUserFeatures(req.user!.id);
+  await Promise.all([
+    requireMemberOrAbove(access.locationId, userId, 'upload photos'),
+    assertLocationWritable(access.locationId),
+  ]);
 
-  // Block uploads entirely for zero-storage plans (e.g. Free tier)
-  if (photoFeatures.maxPhotoStorageMb !== null && photoFeatures.maxPhotoStorageMb === 0) {
-    const planInfo = await getUserPlanInfo(req.user!.id);
-    const upgradeUrl = planInfo ? await generateUpgradeUrl(req.user!.id, planInfo.email) : null;
-    throw new OverLimitError('Photo uploads are available on Plus and Pro plans', upgradeUrl);
+  res.locals.binAccess = access;
+
+  if (photoFeatures.maxPhotoStorageMb === 0) {
+    await throwPhotoOverLimit(userId, 'Photo uploads are available on Plus and Pro plans');
   }
 
   const needsUserUsage = photoFeatures.maxPhotoStorageMb !== null || config.demoMode;
   if (needsUserUsage) {
-    const usageResult = await query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [req.user!.id]);
+    const usageResult = await query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]);
     const usedBytes = usageResult.rows[0].total;
 
     if (photoFeatures.maxPhotoStorageMb !== null && usedBytes >= photoFeatures.maxPhotoStorageMb * 1024 * 1024) {
-      const planInfo = await getUserPlanInfo(req.user!.id);
-      const upgradeUrl = planInfo ? await generateUpgradeUrl(req.user!.id, planInfo.email) : null;
-      throw new OverLimitError(`Photo storage limit reached (${photoFeatures.maxPhotoStorageMb} MB)`, upgradeUrl);
+      await throwPhotoOverLimit(userId, `Photo storage limit reached (${photoFeatures.maxPhotoStorageMb} MB)`);
     }
 
     if (config.demoMode) {
@@ -530,12 +534,10 @@ router.post('/:id/photos', asyncHandler(async (req, res, next) => {
   const storagePath = path.join(binId, photoFilename);
   const photoId = crypto.randomUUID();
 
-  // Generate thumbnail + upload original in parallel
   const thumbFilename = `${path.basename(photoFilename, path.extname(photoFilename))}_thumb.webp`;
   let thumbPath: string | null = null;
 
   if (isS3) {
-    // S3: upload original and generate thumbnail concurrently
     const thumbPromise = generateThumbnailBuffer(file.buffer)
       .then(async (thumbBuffer) => {
         const thumbStoragePath = path.join(binId, thumbFilename);
@@ -549,9 +551,8 @@ router.post('/:id/photos', asyncHandler(async (req, res, next) => {
       thumbPromise,
     ]);
     thumbPath = resolvedThumbPath;
-    (file as any).buffer = undefined; // release for GC
   } else {
-    // Local: file already on disk from multer, just generate thumbnail
+    // File is already on disk from multer; just generate the thumbnail alongside it.
     try {
       const thumbFullPath = path.join(path.dirname(file.path), thumbFilename);
       await generateThumbnail(file.path, thumbFullPath);
@@ -565,7 +566,6 @@ router.post('/:id/photos', asyncHandler(async (req, res, next) => {
   // serialized storage quota re-check to prevent concurrent uploads from
   // bypassing the plan limit (the pre-multer check is best-effort only).
   const result = await withTransaction(async (tx) => {
-    const { assertPhotoStorageAllowedTx } = await import('../lib/planGate.js');
     await assertPhotoStorageAllowedTx(req.user!.id, tx);
 
     const [insertResult] = await Promise.all([

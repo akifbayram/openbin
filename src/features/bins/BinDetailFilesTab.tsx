@@ -7,7 +7,7 @@ import { useAttachments } from '@/features/attachments/useAttachments';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { isAttachmentsEnabled } from '@/lib/qrConfig';
 import { usePlan } from '@/lib/usePlan';
-import { categoryHeader } from '@/lib/utils';
+import { sectionHeader } from '@/lib/utils';
 import type { Photo } from '@/types';
 
 interface BinDetailFilesTabProps {
@@ -42,9 +42,9 @@ export function BinDetailFilesTab({ binId, photos, canEdit }: BinDetailFilesTabP
   return (
     <div className="flex flex-col gap-6">
       {showPhotos && (
-        <section aria-labelledby={showSectionLabels ? photosLabelId : undefined}>
+        <section aria-labelledby={showSectionLabels ? photosLabelId : undefined} className="flex flex-col gap-1">
           {showSectionLabels && (
-            <h3 id={photosLabelId} className={`${categoryHeader} mb-2.5`}>
+            <h3 id={photosLabelId} className={sectionHeader}>
               Photos
             </h3>
           )}
@@ -52,9 +52,9 @@ export function BinDetailFilesTab({ binId, photos, canEdit }: BinDetailFilesTabP
         </section>
       )}
       {showAttachments && (
-        <section aria-labelledby={showSectionLabels ? docsLabelId : undefined} className="flex flex-col gap-3">
+        <section aria-labelledby={showSectionLabels ? docsLabelId : undefined} className="flex flex-col gap-1">
           {showSectionLabels && (
-            <h3 id={docsLabelId} className={categoryHeader}>
+            <h3 id={docsLabelId} className={sectionHeader}>
               Documents
             </h3>
           )}

@@ -49,7 +49,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   usage_tracking_scan: true,
   usage_tracking_manual_lookup: true,
   usage_tracking_view: false,
-  usage_tracking_modify: false,
+  usage_tracking_modify: true,
   usage_granularity: 'daily',
 };
 

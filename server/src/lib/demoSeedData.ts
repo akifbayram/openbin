@@ -628,6 +628,99 @@ export const TRASHED_BINS: DemoBin[] = [
   },
 ];
 
+/**
+ * Heat-map usage profile for each bin. The shape of the dot pattern should
+ * match how a real household would touch the bin — daily staples get dense
+ * grids, seasonal gear gets peaks in the right months, and the comedy
+ * "graveyard" bins stay mostly empty.
+ */
+export type BinUsageProfile =
+  | 'daily'              // Kitchen/pet staples — most days
+  | 'near-daily'         // Heavy ritual (coffee) — 4–6 days/week
+  | 'weekdays'           // School-day pattern — Mon–Fri during school year
+  | 'weekly'             // Hobby/game cadence — 1–2 days/week
+  | 'biweekly'           // Occasional project use — every 1–2 weeks
+  | 'occasional'         // Sporadic — a handful of hits across the year
+  | 'rare'               // Opened only when you truly need it
+  | 'archive-document'   // Cluster near tax season, otherwise silent
+  | 'seasonal-summer'    // May–Sep peak (camping, gardening, field trips)
+  | 'seasonal-winter'    // Dec–Mar peak (snow gear)
+  | 'seasonal-holiday'   // Nov–Jan Christmas setup / teardown
+  | 'seasonal-halloween' // Oct costume spike
+  | 'silent';            // Literally untouched
+
+/**
+ * Explicit per-bin usage profile. Falls back to 'occasional' for any bin
+ * name missing here. Kept next to the bin list so the two stay in sync.
+ */
+export const BIN_USAGE_PROFILES: Record<string, BinUsageProfile> = {
+  // Daily-use household staples
+  'Dog Supplies': 'daily',
+  'Cleaning Supplies': 'daily',
+  'Baby & Toddler': 'daily',
+
+  // Near-daily rituals
+  'Brewing Equipment': 'near-daily',
+  'Coffee Accessories': 'near-daily',
+
+  // Weekday / school-year pattern
+  'Lunch Boxes & Bottles': 'weekdays',
+  'Backpacks & Bags': 'weekdays',
+
+  // Weekly-ish hobbies and family activities
+  'Baking Supplies': 'weekly',
+  'Board Games': 'weekly',
+  'Bike Gear': 'weekly',
+  'Sports Equipment': 'weekly',
+  'Art & Craft Supplies': 'weekly',
+  'LEGO & Building Toys': 'weekly',
+  'Yarn Stash': 'weekly',
+  'Patterns & WIPs': 'weekly',
+  'Knitting Needles & Tools': 'weekly',
+  'D&D Rulebooks': 'weekly',
+  'Dice & Accessories': 'weekly',
+  'DM Toolkit': 'weekly',
+
+  // Every week or two — project cadence
+  'Power Tools': 'biweekly',
+  'Miniatures & Terrain': 'biweekly',
+  'SBCs & Dev Boards': 'biweekly',
+  'Print Fails': 'biweekly',
+  'Hardware': 'biweekly',
+  'Stuffed Animals & Dolls': 'biweekly',
+
+  // Occasional — opened when needed
+  'Car Supplies': 'occasional',
+  'Paint & Stain': 'occasional',
+  'Networking': 'occasional',
+  'Self-Hosted Gear': 'occasional',
+  'Lapidary Tools & Supplies': 'occasional',
+  'Mineral Specimens': 'occasional',
+
+  // Seasonal
+  'Camping Gear': 'seasonal-summer',
+  'Gardening': 'seasonal-summer',
+  'Field Collecting Kit': 'seasonal-summer',
+  'Winter Gear': 'seasonal-winter',
+  'Holiday Decorations': 'seasonal-holiday',
+  'Costumes & Dress-Up': 'seasonal-halloween',
+
+  // Rare — only touched under specific circumstances
+  'Mystery Cables': 'rare',
+  'Pi Graveyard': 'rare',
+  'NAS Spares': 'rare',
+  'Outgrown Kids Clothes': 'rare',
+  'Old Electronics': 'rare',
+  'Keepsakes & Memories': 'rare',
+
+  // Documents — tax-season cluster
+  'Important Documents': 'archive-document',
+
+  // Untouched — the bin's own notes call it out
+  'Dead Drives': 'silent',
+  'Upgrade Box': 'silent',
+};
+
 export const CUSTOM_FIELD_DEFINITIONS = [
   { name: 'Purchase Date', position: 0 },
   { name: 'Estimated Value', position: 1 },

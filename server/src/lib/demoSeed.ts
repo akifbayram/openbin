@@ -4,8 +4,9 @@ import bcrypt from 'bcrypt';
 import type { TxQueryFn } from '../db.js';
 import { d, generateUuid, isUniqueViolation, withTransaction } from '../db.js';
 import { config } from './config.js';
-import type { DemoActivityEntry, DemoBin, DemoMember } from './demoSeedData.js';
+import type { BinUsageProfile, DemoActivityEntry, DemoBin, DemoMember } from './demoSeedData.js';
 import {
+  BIN_USAGE_PROFILES,
   CUSTOM_FIELD_DEFINITIONS,
   CUSTOM_FIELD_VALUES,
   DEMO_ACTIVITY_ENTRIES,
@@ -397,58 +398,195 @@ async function seedScanHistory(tx: TxQueryFn, userIdMap: Map<DemoMember, string>
   }
 }
 
-type UsageProfile = 'hot' | 'warm' | 'historical' | 'cold' | 'silent';
-
-function pickProfile(binName: string): UsageProfile {
-  const hash = (binName.charCodeAt(0) + (binName.charCodeAt(1) || 0)) % 10;
-  if (hash < 2) return 'hot';        // ~20%
-  if (hash < 5) return 'warm';       // ~30%
-  if (hash < 7) return 'historical'; // ~20%
-  if (hash < 9) return 'cold';       // ~20%
-  return 'silent';                   // ~10%
+/** Deterministic LCG — seeded by bin name so each demo run reproduces the same heat map. */
+function createSeededRandom(seed: number): () => number {
+  let s = (seed >>> 0) || 1;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 0x1_0000_0000;
+  };
 }
 
+function seedFromName(name: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < name.length; i++) {
+    h = Math.imul(h ^ name.charCodeAt(i), 16777619);
+  }
+  return h >>> 0;
+}
+
+function pickProfile(binName: string): BinUsageProfile {
+  return BIN_USAGE_PROFILES[binName] ?? 'occasional';
+}
+
+/**
+ * Generate dot dates for a bin's heat map. The dots are deterministic per
+ * bin name, but each profile shapes the distribution differently — daily
+ * staples get dense recent dots, seasonal gear peaks in the right months,
+ * and archival bins stay mostly empty.
+ */
 function generateDatesForProfile(
-  profile: UsageProfile,
+  profile: BinUsageProfile,
   binName: string,
 ): Array<{ date: string; count: number }> {
-  const hash = binName.charCodeAt(0) + (binName.charCodeAt(1) || 0);
+  const rand = createSeededRandom(seedFromName(binName));
   const now = Date.now();
-  const utcDate = (daysAgo: number): string =>
-    new Date(now - daysAgo * 86_400_000).toISOString().slice(0, 10);
+  const mkDate = (daysAgo: number): Date => new Date(now - daysAgo * 86_400_000);
+  const iso = (daysAgo: number): string => mkDate(daysAgo).toISOString().slice(0, 10);
+  const monthOf = (daysAgo: number): number => mkDate(daysAgo).getUTCMonth();
+  const dowOf = (daysAgo: number): number => mkDate(daysAgo).getUTCDay();
 
+  const seen = new Set<string>();
   const results: Array<{ date: string; count: number }> = [];
+  const push = (daysAgo: number, count: number): void => {
+    if (daysAgo < 1) return; // skip today/future
+    const date = iso(daysAgo);
+    if (seen.has(date)) return;
+    seen.add(date);
+    results.push({ date, count });
+  };
 
-  if (profile === 'hot') {
-    // Last 60 days, ~4 days/week
-    for (let i = 0; i < 60; i++) {
-      if ((hash + i) % 7 < 4) {
-        const count = ((hash + i) % 2) + 1; // 1 or 2
-        results.push({ date: utcDate(i), count });
+  switch (profile) {
+    case 'daily': {
+      // Dense recent grid, fading history
+      for (let i = 1; i <= 120; i++) {
+        if (rand() < 0.82) push(i, rand() < 0.2 ? 2 : 1);
       }
-    }
-  } else if (profile === 'warm') {
-    // Last 180 days, ~1 day/week
-    for (let i = 0; i < 180; i++) {
-      if ((hash + i) % 7 === 0) {
-        results.push({ date: utcDate(i), count: 1 });
+      for (let i = 121; i <= 300; i++) {
+        if (rand() < 0.5) push(i, 1);
       }
+      break;
     }
-  } else if (profile === 'historical') {
-    // 300–480 days ago, ~3 of 10 days
-    for (let i = 300; i < 480; i++) {
-      if ((hash + i) % 10 < 3) {
-        const count = ((hash + i) % 2) + 1; // 1 or 2
-        results.push({ date: utcDate(i), count });
+    case 'near-daily': {
+      // 4–6 days/week recent, tapering off
+      for (let i = 1; i <= 150; i++) {
+        if (rand() < 0.68) push(i, rand() < 0.12 ? 2 : 1);
       }
+      for (let i = 151; i <= 330; i++) {
+        if (rand() < 0.38) push(i, 1);
+      }
+      break;
     }
-  } else if (profile === 'cold') {
-    // Just 3 scattered hits far in the past
-    for (const daysAgo of [400, 550, 730]) {
-      results.push({ date: utcDate(daysAgo), count: 1 });
+    case 'weekdays': {
+      // Mon–Fri during school year; near-silent in June–August
+      for (let i = 1; i <= 280; i++) {
+        const dow = dowOf(i);
+        if (dow === 0 || dow === 6) continue;
+        const m = monthOf(i);
+        const summerBreak = m === 5 || m === 6 || m === 7; // Jun, Jul, Aug
+        const p = summerBreak ? 0.08 : 0.78;
+        if (rand() < p) push(i, 1);
+      }
+      break;
+    }
+    case 'weekly': {
+      // 1–2 dots/week, tapering the further back you go
+      for (let i = 1; i <= 260; i++) {
+        if (rand() < 0.22) push(i, rand() < 0.15 ? 2 : 1);
+      }
+      for (let i = 261; i <= 540; i++) {
+        if (rand() < 0.09) push(i, 1);
+      }
+      break;
+    }
+    case 'biweekly': {
+      // Roughly every 1–2 weeks
+      for (let i = 1; i <= 320; i++) {
+        if (rand() < 0.1) push(i, 1);
+      }
+      break;
+    }
+    case 'occasional': {
+      // 8–16 scattered dots across the last ~400 days
+      const n = 8 + Math.floor(rand() * 9);
+      for (let k = 0; k < n; k++) {
+        push(4 + Math.floor(rand() * 400), 1);
+      }
+      break;
+    }
+    case 'rare': {
+      // 3–6 dots across a wider window, biased toward the middle-past
+      const n = 3 + Math.floor(rand() * 4);
+      for (let k = 0; k < n; k++) {
+        push(30 + Math.floor(rand() * 600), 1);
+      }
+      break;
+    }
+    case 'archive-document': {
+      // Tax-season cluster (Feb–Apr) plus an occasional one-off
+      let attempts = 0;
+      while (results.length < 4 + Math.floor(rand() * 3) && attempts < 200) {
+        attempts++;
+        const d = 5 + Math.floor(rand() * 700);
+        const m = monthOf(d);
+        if (m >= 1 && m <= 3) push(d, 1);
+      }
+      // One or two "I need my passport" moments outside tax season
+      for (let k = 0; k < 2; k++) {
+        if (rand() < 0.6) push(20 + Math.floor(rand() * 700), 1);
+      }
+      break;
+    }
+    case 'seasonal-summer': {
+      // Peak May–Aug, shoulders in Apr & Sep
+      for (let i = 1; i <= 730; i++) {
+        const m = monthOf(i);
+        let p: number;
+        if (m >= 4 && m <= 7) p = 0.32;        // May–Aug peak
+        else if (m === 3 || m === 8) p = 0.14; // Apr, Sep shoulders
+        else if (m === 9) p = 0.04;            // Oct tail
+        else p = 0.01;                         // Deep winter
+        if (rand() < p) push(i, 1);
+      }
+      break;
+    }
+    case 'seasonal-winter': {
+      // Peak Dec–Feb, shoulders in Nov & Mar
+      for (let i = 1; i <= 730; i++) {
+        const m = monthOf(i);
+        let p: number;
+        if (m === 11 || m <= 1) p = 0.38;      // Dec–Feb peak
+        else if (m === 10 || m === 2) p = 0.2; // Nov, Mar shoulders
+        else if (m === 9 || m === 3) p = 0.05; // Oct, Apr tails
+        else p = 0.01;
+        if (rand() < p) push(i, 1);
+      }
+      break;
+    }
+    case 'seasonal-holiday': {
+      // Christmas: setup late Nov, peak Dec, teardown early Jan
+      for (let i = 1; i <= 730; i++) {
+        const d = mkDate(i);
+        const m = d.getUTCMonth();
+        const day = d.getUTCDate();
+        let p: number;
+        if (m === 10 && day >= 15) p = 0.3;      // late Nov setup
+        else if (m === 11) p = 0.42;             // December peak
+        else if (m === 0 && day <= 12) p = 0.28; // early Jan teardown
+        else p = 0;
+        if (p > 0 && rand() < p) push(i, 1);
+      }
+      break;
+    }
+    case 'seasonal-halloween': {
+      // Heavy October, trickle the rest of the year (kids play dress-up)
+      for (let i = 1; i <= 730; i++) {
+        const d = mkDate(i);
+        const m = d.getUTCMonth();
+        const day = d.getUTCDate();
+        let p: number;
+        if (m === 9) p = 0.34;                   // October peak
+        else if (m === 10 && day < 5) p = 0.15;  // early Nov tail
+        else p = 0.03;                           // low-level play
+        if (rand() < p) push(i, 1);
+      }
+      break;
+    }
+    case 'silent': {
+      break;
     }
   }
-  // 'silent' returns []
+
   return results;
 }
 

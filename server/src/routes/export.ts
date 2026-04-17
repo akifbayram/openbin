@@ -7,7 +7,7 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { requireMemberOrAbove } from '../lib/binAccess.js';
+import { isLocationAdmin, requireMemberOrAbove } from '../lib/binAccess.js';
 import { config } from '../lib/config.js';
 import { parseCSV } from '../lib/csvParser.js';
 import {
@@ -32,7 +32,6 @@ import {
   fetchTrashedBins,
   insertBinItems,
   insertBinWithShortCode,
-  isLocationAdminCheck,
   loadBinPhotoMeta,
   loadBinPhotosBase64,
   resolveArea,
@@ -376,7 +375,7 @@ router.post('/locations/:id/import', importLimiter, express.json({ limit: '50mb'
   const result = await executeFullImportTransaction({
     locationId,
     userId,
-    isAdmin: await isLocationAdminCheck(locationId, userId),
+    isAdmin: await isLocationAdmin(locationId, userId),
     importMode,
     bins,
     trashedBins,
@@ -563,7 +562,7 @@ router.post('/locations/:id/import/csv', importLimiter, csvUpload, requireLocati
   }
 
   const now = new Date().toISOString();
-  const isAdmin = await isLocationAdminCheck(locationId, userId);
+  const isAdmin = await isLocationAdmin(locationId, userId);
 
   const result = await withTransaction(async (tx) => {
     // Enforce plan bin limit before CSV import
@@ -803,7 +802,7 @@ router.post('/locations/:id/import/zip', importLimiter, zipUpload, requireLocati
   const result = await executeFullImportTransaction({
     locationId,
     userId,
-    isAdmin: await isLocationAdminCheck(locationId, userId),
+    isAdmin: await isLocationAdmin(locationId, userId),
     importMode,
     bins: exportBins,
     trashedBins: exportTrashedBins,

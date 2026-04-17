@@ -11,7 +11,7 @@ const DEFAULT_PREFS: UsageTrackingPrefs = {
   scan: true,
   manual_lookup: true,
   view: false,
-  modify: false,
+  modify: true,
 };
 
 /**

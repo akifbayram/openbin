@@ -31,6 +31,30 @@ import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage, relativeTime } from '@/lib/utils';
 import { capitalize, clearOverrides, deleteUser, fetchOverrides, forcePasswordChange, grantAiCredits, reactivateUser, regenerateApiKey, resetAiCredits, revokeAllApiKeys, revokeSessions, sendPasswordReset, statusVariant, suspendUser, type UserLimitOverrides, updateOverrides, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
 
+// Mirror of server/src/lib/planGate.ts — client can't import server code.
+const PLAN_CODE = { free: 2, plus: 0, pro: 1 } as const;
+const SUB_STATUS_CODE = { inactive: 0, active: 1, trial: 2 } as const;
+
+type PlanKey = keyof typeof PLAN_CODE;
+type SubStatusKey = keyof typeof SUB_STATUS_CODE;
+
+type NumericOverrideKey =
+  | 'maxBins'
+  | 'maxLocations'
+  | 'maxPhotoStorageMb'
+  | 'maxMembersPerLocation'
+  | 'aiCreditsPerMonth'
+  | 'activityRetentionDays';
+
+const OVERRIDE_FIELDS: Array<{ key: NumericOverrideKey; label: string; htmlId: string }> = [
+  { key: 'maxBins', label: 'Max Bins', htmlId: 'ov-bins' },
+  { key: 'maxLocations', label: 'Max Locations', htmlId: 'ov-locs' },
+  { key: 'maxPhotoStorageMb', label: 'Photo Storage (MB)', htmlId: 'ov-storage' },
+  { key: 'maxMembersPerLocation', label: 'Members/Location', htmlId: 'ov-members' },
+  { key: 'aiCreditsPerMonth', label: 'AI Credits/Month', htmlId: 'ov-ai' },
+  { key: 'activityRetentionDays', label: 'Retention (days)', htmlId: 'ov-retention' },
+];
+
 function StatItem({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex flex-col gap-0.5 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
@@ -66,15 +90,14 @@ export function AdminUserDetailPage() {
   const { detail, isLoading, notFound, refresh } = useAdminUserDetail(id ?? '');
   const { planInfo } = usePlan();
 
-  // Redirect non-admins
   useEffect(() => {
     if (currentUser && !currentUser.isAdmin) navigate('/', { replace: true });
   }, [currentUser, navigate]);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [regenKeyOpen, setRegenKeyOpen] = useState(false);
-  const [pendingPlan, setPendingPlan] = useState<'free' | 'plus' | 'pro' | null>(null);
-  const [pendingStatus, setPendingStatus] = useState<'inactive' | 'trial' | 'active' | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<PlanKey | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<SubStatusKey | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ email: '', displayName: '', password: '' });
   const [activeUntilInput, setActiveUntilInput] = useState('');
@@ -91,15 +114,24 @@ export function AdminUserDetailPage() {
   }, [notFound, navigate]);
 
   useEffect(() => {
-    if (detail) setActiveUntilInput(detail.activeUntil ? detail.activeUntil.slice(0, 16) : '');
-  }, [detail]);
+    setActiveUntilInput(detail?.activeUntil ? detail.activeUntil.slice(0, 16) : '');
+  }, [detail?.activeUntil]);
 
-  // Load overrides when detail loads
   useEffect(() => {
     if (!detail || planInfo.selfHosted) return;
-    fetchOverrides(detail.id).then(o => setOverrides(o)).catch((err) => {
-      showToast({ message: getErrorMessage(err, 'Failed to load user overrides'), variant: 'error' });
-    });
+    let ignore = false;
+    fetchOverrides(detail.id)
+      .then((o) => {
+        if (!ignore) setOverrides(o);
+      })
+      .catch((err) => {
+        if (!ignore) {
+          showToast({ message: getErrorMessage(err, 'Failed to load user overrides'), variant: 'error' });
+        }
+      });
+    return () => {
+      ignore = true;
+    };
   }, [detail, planInfo.selfHosted, showToast]);
 
   const handleSaveActiveUntil = useCallback(async () => {
@@ -136,7 +168,7 @@ export function AdminUserDetailPage() {
     }
   }, [detail, showToast, navigate]);
 
-  const handlePlanChange = useCallback((newPlan: 'free' | 'plus' | 'pro') => {
+  const handlePlanChange = useCallback((newPlan: PlanKey) => {
     if (!detail || newPlan === detail.plan) return;
     setPendingPlan(newPlan);
   }, [detail]);
@@ -144,8 +176,7 @@ export function AdminUserDetailPage() {
   const confirmPlanChange = useCallback(async () => {
     if (!detail || !pendingPlan) return;
     try {
-      const planMap = { free: 2, plus: 0, pro: 1 } as const;
-      await updateUser(detail.id, { plan: planMap[pendingPlan] });
+      await updateUser(detail.id, { plan: PLAN_CODE[pendingPlan] });
       showToast({ message: `Plan changed to ${pendingPlan}`, variant: 'success' });
       refresh();
     } catch (err) {
@@ -155,16 +186,15 @@ export function AdminUserDetailPage() {
     }
   }, [detail, pendingPlan, showToast, refresh]);
 
-  const handleStatusChange = useCallback((newStatus: 'inactive' | 'trial' | 'active') => {
+  const handleStatusChange = useCallback((newStatus: SubStatusKey) => {
     if (!detail || newStatus === detail.status) return;
     setPendingStatus(newStatus);
   }, [detail]);
 
   const confirmStatusChange = useCallback(async () => {
     if (!detail || !pendingStatus) return;
-    const statusMap = { inactive: 0, active: 1, trial: 2 } as const;
     try {
-      await updateUser(detail.id, { subStatus: statusMap[pendingStatus] });
+      await updateUser(detail.id, { subStatus: SUB_STATUS_CODE[pendingStatus] });
       showToast({ message: `Status changed to ${pendingStatus}`, variant: 'success' });
       refresh();
     } catch (err) {
@@ -319,7 +349,17 @@ export function AdminUserDetailPage() {
     }
   }, [detail, showToast, refresh]);
 
-  // Prevent flash of admin content for non-admins
+  const handleForcePasswordChange = useCallback(async (checked: boolean) => {
+    if (!detail) return;
+    try {
+      await forcePasswordChange(detail.id, checked);
+      showToast({ message: checked ? 'Password change required' : 'Password change cleared', variant: 'success' });
+      refresh();
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to update'), variant: 'error' });
+    }
+  }, [detail, showToast, refresh]);
+
   if (currentUser && !currentUser.isAdmin) return null;
 
   if (isLoading) {
@@ -364,6 +404,8 @@ export function AdminUserDetailPage() {
   const isLastAdmin = detail.isAdmin && adminCount <= 1;
   const adminDisabled = isSelf || isLastAdmin;
   const savedActiveUntil = detail.activeUntil ? detail.activeUntil.slice(0, 16) : '';
+  const createdAt = new Date(detail.createdAt);
+  const accountAgeDays = Math.floor((Date.now() - createdAt.getTime()) / 86400000);
 
   return (
     <div className="page-content">
@@ -373,7 +415,6 @@ export function AdminUserDetailPage() {
         backTo="/admin/users"
       />
 
-      {/* Identity */}
       <Card>
         <CardHeader>
           <CardTitle>Identity</CardTitle>
@@ -403,7 +444,7 @@ export function AdminUserDetailPage() {
             )}
             <div>
               <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Created</span>
-              <p className="text-[15px] text-[var(--text-primary)]">{new Date(detail.createdAt).toLocaleString()}</p>
+              <p className="text-[15px] text-[var(--text-primary)]">{createdAt.toLocaleString()}</p>
             </div>
             <div>
               <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Updated</span>
@@ -413,7 +454,6 @@ export function AdminUserDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Stats */}
       <Card>
         <CardHeader>
           <CardTitle>Stats</CardTitle>
@@ -431,10 +471,9 @@ export function AdminUserDetailPage() {
             <StatItem label="API Reqs (7d)" value={detail.stats.apiRequests7d} />
             <StatItem label="Shares" value={detail.stats.shareCount} />
             <StatItem label="New Bins (7d)" value={detail.stats.binsCreated7d} />
-            <StatItem label="Account Age" value={`${Math.floor((Date.now() - new Date(detail.createdAt).getTime()) / 86400000)}d`} />
+            <StatItem label="Account Age" value={`${accountAgeDays}d`} />
           </div>
 
-          {/* Limit bars */}
           {(detail.stats.binLimit !== null || detail.stats.storageLimit !== null || detail.stats.aiCreditsLimit > 0) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
               <LimitStatItem label="Bin Usage" used={detail.stats.binCount} limit={detail.stats.binLimit} />
@@ -447,7 +486,6 @@ export function AdminUserDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Actions */}
       <Card>
         <CardHeader>
           <CardTitle>Actions</CardTitle>
@@ -456,13 +494,11 @@ export function AdminUserDetailPage() {
           <div className="flex flex-col divide-y divide-[var(--border-subtle)]">
             <div className="row-spread py-3 first:pt-0">
               <span className="text-[14px] text-[var(--text-secondary)]">Admin role</span>
-              <span className={cn('flex items-center gap-1.5', adminDisabled && 'opacity-50')}>
-                <Switch
-                  checked={detail.isAdmin}
-                  onCheckedChange={handleToggleAdmin}
-                  disabled={adminDisabled}
-                />
-              </span>
+              <Switch
+                checked={detail.isAdmin}
+                onCheckedChange={handleToggleAdmin}
+                disabled={adminDisabled}
+              />
             </div>
 
             <div className="row-spread py-3">
@@ -555,12 +591,10 @@ export function AdminUserDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Security */}
       <Card>
         <CardHeader><CardTitle>Security</CardTitle></CardHeader>
         <CardContent>
           <div className="flex flex-col divide-y divide-[var(--border-subtle)]">
-            {/* Suspend/Reactivate */}
             <div className="row-spread py-3 first:pt-0">
               <div>
                 <span className="text-[14px] text-[var(--text-secondary)]">Account status</span>
@@ -586,7 +620,6 @@ export function AdminUserDetailPage() {
               )}
             </div>
 
-            {/* Revoke sessions */}
             <div className="row-spread py-3">
               <span className="text-[14px] text-[var(--text-secondary)]">Revoke all sessions</span>
               <Button variant="outline" size="sm" onClick={() => setRevokeSessionsOpen(true)}>
@@ -595,25 +628,15 @@ export function AdminUserDetailPage() {
               </Button>
             </div>
 
-            {/* Force password change */}
             <div className="row-spread py-3">
               <span className="text-[14px] text-[var(--text-secondary)]">Require password change</span>
               <Switch
                 checked={!!detail.stats.forcePasswordChange}
-                onCheckedChange={async (checked) => {
-                  try {
-                    await forcePasswordChange(detail.id, checked);
-                    showToast({ message: checked ? 'Password change required' : 'Password change cleared', variant: 'success' });
-                    refresh();
-                  } catch (err) {
-                    showToast({ message: getErrorMessage(err, 'Failed to update'), variant: 'error' });
-                  }
-                }}
+                onCheckedChange={handleForcePasswordChange}
                 disabled={isSelf}
               />
             </div>
 
-            {/* Revoke all API keys */}
             <div className="row-spread py-3 last:pb-0">
               <span className="text-[14px] text-[var(--text-secondary)]">Revoke all API keys</span>
               <Button variant="outline" size="sm" onClick={() => setRevokeKeysOpen(true)}>
@@ -625,7 +648,6 @@ export function AdminUserDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Limit Overrides (cloud only) */}
       {__EE__ && !planInfo.selfHosted && (
         <Card>
           <CardHeader><CardTitle>Limit Overrides</CardTitle></CardHeader>
@@ -634,24 +656,19 @@ export function AdminUserDetailPage() {
               Override plan limits for this user. Leave blank to use plan defaults.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <FormField label="Max Bins" htmlFor="ov-bins">
-                <Input id="ov-bins" type="number" min={0} placeholder="Plan default" value={overrides.maxBins ?? ''} onChange={(e) => setOverrides(o => ({ ...o, maxBins: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
-              </FormField>
-              <FormField label="Max Locations" htmlFor="ov-locs">
-                <Input id="ov-locs" type="number" min={0} placeholder="Plan default" value={overrides.maxLocations ?? ''} onChange={(e) => setOverrides(o => ({ ...o, maxLocations: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
-              </FormField>
-              <FormField label="Photo Storage (MB)" htmlFor="ov-storage">
-                <Input id="ov-storage" type="number" min={0} placeholder="Plan default" value={overrides.maxPhotoStorageMb ?? ''} onChange={(e) => setOverrides(o => ({ ...o, maxPhotoStorageMb: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
-              </FormField>
-              <FormField label="Members/Location" htmlFor="ov-members">
-                <Input id="ov-members" type="number" min={0} placeholder="Plan default" value={overrides.maxMembersPerLocation ?? ''} onChange={(e) => setOverrides(o => ({ ...o, maxMembersPerLocation: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
-              </FormField>
-              <FormField label="AI Credits/Month" htmlFor="ov-ai">
-                <Input id="ov-ai" type="number" min={0} placeholder="Plan default" value={overrides.aiCreditsPerMonth ?? ''} onChange={(e) => setOverrides(o => ({ ...o, aiCreditsPerMonth: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
-              </FormField>
-              <FormField label="Retention (days)" htmlFor="ov-retention">
-                <Input id="ov-retention" type="number" min={0} placeholder="Plan default" value={overrides.activityRetentionDays ?? ''} onChange={(e) => setOverrides(o => ({ ...o, activityRetentionDays: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
-              </FormField>
+              {OVERRIDE_FIELDS.map(({ key, label, htmlId }) => (
+                <FormField key={key} label={label} htmlFor={htmlId}>
+                  <Input
+                    id={htmlId}
+                    type="number"
+                    min={0}
+                    placeholder="Plan default"
+                    value={overrides[key] ?? ''}
+                    onChange={(e) => setOverrides((o) => ({ ...o, [key]: e.target.value ? Number(e.target.value) : null }))}
+                    className="h-8 text-[14px]"
+                  />
+                </FormField>
+              ))}
             </div>
             <div className="flex items-center gap-2 mt-4">
               <Button size="sm" onClick={handleSaveOverrides} disabled={savingOverrides}>
@@ -663,7 +680,6 @@ export function AdminUserDetailPage() {
         </Card>
       )}
 
-      {/* AI Credits (cloud only) */}
       {__EE__ && !planInfo.selfHosted && detail.stats.aiCreditsLimit > 0 && (
         <Card>
           <CardHeader><CardTitle>AI Credits</CardTitle></CardHeader>
@@ -685,7 +701,6 @@ export function AdminUserDetailPage() {
         </Card>
       )}
 
-      {/* Suspend confirmation dialog */}
       <Dialog open={suspendOpen} onOpenChange={(open) => !open && setSuspendOpen(false)}>
         <DialogContent>
           <DialogHeader>
@@ -701,7 +716,6 @@ export function AdminUserDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Revoke sessions confirmation */}
       <Dialog open={revokeSessionsOpen} onOpenChange={(open) => !open && setRevokeSessionsOpen(false)}>
         <DialogContent>
           <DialogHeader>
@@ -717,7 +731,6 @@ export function AdminUserDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Revoke all API keys confirmation */}
       <Dialog open={revokeKeysOpen} onOpenChange={(open) => !open && setRevokeKeysOpen(false)}>
         <DialogContent>
           <DialogHeader>
@@ -733,7 +746,6 @@ export function AdminUserDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation dialog */}
       <Dialog open={deleteOpen} onOpenChange={(open) => !open && setDeleteOpen(false)}>
         <DialogContent>
           <DialogHeader>
@@ -749,7 +761,6 @@ export function AdminUserDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Regenerate API key confirmation dialog */}
       <Dialog open={regenKeyOpen} onOpenChange={(open) => !open && setRegenKeyOpen(false)}>
         <DialogContent>
           <DialogHeader>
@@ -765,7 +776,6 @@ export function AdminUserDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Plan change confirmation dialog */}
       <Dialog open={pendingPlan !== null} onOpenChange={(open) => { if (!open) setPendingPlan(null); }}>
         <DialogContent>
           <DialogHeader>
@@ -781,7 +791,6 @@ export function AdminUserDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Status change confirmation dialog */}
       <Dialog open={pendingStatus !== null} onOpenChange={(open) => { if (!open) setPendingStatus(null); }}>
         <DialogContent>
           <DialogHeader>
@@ -797,7 +806,6 @@ export function AdminUserDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit user dialog */}
       <Dialog open={editOpen} onOpenChange={(open) => !open && setEditOpen(false)}>
         <DialogContent>
           <DialogHeader>

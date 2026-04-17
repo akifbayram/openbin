@@ -125,9 +125,10 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
     next();
   });
 
-  // Routes
+  // Routes — tryAuthenticate must precede apiLimiter so its skip() sees req.user
+  app.use('/api', tryAuthenticate);
   app.use('/api', apiLimiter);
-  app.use('/api', tryAuthenticate, maintenanceGate, requireActiveSubscription());
+  app.use('/api', maintenanceGate, requireActiveSubscription());
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/demo-login', authLimiter);
   app.use('/api/auth/register', registerLimiter);

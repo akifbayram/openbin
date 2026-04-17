@@ -78,8 +78,8 @@ export const overlayBackdrop =
 export const categoryHeader =
   'text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]';
 
-/** Settings section header: 13px semibold in primary text color. */
-export const sectionHeader = 'text-[var(--text-sm)] font-semibold text-[var(--text-primary)]';
+/** Section header: 10px semibold in primary text color. */
+export const sectionHeader = 'text-[13px] text-[var(--text-primary)]';
 
 /** Section header row: baseline-aligned title on the left, actions on the right. */
 export const sectionHeaderRow = 'flex items-baseline justify-between mb-4';

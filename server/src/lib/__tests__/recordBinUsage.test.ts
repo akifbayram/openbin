@@ -80,7 +80,7 @@ describe('getUserUsageTrackingPrefs', () => {
   it('returns defaults when user has no preferences row', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 });
     const prefs = await getUserUsageTrackingPrefs('user-1');
-    expect(prefs).toEqual({ scan: true, manual_lookup: true, view: false, modify: false });
+    expect(prefs).toEqual({ scan: true, manual_lookup: true, view: false, modify: true });
   });
 
   it('parses existing preferences JSON', async () => {
@@ -92,7 +92,7 @@ describe('getUserUsageTrackingPrefs', () => {
     expect(prefs.scan).toBe(false);
     expect(prefs.manual_lookup).toBe(true);  // default
     expect(prefs.view).toBe(true);
-    expect(prefs.modify).toBe(false);  // default
+    expect(prefs.modify).toBe(true);  // default
   });
 
   it('handles settings stored as already-parsed object (pg JSONB)', async () => {
@@ -110,6 +110,6 @@ describe('getUserUsageTrackingPrefs', () => {
       rowCount: 1,
     });
     const prefs = await getUserUsageTrackingPrefs('user-1');
-    expect(prefs).toEqual({ scan: true, manual_lookup: true, view: false, modify: false });
+    expect(prefs).toEqual({ scan: true, manual_lookup: true, view: false, modify: true });
   });
 });
