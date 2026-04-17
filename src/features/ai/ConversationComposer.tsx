@@ -43,6 +43,7 @@ function AttachmentMenu({ onPhotoClick, onCameraClick, disabled }: AttachmentMen
         aria-label="Add attachment"
         aria-haspopup="menu"
         aria-expanded={isOpen}
+        data-tour="photo-to-bin"
       >
         <Plus className="h-5 w-5" />
       </button>

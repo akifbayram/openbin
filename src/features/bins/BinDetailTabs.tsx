@@ -96,15 +96,17 @@ export function BinDetailTabs({
 
   return (
     <div>
-      <OptionGroup
-        options={TAB_OPTIONS}
-        value={tab}
-        onChange={handleChange}
-        size="lg"
-        variant="tabs"
-        aria-label="Bin sections"
-        idPrefix={tabsId}
-      />
+      <div data-tour="bin-tabs">
+        <OptionGroup
+          options={TAB_OPTIONS}
+          value={tab}
+          onChange={handleChange}
+          size="lg"
+          variant="tabs"
+          aria-label="Bin sections"
+          idPrefix={tabsId}
+        />
+      </div>
       <div
         key={tab}
         role="tabpanel"

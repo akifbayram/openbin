@@ -152,7 +152,9 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/bins', binItemsRoutes);
   app.use('/api/bins', itemCheckoutsRoutes);
   app.use('/api/photos', photosRoutes);
-  app.use('/api', attachmentsRoutes);
+  if (config.attachmentsEnabled) {
+    app.use('/api', attachmentsRoutes);
+  }
   app.use('/api/tag-colors', tagColorsRoutes);
   app.use('/api/print-settings', printSettingsRoutes);
   app.use('/api/user-preferences', userPreferencesRoutes);

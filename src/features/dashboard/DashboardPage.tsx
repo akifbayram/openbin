@@ -172,6 +172,7 @@ export function DashboardPage() {
       {/* Search */}
       <SearchInput
         data-shortcut-search
+        data-tour="dashboard-overview"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder={`Search ${t.bins}...`}
