@@ -11,9 +11,9 @@ import { useToast } from '@/components/ui/toast';
 import { useLocationList } from '@/features/locations/useLocations';
 import { SettingsPageHeader } from '@/features/settings/SettingsPageHeader';
 import { useAuth } from '@/lib/auth';
-import { formatTimeAgo } from '@/lib/formatTime';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
+import { relativeTime } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { notifyBinsChanged, permanentDeleteBin, restoreBinFromTrash, useTrashBins } from './useBins';
 
@@ -105,7 +105,7 @@ export function TrashPage() {
                       {bin.name}
                     </p>
                     <p className="text-[12px] text-[var(--text-tertiary)]">
-                      Deleted {formatTimeAgo(bin.deleted_at ?? bin.updated_at)}
+                      Deleted {relativeTime(bin.deleted_at ?? bin.updated_at)}
                       {bin.area_name ? ` · ${bin.area_name}` : ''}
                       {Array.isArray(bin.items) && bin.items.length > 0 ? ` · ${bin.items.length} ${bin.items.length === 1 ? 'item' : 'items'}` : ''}
                     </p>

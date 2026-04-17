@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
 import * as React from 'react';
-import { cn, disabledClasses, focusRingInset } from '@/lib/utils';
+import { cn, disabledClasses, focusRing } from '@/lib/utils';
 
 interface CheckboxProps {
   id?: string;
@@ -23,7 +23,7 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
         disabled={disabled}
         className={cn(
           'h-[22px] w-[22px] shrink-0 rounded-[6px] border-2 transition-all duration-200 flex items-center justify-center',
-          focusRingInset,
+          focusRing,
           disabledClasses,
           checked
             ? 'bg-[var(--accent)] border-[var(--accent)]'

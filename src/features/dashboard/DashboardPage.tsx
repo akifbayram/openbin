@@ -24,14 +24,13 @@ import { LocationActivityWidget } from '@/features/usage/LocationActivityWidget'
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
-import { formatTimeAgo } from '@/lib/formatTime';
 import { deleteView, useSavedViews } from '@/lib/savedViews';
 import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
-import { cn, getErrorMessage } from '@/lib/utils';
+import { cn, getErrorMessage, relativeTime } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { DashboardChecklist } from './DashboardChecklist';
 import { DashboardDialogs } from './DashboardDialogs';
@@ -283,7 +282,7 @@ export function DashboardPage() {
                 <div key={bin.id} className="flex flex-col gap-1 animate-card-stagger" style={{ '--stagger-index': i } as React.CSSProperties}>
                   <BinCard bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
                   {dashSettings.showTimestamps && scanTimeMap.has(bin.id) && (
-                    <p className="text-[11px] text-[var(--text-tertiary)] px-1">{formatTimeAgo(scanTimeMap.get(bin.id) as string)}</p>
+                    <p className="text-[11px] text-[var(--text-tertiary)] px-1">{relativeTime(scanTimeMap.get(bin.id) as string)}</p>
                   )}
                 </div>
               ))}
@@ -305,7 +304,7 @@ export function DashboardPage() {
                 <div key={bin.id} className="flex flex-col gap-1 animate-card-stagger" style={{ '--stagger-index': i } as React.CSSProperties}>
                   <BinCard bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
                   {dashSettings.showTimestamps && (
-                    <p className="text-[11px] text-[var(--text-tertiary)] px-1">{formatTimeAgo(bin.updated_at)}</p>
+                    <p className="text-[11px] text-[var(--text-tertiary)] px-1">{relativeTime(bin.updated_at)}</p>
                   )}
                 </div>
               ))}

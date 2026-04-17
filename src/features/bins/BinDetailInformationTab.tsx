@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useScanHistory } from '@/features/dashboard/scanHistory';
 import { BinUsageSection } from '@/features/usage/BinUsageSection';
 import { resolveColor } from '@/lib/colorPalette';
-import { formatTimeAgo } from '@/lib/formatTime';
 import { resolveIcon } from '@/lib/iconMap';
 import { generateQRDataURL } from '@/lib/qr';
-import { sectionHeader, sectionHeaderRow } from '@/lib/utils';
+import { relativeTime, sectionHeader, sectionHeaderRow } from '@/lib/utils';
 import type { Bin, ItemCheckout } from '@/types';
 import { BinDetailActivitySection } from './BinDetailActivitySection';
 
@@ -117,11 +116,11 @@ export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformation
             <dd className="text-[var(--text-primary)]">{createdAbsolute}</dd>
 
             <dt className="text-[var(--text-tertiary)]">Updated</dt>
-            <dd className="text-[var(--text-primary)]">{formatTimeAgo(bin.updated_at)}</dd>
+            <dd className="text-[var(--text-primary)]">{relativeTime(bin.updated_at)}</dd>
 
             <dt className="text-[var(--text-tertiary)]">Last scanned</dt>
             <dd className="text-[var(--text-primary)]">
-              {lastScan ? formatTimeAgo(lastScan.scannedAt) : 'Never'}
+              {lastScan ? relativeTime(lastScan.scannedAt) : 'Never'}
             </dd>
           </dl>
         </div>
@@ -145,7 +144,7 @@ export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformation
               >
                 <span className="text-[var(--text-primary)]">{c.checked_out_by_name}</span>
                 <span className="text-[var(--text-tertiary)] tabular-nums">
-                  {formatTimeAgo(c.checked_out_at)}
+                  {relativeTime(c.checked_out_at)}
                 </span>
               </li>
             ))}

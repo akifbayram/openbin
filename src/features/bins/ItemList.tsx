@@ -6,9 +6,8 @@ import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { checkoutItem, returnItem } from '@/features/checkouts/useCheckouts';
-import { formatTimeAgo } from '@/lib/formatTime';
 import { parseBareQuantity } from '@/lib/itemQuantities';
-import { cn, rowAction } from '@/lib/utils';
+import { cn, relativeTime, rowAction } from '@/lib/utils';
 import type { BinItem, ItemCheckout } from '@/types';
 import { ItemListPagination } from './ItemListPagination';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
@@ -188,7 +187,7 @@ function CheckoutRow({ item, checkout, canReturn, onReturn }: CheckoutRowProps) 
         {item.name}
       </span>
       <span className="shrink-0 text-[12px] text-[var(--text-tertiary)] opacity-50">
-        Out &middot; {checkout.checked_out_by_name} &middot; {formatTimeAgo(checkout.checked_out_at)}
+        Out &middot; {checkout.checked_out_by_name} &middot; {relativeTime(checkout.checked_out_at)}
       </span>
       {canReturn && (
         <Tooltip content="Return item">

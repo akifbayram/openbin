@@ -1,5 +1,5 @@
 import { query } from '../db.js';
-import { ForbiddenError, OverLimitError, ValidationError } from './httpErrors.js';
+import { ForbiddenError, NotFoundError, OverLimitError, ValidationError } from './httpErrors.js';
 import { checkLocationWritable, generateUpgradeUrl, getEffectiveMemberRole, getUserPlanInfo } from './planGate.js';
 
 export interface BinAccessResult {
@@ -7,6 +7,72 @@ export interface BinAccessResult {
   visibility: string;
   createdBy: string;
   name: string;
+}
+
+export type BinAttachmentKind = 'photo' | 'attachment';
+
+export interface BinAttachmentAccessResult {
+  kind: BinAttachmentKind;
+  binId: string;
+  binName: string;
+  locationId: string;
+  storagePath: string;
+  mimeType: string;
+  filename: string;
+  createdBy: string;
+  role: 'admin' | 'member' | 'viewer';
+}
+
+/** Verify user can access a photo or attachment via the photo/attachment → bin → location chain.
+ *  Throws NotFoundError if the row doesn't exist, the user isn't a member of the bin's
+ *  location, or the bin is private and owned by someone else. Attachments additionally
+ *  require the bin to be non-deleted; photos ignore the soft-delete state to preserve
+ *  legacy behavior. */
+export async function verifyBinAttachmentAccess(
+  userId: string,
+  resourceId: string,
+  kind: BinAttachmentKind,
+): Promise<BinAttachmentAccessResult> {
+  const table = kind === 'photo' ? 'photos' : 'attachments';
+  const notFoundMessage = kind === 'photo' ? 'Photo not found' : 'Attachment not found';
+  const deletedFilter = kind === 'attachment' ? ' AND b.deleted_at IS NULL' : '';
+
+  const result = await query<{
+    bin_id: string;
+    bin_name: string;
+    storage_path: string;
+    mime_type: string;
+    filename: string;
+    created_by: string;
+    location_id: string;
+    visibility: string;
+    bin_created_by: string;
+    role: 'admin' | 'member' | 'viewer';
+  }>(
+    `SELECT r.bin_id, b.name AS bin_name, r.storage_path, r.mime_type, r.filename, r.created_by,
+            b.location_id, b.visibility, b.created_by AS bin_created_by, lm.role
+     FROM ${table} r
+     JOIN bins b ON b.id = r.bin_id
+     JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
+     WHERE r.id = $1${deletedFilter}`,
+    [resourceId, userId],
+  );
+  if (result.rows.length === 0) throw new NotFoundError(notFoundMessage);
+  const row = result.rows[0];
+  if (row.visibility === 'private' && row.bin_created_by !== userId) {
+    throw new NotFoundError(notFoundMessage);
+  }
+  return {
+    kind,
+    binId: row.bin_id,
+    binName: row.bin_name,
+    locationId: row.location_id,
+    storagePath: row.storage_path,
+    mimeType: row.mime_type,
+    filename: row.filename,
+    createdBy: row.created_by,
+    role: row.role,
+  };
 }
 
 /** Verify user is a member of the location that owns a non-deleted bin.

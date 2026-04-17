@@ -5,9 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
 import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { Table, TableHeader, TableRow } from '@/components/ui/table';
-import { formatTimeAgo } from '@/lib/formatTime';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
+import { cn, relativeTime } from '@/lib/utils';
 import type { ActivityLogEntry } from '@/types';
 import { ActivityRowDetail } from './ActivityRowDetail';
 import { getActionBadgeLabel, getActionColor, getActionIcon, getChangedFieldLabels, getEntityDescription } from './activityHelpers';
@@ -141,7 +140,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
                 </div>
 
                 <span className="w-20 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
-                  {formatTimeAgo(entry.created_at)}
+                  {relativeTime(entry.created_at)}
                 </span>
 
                 <div className="w-5 shrink-0 flex justify-center">

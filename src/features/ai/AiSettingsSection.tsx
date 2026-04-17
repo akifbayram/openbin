@@ -32,6 +32,38 @@ interface AiSettingsSectionProps {
   onToggle: (enabled: boolean) => void;
 }
 
+interface FormState {
+  customPrompt: string;
+  commandPrompt: string;
+  queryPrompt: string;
+  structurePrompt: string;
+  reorganizationPrompt: string;
+  temperature: string;
+  maxTokens: string;
+  topP: string;
+  requestTimeout: string;
+}
+
+const EMPTY_FORM: FormState = {
+  customPrompt: '',
+  commandPrompt: '',
+  queryPrompt: '',
+  structurePrompt: '',
+  reorganizationPrompt: '',
+  temperature: '',
+  maxTokens: '',
+  topP: '',
+  requestTimeout: '',
+};
+
+function numberToString(value: number | null | undefined): string {
+  return value != null ? String(value) : '';
+}
+
+function parseOptionalNumber(value: string): number | null {
+  return value ? Number(value) : null;
+}
+
 export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProps) {
   const { demoMode } = useAuth();
   const { isSelfHosted } = usePlan();
@@ -42,19 +74,15 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   const setup = useAiProviderSetup({ providerConfigs: settings?.providerConfigs });
   const { setProvider, setApiKey, setModel, setEndpointUrl } = setup;
 
-  const [customPrompt, setCustomPrompt] = useState('');
-  const [commandPrompt, setCommandPrompt] = useState('');
-  const [queryPrompt, setQueryPrompt] = useState('');
-  const [structurePrompt, setStructurePrompt] = useState('');
-  const [reorganizationPrompt, setReorganizationPrompt] = useState('');
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [activePromptTab, setActivePromptTab] = useState<PromptTab>('analysis');
   const [taskOverrides, setTaskOverrides] = useState<Partial<Record<AiTaskGroup, { provider: string | null; model: string | null; endpointUrl: string | null }>>>({});
-  const [temperature, setTemperature] = useState<string>('');
-  const [maxTokens, setMaxTokens] = useState<string>('');
-  const [topP, setTopP] = useState<string>('');
-  const [requestTimeout, setRequestTimeout] = useState<string>('');
   const [testError, setTestError] = useState('');
   const [touched, setTouched] = useState(false);
+
+  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
 
   // Populate form from loaded settings
   useEffect(() => {
@@ -63,11 +91,17 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setApiKey(settings.apiKey);
       setModel(settings.model);
       setEndpointUrl(settings.endpointUrl || '');
-      setCustomPrompt(settings.customPrompt || '');
-      setCommandPrompt(settings.commandPrompt || '');
-      setQueryPrompt(settings.queryPrompt || '');
-      setStructurePrompt(settings.structurePrompt || '');
-      setReorganizationPrompt(settings.reorganizationPrompt || '');
+      setForm({
+        customPrompt: settings.customPrompt || '',
+        commandPrompt: settings.commandPrompt || '',
+        queryPrompt: settings.queryPrompt || '',
+        structurePrompt: settings.structurePrompt || '',
+        reorganizationPrompt: settings.reorganizationPrompt || '',
+        temperature: numberToString(settings.temperature),
+        maxTokens: numberToString(settings.maxTokens),
+        topP: numberToString(settings.topP),
+        requestTimeout: numberToString(settings.requestTimeout),
+      });
       setTaskOverrides(settings.taskOverrides
         ? Object.fromEntries(
             Object.entries(settings.taskOverrides)
@@ -75,10 +109,6 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
               .map(([k, v]) => [k, { provider: v?.provider, model: v?.model, endpointUrl: v?.endpointUrl }])
           )
         : {});
-      setTemperature(settings.temperature != null ? String(settings.temperature) : '');
-      setMaxTokens(settings.maxTokens != null ? String(settings.maxTokens) : '');
-      setTopP(settings.topP != null ? String(settings.topP) : '');
-      setRequestTimeout(settings.requestTimeout != null ? String(settings.requestTimeout) : '');
     }
   }, [settings, setProvider, setApiKey, setModel, setEndpointUrl]);
 
@@ -107,15 +137,15 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
         apiKey: setup.apiKey,
         model: setup.model,
         endpointUrl: setup.endpointUrl || undefined,
-        customPrompt: customPrompt.trim() || null,
-        commandPrompt: commandPrompt.trim() || null,
-        queryPrompt: queryPrompt.trim() || null,
-        structurePrompt: structurePrompt.trim() || null,
-        reorganizationPrompt: reorganizationPrompt.trim() || null,
-        temperature: temperature ? Number(temperature) : null,
-        maxTokens: maxTokens ? Number(maxTokens) : null,
-        topP: topP ? Number(topP) : null,
-        requestTimeout: requestTimeout ? Number(requestTimeout) : null,
+        customPrompt: form.customPrompt.trim() || null,
+        commandPrompt: form.commandPrompt.trim() || null,
+        queryPrompt: form.queryPrompt.trim() || null,
+        structurePrompt: form.structurePrompt.trim() || null,
+        reorganizationPrompt: form.reorganizationPrompt.trim() || null,
+        temperature: parseOptionalNumber(form.temperature),
+        maxTokens: parseOptionalNumber(form.maxTokens),
+        topP: parseOptionalNumber(form.topP),
+        requestTimeout: parseOptionalNumber(form.requestTimeout),
       });
 
       // Save task overrides in parallel
@@ -146,16 +176,8 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setup.setApiKey('');
       setup.setModel('');
       setup.setEndpointUrl('');
-      setCustomPrompt('');
-      setCommandPrompt('');
-      setQueryPrompt('');
-      setStructurePrompt('');
-      setReorganizationPrompt('');
+      setForm(EMPTY_FORM);
       setTaskOverrides({});
-      setTemperature('');
-      setMaxTokens('');
-      setTopP('');
-      setRequestTimeout('');
       setup.setTestResult(null);
       showToast({ message: 'AI settings removed', variant: 'success' });
     } catch {
@@ -283,14 +305,15 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
                 {/* Custom Prompts */}
                 {(() => {
-                  const promptMap = {
-                    analysis:  { value: customPrompt,    set: setCustomPrompt },
-                    command:   { value: commandPrompt,   set: setCommandPrompt },
-                    query:     { value: queryPrompt,     set: setQueryPrompt },
-                    structure: { value: structurePrompt, set: setStructurePrompt },
-                    reorganization: { value: reorganizationPrompt, set: setReorganizationPrompt },
+                  const promptMap: Record<PromptTab, { value: string; key: keyof FormState }> = {
+                    analysis:  { value: form.customPrompt,         key: 'customPrompt' },
+                    command:   { value: form.commandPrompt,        key: 'commandPrompt' },
+                    query:     { value: form.queryPrompt,          key: 'queryPrompt' },
+                    structure: { value: form.structurePrompt,      key: 'structurePrompt' },
+                    reorganization: { value: form.reorganizationPrompt, key: 'reorganizationPrompt' },
                   };
                   const active = promptMap[activePromptTab];
+                  const setActive = (value: string) => updateField(active.key, value);
                   return (
                     <Disclosure label="Custom Prompts">
                       <div className="space-y-2">
@@ -316,7 +339,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         )}
                         <Textarea
                           value={active.value}
-                          onChange={(e) => active.set(e.target.value)}
+                          onChange={(e) => setActive(e.target.value)}
                           placeholder={defaultPrompts?.[activePromptTab] ?? ''}
                           className="font-mono text-[13px] min-h-[200px] resize-y"
                           maxLength={10000}
@@ -327,7 +350,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           {!demoMode && (active.value.trim() ? (
                             <button
                               type="button"
-                              onClick={() => active.set('')}
+                              onClick={() => setActive('')}
                               className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
                             >
                               <RotateCcw className="h-3 w-3" />
@@ -336,7 +359,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           ) : (
                             <button
                               type="button"
-                              onClick={() => active.set(defaultPrompts?.[activePromptTab] ?? '')}
+                              onClick={() => setActive(defaultPrompts?.[activePromptTab] ?? '')}
                               className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
                             >
                               Load default to customize
@@ -351,7 +374,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                 {/* Advanced AI Parameters */}
                 <Disclosure
                   label="Advanced"
-                  indicator={!!(temperature || maxTokens || topP || requestTimeout)}
+                  indicator={!!(form.temperature || form.maxTokens || form.topP || form.requestTimeout)}
                 >
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
@@ -364,12 +387,12 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           min={0}
                           max={2}
                           step={0.1}
-                          value={temperature}
-                          onChange={(e) => setTemperature(e.target.value)}
+                          value={form.temperature}
+                          onChange={(e) => updateField('temperature', e.target.value)}
                           placeholder="Default"
                         />
-                        {temperature && (
-                          <button type="button" onClick={() => setTemperature('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                        {form.temperature && (
+                          <button type="button" onClick={() => updateField('temperature', '')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
                             <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
@@ -386,12 +409,12 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           min={100}
                           max={16000}
                           step={100}
-                          value={maxTokens}
-                          onChange={(e) => setMaxTokens(e.target.value)}
+                          value={form.maxTokens}
+                          onChange={(e) => updateField('maxTokens', e.target.value)}
                           placeholder="Default"
                         />
-                        {maxTokens && (
-                          <button type="button" onClick={() => setMaxTokens('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                        {form.maxTokens && (
+                          <button type="button" onClick={() => updateField('maxTokens', '')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
                             <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
@@ -408,12 +431,12 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           min={0}
                           max={1}
                           step={0.05}
-                          value={topP}
-                          onChange={(e) => setTopP(e.target.value)}
+                          value={form.topP}
+                          onChange={(e) => updateField('topP', e.target.value)}
                           placeholder="Default"
                         />
-                        {topP && (
-                          <button type="button" onClick={() => setTopP('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                        {form.topP && (
+                          <button type="button" onClick={() => updateField('topP', '')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
                             <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
@@ -430,12 +453,12 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           min={10}
                           max={300}
                           step={5}
-                          value={requestTimeout}
-                          onChange={(e) => setRequestTimeout(e.target.value)}
+                          value={form.requestTimeout}
+                          onChange={(e) => updateField('requestTimeout', e.target.value)}
                           placeholder="Default (30)"
                         />
-                        {requestTimeout && (
-                          <button type="button" onClick={() => setRequestTimeout('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                        {form.requestTimeout && (
+                          <button type="button" onClick={() => updateField('requestTimeout', '')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
                             <RotateCcw className="h-3 w-3" />
                           </button>
                         )}

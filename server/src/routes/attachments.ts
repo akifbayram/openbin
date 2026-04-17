@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { d, isUniqueViolation, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { attachmentStoragePath } from '../lib/attachmentsCleanup.js';
-import { requireMemberOrAbove, verifyBinAccess } from '../lib/binAccess.js';
+import { requireMemberOrAbove, verifyBinAccess, verifyBinAttachmentAccess } from '../lib/binAccess.js';
 import { ForbiddenError, NotFoundError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { generateShortCode } from '../lib/shortCode.js';
@@ -12,58 +12,9 @@ import { attachmentUpload, MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_SIZE_MB } from '
 import { authenticate } from '../middleware/auth.js';
 import { requirePro } from '../middleware/requirePlan.js';
 
-type MemberRole = 'admin' | 'member' | 'viewer';
-
 const router = Router();
 
 router.use(['/bins/:id/attachments', '/attachments/:id', '/attachments/:id/file'], authenticate);
-
-interface AttachmentAccess {
-  binId: string;
-  binName: string;
-  locationId: string;
-  storagePath: string;
-  mimeType: string;
-  filename: string;
-  createdBy: string;
-  role: MemberRole;
-}
-
-async function verifyAttachmentAccess(attachmentId: string, userId: string): Promise<AttachmentAccess | null> {
-  const result = await query<{
-    bin_id: string;
-    bin_name: string;
-    storage_path: string;
-    mime_type: string;
-    filename: string;
-    created_by: string;
-    location_id: string;
-    visibility: string;
-    bin_created_by: string;
-    role: MemberRole;
-  }>(
-    `SELECT a.bin_id, b.name AS bin_name, a.storage_path, a.mime_type, a.filename, a.created_by,
-            b.location_id, b.visibility, b.created_by AS bin_created_by, lm.role
-     FROM attachments a
-     JOIN bins b ON b.id = a.bin_id
-     JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE a.id = $1 AND b.deleted_at IS NULL`,
-    [attachmentId, userId],
-  );
-  if (result.rows.length === 0) return null;
-  const row = result.rows[0];
-  if (row.visibility === 'private' && row.bin_created_by !== userId) return null;
-  return {
-    binId: row.bin_id,
-    binName: row.bin_name,
-    locationId: row.location_id,
-    storagePath: row.storage_path,
-    mimeType: row.mime_type,
-    filename: row.filename,
-    createdBy: row.created_by,
-    role: row.role,
-  };
-}
 
 router.get('/bins/:id/attachments', asyncHandler(async (req, res) => {
   const binId = req.params.id;
@@ -81,7 +32,7 @@ router.get('/bins/:id/attachments', asyncHandler(async (req, res) => {
   res.json({ results: result.rows, count: result.rows.length });
 }));
 
-router.post('/bins/:id/attachments', requirePro(), asyncHandler(async (req, res, next) => {
+router.post('/bins/:id/attachments', requirePro(), asyncHandler(async (req, _res, next) => {
   const cl = req.headers['content-length'];
   if (cl && Number(cl) > MAX_ATTACHMENT_BYTES + 1024) {
     throw new QuotaExceededError('PAYLOAD_TOO_LARGE', `Upload exceeds ${MAX_ATTACHMENT_SIZE_MB} MB limit`);
@@ -94,7 +45,6 @@ router.post('/bins/:id/attachments', requirePro(), asyncHandler(async (req, res,
   }
   await requireMemberOrAbove(access.locationId, req.user!.id, 'upload attachments');
 
-  res.locals.binAccess = access;
   next();
 }), attachmentUpload.single('file'), asyncHandler(async (req, res) => {
   const binId = req.params.id;
@@ -103,7 +53,10 @@ router.post('/bins/:id/attachments', requirePro(), asyncHandler(async (req, res,
     throw new ValidationError('No file uploaded');
   }
 
-  const access = res.locals.binAccess as import('../lib/binAccess.js').BinAccessResult;
+  const access = await verifyBinAccess(binId, req.user!.id);
+  if (!access) {
+    throw new NotFoundError('Bin not found');
+  }
 
   const originalName = path.basename(file.originalname).slice(0, 255);
   const ext = path.extname(originalName).toLowerCase();
@@ -154,10 +107,7 @@ router.post('/bins/:id/attachments', requirePro(), asyncHandler(async (req, res,
 
 router.get('/attachments/:id/file', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const access = await verifyAttachmentAccess(id, req.user!.id);
-  if (!access) {
-    throw new NotFoundError('Attachment not found');
-  }
+  const access = await verifyBinAttachmentAccess(req.user!.id, id, 'attachment');
 
   const safeName = access.filename.replace(/[\r\n"\\]/g, '_') || 'attachment';
   res.setHeader('Content-Type', access.mimeType || 'application/octet-stream');
@@ -177,10 +127,7 @@ router.get('/attachments/:id/file', asyncHandler(async (req, res) => {
 
 router.delete('/attachments/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const access = await verifyAttachmentAccess(id, req.user!.id);
-  if (!access) {
-    throw new NotFoundError('Attachment not found');
-  }
+  const access = await verifyBinAttachmentAccess(req.user!.id, id, 'attachment');
 
   const isAuthor = access.createdBy === req.user!.id;
   const isAdmin = access.role === 'admin';

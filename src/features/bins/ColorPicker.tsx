@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
-import { buildColorKey, hslToHex, parseColorKey, resolveColor, SHADE_COUNT } from '@/lib/colorPalette';
+import { useState } from 'react';
+import { buildColorKey, hslToHex, resolveColor, SHADE_COUNT } from '@/lib/colorPalette';
+import { useColorGradient } from '@/lib/useColorGradient';
 import { cn } from '@/lib/utils';
 
 interface ColorPickerProps {
@@ -17,40 +18,19 @@ function getShadePreview(hue: number | 'neutral', shade: number): string {
 }
 
 export function HueGradientPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
-  const parsed = value ? parseColorKey(value) : null;
-  const isBlack = value === 'black';
-  const isWhite = value === 'white';
-  const isFixed = isBlack || isWhite;
-  const isNeutral = parsed?.hue === 'neutral';
-  const currentHue = parsed && parsed.hue !== 'neutral' ? parsed.hue : null;
-  const currentShade = parsed?.shade ?? 2;
-  const barRef = useRef<HTMLDivElement>(null);
-
-  const hueFromPointer = useCallback((e: React.PointerEvent) => {
-    const rect = barRef.current?.getBoundingClientRect();
-    if (!rect) return 0;
-    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    return Math.round((x / rect.width) * 360);
-  }, []);
-
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    const hue = hueFromPointer(e);
-    onChange(buildColorKey(hue, currentShade));
-  }, [hueFromPointer, onChange, currentShade]);
-
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!(e.target as HTMLElement).hasPointerCapture(e.pointerId)) return;
-    const hue = hueFromPointer(e);
-    onChange(buildColorKey(hue, currentShade));
-  }, [hueFromPointer, onChange, currentShade]);
-
-  const selectShade = useCallback((shade: number) => {
-    const hue = isNeutral ? 'neutral' as const : (currentHue ?? 210);
-    onChange(buildColorKey(hue, shade));
-  }, [isNeutral, currentHue, onChange]);
-
-  const activeHue = isFixed ? null : isNeutral ? 'neutral' as const : currentHue;
+  const {
+    barRef,
+    isBlack,
+    isWhite,
+    isFixed,
+    isNeutral,
+    currentHue,
+    currentShade,
+    activeHue,
+    handlePointerDown,
+    handlePointerMove,
+    selectShade,
+  } = useColorGradient({ value, onChange });
 
   return (
     <div className="space-y-2.5">

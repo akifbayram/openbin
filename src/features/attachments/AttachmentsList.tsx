@@ -4,9 +4,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAuth } from '@/lib/auth';
-import { formatTimeAgo } from '@/lib/formatTime';
 import { usePermissions } from '@/lib/usePermissions';
-import { focusRing, formatBytes, getErrorMessage } from '@/lib/utils';
+import { focusRing, formatBytes, getErrorMessage, relativeTime } from '@/lib/utils';
 import type { Attachment } from '@/types';
 import {
   deleteAttachment,
@@ -150,7 +149,7 @@ export function AttachmentsList({ binId, attachments, canUpload, canDelete }: At
                 {a.filename}
               </p>
               <p className="mt-1 truncate text-[var(--text-xs)] leading-tight text-[var(--text-tertiary)]">
-                {formatBytes(a.size)} · {formatTimeAgo(a.created_at)}
+                {formatBytes(a.size)} · {relativeTime(a.created_at)}
               </p>
             </div>
           </a>

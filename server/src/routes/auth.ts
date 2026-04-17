@@ -26,6 +26,7 @@ import {
 import { consumeResetToken, createPasswordResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
 import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
+import { queryMaybeOne, queryOne } from '../lib/queryHelpers.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { validateDisplayName, validateEmail, validateLoginEmail, validatePassword } from '../lib/validation.js';
 import { authenticate, invalidateUserStatusCache, signToken } from '../middleware/auth.js';
@@ -35,6 +36,14 @@ import { getRegistrationMode } from './admin.js';
 
 const log = createLogger('auth');
 const router = Router();
+
+async function isLocationMember(locationId: string, userId: string): Promise<boolean> {
+  const row = await queryMaybeOne(
+    'SELECT 1 FROM location_members WHERE location_id = $1 AND user_id = $2',
+    [locationId, userId],
+  );
+  return row !== null;
+}
 
 // GET /api/auth/status — public (no auth required)
 router.get('/status', async (_req, res) => {
@@ -53,12 +62,12 @@ router.get('/status', async (_req, res) => {
   }
 
   // Include active announcement banner if any
-  const announcementResult = await query<{ id: string; text: string; type: string; dismissible: number | boolean }>(
+  const announcement = await queryMaybeOne<{ id: string; text: string; type: string; dismissible: number | boolean }>(
     "SELECT id, text, type, dismissible FROM announcements WHERE active = TRUE ORDER BY created_at DESC LIMIT 1",
+    [],
   );
-  if (announcementResult.rows.length > 0) {
-    const a = announcementResult.rows[0];
-    body.announcement = { id: a.id, text: a.text, type: a.type, dismissible: !!a.dismissible };
+  if (announcement) {
+    body.announcement = { id: announcement.id, text: announcement.text, type: announcement.type, dismissible: !!announcement.dismissible };
   }
 
   // Include maintenance mode status
@@ -75,22 +84,20 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
     throw new ForbiddenError('Demo mode is not enabled');
   }
 
-  const result = await query(
+  const user = await queryOne<{ id: string; display_name: string; email: string; avatar_path: string | null; active_location_id: string | null }>(
     'SELECT id, display_name, email, avatar_path, active_location_id FROM users WHERE email = $1',
     ['demo@openbin.local'],
+    'Demo user not found',
   );
 
-  if (result.rows.length === 0) {
-    throw new NotFoundError('Demo user not found');
-  }
-
-  const user = result.rows[0];
-
   // Reset onboarding so every new demo session starts fresh
-  const existingPrefs = await query('SELECT settings FROM user_preferences WHERE user_id = $1', [user.id]);
-  const currentSettings = existingPrefs.rows.length > 0 ? (existingPrefs.rows[0].settings as Record<string, unknown>) : {};
+  const existingPrefs = await queryMaybeOne<{ settings: Record<string, unknown> }>(
+    'SELECT settings FROM user_preferences WHERE user_id = $1',
+    [user.id],
+  );
+  const currentSettings = existingPrefs?.settings ?? {};
   const resetSettings = JSON.stringify({ ...currentSettings, onboarding_completed: false, onboarding_step: 0, onboarding_location_id: null });
-  if (existingPrefs.rows.length > 0) {
+  if (existingPrefs) {
     await query('UPDATE user_preferences SET settings = $1 WHERE user_id = $2', [resetSettings, user.id]);
   } else {
     await query('INSERT INTO user_preferences (id, user_id, settings) VALUES ($1, $2, $3)', [generateUuid(), user.id, resetSettings]);
@@ -120,19 +127,15 @@ router.get('/invite-preview', authenticate, asyncHandler(async (req, res) => {
     throw new ValidationError('Invite code is required');
   }
 
-  const result = await query(
+  const row = await queryOne<{ name: string; member_count: number | string }>(
     `SELECT l.name,
             (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count
      FROM locations l
      WHERE l.invite_code = $1`,
-    [code.trim()]
+    [code.trim()],
+    'Invalid invite code',
   );
 
-  if (result.rows.length === 0) {
-    throw new NotFoundError('Invalid invite code');
-  }
-
-  const row = result.rows[0];
   res.json({
     name: row.name,
     memberCount: Number(row.member_count),
@@ -156,14 +159,11 @@ router.post('/register', asyncHandler(async (req, res) => {
   // Validate invite code if provided (in any mode)
   let locationToJoin: { id: string; default_join_role: string } | null = null;
   if (inviteCode && typeof inviteCode === 'string') {
-    const locResult = await query(
+    locationToJoin = await queryOne<{ id: string; default_join_role: string }>(
       'SELECT id, default_join_role FROM locations WHERE invite_code = $1',
-      [inviteCode.trim()]
+      [inviteCode.trim()],
+      'Invalid invite code',
     );
-    if (locResult.rows.length === 0) {
-      throw new NotFoundError('Invalid invite code');
-    }
-    locationToJoin = locResult.rows[0] as { id: string; default_join_role: string };
   }
 
   const trimmedEmail = validateLoginEmail(email);
@@ -309,26 +309,20 @@ router.post('/login', asyncHandler(async (req, res) => {
 
   // Use persisted active_location_id if user is still a member
   let activeLocationId: string | null = null;
-  if (user.active_location_id) {
-    const memberCheck = await query(
-      'SELECT 1 FROM location_members WHERE location_id = $1 AND user_id = $2',
-      [user.active_location_id, user.id]
-    );
-    if (memberCheck.rows.length > 0) {
-      activeLocationId = user.active_location_id;
-    }
+  if (user.active_location_id && await isLocationMember(user.active_location_id, user.id)) {
+    activeLocationId = user.active_location_id;
   }
 
   // Fallback: pick most recently updated location
   if (!activeLocationId) {
-    const locationsResult = await query(
+    const fallback = await queryMaybeOne<{ id: string }>(
       `SELECT l.id FROM locations l
        JOIN location_members lm ON lm.location_id = l.id AND lm.user_id = $1
        ORDER BY l.updated_at DESC LIMIT 1`,
-      [user.id]
+      [user.id],
     );
-    if (locationsResult.rows.length > 0) {
-      activeLocationId = locationsResult.rows[0].id;
+    if (fallback) {
+      activeLocationId = fallback.id;
       // Seed the column for future logins
       await query('UPDATE users SET active_location_id = $1 WHERE id = $2', [activeLocationId, user.id]);
     }
@@ -364,20 +358,19 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   }
 
   // Look up user for new access token (reject soft-deleted/suspended users)
-  const userResult = await query<{ id: string; email: string; deleted_at: string | null; suspended_at: string | null; token_version: number }>(
+  const user = await queryMaybeOne<{ id: string; email: string; deleted_at: string | null; suspended_at: string | null; token_version: number }>(
     'SELECT id, email, deleted_at, suspended_at, token_version FROM users WHERE id = $1',
     [rotated.userId],
   );
-  if (userResult.rows.length === 0 || userResult.rows[0].deleted_at !== null) {
+  if (!user || user.deleted_at !== null) {
     clearAuthCookies(res);
     throw new UnauthorizedError('User not found');
   }
-  if (userResult.rows[0].suspended_at !== null) {
+  if (user.suspended_at !== null) {
     clearAuthCookies(res);
     throw new ForbiddenError('This account has been suspended');
   }
 
-  const user = userResult.rows[0];
   const accessToken = await signToken({ id: user.id, email: user.email }, user.token_version ?? 0);
 
   setAccessTokenCookie(res, accessToken);
@@ -405,28 +398,17 @@ router.post('/logout-all', authenticate, asyncHandler(async (req, res) => {
 
 // GET /api/auth/me
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
-  const result = await query(
+  const user = await queryOne<Record<string, any>>(
     'SELECT id, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin, password_hash FROM users WHERE id = $1',
-    [req.user!.id]
+    [req.user!.id],
+    'User not found',
   );
-
-  if (result.rows.length === 0) {
-    throw new NotFoundError('User not found');
-  }
-
-  const user = result.rows[0];
 
   // Validate stored active_location_id — clear if no longer a member
   let activeLocationId: string | null = user.active_location_id || null;
-  if (activeLocationId) {
-    const memberCheck = await query(
-      'SELECT 1 FROM location_members WHERE location_id = $1 AND user_id = $2',
-      [activeLocationId, user.id]
-    );
-    if (memberCheck.rows.length === 0) {
-      activeLocationId = null;
-      await query('UPDATE users SET active_location_id = NULL WHERE id = $1', [user.id]);
-    }
+  if (activeLocationId && !(await isLocationMember(activeLocationId, user.id))) {
+    activeLocationId = null;
+    await query('UPDATE users SET active_location_id = NULL WHERE id = $1', [user.id]);
   }
 
   res.json({
@@ -460,7 +442,9 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
   }
 
   // Check if user currently has no email (for welcome email trigger)
-  const existingUser = email ? (await query('SELECT email FROM users WHERE id = $1', [req.user!.id])).rows[0] : null;
+  const existingUser = email
+    ? await queryMaybeOne<{ email: string | null }>('SELECT email FROM users WHERE id = $1', [req.user!.id])
+    : null;
   const isFirstEmail = existingUser && !existingUser.email && email && email !== '';
 
   const updates: string[] = [];
@@ -521,11 +505,7 @@ router.put('/active-location', authenticate, asyncHandler(async (req, res) => {
     if (typeof locationId !== 'string' || locationId.length === 0) {
       throw new ValidationError('locationId must be a non-empty string or null');
     }
-    const memberCheck = await query(
-      'SELECT 1 FROM location_members WHERE location_id = $1 AND user_id = $2',
-      [locationId, req.user!.id]
-    );
-    if (memberCheck.rows.length === 0) {
+    if (!(await isLocationMember(locationId, req.user!.id))) {
       throw new ForbiddenError('Not a member of this location');
     }
   }
@@ -544,13 +524,14 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
   }
   validatePassword(newPassword);
 
-  const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user!.id]);
-  if (result.rows.length === 0) {
-    throw new NotFoundError('User not found');
-  }
+  const user = await queryOne<{ password_hash: string | null }>(
+    'SELECT password_hash FROM users WHERE id = $1',
+    [req.user!.id],
+    'User not found',
+  );
 
   // Social-only users setting their first password
-  if (!result.rows[0].password_hash) {
+  if (!user.password_hash) {
     const hash = await bcrypt.hash(newPassword, config.bcryptRounds);
     await query('UPDATE users SET password_hash = $1, updated_at = $2, token_version = token_version + 1 WHERE id = $3',
       [hash, new Date().toISOString(), req.user!.id]);
@@ -564,7 +545,7 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
     throw new ValidationError('Current password is required');
   }
 
-  const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
+  const valid = await bcrypt.compare(currentPassword, user.password_hash);
   if (!valid) {
     throw new UnauthorizedError('Current password is incorrect');
   }
@@ -586,25 +567,26 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
   const { password } = req.body;
   const userId = req.user!.id;
 
-  const userResult = await query('SELECT password_hash, avatar_path, is_admin FROM users WHERE id = $1', [userId]);
-  if (userResult.rows.length === 0) {
-    throw new NotFoundError('User not found');
-  }
+  const userRow = await queryOne<{ password_hash: string | null; avatar_path: string | null; is_admin: boolean | number }>(
+    'SELECT password_hash, avatar_path, is_admin FROM users WHERE id = $1',
+    [userId],
+    'User not found',
+  );
 
   // Verify password when user has one; OAuth-only users (no password_hash) skip this check
-  if (userResult.rows[0].password_hash) {
+  if (userRow.password_hash) {
     if (!password) {
       throw new ValidationError('Password is required');
     }
-    const valid = await bcrypt.compare(password, userResult.rows[0].password_hash);
+    const valid = await bcrypt.compare(password, userRow.password_hash);
     if (!valid) {
       throw new UnauthorizedError('Incorrect password');
     }
   }
 
-  const avatarPath = userResult.rows[0].avatar_path;
+  const avatarPath = userRow.avatar_path;
 
-  if (userResult.rows[0].is_admin) {
+  if (userRow.is_admin) {
     const adminCountResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM users WHERE is_admin = TRUE', []);
     if (adminCountResult.rows[0].cnt <= 1) {
       throw new ForbiddenError('Cannot delete the only admin account');
@@ -676,14 +658,13 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
   }
   validateEmail(email.trim());
 
-  const result = await query<{ id: string; display_name: string; email: string }>(
+  const user = await queryMaybeOne<{ id: string; display_name: string; email: string }>(
     'SELECT id, display_name, email FROM users WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL',
     [email.trim()],
   );
 
-  if (result.rows.length > 0) {
+  if (user) {
     if (config.baseUrl) {
-      const user = result.rows[0];
       const { rawToken } = await createPasswordResetToken(user.id, null);
       const resetUrl = `${config.baseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
       const { firePasswordResetEmail } = await import('../lib/emailSender.js');
@@ -904,11 +885,11 @@ router.delete('/oauth/link/:provider', authenticate, asyncHandler(async (req, re
   const { provider } = req.params;
   const userId = req.user!.id;
 
-  const userResult = await query<{ password_hash: string | null }>(
+  const userRow = await queryMaybeOne<{ password_hash: string | null }>(
     'SELECT password_hash FROM users WHERE id = $1',
-    [userId]
+    [userId],
   );
-  const hasPassword = !!userResult.rows[0]?.password_hash;
+  const hasPassword = !!userRow?.password_hash;
 
   const linkCount = await query<{ count: number }>(
     'SELECT COUNT(*) as count FROM user_oauth_links WHERE user_id = $1',

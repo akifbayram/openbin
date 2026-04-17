@@ -1,15 +1,7 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';
+import { BulkUpdateDialog, pluralizeBins } from './BulkUpdateDialog';
 import { updateBin } from './useBins';
 
 interface BulkAreaDialogProps {
@@ -22,47 +14,30 @@ interface BulkAreaDialogProps {
 export function BulkAreaDialog({ open, onOpenChange, binIds, onDone }: BulkAreaDialogProps) {
   const { activeLocationId } = useAuth();
   const [areaId, setAreaId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  async function handleApply() {
-    setLoading(true);
-    try {
-      await Promise.all(
-        binIds.map((id) => updateBin(id, { areaId }))
-      );
-      setAreaId(null);
-      onOpenChange(false);
-      onDone();
-    } finally {
-      setLoading(false);
-    }
+  async function apply(ids: string[]) {
+    await Promise.all(ids.map((id) => updateBin(id, { areaId })));
+    setAreaId(null);
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Move to Area</DialogTitle>
-          <DialogDescription>
-            Assign {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''} to an area.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2">
-          <AreaPicker
-            locationId={activeLocationId ?? undefined}
-            value={areaId}
-            onChange={setAreaId}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleApply} disabled={loading}>
-            {loading ? 'Moving...' : 'Apply'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <BulkUpdateDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Move to Area"
+      description={`Assign ${pluralizeBins(binIds.length)} to an area.`}
+      binIds={binIds}
+      onApply={apply}
+      onApplied={onDone}
+      loadingLabel="Moving..."
+    >
+      <div className="space-y-2">
+        <AreaPicker
+          locationId={activeLocationId ?? undefined}
+          value={areaId}
+          onChange={setAreaId}
+        />
+      </div>
+    </BulkUpdateDialog>
   );
 }

@@ -6,12 +6,15 @@ import { executeActions } from '../lib/commandExecutor.js';
 import type { CommandAction } from '../lib/commandParser.js';
 import { config } from '../lib/config.js';
 import { ValidationError } from '../lib/httpErrors.js';
+import { validateBinName } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 
 const router = Router();
 
-const VALID_TYPES = new Set([
+type OperationType = CommandAction['type'];
+
+const VALID_TYPES = new Set<OperationType>([
   'add_items', 'remove_items', 'modify_item', 'create_bin', 'delete_bin',
   'add_tags', 'remove_tags', 'modify_tag', 'set_area', 'set_notes',
   'set_icon', 'set_color', 'update_bin', 'restore_bin',
@@ -20,6 +23,361 @@ const VALID_TYPES = new Set([
 ]);
 
 const MAX_OPS = 50;
+const MAX_AREA_NAME = 255;
+
+type OpInput = Record<string, unknown>;
+
+// ---------- Small input helpers (consistent error messages per-index) ----------
+
+function fail(index: number, message: string): never {
+  throw new ValidationError(`operations[${index}]: ${message}`);
+}
+
+function requireString(op: OpInput, field: string, index: number, opType: OperationType): string {
+  const value = op[field];
+  if (!value || typeof value !== 'string') {
+    fail(index, `${opType} requires "${field}"`);
+  }
+  return value;
+}
+
+function optionalString(op: OpInput, field: string): string | undefined {
+  const value = op[field];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function optionalTrimmedString(op: OpInput, field: string): string | undefined {
+  const value = op[field];
+  return typeof value === 'string' ? value.trim() : undefined;
+}
+
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((x): x is string => typeof x === 'string')
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function requireNonEmptyArray(op: OpInput, field: string, index: number, opType: OperationType): unknown[] {
+  const value = op[field];
+  if (!Array.isArray(value) || value.length === 0) {
+    fail(index, `${opType} requires non-empty "${field}" array`);
+  }
+  return value;
+}
+
+function optionalRecord(value: unknown): Record<string, string> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, string>)
+    : undefined;
+}
+
+function binName(op: OpInput): string {
+  return (op.bin_name as string) || '';
+}
+
+function validateAreaName(value: unknown, index: number): void {
+  if (typeof value === 'string' && value.length > MAX_AREA_NAME) {
+    fail(index, `area_name exceeds ${MAX_AREA_NAME} characters`);
+  }
+}
+
+/** Normalize add_items payload: accepts strings or { name, quantity } objects. */
+function normalizeAddItems(raw: unknown[]): (string | { name: string; quantity?: number })[] {
+  const result: (string | { name: string; quantity?: number })[] = [];
+  for (const item of raw) {
+    if (typeof item === 'string' && item.trim()) {
+      result.push(item.trim());
+    } else if (item && typeof item === 'object' && typeof (item as { name?: unknown }).name === 'string') {
+      const obj = item as { name: string; quantity?: unknown };
+      const name = obj.name.trim();
+      if (!name) continue;
+      const entry: { name: string; quantity?: number } = { name };
+      if (typeof obj.quantity === 'number' && obj.quantity > 0) entry.quantity = obj.quantity;
+      result.push(entry);
+    }
+  }
+  return result;
+}
+
+/** Filter create_bin items to preserve either strings or {name} objects (schema-compatible with CommandAction). */
+function filterCreateBinItems(value: unknown): (string | { name: string; quantity?: number })[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((i): i is string | { name: string; quantity?: number } =>
+    typeof i === 'string' ||
+    (!!i && typeof i === 'object' && typeof (i as { name?: unknown }).name === 'string'),
+  );
+}
+
+// ---------- Per-operation validators returning a CommandAction ----------
+
+type Validator = (op: OpInput, index: number) => CommandAction;
+
+const OPERATION_VALIDATORS: Record<OperationType, Validator> = {
+  create_bin(op, i) {
+    const name = validateBinName(op.name);
+    validateAreaName(op.area_name, i);
+    return {
+      type: 'create_bin',
+      name,
+      area_name: optionalTrimmedString(op, 'area_name'),
+      tags: Array.isArray(op.tags) ? stringArray(op.tags) : undefined,
+      items: filterCreateBinItems(op.items),
+      color: optionalString(op, 'color'),
+      icon: optionalString(op, 'icon'),
+      notes: optionalString(op, 'notes'),
+      card_style: optionalString(op, 'card_style'),
+      custom_fields: optionalRecord(op.custom_fields),
+    };
+  },
+
+  update_bin(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'update_bin');
+    validateAreaName(op.area_name, i);
+    const visibility = op.visibility === 'location' || op.visibility === 'private' ? op.visibility : undefined;
+    return {
+      type: 'update_bin',
+      bin_id,
+      bin_name: binName(op),
+      name: optionalTrimmedString(op, 'name'),
+      notes: optionalString(op, 'notes'),
+      tags: Array.isArray(op.tags) ? stringArray(op.tags) : undefined,
+      area_name: optionalTrimmedString(op, 'area_name'),
+      icon: optionalString(op, 'icon'),
+      color: optionalString(op, 'color'),
+      card_style: optionalString(op, 'card_style'),
+      visibility,
+      custom_fields: optionalRecord(op.custom_fields),
+    };
+  },
+
+  delete_bin: (op, i) => ({
+    type: 'delete_bin',
+    bin_id: requireString(op, 'bin_id', i, 'delete_bin'),
+    bin_name: binName(op),
+  }),
+
+  restore_bin: (op, i) => ({
+    type: 'restore_bin',
+    bin_id: requireString(op, 'bin_id', i, 'restore_bin'),
+    bin_name: binName(op),
+  }),
+
+  add_items(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'add_items');
+    const raw = requireNonEmptyArray(op, 'items', i, 'add_items');
+    return {
+      type: 'add_items',
+      bin_id,
+      bin_name: binName(op),
+      items: normalizeAddItems(raw),
+    };
+  },
+
+  remove_items(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'remove_items');
+    const raw = requireNonEmptyArray(op, 'items', i, 'remove_items');
+    return {
+      type: 'remove_items',
+      bin_id,
+      bin_name: binName(op),
+      items: stringArray(raw),
+    };
+  },
+
+  modify_item(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'modify_item');
+    if (typeof op.old_item !== 'string' || typeof op.new_item !== 'string') {
+      fail(i, 'modify_item requires "old_item" and "new_item"');
+    }
+    return {
+      type: 'modify_item',
+      bin_id,
+      bin_name: binName(op),
+      old_item: op.old_item.trim(),
+      new_item: op.new_item.trim(),
+    };
+  },
+
+  add_tags(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'add_tags');
+    const raw = requireNonEmptyArray(op, 'tags', i, 'add_tags');
+    return {
+      type: 'add_tags',
+      bin_id,
+      bin_name: binName(op),
+      tags: stringArray(raw),
+    };
+  },
+
+  remove_tags(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'remove_tags');
+    const raw = requireNonEmptyArray(op, 'tags', i, 'remove_tags');
+    return {
+      type: 'remove_tags',
+      bin_id,
+      bin_name: binName(op),
+      tags: stringArray(raw),
+    };
+  },
+
+  modify_tag(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'modify_tag');
+    if (typeof op.old_tag !== 'string' || typeof op.new_tag !== 'string') {
+      fail(i, 'modify_tag requires "old_tag" and "new_tag"');
+    }
+    return {
+      type: 'modify_tag',
+      bin_id,
+      bin_name: binName(op),
+      old_tag: op.old_tag.trim(),
+      new_tag: op.new_tag.trim(),
+    };
+  },
+
+  set_area(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'set_area');
+    if (typeof op.area_name !== 'string') {
+      fail(i, 'set_area requires "area_name"');
+    }
+    validateAreaName(op.area_name, i);
+    return {
+      type: 'set_area',
+      bin_id,
+      bin_name: binName(op),
+      area_id: typeof op.area_id === 'string' ? op.area_id : null,
+      area_name: op.area_name.trim(),
+    };
+  },
+
+  set_notes(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'set_notes');
+    const mode = op.mode;
+    if (mode !== 'set' && mode !== 'append' && mode !== 'clear') {
+      fail(i, 'set_notes requires "mode" (set|append|clear)');
+    }
+    return {
+      type: 'set_notes',
+      bin_id,
+      bin_name: binName(op),
+      notes: typeof op.notes === 'string' ? op.notes : '',
+      mode,
+    };
+  },
+
+  set_icon(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'set_icon');
+    if (typeof op.icon !== 'string') {
+      fail(i, 'set_icon requires "icon"');
+    }
+    return { type: 'set_icon', bin_id, bin_name: binName(op), icon: op.icon };
+  },
+
+  set_color(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'set_color');
+    if (typeof op.color !== 'string') {
+      fail(i, 'set_color requires "color"');
+    }
+    return { type: 'set_color', bin_id, bin_name: binName(op), color: op.color };
+  },
+
+  duplicate_bin(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'duplicate_bin');
+    return {
+      type: 'duplicate_bin',
+      bin_id,
+      bin_name: binName(op),
+      new_name: optionalTrimmedString(op, 'new_name'),
+    };
+  },
+
+  pin_bin: (op, i) => ({
+    type: 'pin_bin',
+    bin_id: requireString(op, 'bin_id', i, 'pin_bin'),
+    bin_name: binName(op),
+  }),
+
+  unpin_bin: (op, i) => ({
+    type: 'unpin_bin',
+    bin_id: requireString(op, 'bin_id', i, 'unpin_bin'),
+    bin_name: binName(op),
+  }),
+
+  rename_area(op, i) {
+    const area_id = requireString(op, 'area_id', i, 'rename_area');
+    const new_name = requireString(op, 'new_name', i, 'rename_area');
+    if (new_name.length > MAX_AREA_NAME) {
+      fail(i, `new_name exceeds ${MAX_AREA_NAME} characters`);
+    }
+    return {
+      type: 'rename_area',
+      area_id,
+      area_name: (op.area_name as string) || '',
+      new_name: new_name.trim(),
+    };
+  },
+
+  delete_area(op, i) {
+    const area_id = requireString(op, 'area_id', i, 'delete_area');
+    return {
+      type: 'delete_area',
+      area_id,
+      area_name: (op.area_name as string) || '',
+    };
+  },
+
+  set_tag_color(op, i) {
+    if (typeof op.tag !== 'string' || !op.tag.trim()) {
+      fail(i, 'set_tag_color requires "tag"');
+    }
+    if (typeof op.color !== 'string') {
+      fail(i, 'set_tag_color requires "color"');
+    }
+    return { type: 'set_tag_color', tag: op.tag.trim(), color: op.color };
+  },
+
+  reorder_items(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'reorder_items');
+    const raw = requireNonEmptyArray(op, 'item_ids', i, 'reorder_items');
+    return {
+      type: 'reorder_items',
+      bin_id,
+      bin_name: binName(op),
+      item_ids: raw.filter((id): id is string => typeof id === 'string'),
+    };
+  },
+
+  checkout_item(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'checkout_item');
+    if (typeof op.item_name !== 'string' || !op.item_name.trim()) {
+      fail(i, 'checkout_item requires "item_name"');
+    }
+    return {
+      type: 'checkout_item',
+      bin_id,
+      bin_name: binName(op),
+      item_name: op.item_name.trim(),
+    };
+  },
+
+  return_item(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'return_item');
+    if (typeof op.item_name !== 'string' || !op.item_name.trim()) {
+      fail(i, 'return_item requires "item_name"');
+    }
+    return {
+      type: 'return_item',
+      bin_id,
+      bin_name: binName(op),
+      item_name: op.item_name.trim(),
+      target_bin_id: typeof op.target_bin_id === 'string' ? op.target_bin_id : undefined,
+      target_bin_name: typeof op.target_bin_name === 'string' ? op.target_bin_name : undefined,
+    };
+  },
+};
+
+// ---------- Route ----------
 
 const noop = (_req: import('express').Request, _res: import('express').Response, next: import('express').NextFunction) => next();
 
@@ -48,324 +406,17 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
     throw new ValidationError(`operations array exceeds maximum of ${MAX_OPS}`);
   }
 
-  // Validate each operation has a known type and required fields
-  const actions: CommandAction[] = [];
-  for (let i = 0; i < operations.length; i++) {
-    const op = operations[i];
+  const actions: CommandAction[] = operations.map((op: unknown, i: number) => {
     if (!op || typeof op !== 'object') {
       throw new ValidationError(`operations[${i}]: must be an object`);
     }
-    if (!op.type || !VALID_TYPES.has(op.type)) {
-      throw new ValidationError(`operations[${i}]: unknown type "${op.type}"`);
+    const typedOp = op as OpInput;
+    const opType = typedOp.type as OperationType;
+    if (!opType || !VALID_TYPES.has(opType)) {
+      throw new ValidationError(`operations[${i}]: unknown type "${String(typedOp.type)}"`);
     }
-
-    // Type-specific required field validation
-    switch (op.type) {
-      case 'create_bin':
-        if (!op.name || typeof op.name !== 'string') {
-          throw new ValidationError(`operations[${i}]: create_bin requires "name"`);
-        }
-        if (typeof op.area_name === 'string' && op.area_name.length > 255) {
-          throw new ValidationError(`operations[${i}]: area_name exceeds 255 characters`);
-        }
-        actions.push({
-          type: 'create_bin',
-          name: op.name.trim(),
-          area_name: typeof op.area_name === 'string' ? op.area_name.trim() : undefined,
-          tags: Array.isArray(op.tags) ? op.tags.filter((t: unknown): t is string => typeof t === 'string') : undefined,
-          items: Array.isArray(op.items) ? op.items.filter((i: unknown) => typeof i === 'string' || (i && typeof i === 'object' && typeof (i as Record<string, unknown>).name === 'string')) : undefined,
-          color: typeof op.color === 'string' ? op.color : undefined,
-          icon: typeof op.icon === 'string' ? op.icon : undefined,
-          notes: typeof op.notes === 'string' ? op.notes : undefined,
-          card_style: typeof op.card_style === 'string' ? op.card_style : undefined,
-          custom_fields: op.custom_fields && typeof op.custom_fields === 'object' ? op.custom_fields : undefined,
-        });
-        break;
-
-      case 'update_bin':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: update_bin requires "bin_id"`);
-        }
-        if (typeof op.area_name === 'string' && op.area_name.length > 255) {
-          throw new ValidationError(`operations[${i}]: area_name exceeds 255 characters`);
-        }
-        actions.push({
-          type: 'update_bin',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          name: typeof op.name === 'string' ? op.name.trim() : undefined,
-          notes: typeof op.notes === 'string' ? op.notes : undefined,
-          tags: Array.isArray(op.tags) ? op.tags.filter((t: unknown): t is string => typeof t === 'string') : undefined,
-          area_name: typeof op.area_name === 'string' ? op.area_name.trim() : undefined,
-          icon: typeof op.icon === 'string' ? op.icon : undefined,
-          color: typeof op.color === 'string' ? op.color : undefined,
-          card_style: typeof op.card_style === 'string' ? op.card_style : undefined,
-          visibility: op.visibility === 'location' || op.visibility === 'private' ? op.visibility : undefined,
-          custom_fields: op.custom_fields && typeof op.custom_fields === 'object' ? op.custom_fields : undefined,
-        });
-        break;
-
-      case 'delete_bin':
-      case 'restore_bin':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: ${op.type} requires "bin_id"`);
-        }
-        actions.push({ type: op.type, bin_id: op.bin_id, bin_name: (op.bin_name as string) || '' });
-        break;
-
-      case 'add_items': {
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: add_items requires "bin_id"`);
-        }
-        if (!Array.isArray(op.items) || op.items.length === 0) {
-          throw new ValidationError(`operations[${i}]: add_items requires non-empty "items" array`);
-        }
-        // Accept both strings and {name, quantity} objects
-        const addItems: (string | { name: string; quantity?: number })[] = [];
-        for (const item of op.items) {
-          if (typeof item === 'string' && item.trim()) {
-            addItems.push(item.trim());
-          } else if (item && typeof item === 'object' && typeof item.name === 'string' && item.name.trim()) {
-            const entry: { name: string; quantity?: number } = { name: item.name.trim() };
-            if (typeof item.quantity === 'number' && item.quantity > 0) entry.quantity = item.quantity;
-            addItems.push(entry);
-          }
-        }
-        actions.push({
-          type: 'add_items',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          items: addItems,
-        });
-        break;
-      }
-      case 'remove_items':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: remove_items requires "bin_id"`);
-        }
-        if (!Array.isArray(op.items) || op.items.length === 0) {
-          throw new ValidationError(`operations[${i}]: remove_items requires non-empty "items" array`);
-        }
-        actions.push({
-          type: 'remove_items',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          items: op.items.filter((i: unknown): i is string => typeof i === 'string').map((i: string) => i.trim()).filter(Boolean),
-        });
-        break;
-
-      case 'modify_item':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: modify_item requires "bin_id"`);
-        }
-        if (typeof op.old_item !== 'string' || typeof op.new_item !== 'string') {
-          throw new ValidationError(`operations[${i}]: modify_item requires "old_item" and "new_item"`);
-        }
-        actions.push({
-          type: 'modify_item',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          old_item: op.old_item.trim(),
-          new_item: op.new_item.trim(),
-        });
-        break;
-
-      case 'add_tags':
-      case 'remove_tags':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: ${op.type} requires "bin_id"`);
-        }
-        if (!Array.isArray(op.tags) || op.tags.length === 0) {
-          throw new ValidationError(`operations[${i}]: ${op.type} requires non-empty "tags" array`);
-        }
-        actions.push({
-          type: op.type,
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          tags: op.tags.filter((t: unknown): t is string => typeof t === 'string').map((t: string) => t.trim()).filter(Boolean),
-        });
-        break;
-
-      case 'modify_tag':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: modify_tag requires "bin_id"`);
-        }
-        if (typeof op.old_tag !== 'string' || typeof op.new_tag !== 'string') {
-          throw new ValidationError(`operations[${i}]: modify_tag requires "old_tag" and "new_tag"`);
-        }
-        actions.push({
-          type: 'modify_tag',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          old_tag: op.old_tag.trim(),
-          new_tag: op.new_tag.trim(),
-        });
-        break;
-
-      case 'set_area':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: set_area requires "bin_id"`);
-        }
-        if (typeof op.area_name !== 'string') {
-          throw new ValidationError(`operations[${i}]: set_area requires "area_name"`);
-        }
-        if (op.area_name.length > 255) {
-          throw new ValidationError(`operations[${i}]: area_name exceeds 255 characters`);
-        }
-        actions.push({
-          type: 'set_area',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          area_id: typeof op.area_id === 'string' ? op.area_id : null,
-          area_name: op.area_name.trim(),
-        });
-        break;
-
-      case 'set_notes': {
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: set_notes requires "bin_id"`);
-        }
-        const mode = op.mode as string;
-        if (!['set', 'append', 'clear'].includes(mode)) {
-          throw new ValidationError(`operations[${i}]: set_notes requires "mode" (set|append|clear)`);
-        }
-        actions.push({
-          type: 'set_notes',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          notes: typeof op.notes === 'string' ? op.notes : '',
-          mode: mode as 'set' | 'append' | 'clear',
-        });
-        break;
-      }
-
-      case 'set_icon':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: set_icon requires "bin_id"`);
-        }
-        if (typeof op.icon !== 'string') {
-          throw new ValidationError(`operations[${i}]: set_icon requires "icon"`);
-        }
-        actions.push({ type: 'set_icon', bin_id: op.bin_id, bin_name: (op.bin_name as string) || '', icon: op.icon });
-        break;
-
-      case 'set_color':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: set_color requires "bin_id"`);
-        }
-        if (typeof op.color !== 'string') {
-          throw new ValidationError(`operations[${i}]: set_color requires "color"`);
-        }
-        actions.push({ type: 'set_color', bin_id: op.bin_id, bin_name: (op.bin_name as string) || '', color: op.color });
-        break;
-
-      case 'duplicate_bin':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: duplicate_bin requires "bin_id"`);
-        }
-        actions.push({
-          type: 'duplicate_bin',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          new_name: typeof op.new_name === 'string' ? op.new_name.trim() : undefined,
-        });
-        break;
-
-      case 'pin_bin':
-      case 'unpin_bin':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: ${op.type} requires "bin_id"`);
-        }
-        actions.push({ type: op.type, bin_id: op.bin_id, bin_name: (op.bin_name as string) || '' });
-        break;
-
-      case 'rename_area':
-        if (!op.area_id || typeof op.area_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: rename_area requires "area_id"`);
-        }
-        if (!op.new_name || typeof op.new_name !== 'string') {
-          throw new ValidationError(`operations[${i}]: rename_area requires "new_name"`);
-        }
-        if (op.new_name.length > 255) {
-          throw new ValidationError(`operations[${i}]: new_name exceeds 255 characters`);
-        }
-        actions.push({
-          type: 'rename_area',
-          area_id: op.area_id,
-          area_name: (op.area_name as string) || '',
-          new_name: op.new_name.trim(),
-        });
-        break;
-
-      case 'delete_area':
-        if (!op.area_id || typeof op.area_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: delete_area requires "area_id"`);
-        }
-        actions.push({
-          type: 'delete_area',
-          area_id: op.area_id,
-          area_name: (op.area_name as string) || '',
-        });
-        break;
-
-      case 'set_tag_color':
-        if (typeof op.tag !== 'string' || !op.tag.trim()) {
-          throw new ValidationError(`operations[${i}]: set_tag_color requires "tag"`);
-        }
-        if (typeof op.color !== 'string') {
-          throw new ValidationError(`operations[${i}]: set_tag_color requires "color"`);
-        }
-        actions.push({ type: 'set_tag_color', tag: op.tag.trim(), color: op.color });
-        break;
-
-      case 'reorder_items':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: reorder_items requires "bin_id"`);
-        }
-        if (!Array.isArray(op.item_ids) || op.item_ids.length === 0) {
-          throw new ValidationError(`operations[${i}]: reorder_items requires non-empty "item_ids" array`);
-        }
-        actions.push({
-          type: 'reorder_items',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          item_ids: op.item_ids.filter((id: unknown): id is string => typeof id === 'string'),
-        });
-        break;
-
-      case 'checkout_item':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: checkout_item requires "bin_id"`);
-        }
-        if (typeof op.item_name !== 'string' || !op.item_name.trim()) {
-          throw new ValidationError(`operations[${i}]: checkout_item requires "item_name"`);
-        }
-        actions.push({
-          type: 'checkout_item',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          item_name: op.item_name.trim(),
-        });
-        break;
-
-      case 'return_item':
-        if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: return_item requires "bin_id"`);
-        }
-        if (typeof op.item_name !== 'string' || !op.item_name.trim()) {
-          throw new ValidationError(`operations[${i}]: return_item requires "item_name"`);
-        }
-        actions.push({
-          type: 'return_item',
-          bin_id: op.bin_id,
-          bin_name: (op.bin_name as string) || '',
-          item_name: op.item_name.trim(),
-          target_bin_id: typeof op.target_bin_id === 'string' ? op.target_bin_id : undefined,
-          target_bin_name: typeof op.target_bin_name === 'string' ? op.target_bin_name : undefined,
-        });
-        break;
-    }
-  }
+    return OPERATION_VALIDATORS[opType](typedOp, i);
+  });
 
   const result = await executeActions(actions, locationId, req.user!.id, req.user!.email, req.authMethod, req.apiKeyId);
 

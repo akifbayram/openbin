@@ -43,9 +43,9 @@ describe('DELETE /api/photos/:id', () => {
   });
 
   it('rejects deletion by a viewer', async () => {
-    // verifyPhotoAccess query → photo found, role is viewer
+    // verifyBinAttachmentAccess query → photo found, role is viewer
     mockQuery.mockResolvedValueOnce({
-      rows: [{ bin_id: 'bin-1', storage_path: 'bin-1/photo.jpg', mime_type: 'image/jpeg', location_id: 'loc-1', visibility: 'location', created_by: 'user-2', role: 'viewer' }],
+      rows: [{ bin_id: 'bin-1', bin_name: 'Test Bin', storage_path: 'bin-1/photo.jpg', mime_type: 'image/jpeg', location_id: 'loc-1', visibility: 'location', bin_created_by: 'user-2', role: 'viewer' }],
     });
 
     const handler = getDeleteHandler();
@@ -62,9 +62,9 @@ describe('DELETE /api/photos/:id', () => {
   });
 
   it('allows deletion by a member', async () => {
-    // verifyPhotoAccess → found with role: member
+    // verifyBinAttachmentAccess → found with role: member (bin_name joined from bins table)
     mockQuery.mockResolvedValueOnce({
-      rows: [{ bin_id: 'bin-1', storage_path: 'bin-1/photo.jpg', mime_type: 'image/jpeg', location_id: 'loc-1', visibility: 'location', created_by: 'user-1', role: 'member' }],
+      rows: [{ bin_id: 'bin-1', bin_name: 'Test Bin', storage_path: 'bin-1/photo.jpg', mime_type: 'image/jpeg', location_id: 'loc-1', visibility: 'location', bin_created_by: 'user-1', role: 'member' }],
     });
     // thumb_path query
     mockQuery.mockResolvedValueOnce({ rows: [{ thumb_path: null }] });
@@ -72,8 +72,6 @@ describe('DELETE /api/photos/:id', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
     // UPDATE bin updated_at
     mockQuery.mockResolvedValueOnce({ rows: [] });
-    // bin name for activity log
-    mockQuery.mockResolvedValueOnce({ rows: [{ name: 'Test Bin' }] });
 
     const handler = getDeleteHandler();
     const req = { params: { id: 'photo-1' }, user: { id: 'member-user' } } as any;

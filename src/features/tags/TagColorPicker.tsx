@@ -4,9 +4,10 @@ import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
 import { useDialogPortal } from '@/components/ui/dialog';
 import { Tooltip } from '@/components/ui/tooltip';
-import { buildColorKey, getTagTextColor, hslToHex, parseColorKey, resolveColor, SHADE_COUNT } from '@/lib/colorPalette';
+import { buildColorKey, getTagTextColor, hslToHex, resolveColor, SHADE_COUNT } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { useColorGradient } from '@/lib/useColorGradient';
 import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
 
@@ -34,19 +35,23 @@ export function TagColorPicker({ currentColor, onColorChange, tagName }: TagColo
   const { visible, animating, close, toggle } = usePopover();
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const barRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
   useClickOutside(ref, close);
 
-  const parsed = currentColor ? parseColorKey(currentColor) : null;
-  const isBlack = currentColor === 'black';
-  const isWhite = currentColor === 'white';
-  const isFixed = isBlack || isWhite;
-  const isNeutral = parsed?.hue === 'neutral';
-  const currentHue = parsed && parsed.hue !== 'neutral' ? parsed.hue : null;
-  const currentShade = parsed?.shade ?? 2;
+  const {
+    barRef,
+    isBlack,
+    isWhite,
+    isFixed,
+    isNeutral,
+    currentHue,
+    currentShade,
+    activeHue,
+    emitHue,
+    handlePointerDown,
+    handlePointerMove,
+  } = useColorGradient({ value: currentColor, onChange: onColorChange });
   const currentPreset = currentColor ? resolveColor(currentColor) : undefined;
-  const activeHue = isFixed ? null : isNeutral ? 'neutral' as const : currentHue;
 
   // Viewport-aware positioning
   const reposition = useCallback(() => {
@@ -67,44 +72,23 @@ export function TagColorPicker({ currentColor, onColorChange, tagName }: TagColo
     reposition();
   }, [visible, reposition]);
 
-  const hueFromPointer = useCallback((e: React.PointerEvent) => {
-    const rect = barRef.current?.getBoundingClientRect();
-    if (!rect || rect.width === 0) return 0;
-    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    return Math.round((x / rect.width) * 360);
-  }, []);
-
-  const emitColor = useCallback((hue: number) => {
-    onColorChange(buildColorKey(hue, currentShade));
-  }, [onColorChange, currentShade]);
-
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    emitColor(hueFromPointer(e));
-  }, [hueFromPointer, emitColor]);
-
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!(e.target as HTMLElement).hasPointerCapture(e.pointerId)) return;
-    emitColor(hueFromPointer(e));
-  }, [hueFromPointer, emitColor]);
-
   // Keyboard navigation for hue slider
   const handleHueKeyDown = useCallback((e: React.KeyboardEvent) => {
     const hue = currentHue ?? 0;
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
       e.preventDefault();
-      emitColor(Math.min(360, hue + HUE_STEP));
+      emitHue(Math.min(360, hue + HUE_STEP));
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
       e.preventDefault();
-      emitColor(Math.max(0, hue - HUE_STEP));
+      emitHue(Math.max(0, hue - HUE_STEP));
     } else if (e.key === 'Home') {
       e.preventDefault();
-      emitColor(0);
+      emitHue(0);
     } else if (e.key === 'End') {
       e.preventDefault();
-      emitColor(360);
+      emitHue(360);
     }
-  }, [currentHue, emitColor]);
+  }, [currentHue, emitHue]);
 
   const previewStyle = currentPreset
     ? { backgroundColor: currentPreset.bgCss, color: getTagTextColor(currentPreset, theme) }

@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import { cn, focusRingInset } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
 
 const badgeVariants = {
   default: 'bg-[var(--accent)] text-[var(--text-on-accent)]',
@@ -23,7 +23,7 @@ function Badge({ className, variant = 'default', onClick, style, children }: Bad
     return (
       <button
         type="button"
-        className={cn(BASE, badgeVariants[variant], 'border-0 cursor-pointer', focusRingInset, className)}
+        className={cn(BASE, badgeVariants[variant], 'border-0 cursor-pointer', focusRing, className)}
         onClick={onClick}
         style={style}
       >

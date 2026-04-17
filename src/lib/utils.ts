@@ -56,10 +56,6 @@ export function isSafeExternalUrl(url: string): boolean {
 export const focusRing =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]';
 
-/** Focus ring variant without offset — for inputs embedded in containers. */
-export const focusRingInset =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]';
-
 /** Shared disabled styling for interactive elements. */
 export const disabledClasses = 'disabled:cursor-not-allowed disabled:opacity-50';
 
@@ -109,4 +105,10 @@ export function relativeTime(iso: string | null): string {
   const months = Math.floor(days / 30);
   if (months < 12) return `${months}mo ago`;
   return `${Math.floor(months / 12)}y ago`;
+}
+
+/** Short numeric date string (M/D/YYYY) from an ISO timestamp. */
+export function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
 }

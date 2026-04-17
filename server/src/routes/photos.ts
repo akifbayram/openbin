@@ -2,6 +2,7 @@ import path from 'node:path';
 import { Router } from 'express';
 import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { verifyBinAttachmentAccess } from '../lib/binAccess.js';
 import { config } from '../lib/config.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { invalidateOverLimitCache } from '../lib/planGate.js';
@@ -13,21 +14,6 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 
 router.use(authenticate);
-
-/** Verify user has access to a photo via photo -> bin -> location chain */
-async function verifyPhotoAccess(photoId: string, userId: string): Promise<{ binId: string; storagePath: string; locationId: string; mimeType: string; role: string } | null> {
-  const result = await query(
-    `SELECT p.bin_id, p.storage_path, p.mime_type, b.location_id, b.visibility, b.created_by, lm.role FROM photos p
-     JOIN bins b ON b.id = p.bin_id
-     JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE p.id = $1`,
-    [photoId, userId]
-  );
-  if (result.rows.length === 0) return null;
-  const row = result.rows[0];
-  if (row.visibility === 'private' && row.created_by !== userId) return null;
-  return { binId: row.bin_id, storagePath: row.storage_path, locationId: row.location_id, mimeType: row.mime_type, role: row.role };
-}
 
 // GET /api/photos — list photos for a bin
 router.get('/', asyncHandler(async (req, res) => {
@@ -62,10 +48,7 @@ router.get('/', asyncHandler(async (req, res) => {
 router.get('/:id/file', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const access = await verifyPhotoAccess(id, req.user!.id);
-  if (!access) {
-    throw new NotFoundError('Photo not found');
-  }
+  const access = await verifyBinAttachmentAccess(req.user!.id, id, 'photo');
 
   if (!(await storage.exists(access.storagePath))) {
     throw new NotFoundError('Photo file not found');
@@ -82,10 +65,7 @@ router.get('/:id/file', asyncHandler(async (req, res) => {
 router.get('/:id/thumb', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const access = await verifyPhotoAccess(id, req.user!.id);
-  if (!access) {
-    throw new NotFoundError('Photo not found');
-  }
+  await verifyBinAttachmentAccess(req.user!.id, id, 'photo');
 
   // Check for thumb_path
   const thumbResult = await query('SELECT thumb_path, storage_path FROM photos WHERE id = $1', [id]);
@@ -153,10 +133,7 @@ router.get('/:id/thumb', asyncHandler(async (req, res) => {
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const access = await verifyPhotoAccess(id, req.user!.id);
-  if (!access) {
-    throw new NotFoundError('Photo not found');
-  }
+  const access = await verifyBinAttachmentAccess(req.user!.id, id, 'photo');
 
   // Viewers cannot delete photos
   if (access.role === 'viewer') {
@@ -179,14 +156,12 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 
   await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [access.binId]);
 
-  // Get bin name for activity log
-  const binResult = await query('SELECT name FROM bins WHERE id = $1', [access.binId]);
   logRouteActivity(req, {
     locationId: access.locationId,
     action: 'delete_photo',
     entityType: 'bin',
     entityId: access.binId,
-    entityName: binResult.rows[0]?.name,
+    entityName: access.binName,
   });
 
   res.json({ message: 'Photo deleted' });

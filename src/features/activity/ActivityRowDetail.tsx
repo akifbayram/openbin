@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { formatDate } from '@/lib/formatTime';
-import { categoryHeader, cn } from '@/lib/utils';
+import { categoryHeader, cn, formatDate } from '@/lib/utils';
 import type { ActivityLogEntry } from '@/types';
 import { getActionBadgeLabel, getActionColor, renderChangeDiff } from './activityHelpers';
 

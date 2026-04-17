@@ -14,10 +14,9 @@ import { Table, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAuth } from '@/lib/auth';
 import { resolveColor } from '@/lib/colorPalette';
-import { formatTimeAgo } from '@/lib/formatTime';
 import { resolveIcon } from '@/lib/iconMap';
 import { usePermissions } from '@/lib/usePermissions';
-import { cn } from '@/lib/utils';
+import { cn, relativeTime } from '@/lib/utils';
 import type { ItemCheckoutWithContext } from '@/types';
 import { ReturnItemDialog } from './ReturnItemDialog';
 import { useLocationCheckouts } from './useCheckouts';
@@ -153,7 +152,7 @@ export function CheckoutsPage() {
                     </span>
                   </div>
                   <span className="w-20 shrink-0 text-[13px] text-[var(--text-tertiary)] text-right">
-                    {formatTimeAgo(co.checked_out_at)}
+                    {relativeTime(co.checked_out_at)}
                   </span>
                   {canWrite && (
                     // biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to return button
