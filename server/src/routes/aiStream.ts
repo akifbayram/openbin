@@ -14,7 +14,7 @@ import { config, isDemoUser } from '../lib/config.js';
 import { parseHistoryFromBody } from '../lib/conversationHistory.js';
 import { ValidationError } from '../lib/httpErrors.js';
 import { classifyIntent } from '../lib/intentClassifier.js';
-import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
+import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg, enrichQueryMatches } from '../lib/inventoryQuery.js';
 import { refundAiCredit } from '../lib/planGate.js';
 import { aiRateLimiters } from '../lib/rateLimiters.js';
 import { buildReorganizePrompt } from '../lib/reorganizePrompt.js';
@@ -71,6 +71,12 @@ streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAi
     userContent: buildQueryUserMsg(question, context),
     priorMessages,
     ...streamOpts(settings, { maxTokens: 4096, temperature: 0.2 }),
+    enrichResult: async (parsed: unknown) => {
+      const r = parsed as { answer?: string; matches?: unknown[] };
+      const matches = Array.isArray(r.matches) ? r.matches : [];
+      const enriched = await enrichQueryMatches(matches as never, locationId, req.user!.id);
+      return { answer: r.answer ?? '', matches: enriched };
+    },
   });
 }));
 
@@ -122,6 +128,12 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
       userContent: buildQueryUserMsg(`${scopeNote}${text}`, queryContext),
       priorMessages,
       ...streamOpts(settings, { maxTokens: 4096, temperature: 0.2 }),
+      enrichResult: async (parsed: unknown) => {
+        const r = parsed as { answer?: string; matches?: unknown[] };
+        const matches = Array.isArray(r.matches) ? r.matches : [];
+        const enriched = await enrichQueryMatches(matches as never, locationId, req.user!.id);
+        return { answer: r.answer ?? '', matches: enriched };
+      },
     });
   } else {
     const [{ settings, model }, context] = await Promise.all([

@@ -1,14 +1,26 @@
 import { resolvePrompt, sanitizeForPrompt, withHardening } from './aiSanitize.js';
+import { fetchBinById } from './binQueries.js';
 import { DEFAULT_QUERY_PROMPT, QUERY_RESPONSE_SHAPE } from './defaultPrompts.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('inventory-query');
+
+export interface EnrichedQueryItem {
+  id: string;
+  name: string;
+  quantity: number | null;
+}
 
 export interface QueryMatch {
   bin_id: string;
   name: string;
   area_name: string;
-  items: string[];
+  items: EnrichedQueryItem[];
   tags: string[];
   relevance: string;
   is_trashed?: boolean;
+  icon: string;
+  color: string;
 }
 
 export interface QueryResult {
@@ -61,4 +73,92 @@ export function buildUserMessage(question: string, context: InventoryContext): s
 <inventory>
 ${JSON.stringify(data)}
 </inventory>`;
+}
+
+export interface RawMatch {
+  bin_id: string;
+  name: string;
+  area_name: string;
+  items: string[];
+  tags: string[];
+  relevance: string;
+  is_trashed?: boolean;
+}
+
+function normalizeStr(s: string): string {
+  return s.trim().toLowerCase();
+}
+
+function stripPunct(s: string): string {
+  return s
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export async function enrichQueryMatches(
+  matches: RawMatch[],
+  locationId: string,
+  userId: string,
+): Promise<QueryMatch[]> {
+  const out: QueryMatch[] = [];
+  for (const match of matches) {
+    const bin = await fetchBinById(match.bin_id, { userId });
+    if (!bin) {
+      log.debug('Bin not found', { bin_id: match.bin_id });
+      continue;
+    }
+    if (bin.location_id !== locationId) {
+      log.debug('Bin in different location', {
+        bin_id: match.bin_id,
+        expectedLocationId: locationId,
+        actualLocationId: bin.location_id,
+      });
+      continue;
+    }
+
+    const rawBinItems: EnrichedQueryItem[] = typeof bin.items === 'string'
+      ? JSON.parse(bin.items)
+      : (Array.isArray(bin.items) ? bin.items : []);
+
+    const byExact = new Map<string, EnrichedQueryItem>();
+    const byLower = new Map<string, EnrichedQueryItem>();
+    const byStripped = new Map<string, EnrichedQueryItem>();
+    for (const it of rawBinItems) {
+      if (!byExact.has(it.name)) byExact.set(it.name, it);
+      const lower = normalizeStr(it.name);
+      if (!byLower.has(lower)) byLower.set(lower, it);
+      const stripped = normalizeStr(stripPunct(it.name));
+      if (!byStripped.has(stripped)) byStripped.set(stripped, it);
+    }
+
+    const items: EnrichedQueryItem[] = [];
+    for (const aiName of match.items) {
+      const hit =
+        byExact.get(aiName) ??
+        byLower.get(normalizeStr(aiName)) ??
+        byStripped.get(normalizeStr(stripPunct(aiName)));
+      if (hit) {
+        items.push(hit);
+      } else {
+        log.debug('AI item name could not be resolved', {
+          bin_id: match.bin_id,
+          aiName,
+        });
+      }
+    }
+
+    out.push({
+      bin_id: match.bin_id,
+      name: match.name,
+      area_name: match.area_name,
+      items,
+      tags: match.tags,
+      relevance: match.relevance,
+      is_trashed: match.is_trashed,
+      icon: bin.icon ?? '',
+      color: bin.color ?? '',
+    });
+  }
+  return out;
 }
