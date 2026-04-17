@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
+import { restoreBinFromTrash } from '@/features/bins/useBins';
 import {
   checkoutItemSafe,
   removeItemSafe,
@@ -102,6 +103,19 @@ export function ItemRow({
     setConfirmRemove(false);
   }
 
+  async function handleRestoreBin() {
+    try {
+      await restoreBinFromTrash(binId);
+      showToast({ message: 'Bin restored' });
+      navigate(`/bins/${binId}`);
+    } catch (err) {
+      showToast({
+        message: err instanceof Error && err.message ? err.message : 'Restore failed',
+        variant: 'error',
+      });
+    }
+  }
+
   return (
     <>
       <div className="group flex items-center gap-3 px-3 py-1.5 hover:bg-[var(--bg-hover)] transition-colors">
@@ -177,6 +191,7 @@ export function ItemRow({
           canWrite={canWrite}
           isTrashed={isTrashed}
           onOpenBin={handleOpen}
+          onRestoreBin={handleRestoreBin}
           onCheckout={canWrite ? handleCheckout : undefined}
           onRename={
             canWrite

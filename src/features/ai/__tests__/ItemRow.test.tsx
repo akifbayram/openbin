@@ -9,6 +9,7 @@ const mockCheckoutItemSafe = vi.fn().mockResolvedValue({ ok: true });
 const mockRemoveItemSafe = vi.fn().mockResolvedValue({ ok: true });
 const mockRenameItemSafe = vi.fn().mockResolvedValue({ ok: true });
 const mockUpdateQuantitySafe = vi.fn().mockResolvedValue({ ok: true, quantity: 5 });
+const mockRestoreBinFromTrash = vi.fn().mockResolvedValue({ id: 'b1' });
 
 vi.mock('@/components/ui/toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),
@@ -19,6 +20,10 @@ vi.mock('@/features/items/itemActions', () => ({
   removeItemSafe: (...args: unknown[]) => mockRemoveItemSafe(...args),
   renameItemSafe: (...args: unknown[]) => mockRenameItemSafe(...args),
   updateQuantitySafe: (...args: unknown[]) => mockUpdateQuantitySafe(...args),
+}));
+
+vi.mock('@/features/bins/useBins', () => ({
+  restoreBinFromTrash: (...args: unknown[]) => mockRestoreBinFromTrash(...args),
 }));
 
 const baseItem = { id: 'i1', name: 'Tent', quantity: null };
@@ -37,6 +42,7 @@ beforeEach(() => {
   mockRemoveItemSafe.mockResolvedValue({ ok: true });
   mockRenameItemSafe.mockResolvedValue({ ok: true });
   mockUpdateQuantitySafe.mockResolvedValue({ ok: true, quantity: 5 });
+  mockRestoreBinFromTrash.mockResolvedValue({ id: 'b1' });
 });
 
 describe('ItemRow (display)', () => {
@@ -205,6 +211,29 @@ describe('ItemRow — Inline quantity stepper', () => {
     await waitFor(() => {
       // quantity unchanged (3 === 3), so should not be called
       expect(mockUpdateQuantitySafe).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('ItemRow — Restore action', () => {
+  it('invokes restoreBinFromTrash and navigates when Restore & open is chosen', async () => {
+    renderRow({ isTrashed: true });
+    await userEvent.click(screen.getByRole('button', { name: /item actions/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /restore/i }));
+    await waitFor(() => {
+      expect(mockRestoreBinFromTrash).toHaveBeenCalledWith('b1');
+    });
+  });
+
+  it('shows error toast when restoreBinFromTrash fails', async () => {
+    mockRestoreBinFromTrash.mockRejectedValueOnce(new Error('Not found'));
+    renderRow({ isTrashed: true });
+    await userEvent.click(screen.getByRole('button', { name: /item actions/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /restore/i }));
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'error' }),
+      );
     });
   });
 });
