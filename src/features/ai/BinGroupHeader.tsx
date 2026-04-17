@@ -1,4 +1,7 @@
 import { ChevronRight, Trash2 } from 'lucide-react';
+import { BinIconBadge } from '@/components/ui/bin-icon-badge';
+import { resolveColor } from '@/lib/colorPalette';
+import { resolveIcon } from '@/lib/iconMap';
 import { cn } from '@/lib/utils';
 
 interface BinGroupHeaderProps {
@@ -18,6 +21,9 @@ export function BinGroupHeader({
   isTrashed,
   onOpen,
 }: BinGroupHeaderProps) {
+  const BinIcon = resolveIcon(icon);
+  const colorPreset = resolveColor(color);
+
   return (
     <button
       type="button"
@@ -32,13 +38,7 @@ export function BinGroupHeader({
       {isTrashed ? (
         <Trash2 className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
       ) : (
-        <span
-          aria-hidden
-          className="inline-flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-xs)] text-[13px]"
-          style={{ background: color }}
-        >
-          {icon}
-        </span>
+        <BinIconBadge icon={BinIcon} colorPreset={colorPreset} />
       )}
       <span className="flex-1 min-w-0">
         <span className="block text-[14px] font-medium text-[var(--text-primary)] truncate">{name}</span>

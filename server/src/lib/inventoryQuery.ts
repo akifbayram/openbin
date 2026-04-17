@@ -96,69 +96,76 @@ function stripPunct(s: string): string {
     .trim();
 }
 
+async function enrichOneMatch(
+  match: RawMatch,
+  locationId: string,
+  userId: string,
+): Promise<QueryMatch | null> {
+  const bin = await fetchBinById(match.bin_id, { userId });
+  if (!bin) {
+    log.debug('Bin not found', { bin_id: match.bin_id });
+    return null;
+  }
+  if (bin.location_id !== locationId) {
+    log.debug('Bin in different location', {
+      bin_id: match.bin_id,
+      expectedLocationId: locationId,
+      actualLocationId: bin.location_id,
+    });
+    return null;
+  }
+
+  const rawBinItems: EnrichedQueryItem[] = typeof bin.items === 'string'
+    ? JSON.parse(bin.items)
+    : (Array.isArray(bin.items) ? bin.items : []);
+
+  const byExact = new Map<string, EnrichedQueryItem>();
+  const byLower = new Map<string, EnrichedQueryItem>();
+  const byStripped = new Map<string, EnrichedQueryItem>();
+  for (const it of rawBinItems) {
+    if (!byExact.has(it.name)) byExact.set(it.name, it);
+    const lower = normalizeStr(it.name);
+    if (!byLower.has(lower)) byLower.set(lower, it);
+    const stripped = normalizeStr(stripPunct(it.name));
+    if (!byStripped.has(stripped)) byStripped.set(stripped, it);
+  }
+
+  const items: EnrichedQueryItem[] = [];
+  for (const aiName of match.items) {
+    const hit =
+      byExact.get(aiName) ??
+      byLower.get(normalizeStr(aiName)) ??
+      byStripped.get(normalizeStr(stripPunct(aiName)));
+    if (hit) {
+      items.push(hit);
+    } else {
+      log.debug('AI item name could not be resolved', {
+        bin_id: match.bin_id,
+        aiName,
+      });
+    }
+  }
+
+  return {
+    bin_id: match.bin_id,
+    name: match.name,
+    area_name: match.area_name,
+    items,
+    tags: match.tags,
+    relevance: match.relevance,
+    is_trashed: match.is_trashed,
+    icon: bin.icon ?? '',
+    color: bin.color ?? '',
+  };
+}
+
 export async function enrichQueryMatches(
   matches: RawMatch[],
   locationId: string,
   userId: string,
 ): Promise<QueryMatch[]> {
-  const out: QueryMatch[] = [];
-  for (const match of matches) {
-    const bin = await fetchBinById(match.bin_id, { userId });
-    if (!bin) {
-      log.debug('Bin not found', { bin_id: match.bin_id });
-      continue;
-    }
-    if (bin.location_id !== locationId) {
-      log.debug('Bin in different location', {
-        bin_id: match.bin_id,
-        expectedLocationId: locationId,
-        actualLocationId: bin.location_id,
-      });
-      continue;
-    }
-
-    const rawBinItems: EnrichedQueryItem[] = typeof bin.items === 'string'
-      ? JSON.parse(bin.items)
-      : (Array.isArray(bin.items) ? bin.items : []);
-
-    const byExact = new Map<string, EnrichedQueryItem>();
-    const byLower = new Map<string, EnrichedQueryItem>();
-    const byStripped = new Map<string, EnrichedQueryItem>();
-    for (const it of rawBinItems) {
-      if (!byExact.has(it.name)) byExact.set(it.name, it);
-      const lower = normalizeStr(it.name);
-      if (!byLower.has(lower)) byLower.set(lower, it);
-      const stripped = normalizeStr(stripPunct(it.name));
-      if (!byStripped.has(stripped)) byStripped.set(stripped, it);
-    }
-
-    const items: EnrichedQueryItem[] = [];
-    for (const aiName of match.items) {
-      const hit =
-        byExact.get(aiName) ??
-        byLower.get(normalizeStr(aiName)) ??
-        byStripped.get(normalizeStr(stripPunct(aiName)));
-      if (hit) {
-        items.push(hit);
-      } else {
-        log.debug('AI item name could not be resolved', {
-          bin_id: match.bin_id,
-          aiName,
-        });
-      }
-    }
-
-    out.push({
-      bin_id: match.bin_id,
-      name: match.name,
-      area_name: match.area_name,
-      items,
-      tags: match.tags,
-      relevance: match.relevance,
-      is_trashed: match.is_trashed,
-      icon: bin.icon ?? '',
-      color: bin.color ?? '',
-    });
-  }
-  return out;
+  const results = await Promise.all(
+    matches.map((match) => enrichOneMatch(match, locationId, userId)),
+  );
+  return results.filter((r): r is QueryMatch => r !== null);
 }

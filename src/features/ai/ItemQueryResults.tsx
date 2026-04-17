@@ -11,6 +11,7 @@ import {
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
+import { getErrorMessage } from '@/lib/utils';
 import { BinItemGroup } from './BinItemGroup';
 import { ItemSelectionBar } from './ItemSelectionBar';
 import { executeBatch } from './useActionExecutor';
@@ -56,7 +57,7 @@ export function ItemQueryResults({ matches, onBinClick }: ItemQueryResultsProps)
       }
       selection.clearSelection();
     } catch (err) {
-      showToast({ message: (err as Error).message ?? 'Bulk action failed', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Bulk action failed'), variant: 'error' });
     } finally {
       setIsBusy(false);
     }
@@ -82,33 +83,31 @@ export function ItemQueryResults({ matches, onBinClick }: ItemQueryResultsProps)
         onClear={selection.clearSelection}
         isBusy={isBusy}
       />
-      {confirmRemove && (
-        <Dialog open={confirmRemove} onOpenChange={(v) => { if (!isBusy) setConfirmRemove(v); }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Remove {selection.selectionCount} {selection.selectionCount === 1 ? 'item' : 'items'}?</DialogTitle>
-              <DialogDescription>
-                This will permanently remove the selected {selection.selectionCount === 1 ? 'item' : 'items'} from their bins.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setConfirmRemove(false)} disabled={isBusy}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={isBusy}
-                onClick={async () => {
-                  await runBulk('remove');
-                  setConfirmRemove(false);
-                }}
-              >
-                {isBusy ? 'Removing\u2026' : 'Remove'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+      <Dialog open={confirmRemove} onOpenChange={(v) => { if (!isBusy) setConfirmRemove(v); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove {selection.selectionCount} {selection.selectionCount === 1 ? 'item' : 'items'}?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove the selected {selection.selectionCount === 1 ? 'item' : 'items'} from their bins.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmRemove(false)} disabled={isBusy}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isBusy}
+              onClick={async () => {
+                await runBulk('remove');
+                setConfirmRemove(false);
+              }}
+            >
+              {isBusy ? 'Removing\u2026' : 'Remove'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
   renameItemSafe,
   updateQuantitySafe,
 } from '@/features/items/itemActions';
+import { getErrorMessage } from '@/lib/utils';
 import { ItemActionMenu } from './ItemActionMenu';
 import { SelectionCheckbox } from './SelectionCheckbox';
 import type { EnrichedQueryItem } from './useInventoryQuery';
@@ -44,7 +45,13 @@ export function ItemRow({
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  // Rename state
+  // The Ask AI turn holds a frozen snapshot of the AI response, so the `item`
+  // prop never updates after mutations. Track the latest values locally so
+  // the row reflects renames/quantity edits/removes without a parent refetch.
+  const [displayName, setDisplayName] = useState(item.name);
+  const [displayQuantity, setDisplayQuantity] = useState<number | null>(item.quantity);
+  const [removed, setRemoved] = useState(false);
+
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(item.name);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -52,22 +59,20 @@ export function ItemRow({
     if (editingName) nameInputRef.current?.focus();
   }, [editingName]);
 
-  // Quantity state
   const [editingQty, setEditingQty] = useState(false);
   const [qtyDraft, setQtyDraft] = useState(item.quantity ?? 0);
 
-  // Remove confirm state
   const [confirmRemove, setConfirmRemove] = useState(false);
 
   function handleOpen() {
     if (onOpenBin) onOpenBin(binId);
-    else navigate(`/bins/${binId}`);
+    else navigate(`/bin/${binId}`);
   }
 
   async function handleCheckout() {
     const result = await checkoutItemSafe(binId, item.id);
     if (result.ok) {
-      showToast({ message: `Checked out ${item.name}` });
+      showToast({ message: `Checked out "${displayName}"` });
     } else {
       showToast({ message: result.error, variant: 'error' });
     }
@@ -75,31 +80,43 @@ export function ItemRow({
 
   async function handleRenameSave() {
     const trimmed = draftName.trim();
-    if (!trimmed || trimmed === item.name) {
+    if (!trimmed || trimmed === displayName) {
       setEditingName(false);
       return;
     }
     const r = await renameItemSafe(binId, item.id, trimmed);
-    if (r.ok) showToast({ message: `Renamed to "${trimmed}"` });
-    else showToast({ message: r.error, variant: 'error' });
+    if (r.ok) {
+      setDisplayName(trimmed);
+      showToast({ message: `Renamed to "${trimmed}"` });
+    } else {
+      showToast({ message: r.error, variant: 'error' });
+    }
     setEditingName(false);
   }
 
   async function handleQtyCommit(next: number) {
     const clamped = Math.max(0, Math.floor(next));
-    if (clamped === (item.quantity ?? 0)) {
+    if (clamped === (displayQuantity ?? 0)) {
       setEditingQty(false);
       return;
     }
     const r = await updateQuantitySafe(binId, item.id, clamped);
-    if (!r.ok) showToast({ message: r.error, variant: 'error' });
+    if (r.ok) {
+      setDisplayQuantity(r.quantity);
+    } else {
+      showToast({ message: r.error, variant: 'error' });
+    }
     setEditingQty(false);
   }
 
   async function handleRemove() {
     const r = await removeItemSafe(binId, item.id);
-    if (r.ok) showToast({ message: `Removed ${item.name}` });
-    else showToast({ message: r.error, variant: 'error' });
+    if (r.ok) {
+      setRemoved(true);
+      showToast({ message: `Removed "${displayName}"` });
+    } else {
+      showToast({ message: r.error, variant: 'error' });
+    }
     setConfirmRemove(false);
   }
 
@@ -107,14 +124,13 @@ export function ItemRow({
     try {
       await restoreBinFromTrash(binId);
       showToast({ message: 'Bin restored' });
-      navigate(`/bins/${binId}`);
+      navigate(`/bin/${binId}`);
     } catch (err) {
-      showToast({
-        message: err instanceof Error && err.message ? err.message : 'Restore failed',
-        variant: 'error',
-      });
+      showToast({ message: getErrorMessage(err, 'Restore failed'), variant: 'error' });
     }
   }
+
+  if (removed) return null;
 
   return (
     <>
@@ -122,8 +138,8 @@ export function ItemRow({
         {canWrite && !isTrashed && onToggleSelect && (
           <SelectionCheckbox
             checked={!!selected}
-            onChange={onToggleSelect}
-            label={`Select ${item.name}`}
+            onToggle={onToggleSelect}
+            label={`Select ${displayName}`}
           />
         )}
         {editingName ? (
@@ -139,7 +155,7 @@ export function ItemRow({
               }
               if (e.key === 'Escape') {
                 setEditingName(false);
-                setDraftName(item.name);
+                setDraftName(displayName);
               }
             }}
             onBlur={handleRenameSave}
@@ -147,7 +163,7 @@ export function ItemRow({
           />
         ) : (
           <span className="flex-1 min-w-0 text-[14px] text-[var(--text-primary)] truncate">
-            {item.name}
+            {displayName}
           </span>
         )}
 
@@ -181,9 +197,9 @@ export function ItemRow({
               <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
-        ) : item.quantity != null ? (
+        ) : displayQuantity != null ? (
           <span className="shrink-0 text-[13px] text-[var(--text-tertiary)] tabular-nums">
-            ×{item.quantity}
+            ×{displayQuantity}
           </span>
         ) : null}
 
@@ -196,7 +212,7 @@ export function ItemRow({
           onRename={
             canWrite
               ? () => {
-                  setDraftName(item.name);
+                  setDraftName(displayName);
                   setEditingName(true);
                 }
               : undefined
@@ -204,7 +220,7 @@ export function ItemRow({
           onAdjustQuantity={
             canWrite
               ? () => {
-                  setQtyDraft(item.quantity ?? 0);
+                  setQtyDraft(displayQuantity ?? 0);
                   setEditingQty(true);
                 }
               : undefined
@@ -218,7 +234,7 @@ export function ItemRow({
           <DialogHeader>
             <DialogTitle>Remove item?</DialogTitle>
             <DialogDescription>
-              This will permanently remove &apos;{item.name}&apos; from the bin.
+              This will permanently remove &quot;{displayName}&quot; from the bin.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -1,7 +1,8 @@
 import { ExternalLink, MoreHorizontal, Package, PackageMinus, Pencil, Trash2, Undo2 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { useIsMobile } from '@/lib/useIsMobile';
 import { cn } from '@/lib/utils';
 
 interface ItemActionMenuProps {
@@ -13,20 +14,6 @@ interface ItemActionMenuProps {
   onRestoreBin?: () => void;
   canWrite: boolean;
   isTrashed: boolean;
-}
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState<boolean>(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches,
-  );
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mq = window.matchMedia('(max-width: 1023px)');
-    const handler = () => setIsMobile(mq.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-  return isMobile;
 }
 
 export function ItemActionMenu({
@@ -121,10 +108,8 @@ function MenuItem({
       role="menuitem"
       onClick={onClick}
       className={cn(
-        'w-full px-3 py-2 flex items-center gap-2 text-left text-[13px]',
-        destructive
-          ? 'text-[var(--destructive)] hover:bg-[var(--bg-active)]'
-          : 'text-[var(--text-primary)] hover:bg-[var(--bg-active)]',
+        'w-full px-3 py-2 flex items-center gap-2 text-left text-[13px] hover:bg-[var(--bg-active)]',
+        destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-primary)]',
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />

@@ -1,20 +1,18 @@
 import { removeItemFromBin, renameItem, updateItemQuantity } from '@/features/bins/useBins';
 import { checkoutItem } from '@/features/checkouts/useCheckouts';
+import { getErrorMessage } from '@/lib/utils';
 
 export type ItemActionOutcome = { ok: true } | { ok: false; error: string };
 export type QuantityOutcome = { ok: true; quantity: number | null } | { ok: false; error: string };
 
-function toError(err: unknown): string {
-  if (err instanceof Error && err.message) return err.message;
-  return 'Request failed';
-}
+const FALLBACK = 'Request failed';
 
 export async function checkoutItemSafe(binId: string, itemId: string): Promise<ItemActionOutcome> {
   try {
     await checkoutItem(binId, itemId);
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: toError(err) };
+    return { ok: false, error: getErrorMessage(err, FALLBACK) };
   }
 }
 
@@ -23,7 +21,7 @@ export async function removeItemSafe(binId: string, itemId: string): Promise<Ite
     await removeItemFromBin(binId, itemId);
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: toError(err) };
+    return { ok: false, error: getErrorMessage(err, FALLBACK) };
   }
 }
 
@@ -37,7 +35,7 @@ export async function renameItemSafe(
     await renameItem(binId, itemId, name, quantity);
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: toError(err) };
+    return { ok: false, error: getErrorMessage(err, FALLBACK) };
   }
 }
 
@@ -50,6 +48,6 @@ export async function updateQuantitySafe(
     const r = await updateItemQuantity(binId, itemId, quantity);
     return { ok: true, quantity: r.quantity ?? null };
   } catch (err) {
-    return { ok: false, error: toError(err) };
+    return { ok: false, error: getErrorMessage(err, FALLBACK) };
   }
 }

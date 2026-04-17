@@ -1,8 +1,6 @@
-export interface EnrichedQueryItem {
-  id: string;
-  name: string;
-  quantity: number | null;
-}
+import type { BinItem } from '@/types';
+
+export type EnrichedQueryItem = BinItem;
 
 export interface QueryMatch {
   bin_id: string;
