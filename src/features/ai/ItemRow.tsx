@@ -18,6 +18,7 @@ import {
   updateQuantitySafe,
 } from '@/features/items/itemActions';
 import { ItemActionMenu } from './ItemActionMenu';
+import { SelectionCheckbox } from './SelectionCheckbox';
 import type { EnrichedQueryItem } from './useInventoryQuery';
 
 interface ItemRowProps {
@@ -26,6 +27,8 @@ interface ItemRowProps {
   canWrite?: boolean;
   isTrashed?: boolean;
   onOpenBin?: (binId: string) => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 export function ItemRow({
@@ -34,6 +37,8 @@ export function ItemRow({
   canWrite = false,
   isTrashed = false,
   onOpenBin,
+  selected,
+  onToggleSelect,
 }: ItemRowProps) {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -100,6 +105,13 @@ export function ItemRow({
   return (
     <>
       <div className="group flex items-center gap-3 px-3 py-1.5 hover:bg-[var(--bg-hover)] transition-colors">
+        {canWrite && !isTrashed && onToggleSelect && (
+          <SelectionCheckbox
+            checked={!!selected}
+            onChange={onToggleSelect}
+            label={`Select ${item.name}`}
+          />
+        )}
         {editingName ? (
           <input
             ref={nameInputRef}

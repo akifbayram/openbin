@@ -9,6 +9,10 @@ vi.mock('@/lib/usePermissions', () => ({
   usePermissions: () => ({ canWrite: true }),
 }));
 
+vi.mock('@/lib/auth', () => ({
+  useAuth: () => ({ activeLocationId: 'loc1' }),
+}));
+
 vi.mock('@/components/ui/toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }));
