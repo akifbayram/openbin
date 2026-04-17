@@ -283,6 +283,5 @@ function askClassifiedToTurn(id: string, c: AskClassified): Turn {
     kind: 'ai-query-result',
     id,
     queryResult: { answer: c.answer, matches: c.matches },
-    isStreaming: false,
   };
 }

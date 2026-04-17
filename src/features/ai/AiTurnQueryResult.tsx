@@ -3,9 +3,7 @@ import { QueryAnswerBody } from './QueryAnswerBody';
 import type { QueryResult } from './useInventoryQuery';
 
 interface AiTurnQueryResultProps {
-  queryResult: QueryResult | null;
-  streamingText?: string;
-  isStreaming: boolean;
+  queryResult: QueryResult;
   onBinClick: (binId: string, isTrashed?: boolean) => void;
 }
 

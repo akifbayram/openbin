@@ -65,7 +65,6 @@ describe('ConversationThread', () => {
     const turns: Turn[] = [{
       kind: 'ai-query-result', id: 'q1',
       queryResult: { answer: 'Yes', matches: [] },
-      isStreaming: false,
     }];
     render(<ConversationThread turns={turns} {...handlers} />);
     expect(screen.getByText('Yes')).toBeDefined();

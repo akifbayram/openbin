@@ -35,9 +35,8 @@ describe('buildHistoryPayload', () => {
         id: 't2',
         queryResult: {
           answer: 'over there',
-          matches: [{ bin_id: 'b1', name: 'Bin', area_name: '', items: [], tags: [], relevance: '' }],
+          matches: [{ bin_id: 'b1', name: 'Bin', area_name: '', items: [], tags: [], relevance: '', icon: '', color: '' }],
         },
-        isStreaming: false,
       },
     ];
     const payload = buildHistoryPayload(turns);

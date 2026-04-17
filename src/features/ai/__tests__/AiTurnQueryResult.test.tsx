@@ -7,7 +7,6 @@ describe('AiTurnQueryResult', () => {
     const { container } = render(
       <AiTurnQueryResult
         queryResult={{ answer: 'Found it', matches: [] }}
-        isStreaming={false}
         onBinClick={vi.fn()}
       />,
     );
@@ -19,7 +18,6 @@ describe('AiTurnQueryResult', () => {
     render(
       <AiTurnQueryResult
         queryResult={{ answer: '', matches: [] }}
-        isStreaming={false}
         onBinClick={vi.fn()}
       />,
     );

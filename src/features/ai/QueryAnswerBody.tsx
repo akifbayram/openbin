@@ -1,26 +1,19 @@
 import { ChevronRight, Search, Trash2 } from 'lucide-react';
-import { StreamingText } from './StreamingText';
 import type { QueryResult } from './useInventoryQuery';
 
 interface QueryAnswerBodyProps {
-  queryResult: QueryResult | null;
-  streamingText?: string;
-  isStreaming: boolean;
+  queryResult: QueryResult;
   onBinClick: (binId: string, isTrashed?: boolean) => void;
 }
 
-export function QueryAnswerBody({ queryResult, streamingText, isStreaming, onBinClick }: QueryAnswerBodyProps) {
-  const showStreaming = isStreaming && !queryResult;
-  const answer = queryResult?.answer ?? streamingText ?? '';
-  const matches = queryResult?.matches ?? [];
+export function QueryAnswerBody({ queryResult, onBinClick }: QueryAnswerBodyProps) {
+  const { answer, matches } = queryResult;
 
   return (
     <div className="space-y-3">
-      <StreamingText
-        text={answer}
-        isStreaming={!!showStreaming}
-        className="text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]"
-      />
+      <p className="text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
+        {answer}
+      </p>
 
       {matches.length > 0 && (
         <div className="space-y-2">
@@ -43,7 +36,9 @@ export function QueryAnswerBody({ queryResult, streamingText, isStreaming, onBin
                   <p className="text-[12px] text-[var(--text-tertiary)]">{match.area_name}</p>
                 )}
                 {match.items.length > 0 && (
-                  <p className="text-[12px] text-[var(--text-secondary)] truncate">{match.items.join(', ')}</p>
+                  <p className="text-[12px] text-[var(--text-secondary)] truncate">
+                    {match.items.map((it) => it.name).join(', ')}
+                  </p>
                 )}
               </div>
               <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
@@ -52,7 +47,7 @@ export function QueryAnswerBody({ queryResult, streamingText, isStreaming, onBin
         </div>
       )}
 
-      {!isStreaming && matches.length === 0 && queryResult && (
+      {matches.length === 0 && (
         <p className="text-[13px] text-[var(--text-tertiary)] text-center py-2">
           No matching bins found. Try different terms or check trash.
         </p>

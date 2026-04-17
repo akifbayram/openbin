@@ -9,10 +9,18 @@ describe('QueryAnswerBody', () => {
         queryResult={{
           answer: 'Found in the kitchen drawer.',
           matches: [
-            { bin_id: 'b1', name: 'Kitchen drawer', area_name: 'Pantry', items: ['AA'], tags: [], relevance: 'exact' },
+            {
+              bin_id: 'b1',
+              name: 'Kitchen drawer',
+              area_name: 'Pantry',
+              items: [{ id: 'i1', name: 'AA', quantity: null }],
+              tags: [],
+              relevance: 'exact',
+              icon: '',
+              color: '',
+            },
           ],
         }}
-        isStreaming={false}
         onBinClick={vi.fn()}
       />,
     );
@@ -21,24 +29,37 @@ describe('QueryAnswerBody', () => {
     expect(screen.getByText('Pantry')).toBeDefined();
   });
 
-  it('renders streaming text when streaming and no result', () => {
-    const { container } = render(
+  it('renders item names from enriched shape', () => {
+    render(
       <QueryAnswerBody
-        queryResult={null}
-        streamingText="Searching…"
-        isStreaming
+        queryResult={{
+          answer: 'Check the garage bin.',
+          matches: [
+            {
+              bin_id: 'b2',
+              name: 'Garage bin',
+              area_name: '',
+              items: [
+                { id: 'i1', name: 'Tent', quantity: null },
+                { id: 'i2', name: 'Stakes', quantity: 4 },
+              ],
+              tags: [],
+              relevance: 'partial',
+              icon: '',
+              color: '',
+            },
+          ],
+        }}
         onBinClick={vi.fn()}
       />,
     );
-    expect(screen.getByText(/Searching/)).toBeDefined();
-    expect(container.querySelector('[data-streaming-cursor]')).not.toBeNull();
+    expect(screen.getByText('Tent, Stakes')).toBeDefined();
   });
 
   it('does NOT render a follow-up textarea or Back button', () => {
     render(
       <QueryAnswerBody
         queryResult={{ answer: 'Answer', matches: [] }}
-        isStreaming={false}
         onBinClick={vi.fn()}
       />,
     );
