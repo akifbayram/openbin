@@ -14,7 +14,7 @@ import { config, isDemoUser } from '../lib/config.js';
 import { parseHistoryFromBody } from '../lib/conversationHistory.js';
 import { ValidationError } from '../lib/httpErrors.js';
 import { classifyIntent } from '../lib/intentClassifier.js';
-import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
+import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg, enrichQueryMatches, type RawMatch } from '../lib/inventoryQuery.js';
 import { refundAiCredit } from '../lib/planGate.js';
 import { aiRateLimiters } from '../lib/rateLimiters.js';
 import { buildReorganizePrompt } from '../lib/reorganizePrompt.js';
@@ -46,6 +46,15 @@ function assertBinsFound(binIds: string[] | undefined, bins: { length: number })
   }
 }
 
+function makeQueryEnrichResult(locationId: string, userId: string) {
+  return async (parsed: unknown) => {
+    const r = parsed as { answer?: string; matches?: unknown[] };
+    const matches = Array.isArray(r.matches) ? (r.matches as RawMatch[]) : [];
+    const enriched = await enrichQueryMatches(matches, locationId, userId);
+    return { answer: r.answer ?? '', matches: enriched };
+  };
+}
+
 function validateBinIds(binIds: unknown): string[] | undefined {
   if (!binIds) return undefined;
   if (!Array.isArray(binIds)) return undefined;
@@ -71,6 +80,7 @@ streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAi
     userContent: buildQueryUserMsg(question, context),
     priorMessages,
     ...streamOpts(settings, { maxTokens: 4096, temperature: 0.2 }),
+    enrichResult: makeQueryEnrichResult(locationId, req.user!.id),
   });
 }));
 
@@ -122,6 +132,7 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
       userContent: buildQueryUserMsg(`${scopeNote}${text}`, queryContext),
       priorMessages,
       ...streamOpts(settings, { maxTokens: 4096, temperature: 0.2 }),
+      enrichResult: makeQueryEnrichResult(locationId, req.user!.id),
     });
   } else {
     const [{ settings, model }, context] = await Promise.all([

@@ -294,6 +294,5 @@ function askClassifiedToTurn(id: string, c: AskClassified, binMap: Map<string, {
     kind: 'ai-query-result',
     id,
     queryResult: { answer: c.answer, matches: c.matches },
-    isStreaming: false,
   };
 }

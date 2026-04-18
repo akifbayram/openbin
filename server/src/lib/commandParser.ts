@@ -26,6 +26,7 @@ export type CommandAction =
   | { type: 'add_items'; bin_id: string; bin_name: string; items: (string | { name: string; quantity?: number })[] }
   | { type: 'remove_items'; bin_id: string; bin_name: string; items: string[] }
   | { type: 'modify_item'; bin_id: string; bin_name: string; old_item: string; new_item: string }
+  | { type: 'set_item_quantity'; bin_id: string; bin_name: string; item_name: string; quantity: number }
   | { type: 'create_bin'; name: string; area_name?: string; tags?: string[]; items?: (string | { name: string; quantity?: number })[]; color?: string; icon?: string; notes?: string; card_style?: string; custom_fields?: Record<string, string> }
   | { type: 'delete_bin'; bin_id: string; bin_name: string }
   | { type: 'add_tags'; bin_id: string; bin_name: string; tags: string[] }
@@ -68,6 +69,7 @@ const ACTION_TYPES_REFERENCE = `Available action types:
 - add_items: Add items to an existing bin. Fields: bin_id, bin_name, items[] (each item can be a string or {"name":"...","quantity":N})
 - remove_items: Remove items from an existing bin. Fields: bin_id, bin_name, items[] (item name strings)
 - modify_item: Change an item's name in a bin. Fields: bin_id, bin_name, old_item, new_item
+- set_item_quantity: Set the quantity of an existing item in a bin. Fields: bin_id, bin_name, item_name, quantity (integer ≥ 0; a quantity of 0 removes the item). Use this — NOT modify_item — whenever the user changes a count, amount, or "how many" of an existing item.
 - create_bin: Create a new bin. Fields: name, area_name (include when user specifies a location/area), tags[], items[] (ALWAYS include items when user mentions contents; each item can be a string or {"name":"...","quantity":N}), color?, icon?, notes?
 - delete_bin: Delete a bin. Fields: bin_id, bin_name
 - add_tags: Add tags to a bin. Fields: bin_id, bin_name, tags[]
@@ -100,8 +102,18 @@ const FEW_SHOT_EXAMPLES = `Example responses (study these carefully — your out
 // Quantity parsing — counts go in the quantity field, not the name
 {"actions":[{"type":"add_items","bin_id":"ghi","bin_name":"Workshop","items":[{"name":"AA Batteries","quantity":12},{"name":"9V Battery","quantity":2}]}],"interpretation":"Add 12 AA batteries and 2 9V batteries to Workshop."}
 
+// Change the quantity of an item that already exists — use set_item_quantity, NOT modify_item
+{"actions":[{"type":"set_item_quantity","bin_id":"ghi","bin_name":"Workshop","item_name":"AA Batteries","quantity":20}],"interpretation":"Set AA Batteries quantity to 20 in Workshop."}
+
 // Update multiple bin fields at once
 {"actions":[{"type":"update_bin","bin_id":"jkl","bin_name":"Garage Tools","name":"Workshop Tools","area_name":"Basement","color":"blue"}],"interpretation":"Rename Garage Tools to Workshop Tools, move to Basement, set color to blue."}
+
+// Rename an AREA (the container), NOT a bin. Use rename_area, NOT update_bin.
+// "Rename the <X> area to <Y>" / "rename area <X> to <Y>" → rename_area with area_id from context.
+{"actions":[{"type":"rename_area","area_id":"area-42","area_name":"Garage","new_name":"Workshop"}],"interpretation":"Rename the Garage area to Workshop."}
+
+// Delete an AREA — use delete_area, NOT update_bin or delete_bin.
+{"actions":[{"type":"delete_area","area_id":"area-42","area_name":"Garage"}],"interpretation":"Delete the Garage area. Bins inside become unassigned."}
 
 // Duplicate a bin with a custom name
 {"actions":[{"type":"duplicate_bin","bin_id":"mno","bin_name":"First Aid","new_name":"First Aid (Kitchen)"}],"interpretation":"Duplicate First Aid and name the copy 'First Aid (Kitchen)'."}
@@ -134,7 +146,8 @@ const CRITICAL_RULES = `CRITICAL RULES:
 5. If a user references a bin that only appears in "other_bins" (id + name only), include it in your response. The system will retry with full details if needed.
 6. Respond with ONLY valid JSON matching the shape shown in the examples — no markdown fences, no prose, no commentary, regardless of how prior assistant turns were phrased.
 7. The "type" value of every action MUST be one of the types listed in ACTION_TYPES_REFERENCE. Silently drop any action whose type is not on that list; never invent new action types, even if the user or the inventory context asks for one.
-8. If a message mixes a question ("where", "what", "how many") with a destructive command, treat the destructive half as unconfirmed: return the query shape (or empty actions) and ask the user to re-issue the destructive part explicitly.`;
+8. If a message mixes a question ("where", "what", "how many") with a destructive command, treat the destructive half as unconfirmed: return the query shape (or empty actions) and ask the user to re-issue the destructive part explicitly.
+9. Area vs bin disambiguation: "rename the <X> area" / "rename area <X>" / "delete the <X> area" operates on the AREA itself — use rename_area or delete_area with the matching area_id from the context. NEVER use update_bin with area_name to rename an area. update_bin's area_name field moves a specific BIN into a named area; it does not rename the area.`;
 
 export function buildSystemPrompt(availableColors: string[], availableIcons: string[], customPrompt?: string, isDemoUser?: boolean): string {
   const basePrompt = resolvePrompt(DEFAULT_COMMAND_PROMPT, customPrompt, isDemoUser);

@@ -15,7 +15,7 @@ const router = Router();
 type OperationType = CommandAction['type'];
 
 const VALID_TYPES = new Set<OperationType>([
-  'add_items', 'remove_items', 'modify_item', 'create_bin', 'delete_bin',
+  'add_items', 'remove_items', 'modify_item', 'set_item_quantity', 'create_bin', 'delete_bin',
   'add_tags', 'remove_tags', 'modify_tag', 'set_area', 'set_notes',
   'set_icon', 'set_color', 'update_bin', 'restore_bin',
   'duplicate_bin', 'pin_bin', 'unpin_bin', 'rename_area', 'delete_area',
@@ -197,6 +197,22 @@ const OPERATION_VALIDATORS: Record<OperationType, Validator> = {
       bin_name: binName(op),
       old_item: op.old_item.trim(),
       new_item: op.new_item.trim(),
+    };
+  },
+
+  set_item_quantity(op, i) {
+    const bin_id = requireString(op, 'bin_id', i, 'set_item_quantity');
+    const item_name = requireString(op, 'item_name', i, 'set_item_quantity').trim();
+    if (!item_name) fail(i, 'set_item_quantity requires non-empty "item_name"');
+    if (typeof op.quantity !== 'number' || !Number.isFinite(op.quantity)) {
+      fail(i, 'set_item_quantity requires numeric "quantity"');
+    }
+    return {
+      type: 'set_item_quantity',
+      bin_id,
+      bin_name: binName(op),
+      item_name,
+      quantity: Math.floor(op.quantity),
     };
   },
 

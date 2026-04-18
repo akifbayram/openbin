@@ -30,6 +30,17 @@ vi.mock('@/lib/auth', () => ({
   useAuth: () => ({ activeLocationId: 'loc-1', token: 'tok', user: { id: 'u1' } }),
 }));
 
+vi.mock('@/lib/usePermissions', () => ({
+  usePermissions: () => ({ canWrite: true }),
+}));
+
+vi.mock('@/features/items/itemActions', () => ({
+  checkoutItemSafe: vi.fn().mockResolvedValue({ ok: true }),
+  removeItemSafe: vi.fn().mockResolvedValue({ ok: true }),
+  renameItemSafe: vi.fn().mockResolvedValue({ ok: true }),
+  updateQuantitySafe: vi.fn().mockResolvedValue({ ok: true, quantity: null }),
+}));
+
 vi.mock('@/components/ui/toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }));
