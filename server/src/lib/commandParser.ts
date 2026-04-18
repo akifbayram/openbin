@@ -26,6 +26,7 @@ export type CommandAction =
   | { type: 'add_items'; bin_id: string; bin_name: string; items: (string | { name: string; quantity?: number })[] }
   | { type: 'remove_items'; bin_id: string; bin_name: string; items: string[] }
   | { type: 'modify_item'; bin_id: string; bin_name: string; old_item: string; new_item: string }
+  | { type: 'set_item_quantity'; bin_id: string; bin_name: string; item_name: string; quantity: number }
   | { type: 'create_bin'; name: string; area_name?: string; tags?: string[]; items?: (string | { name: string; quantity?: number })[]; color?: string; icon?: string; notes?: string; card_style?: string; custom_fields?: Record<string, string> }
   | { type: 'delete_bin'; bin_id: string; bin_name: string }
   | { type: 'add_tags'; bin_id: string; bin_name: string; tags: string[] }
@@ -68,6 +69,7 @@ const ACTION_TYPES_REFERENCE = `Available action types:
 - add_items: Add items to an existing bin. Fields: bin_id, bin_name, items[] (each item can be a string or {"name":"...","quantity":N})
 - remove_items: Remove items from an existing bin. Fields: bin_id, bin_name, items[] (item name strings)
 - modify_item: Change an item's name in a bin. Fields: bin_id, bin_name, old_item, new_item
+- set_item_quantity: Set the quantity of an existing item in a bin. Fields: bin_id, bin_name, item_name, quantity (integer ≥ 0; a quantity of 0 removes the item). Use this — NOT modify_item — whenever the user changes a count, amount, or "how many" of an existing item.
 - create_bin: Create a new bin. Fields: name, area_name (include when user specifies a location/area), tags[], items[] (ALWAYS include items when user mentions contents; each item can be a string or {"name":"...","quantity":N}), color?, icon?, notes?
 - delete_bin: Delete a bin. Fields: bin_id, bin_name
 - add_tags: Add tags to a bin. Fields: bin_id, bin_name, tags[]
@@ -99,6 +101,9 @@ const FEW_SHOT_EXAMPLES = `Example responses (study these carefully — your out
 
 // Quantity parsing — counts go in the quantity field, not the name
 {"actions":[{"type":"add_items","bin_id":"ghi","bin_name":"Workshop","items":[{"name":"AA Batteries","quantity":12},{"name":"9V Battery","quantity":2}]}],"interpretation":"Add 12 AA batteries and 2 9V batteries to Workshop."}
+
+// Change the quantity of an item that already exists — use set_item_quantity, NOT modify_item
+{"actions":[{"type":"set_item_quantity","bin_id":"ghi","bin_name":"Workshop","item_name":"AA Batteries","quantity":20}],"interpretation":"Set AA Batteries quantity to 20 in Workshop."}
 
 // Update multiple bin fields at once
 {"actions":[{"type":"update_bin","bin_id":"jkl","bin_name":"Garage Tools","name":"Workshop Tools","area_name":"Basement","color":"blue"}],"interpretation":"Rename Garage Tools to Workshop Tools, move to Basement, set color to blue."}
