@@ -1,4 +1,4 @@
-import { ExternalLink, MoreHorizontal, Package, PackageMinus, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { ExternalLink, Hash, MoreHorizontal, PackageMinus, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useClickOutside } from '@/lib/useClickOutside';
@@ -41,7 +41,7 @@ export function ItemActionMenu({
         <>
           <Divider />
           <MenuItem icon={PackageMinus} label="Checkout" onClick={run(onCheckout)} />
-          <MenuItem icon={Package} label="Adjust quantity" onClick={run(onAdjustQuantity)} />
+          <MenuItem icon={Hash} label="Adjust quantity" onClick={run(onAdjustQuantity)} />
           <MenuItem icon={Pencil} label="Rename" onClick={run(onRename)} />
           <Divider />
           <MenuItem icon={Trash2} label="Remove" onClick={run(onRemove)} destructive />

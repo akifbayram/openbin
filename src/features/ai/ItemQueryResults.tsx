@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,35 +24,74 @@ interface ItemQueryResultsProps {
   onBinClick: (binId: string, isTrashed?: boolean) => void;
 }
 
+const MAX_MATCHES = 8;
+
 export function ItemQueryResults({ matches, onBinClick }: ItemQueryResultsProps) {
   const { canWrite } = usePermissions();
   const { activeLocationId } = useAuth();
   const { showToast } = useToast();
-  const selection = useItemQuerySelection(matches);
+
+  // Defensive: the prompt says "at most 8 bins", but a misbehaving model
+  // could return more. Also dedup — two matches with the same bin_id would
+  // share item IDs, cross-wiring selection and tripping React key warnings.
+  const visibleMatches = useMemo(() => {
+    const seen = new Set<string>();
+    const deduped: QueryMatch[] = [];
+    for (const m of matches) {
+      if (seen.has(m.bin_id)) continue;
+      seen.add(m.bin_id);
+      deduped.push(m);
+      if (deduped.length >= MAX_MATCHES) break;
+    }
+    return deduped;
+  }, [matches]);
+
+  const selection = useItemQuerySelection(visibleMatches);
   const [isBusy, setIsBusy] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removedItemIds, setRemovedItemIds] = useState<Set<string>>(new Set());
 
   async function runBulk(kind: 'checkout' | 'remove') {
     if (!activeLocationId || selection.selectionCount === 0) return;
+    const targetedIds = [...selection.selected.keys()];
     setIsBusy(true);
     try {
       const actions: CommandAction[] =
         kind === 'checkout'
-          ? buildCheckoutActions(selection.selected, matches)
-          : buildRemoveActions(selection.selected, matches);
-      const result = await executeBatch({
-        actions,
-        selectedIndices: actions.map((_, i) => i),
-        locationId: activeLocationId,
-      });
-      if (result.failedCount > 0) {
+          ? buildCheckoutActions(selection.selected, visibleMatches)
+          : buildRemoveActions(selection.selected, visibleMatches);
+
+      // Chunk here so selecting many items never trips the server limit.
+      // Keep BATCH_CAP in sync with MAX_OPS in server/src/routes/batch.ts.
+      const BATCH_CAP = 50;
+      let completed = 0;
+      let failed = 0;
+      for (let i = 0; i < actions.length; i += BATCH_CAP) {
+        const chunk = actions.slice(i, i + BATCH_CAP);
+        const result = await executeBatch({
+          actions: chunk,
+          selectedIndices: chunk.map((_, idx) => idx),
+          locationId: activeLocationId,
+        });
+        completed += result.completedActions.length;
+        failed += result.failedCount;
+      }
+
+      if (failed > 0) {
         showToast({
-          message: `${result.completedActions.length} of ${actions.length} actions completed`,
+          message: `${completed} of ${actions.length} actions completed`,
           variant: 'error',
         });
       } else {
         showToast({
           message: `Done — ${selection.selectionCount} ${selection.selectionCount === 1 ? 'item' : 'items'} ${kind === 'checkout' ? 'checked out' : 'removed'}`,
+        });
+      }
+      if (kind === 'remove' && failed === 0) {
+        setRemovedItemIds((prev) => {
+          const next = new Set(prev);
+          for (const id of targetedIds) next.add(id);
+          return next;
         });
       }
       selection.clearSelection();
@@ -63,16 +102,17 @@ export function ItemQueryResults({ matches, onBinClick }: ItemQueryResultsProps)
     }
   }
 
-  if (matches.length === 0) return null;
+  if (visibleMatches.length === 0) return null;
 
   return (
     <div className="space-y-2">
-      {matches.map((match) => (
+      {visibleMatches.map((match) => (
         <BinItemGroup
           key={match.bin_id}
           match={match}
           canWrite={canWrite}
           selection={selection}
+          removedItemIds={removedItemIds}
           onBinClick={onBinClick}
         />
       ))}
@@ -114,17 +154,21 @@ export function ItemQueryResults({ matches, onBinClick }: ItemQueryResultsProps)
 
 // --- Local action builders ---
 
+function indexByBinId(matches: QueryMatch[]): Map<string, string> {
+  return new Map(matches.map((m) => [m.bin_id, m.name]));
+}
+
 function buildCheckoutActions(
   selected: ReturnType<typeof useItemQuerySelection>['selected'],
   matches: QueryMatch[],
 ): CommandAction[] {
+  const nameByBinId = indexByBinId(matches);
   const actions: CommandAction[] = [];
   for (const s of selected.values()) {
-    const match = matches.find((m) => m.bin_id === s.binId);
     actions.push({
       type: 'checkout_item',
       bin_id: s.binId,
-      bin_name: match?.name ?? '',
+      bin_name: nameByBinId.get(s.binId) ?? '',
       item_name: s.itemName,
     });
   }
@@ -135,10 +179,10 @@ function buildRemoveActions(
   selected: ReturnType<typeof useItemQuerySelection>['selected'],
   matches: QueryMatch[],
 ): CommandAction[] {
+  const nameByBinId = indexByBinId(matches);
   const byBin = new Map<string, { bin_name: string; items: string[] }>();
   for (const s of selected.values()) {
-    const match = matches.find((m) => m.bin_id === s.binId);
-    const bucket = byBin.get(s.binId) ?? { bin_name: match?.name ?? '', items: [] };
+    const bucket = byBin.get(s.binId) ?? { bin_name: nameByBinId.get(s.binId) ?? '', items: [] };
     bucket.items.push(s.itemName);
     byBin.set(s.binId, bucket);
   }

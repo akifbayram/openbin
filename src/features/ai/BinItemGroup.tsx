@@ -1,4 +1,4 @@
-import { CheckSquare } from 'lucide-react';
+import { CheckSquare, ChevronRight } from 'lucide-react';
 import { cn, flatCard } from '@/lib/utils';
 import { BinGroupHeader } from './BinGroupHeader';
 import { ItemRow } from './ItemRow';
@@ -11,11 +11,14 @@ interface BinItemGroupProps {
   match: QueryMatch;
   canWrite: boolean;
   selection?: SelectionApi;
+  /** Items hidden by external actions (e.g. bulk remove). */
+  removedItemIds?: Set<string>;
   onBinClick: (binId: string, isTrashed?: boolean) => void;
 }
 
-export function BinItemGroup({ match, canWrite, selection, onBinClick }: BinItemGroupProps) {
+export function BinItemGroup({ match, canWrite, selection, removedItemIds, onBinClick }: BinItemGroupProps) {
   const hasItems = match.items.length > 0;
+  const hiddenCount = Math.max(0, match.total_item_count - match.items.length);
   return (
     <div className={cn(flatCard, 'overflow-hidden rounded-[var(--radius-sm)]')}>
       <BinGroupHeader
@@ -42,6 +45,7 @@ export function BinItemGroup({ match, canWrite, selection, onBinClick }: BinItem
                     ? () => selection.toggleItem(item.id, match.bin_id, item.name)
                     : undefined
                 }
+                externallyRemoved={removedItemIds?.has(item.id) ?? false}
               />
             </li>
           ))}
@@ -62,6 +66,18 @@ export function BinItemGroup({ match, canWrite, selection, onBinClick }: BinItem
             <span>Select all {match.items.length} items</span>
           </button>
         )}
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={() => onBinClick(match.bin_id, match.is_trashed)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] border-t border-[var(--border-subtle)] transition-colors"
+        >
+          <span className="flex-1 text-left">
+            + {hiddenCount} more {hiddenCount === 1 ? 'item' : 'items'} — open bin to see all
+          </span>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+        </button>
+      )}
     </div>
   );
 }

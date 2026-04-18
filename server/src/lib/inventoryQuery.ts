@@ -16,6 +16,8 @@ export interface QueryMatch {
   name: string;
   area_name: string;
   items: EnrichedQueryItem[];
+  /** Total items in the bin — may exceed `items.length` when the AI truncated. */
+  total_item_count: number;
   tags: string[];
   relevance: string;
   is_trashed?: boolean;
@@ -151,6 +153,7 @@ async function enrichOneMatch(
     name: match.name,
     area_name: match.area_name,
     items,
+    total_item_count: rawBinItems.length,
     tags: match.tags,
     relevance: match.relevance,
     is_trashed: match.is_trashed,

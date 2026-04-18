@@ -7,12 +7,12 @@ const matches: QueryMatch[] = [
   {
     bin_id: 'b1', name: 'A', area_name: '', tags: [], relevance: '',
     items: [{ id: 'i1', name: '1', quantity: null }, { id: 'i2', name: '2', quantity: null }],
-    icon: '', color: '',
+    total_item_count: 2, icon: '', color: '',
   },
   {
     bin_id: 'b2', name: 'B', area_name: '', tags: [], relevance: '',
     items: [{ id: 'i3', name: '3', quantity: null }],
-    icon: '', color: '',
+    total_item_count: 1, icon: '', color: '',
   },
 ];
 

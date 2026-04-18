@@ -31,6 +31,8 @@ interface ItemRowProps {
   onOpenBin?: (binId: string) => void;
   selected?: boolean;
   onToggleSelect?: () => void;
+  /** External removal signal (e.g. from bulk remove). Hides the row. */
+  externallyRemoved?: boolean;
 }
 
 export function ItemRow({
@@ -41,6 +43,7 @@ export function ItemRow({
   onOpenBin,
   selected,
   onToggleSelect,
+  externallyRemoved = false,
 }: ItemRowProps) {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -56,11 +59,21 @@ export function ItemRow({
   const [draftName, setDraftName] = useState(item.name);
   const nameInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (editingName) nameInputRef.current?.focus();
+    if (editingName) {
+      nameInputRef.current?.focus();
+      nameInputRef.current?.select();
+    }
   }, [editingName]);
 
   const [editingQty, setEditingQty] = useState(false);
-  const [qtyDraft, setQtyDraft] = useState(item.quantity ?? 0);
+  const [qtyDraft, setQtyDraft] = useState(displayQuantity ?? 0);
+  const qtyInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (editingQty) {
+      qtyInputRef.current?.focus();
+      qtyInputRef.current?.select();
+    }
+  }, [editingQty]);
 
   const [confirmRemove, setConfirmRemove] = useState(false);
 
@@ -102,7 +115,13 @@ export function ItemRow({
     }
     const r = await updateQuantitySafe(binId, item.id, clamped);
     if (r.ok) {
-      setDisplayQuantity(r.quantity);
+      if (r.removed) {
+        // Server deletes the item when quantity <= 0. Mirror that in the UI.
+        setRemoved(true);
+        showToast({ message: `Removed "${displayName}"` });
+      } else {
+        setDisplayQuantity(r.quantity);
+      }
     } else {
       showToast({ message: r.error, variant: 'error' });
     }
@@ -130,7 +149,7 @@ export function ItemRow({
     }
   }
 
-  if (removed) return null;
+  if (removed || externallyRemoved) return null;
 
   return (
     <>
@@ -178,6 +197,7 @@ export function ItemRow({
               <Minus className="h-3.5 w-3.5" />
             </button>
             <input
+              ref={qtyInputRef}
               aria-label="Quantity"
               type="number"
               min={0}
@@ -188,7 +208,7 @@ export function ItemRow({
                 if (e.key === 'Enter') handleQtyCommit(qtyDraft);
                 if (e.key === 'Escape') setEditingQty(false);
               }}
-              className="w-10 text-center text-[13px] bg-transparent outline-none tabular-nums"
+              className="w-14 text-center text-[13px] bg-transparent outline-none tabular-nums"
             />
             <button
               type="button"

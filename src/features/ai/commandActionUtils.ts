@@ -82,6 +82,7 @@ export function describeAction(action: CommandAction, t: Terminology): string {
       return `Set color on "${action.bin_name}" to ${action.color}`;
     case 'update_bin': {
       const fields = ['name', 'notes', 'tags', 'area_name', 'icon', 'color', 'visibility'].filter((f) => (action as Record<string, unknown>)[f] !== undefined);
+      if (!action.bin_name) return `Invalid update: missing ${t.bin} — ${fields.join(', ')}`;
       return `Update "${action.bin_name}": ${fields.join(', ')}`;
     }
     case 'restore_bin':

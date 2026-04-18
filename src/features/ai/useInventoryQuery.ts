@@ -7,6 +7,8 @@ export interface QueryMatch {
   name: string;
   area_name: string;
   items: EnrichedQueryItem[];
+  /** Total items in the bin — may exceed `items.length` when the AI truncated. */
+  total_item_count: number;
   tags: string[];
   relevance: string;
   is_trashed?: boolean;

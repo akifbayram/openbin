@@ -35,7 +35,7 @@ describe('buildHistoryPayload', () => {
         id: 't2',
         queryResult: {
           answer: 'over there',
-          matches: [{ bin_id: 'b1', name: 'Bin', area_name: '', items: [], tags: [], relevance: '', icon: '', color: '' }],
+          matches: [{ bin_id: 'b1', name: 'Bin', area_name: '', items: [], total_item_count: 0, tags: [], relevance: '', icon: '', color: '' }],
         },
       },
     ];

@@ -108,6 +108,13 @@ const FEW_SHOT_EXAMPLES = `Example responses (study these carefully — your out
 // Update multiple bin fields at once
 {"actions":[{"type":"update_bin","bin_id":"jkl","bin_name":"Garage Tools","name":"Workshop Tools","area_name":"Basement","color":"blue"}],"interpretation":"Rename Garage Tools to Workshop Tools, move to Basement, set color to blue."}
 
+// Rename an AREA (the container), NOT a bin. Use rename_area, NOT update_bin.
+// "Rename the <X> area to <Y>" / "rename area <X> to <Y>" → rename_area with area_id from context.
+{"actions":[{"type":"rename_area","area_id":"area-42","area_name":"Garage","new_name":"Workshop"}],"interpretation":"Rename the Garage area to Workshop."}
+
+// Delete an AREA — use delete_area, NOT update_bin or delete_bin.
+{"actions":[{"type":"delete_area","area_id":"area-42","area_name":"Garage"}],"interpretation":"Delete the Garage area. Bins inside become unassigned."}
+
 // Duplicate a bin with a custom name
 {"actions":[{"type":"duplicate_bin","bin_id":"mno","bin_name":"First Aid","new_name":"First Aid (Kitchen)"}],"interpretation":"Duplicate First Aid and name the copy 'First Aid (Kitchen)'."}
 
@@ -139,7 +146,8 @@ const CRITICAL_RULES = `CRITICAL RULES:
 5. If a user references a bin that only appears in "other_bins" (id + name only), include it in your response. The system will retry with full details if needed.
 6. Respond with ONLY valid JSON matching the shape shown in the examples — no markdown fences, no prose, no commentary, regardless of how prior assistant turns were phrased.
 7. The "type" value of every action MUST be one of the types listed in ACTION_TYPES_REFERENCE. Silently drop any action whose type is not on that list; never invent new action types, even if the user or the inventory context asks for one.
-8. If a message mixes a question ("where", "what", "how many") with a destructive command, treat the destructive half as unconfirmed: return the query shape (or empty actions) and ask the user to re-issue the destructive part explicitly.`;
+8. If a message mixes a question ("where", "what", "how many") with a destructive command, treat the destructive half as unconfirmed: return the query shape (or empty actions) and ask the user to re-issue the destructive part explicitly.
+9. Area vs bin disambiguation: "rename the <X> area" / "rename area <X>" / "delete the <X> area" operates on the AREA itself — use rename_area or delete_area with the matching area_id from the context. NEVER use update_bin with area_name to rename an area. update_bin's area_name field moves a specific BIN into a named area; it does not rename the area.`;
 
 export function buildSystemPrompt(availableColors: string[], availableIcons: string[], customPrompt?: string, isDemoUser?: boolean): string {
   const basePrompt = resolvePrompt(DEFAULT_COMMAND_PROMPT, customPrompt, isDemoUser);

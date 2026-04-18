@@ -29,6 +29,7 @@ const makeMatch = (overrides?: Partial<QueryMatch>): QueryMatch => ({
   name: 'Camping Gear',
   area_name: 'Garage',
   items: [{ id: 'i1', name: 'Tent', quantity: null }],
+  total_item_count: 1,
   tags: [],
   relevance: '',
   icon: '',

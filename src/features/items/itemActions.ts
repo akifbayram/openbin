@@ -3,7 +3,9 @@ import { checkoutItem } from '@/features/checkouts/useCheckouts';
 import { getErrorMessage } from '@/lib/utils';
 
 export type ItemActionOutcome = { ok: true } | { ok: false; error: string };
-export type QuantityOutcome = { ok: true; quantity: number | null } | { ok: false; error: string };
+export type QuantityOutcome =
+  | { ok: true; quantity: number | null; removed?: boolean }
+  | { ok: false; error: string };
 
 const FALLBACK = 'Request failed';
 
@@ -46,6 +48,7 @@ export async function updateQuantitySafe(
 ): Promise<QuantityOutcome> {
   try {
     const r = await updateItemQuantity(binId, itemId, quantity);
+    if (r.removed) return { ok: true, quantity: null, removed: true };
     return { ok: true, quantity: r.quantity ?? null };
   } catch (err) {
     return { ok: false, error: getErrorMessage(err, FALLBACK) };

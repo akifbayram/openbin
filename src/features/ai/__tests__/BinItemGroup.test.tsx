@@ -23,6 +23,7 @@ const match: QueryMatch = {
     { id: 'i1', name: 'Tent', quantity: null },
     { id: 'i2', name: 'Sleeping bag', quantity: 4 },
   ],
+  total_item_count: 2,
   tags: [],
   relevance: '',
   icon: '',
