@@ -1,6 +1,5 @@
 import { PackageMinus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn, flatCard } from '@/lib/utils';
 
 interface ItemSelectionBarProps {
   selectionCount: number;
@@ -22,22 +21,19 @@ export function ItemSelectionBar({
     <section
       aria-label="Bulk actions"
       aria-live="polite"
-      className={cn(
-        flatCard,
-        'sticky bottom-2 mt-3 px-3 py-2 flex items-center gap-2 rounded-[var(--radius-md)]',
-      )}
+      className="flat-heavy sticky bottom-2 mt-3 px-3 py-2.5 flex items-center gap-2 rounded-[var(--radius-md)]"
     >
-      <span className="text-[13px] text-[var(--text-primary)]">
-        {selectionCount} {selectionCount === 1 ? 'item' : 'items'} selected
-      </span>
       <button
         type="button"
         onClick={onClear}
         aria-label="Clear selection"
-        className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-[var(--radius-xs)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)]"
+        className="shrink-0 inline-flex items-center justify-center h-8 w-8 -ml-1 rounded-[var(--radius-xs)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] hover:text-[var(--text-primary)] transition-colors"
       >
         <X className="h-4 w-4" />
       </button>
+      <span className="text-[13px] font-medium text-[var(--text-primary)]">
+        {selectionCount} {selectionCount === 1 ? 'item' : 'items'} selected
+      </span>
       <span className="flex-1" />
       <Button size="sm" variant="secondary" onClick={onCheckout} disabled={isBusy}>
         <PackageMinus className="h-4 w-4 mr-1" /> Checkout

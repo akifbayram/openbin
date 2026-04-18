@@ -10,10 +10,12 @@ export function SelectionCheckbox({ checked, onToggle, label }: SelectionCheckbo
   return (
     <label
       className={cn(
-        'shrink-0 inline-flex items-center justify-center h-5 w-5 cursor-pointer transition-opacity',
-        'lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100',
-        'opacity-30',
-        checked && 'opacity-100',
+        'shrink-0 inline-flex items-center justify-center h-8 w-8 -ml-1 cursor-pointer transition-opacity',
+        // Checked is always visible. Unchecked fades to 40% on mobile and
+        // is hidden until row hover/focus on desktop.
+        checked
+          ? 'opacity-100'
+          : 'opacity-40 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100',
       )}
     >
       <input

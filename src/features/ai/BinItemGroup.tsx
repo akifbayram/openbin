@@ -1,3 +1,4 @@
+import { CheckSquare } from 'lucide-react';
 import { cn, flatCard } from '@/lib/utils';
 import { BinGroupHeader } from './BinGroupHeader';
 import { ItemRow } from './ItemRow';
@@ -55,9 +56,10 @@ export function BinItemGroup({ match, canWrite, selection, onBinClick }: BinItem
           <button
             type="button"
             onClick={() => selection.selectAllInBin(match.bin_id)}
-            className="w-full text-left px-3 py-1.5 text-[12px] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] border-t border-[var(--border-subtle)]"
+            className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-[var(--accent)] hover:bg-[var(--bg-hover)] border-t border-[var(--border-subtle)] transition-colors"
           >
-            Select all {match.items.length} items in {match.name}
+            <CheckSquare className="h-4 w-4 shrink-0" />
+            <span>Select all {match.items.length} items</span>
           </button>
         )}
     </div>

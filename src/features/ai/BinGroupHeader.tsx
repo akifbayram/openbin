@@ -31,7 +31,7 @@ export function BinGroupHeader({
       data-trashed={isTrashed ? 'true' : undefined}
       aria-label={`Open ${name}`}
       className={cn(
-        'w-full text-left px-3 py-2 flex items-center gap-3 hover:bg-[var(--bg-active)] transition-colors rounded-t-[var(--radius-sm)]',
+        'w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--bg-active)] transition-colors rounded-t-[var(--radius-sm)]',
         isTrashed && 'opacity-70',
       )}
     >
@@ -41,9 +41,9 @@ export function BinGroupHeader({
         <BinIconBadge icon={BinIcon} colorPreset={colorPreset} />
       )}
       <span className="flex-1 min-w-0">
-        <span className="block text-[14px] font-medium text-[var(--text-primary)] truncate">{name}</span>
+        <span className="block text-[15px] font-semibold text-[var(--text-primary)] truncate">{name}</span>
         {areaName && (
-          <span className="block text-[12px] text-[var(--text-tertiary)]">{areaName}</span>
+          <span className="block text-[12px] text-[var(--text-tertiary)] mt-0.5">{areaName}</span>
         )}
       </span>
       <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />

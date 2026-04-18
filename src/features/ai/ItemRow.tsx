@@ -134,7 +134,7 @@ export function ItemRow({
 
   return (
     <>
-      <div className="group flex items-center gap-3 px-3 py-1.5 hover:bg-[var(--bg-hover)] transition-colors">
+      <div className="group flex items-center gap-3 px-3 py-2 hover:bg-[var(--bg-hover)] transition-colors">
         {canWrite && !isTrashed && onToggleSelect && (
           <SelectionCheckbox
             checked={!!selected}
@@ -159,7 +159,7 @@ export function ItemRow({
               }
             }}
             onBlur={handleRenameSave}
-            className="flex-1 min-w-0 bg-transparent text-[14px] text-[var(--text-primary)] outline-none"
+            className="flex-1 min-w-0 bg-[var(--bg-input)] text-[14px] text-[var(--text-primary)] outline-none rounded-[var(--radius-xs)] border border-[var(--border-flat)] px-2 py-0.5 -my-0.5"
           />
         ) : (
           <span className="flex-1 min-w-0 text-[14px] text-[var(--text-primary)] truncate">
@@ -168,11 +168,12 @@ export function ItemRow({
         )}
 
         {editingQty ? (
-          <div className="flex items-center gap-1 bg-[var(--bg-input)] border border-[var(--border-flat)] rounded-[var(--radius-xs)] px-1 py-0.5">
+          <div className="flex items-center gap-0.5 bg-[var(--bg-input)] border border-[var(--border-flat)] rounded-[var(--radius-xs)]">
             <button
               type="button"
               aria-label="Decrement"
               onClick={() => setQtyDraft((q) => Math.max(0, q - 1))}
+              className="inline-flex items-center justify-center h-7 w-7 rounded-[var(--radius-xs)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] hover:text-[var(--text-primary)] transition-colors"
             >
               <Minus className="h-3.5 w-3.5" />
             </button>
@@ -193,6 +194,7 @@ export function ItemRow({
               type="button"
               aria-label="Increment"
               onClick={() => setQtyDraft((q) => q + 1)}
+              className="inline-flex items-center justify-center h-7 w-7 rounded-[var(--radius-xs)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] hover:text-[var(--text-primary)] transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
             </button>

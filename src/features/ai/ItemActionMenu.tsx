@@ -57,7 +57,7 @@ export function ItemActionMenu({
       aria-haspopup="menu"
       aria-expanded={open}
       onClick={() => setOpen((v) => !v)}
-      className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-[var(--radius-xs)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] hover:text-[var(--text-primary)] transition-colors"
+      className="shrink-0 inline-flex items-center justify-center h-8 w-8 -mr-1 rounded-[var(--radius-xs)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] hover:text-[var(--text-primary)] transition-colors"
     >
       <MoreHorizontal className="h-4 w-4" />
     </button>
