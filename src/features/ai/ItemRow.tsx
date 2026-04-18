@@ -191,6 +191,7 @@ export function ItemRow({
             <button
               type="button"
               aria-label="Decrement"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => setQtyDraft((q) => Math.max(0, q - 1))}
               className="inline-flex items-center justify-center h-7 w-7 rounded-[var(--radius-xs)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] hover:text-[var(--text-primary)] transition-colors"
             >
@@ -213,6 +214,7 @@ export function ItemRow({
             <button
               type="button"
               aria-label="Increment"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => setQtyDraft((q) => q + 1)}
               className="inline-flex items-center justify-center h-7 w-7 rounded-[var(--radius-xs)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] hover:text-[var(--text-primary)] transition-colors"
             >
