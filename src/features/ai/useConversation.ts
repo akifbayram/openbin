@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useToast } from '@/components/ui/toast';
+import { useBinList } from '@/features/bins/useBins';
 import { mapAiError } from './aiErrors';
+import { enrichActionsWithNames } from './commandActionUtils';
 import { buildHistoryPayload, createTurnId, type Turn } from './conversationTurns';
 import { executeBatch } from './useActionExecutor';
 import { type AskClassified, classifyResult, useStreamingAsk } from './useStreamingAsk';
@@ -35,6 +37,14 @@ export function useConversation({
 }: UseConversationOptions): UseConversationReturn {
   const { showToast } = useToast();
   const { ask: streamAsk, isStreaming, cancel: cancelAsk, clear: clearAsk } = useStreamingAsk();
+  const { bins } = useBinList();
+  const binMap = useMemo(() => {
+    const m = new Map<string, { name: string }>();
+    for (const b of bins) m.set(b.id, { name: b.name });
+    return m;
+  }, [bins]);
+  const binMapRef = useRef(binMap);
+  binMapRef.current = binMap;
   const [turns, setTurns] = useState<Turn[]>([]);
   const [scopeCleared, setScopeCleared] = useState(false);
   const [executing, setExecuting] = useState<
@@ -104,7 +114,7 @@ export function useConversation({
           return;
         }
         const classified = classifyResult(result as never);
-        const aiTurn = askClassifiedToTurn(thinkingTurn.id, classified);
+        const aiTurn = askClassifiedToTurn(thinkingTurn.id, classified, binMapRef.current);
         setTurns((curr) => curr.map((t) => (t.id === thinkingTurn.id ? aiTurn : t)));
       } catch (err) {
         // Aborted requests (from cancelStreaming) are user-initiated — don't show an error.
@@ -267,13 +277,14 @@ export function useConversation({
   };
 }
 
-function askClassifiedToTurn(id: string, c: AskClassified): Turn {
+function askClassifiedToTurn(id: string, c: AskClassified, binMap: Map<string, { name: string }>): Turn {
   if (c.kind === 'command') {
-    const checked = new Map<number, boolean>(c.actions.map((_, i) => [i, true] as const));
+    const actions = enrichActionsWithNames(c.actions, binMap);
+    const checked = new Map<number, boolean>(actions.map((_, i) => [i, true] as const));
     return {
       kind: 'ai-command-preview',
       id,
-      actions: c.actions,
+      actions,
       interpretation: c.interpretation,
       checkedActions: checked,
       status: 'pending',

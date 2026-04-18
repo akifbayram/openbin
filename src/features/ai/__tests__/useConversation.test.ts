@@ -33,6 +33,11 @@ vi.mock('@/lib/auth', () => ({
   useAuth: () => ({ activeLocationId: 'loc-1' }),
 }));
 
+vi.mock('@/features/bins/useBins', () => ({
+  useBinList: () => ({ bins: [], isLoading: false, refresh: vi.fn() }),
+  notifyBinsChanged: vi.fn(),
+}));
+
 vi.mock('@/components/ui/toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));

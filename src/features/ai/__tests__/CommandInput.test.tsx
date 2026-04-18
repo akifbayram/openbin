@@ -63,6 +63,7 @@ vi.mock('@/features/bins/useBins', () => ({
   restoreBin: vi.fn(),
   notifyBinsChanged: vi.fn(),
   addItemsToBin: vi.fn(),
+  useBinList: () => ({ bins: [], isLoading: false, refresh: vi.fn() }),
 }));
 
 vi.mock('@/features/capture/capturedPhotos', () => ({
