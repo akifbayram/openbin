@@ -127,7 +127,7 @@ export function TagsPage() {
   }
 
   return (
-    <div className="page-content">
+    <div className="page-content-wide">
       <PageHeader
         title="Tags"
         actions={canWrite ? (

@@ -3,13 +3,12 @@ import { apiFetch } from '@/lib/api';
 
 export interface UserPreferences {
   dashboard_recent_bins_count: number;
-  dashboard_scan_history_max: number;
   dashboard_show_stats: boolean;
   dashboard_show_needs_organizing: boolean;
   dashboard_show_saved_views: boolean;
   dashboard_show_pinned_bins: boolean;
   dashboard_show_recently_scanned: boolean;
-  dashboard_show_recently_updated: boolean;
+  dashboard_show_checkouts: boolean;
   dashboard_show_activity: boolean;
   dashboard_show_timestamps: boolean;
   ai_enabled: boolean;
@@ -29,13 +28,12 @@ export interface UserPreferences {
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   dashboard_recent_bins_count: 5,
-  dashboard_scan_history_max: 20,
   dashboard_show_stats: false,
   dashboard_show_needs_organizing: true,
   dashboard_show_saved_views: true,
   dashboard_show_pinned_bins: true,
   dashboard_show_recently_scanned: true,
-  dashboard_show_recently_updated: true,
+  dashboard_show_checkouts: true,
   dashboard_show_activity: true,
   dashboard_show_timestamps: false,
   ai_enabled: true,

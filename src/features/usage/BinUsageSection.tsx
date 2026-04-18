@@ -77,7 +77,6 @@ export function BinUsageSection({ binId }: BinUsageSectionProps) {
             data={usage}
             year={selectedYear}
             granularity={preferences.usage_granularity}
-            mode="per-bin"
           />
           <p className="text-[11px] text-[var(--text-tertiary)] tabular-nums">
             {activeInYear} active {plural(activeInYear, 'day')} in {selectedYear}

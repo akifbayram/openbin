@@ -25,7 +25,7 @@ export function ItemsPage() {
   );
 
   return (
-    <div className="page-content">
+    <div className="page-content-wide">
       <PageHeader title="Items" />
 
       {(totalCount > 0 || search) && (

@@ -11,20 +11,21 @@ import { cn } from '@/lib/utils';
 interface DashboardSettingsMenuProps {
   settings: DashboardSettings;
   onUpdate: (patch: Partial<DashboardSettings>) => void;
+  onReset?: () => void;
   terminology: { Bins: string };
 }
 
 const SECTION_TOGGLES: Array<{ key: keyof DashboardSettings & `show${string}`; label: string }> = [
   { key: 'showStats', label: 'Stats' },
   { key: 'showNeedsOrganizing', label: 'Needs Organizing' },
-  { key: 'showSavedViews', label: 'Saved Searches' },
+  { key: 'showSavedViews', label: 'Saved searches' },
   { key: 'showPinnedBins', label: 'Pinned' },
-  { key: 'showRecentlyScanned', label: 'Recently Scanned' },
-  { key: 'showRecentlyUpdated', label: 'Recently Updated' },
-  { key: 'showActivity', label: 'Activity' },
+  { key: 'showRecentlyScanned', label: 'Recent scans' },
+  { key: 'showCheckouts', label: 'Checked out' },
+  { key: 'showActivity', label: 'Activity & heatmap' },
 ];
 
-export function DashboardSettingsMenu({ settings, onUpdate, terminology }: DashboardSettingsMenuProps) {
+export function DashboardSettingsMenu({ settings, onUpdate, onReset, terminology }: DashboardSettingsMenuProps) {
   const { visible, animating, close, toggle } = usePopover();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -96,6 +97,17 @@ export function DashboardSettingsMenu({ settings, onUpdate, terminology }: Dashb
               </span>
             </div>
           </div>
+          {onReset && (
+            <div className="border-t border-[var(--border-subtle)] mt-1 pt-1">
+              <button
+                type="button"
+                onClick={() => { onReset(); close(); }}
+                className="w-full text-left px-3.5 py-2 text-[13px] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+              >
+                Reset to defaults
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -15,7 +15,7 @@ vi.mock('@/features/pins/usePins', () => ({
 }));
 vi.mock('@/lib/dashboardSettings', () => ({
   useDashboardSettings: vi.fn(() => ({
-    settings: { recentBinsCount: 5, scanHistoryMax: 20 },
+    settings: { recentBinsCount: 5 },
     isLoading: false,
   })),
 }));

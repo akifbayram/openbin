@@ -28,6 +28,22 @@ export function yearOf(isoDate: string): number {
   return parseIsoDate(isoDate)?.y ?? Number.NaN;
 }
 
+/** Format a Date as `YYYY-MM-DD` in UTC. */
+export function toIsoUtc(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+export type Intensity = 0 | 1 | 2 | 3;
+
+export const HEATMAP_OPACITY_BY_STEP: readonly number[] = [0, 0.22, 0.48, 0.82];
+
+/** Accent color-mix string for a given intensity step; step 0 falls back to the subtle border token. */
+export function heatmapCellColor(intensity: Intensity): string {
+  if (intensity === 0) return 'var(--border-subtle)';
+  const pct = Math.round(HEATMAP_OPACITY_BY_STEP[intensity] * 100);
+  return `color-mix(in srgb, var(--accent) ${pct}%, transparent)`;
+}
+
 export function availableYears(data: { date: string }[]): number[] {
   const fallback = [new Date().getUTCFullYear()];
   if (data.length === 0) return fallback;
@@ -103,7 +119,7 @@ export function bucketByWeek(
  * Map a bucket's `activeDays` (weekly/monthly) or daily `count` to an intensity
  * step 0..3. 0 = empty.
  */
-export function intensityStep(value: number, granularity: UsageGranularity): 0 | 1 | 2 | 3 {
+export function intensityStep(value: number, granularity: UsageGranularity): Intensity {
   if (value <= 0) return 0;
   if (granularity === 'daily') {
     if (value === 1) return 1;

@@ -1,5 +1,5 @@
-import { Bookmark, ChevronRight, Clock, Inbox, MapPin, Package, Pin, Plus, Printer, QrCode, ScanLine, Sparkles } from 'lucide-react';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { BarChart3, Bookmark, ChevronRight, Inbox, MapPin, Package, Pin, Plus, Printer, QrCode, ScanLine, Sparkles } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { SavedViewChips } from '@/components/saved-view-chips';
@@ -20,7 +20,6 @@ import { useBulkSelection } from '@/features/bins/useBulkSelection';
 import { useReopenCreateOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { getCommandInputRef } from '@/features/tour/TourProvider';
-import { LocationActivityWidget } from '@/features/usage/LocationActivityWidget';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
@@ -30,10 +29,13 @@ import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
-import { cn, getErrorMessage, relativeTime } from '@/lib/utils';
-import type { Bin } from '@/types';
+import { cn, getErrorMessage } from '@/lib/utils';
+import { DashboardActivityFeed } from './DashboardActivityFeed';
 import { DashboardChecklist } from './DashboardChecklist';
 import { DashboardDialogs } from './DashboardDialogs';
+import { DashboardMonthHeatmap } from './DashboardMonthHeatmap';
+import { DashboardOpenCheckouts } from './DashboardOpenCheckouts';
+import { DashboardRecentScans } from './DashboardRecentScans';
 import { DashboardSettingsMenu } from './DashboardSettingsMenu';
 import { DashboardSkeleton } from './DashboardSkeleton';
 import { SectionHeader, StatCard } from './DashboardWidgets';
@@ -53,9 +55,9 @@ export function DashboardPage() {
   const aiAvailable = aiEnabled && (isSelfHosted || !isGated('ai'));
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const { showToast } = useToast();
-  const { totalBins, totalItems, totalAreas, needsOrganizing, checkoutCount, recentlyScanned, scanTimeMap, recentlyUpdated, pinnedBins, isLoading } =
+  const { totalBins, totalItems, totalAreas, needsOrganizing, checkouts, checkoutCount, recentlyScanned, scanTimeMap, pinnedBins, isLoading } =
     useDashboard();
-  const { settings: dashSettings, updateSettings: updateDashSettings } = useDashboardSettings();
+  const { settings: dashSettings, updateSettings: updateDashSettings, resetSettings: resetDashSettings } = useDashboardSettings();
   const { preferences, updatePreferences } = useUserPreferences();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
@@ -63,32 +65,13 @@ export function DashboardPage() {
   const [createOpen, setCreateOpen] = useState(false);
   useReopenCreateOnCapture(setCreateOpen);
 
-  // Bulk selection
-  const allDashboardBins = useMemo(() => {
-    const seen = new Set<string>();
-    const result: Bin[] = [];
-    for (const bin of [...pinnedBins, ...recentlyScanned, ...recentlyUpdated]) {
-      if (!seen.has(bin.id)) {
-        seen.add(bin.id);
-        result.push(bin);
-      }
-    }
-    return result;
-  }, [pinnedBins, recentlyScanned, recentlyUpdated]);
-
   const { isAdmin, canWrite, canCreateBin } = usePermissions();
   const allTags = useAllTags();
   const bulk = useBulkDialogs();
-  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(allDashboardBins, [activeLocationId]);
-  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy } = useBulkActions(allDashboardBins, selectedIds, clearSelection, showToast, t);
+  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(pinnedBins, [activeLocationId]);
+  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy } = useBulkActions(pinnedBins, selectedIds, clearSelection, showToast, t);
 
   const showChecklist = !preferences.checklist_dismissed && totalBins < 3 && totalBins > 0;
-
-  const binIndexMap = useMemo(() => {
-    const map = new Map<string, number>();
-    for (let i = 0; i < allDashboardBins.length; i++) map.set(allDashboardBins[i].id, i);
-    return map;
-  }, [allDashboardBins]);
 
   useEffect(() => {
     if (debouncedSearch.trim()) {
@@ -118,6 +101,16 @@ export function DashboardPage() {
     );
   }
 
+  const anySectionVisible =
+    (dashSettings.showNeedsOrganizing && needsOrganizing > 0) ||
+    (dashSettings.showSavedViews && savedViews.length > 0) ||
+    (dashSettings.showPinnedBins && pinnedBins.length > 0) ||
+    (dashSettings.showActivity && !!activeLocationId) ||
+    dashSettings.showStats ||
+    (dashSettings.showCheckouts && checkoutCount > 0) ||
+    (dashSettings.showRecentlyScanned && recentlyScanned.length > 0) ||
+    showChecklist;
+
   return (
     <div className="page-content-wide">
       <PageHeader
@@ -125,7 +118,7 @@ export function DashboardPage() {
         actions={
           <div className="row">
             <div className="flex items-center gap-1">
-              <DashboardSettingsMenu settings={dashSettings} onUpdate={updateDashSettings} terminology={t} />
+              <DashboardSettingsMenu settings={dashSettings} onUpdate={updateDashSettings} onReset={resetDashSettings} terminology={t} />
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
                   onClick={() => openScanDialog()}
@@ -183,42 +176,6 @@ export function DashboardPage() {
         isLoading={isLoading}
         skeleton={<DashboardSkeleton settings={dashSettings} />}
       >
-        {showChecklist && (
-          <DashboardChecklist
-            totalBins={totalBins}
-            totalItems={totalItems}
-            onDismiss={() => updatePreferences({ checklist_dismissed: true })}
-          />
-        )}
-
-        {/* Stats */}
-        {dashSettings.showStats && (
-          <div className="flex gap-3">
-            <StatCard
-              label={`Total ${t.Bins}`}
-              value={totalBins}
-              onClick={() => navigate('/bins')}
-            />
-            <StatCard label="Total Items" value={totalItems} />
-            {totalAreas > 0 && (
-              <StatCard
-                label={t.Areas}
-                value={totalAreas}
-                onClick={() => navigate('/locations')}
-              />
-            )}
-            {checkoutCount > 0 && (
-              <StatCard
-                label="Checked Out"
-                value={checkoutCount}
-                variant="warning"
-                onClick={() => navigate('/checkouts')}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Needs Organizing */}
         {dashSettings.showNeedsOrganizing && needsOrganizing > 0 && (
           <button
             type="button"
@@ -240,84 +197,126 @@ export function DashboardPage() {
           </button>
         )}
 
-        {/* Saved Views */}
-        {dashSettings.showSavedViews && savedViews.length > 0 && (
-          <section aria-labelledby="dash-saved-views" className="flex flex-col gap-2">
-          <SectionHeader id="dash-saved-views" icon={Bookmark} title="Saved Searches" />
-          <SavedViewChips
-            views={savedViews}
-            onApply={(view) => {
-              const qs = buildViewSearchParams(view);
-              navigate(qs ? `/bins?${qs}` : '/bins');
-            }}
-            onDelete={(viewId) => {
-              deleteView(viewId).catch((err) => {
-                showToast({ message: getErrorMessage(err, 'Failed to delete saved view'), variant: 'error' });
-              });
-            }}
-          />
-          </section>
-        )}
+        {/*
+          Mobile order is driven by action gradient (act → shortcut → recall → orient → analyze):
+          1 onboarding · 2 checkouts · 3 pinned · 4 recent scans · 5 saved · 6 stats · 7 activity · 8 heatmap.
+          Wrappers use `display: contents` on mobile so sections participate directly in the outer grid;
+          on `lg:` they become real 2:1 columns with natural DOM order restored.
+        */}
+        <div className={cn('grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start', selectable && 'pb-16')}>
+          <div className="contents lg:col-span-2 lg:flex lg:flex-col lg:gap-4 lg:min-w-0">
+            {dashSettings.showSavedViews && savedViews.length > 0 && (
+              <section aria-labelledby="dash-saved-views" className="flex flex-col gap-2 order-5 lg:order-none min-w-0">
+                <SectionHeader id="dash-saved-views" icon={Bookmark} title="Saved searches" />
+                <SavedViewChips
+                  views={savedViews}
+                  onApply={(view) => {
+                    const qs = buildViewSearchParams(view);
+                    navigate(qs ? `/bins?${qs}` : '/bins');
+                  }}
+                  onDelete={(viewId) => {
+                    deleteView(viewId).catch((err) => {
+                      showToast({ message: getErrorMessage(err, 'Failed to delete saved view'), variant: 'error' });
+                    });
+                  }}
+                />
+              </section>
+            )}
 
-        {/* Pinned Bins */}
-        {dashSettings.showPinnedBins && pinnedBins.length > 0 && (
-          <section aria-labelledby="dash-pinned" className="flex flex-col gap-2">
-            <SectionHeader id="dash-pinned" icon={Pin} title="Pinned" />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {pinnedBins.map((bin, i) => (
-                <div key={bin.id} className="animate-card-stagger" style={{ '--stagger-index': i } as React.CSSProperties}>
-                  <BinCard bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+            {dashSettings.showPinnedBins && pinnedBins.length > 0 && (
+              <section aria-labelledby="dash-pinned" className="flex flex-col gap-2 order-3 lg:order-none min-w-0">
+                <SectionHeader
+                  id="dash-pinned"
+                  icon={Pin}
+                  title="Pinned"
+                  action={{ label: `All ${t.Bins}`, onClick: () => navigate('/bins?pinned=true') }}
+                />
+                <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1 py-1 snap-x snap-mandatory">
+                  {pinnedBins.map((bin, i) => (
+                    <div
+                      key={bin.id}
+                      className="shrink-0 w-[clamp(220px,70vw,260px)] snap-start animate-card-stagger"
+                      style={{ '--stagger-index': i } as React.CSSProperties}
+                    >
+                      <BinCard bin={bin} index={i} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
+              </section>
+            )}
 
-        {/* Recently Scanned */}
-        {dashSettings.showRecentlyScanned && recentlyScanned.length > 0 && (
-          <section aria-labelledby="dash-scanned" className="flex flex-col gap-2">
-            <SectionHeader id="dash-scanned" icon={ScanLine} title="Recently Scanned" />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {recentlyScanned.map((bin, i) => (
-                <div key={bin.id} className="flex flex-col gap-1 animate-card-stagger" style={{ '--stagger-index': i } as React.CSSProperties}>
-                  <BinCard bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
-                  {dashSettings.showTimestamps && scanTimeMap.has(bin.id) && (
-                    <p className="text-[11px] text-[var(--text-tertiary)] px-1">{relativeTime(scanTimeMap.get(bin.id) as string)}</p>
-                  )}
+            {dashSettings.showActivity && isAdmin && (
+              <div className="order-7 lg:order-none min-w-0">
+                <DashboardActivityFeed showTimestamps={dashSettings.showTimestamps} />
+              </div>
+            )}
+
+            {dashSettings.showActivity && activeLocationId && (
+              <div className="order-8 lg:order-none min-w-0">
+                <DashboardMonthHeatmap locationId={activeLocationId} />
+              </div>
+            )}
+          </div>
+
+          <div className="contents lg:flex lg:flex-col lg:gap-4 lg:min-w-0">
+            {dashSettings.showStats && (
+              <section aria-labelledby="dash-stats" className="flex flex-col gap-2 order-6 lg:order-none min-w-0">
+                <SectionHeader id="dash-stats" icon={BarChart3} title="Overview" />
+                <div className="grid grid-cols-2 gap-3">
+                  <StatCard
+                    label={`Total ${t.Bins}`}
+                    value={totalBins}
+                    onClick={() => navigate('/bins')}
+                  />
+                  <StatCard
+                    label={t.Areas}
+                    value={totalAreas}
+                    onClick={() => navigate('/locations')}
+                  />
+                  <StatCard
+                    label="Items"
+                    value={totalItems}
+                    onClick={() => navigate('/items')}
+                  />
+                  <StatCard
+                    label="Checked out"
+                    value={checkoutCount}
+                    variant={checkoutCount > 0 ? 'warning' : 'default'}
+                    onClick={() => navigate('/checkouts')}
+                  />
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
+              </section>
+            )}
 
-        {/* Recently Updated */}
-        {dashSettings.showRecentlyUpdated && recentlyUpdated.length > 0 && (
-          <section aria-labelledby="dash-updated" className={cn("flex flex-col gap-2", selectable && "pb-16")}>
-            <SectionHeader
-              id="dash-updated"
-              icon={Clock}
-              title="Recently Updated"
-              action={{ label: `All ${t.Bins}`, onClick: () => navigate('/bins') }}
-            />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {recentlyUpdated.map((bin, i) => (
-                <div key={bin.id} className="flex flex-col gap-1 animate-card-stagger" style={{ '--stagger-index': i } as React.CSSProperties}>
-                  <BinCard bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
-                  {dashSettings.showTimestamps && (
-                    <p className="text-[11px] text-[var(--text-tertiary)] px-1">{relativeTime(bin.updated_at)}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+            {dashSettings.showCheckouts && checkouts.length > 0 && (
+              <div className="order-2 lg:order-none min-w-0">
+                <DashboardOpenCheckouts checkouts={checkouts} showTimestamps={dashSettings.showTimestamps} />
+              </div>
+            )}
 
-        {/* Activity heatmap */}
-        {dashSettings.showActivity && activeLocationId && (
-          <LocationActivityWidget locationId={activeLocationId} />
-        )}
+            {dashSettings.showRecentlyScanned && (
+              <div className="order-4 lg:order-none min-w-0">
+                <DashboardRecentScans
+                  bins={recentlyScanned}
+                  scanTimeMap={scanTimeMap}
+                  limit={3}
+                  showTimestamps={dashSettings.showTimestamps}
+                />
+              </div>
+            )}
 
-        {/* First-run onboarding (0 bins) */}
+            {showChecklist && (
+              <div className="order-1 lg:order-none min-w-0">
+                <DashboardChecklist
+                  totalBins={totalBins}
+                  totalItems={totalItems}
+                  onDismiss={() => updatePreferences({ checklist_dismissed: true })}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
         {totalBins === 0 && (
           <div className="flex flex-col items-center justify-center gap-6 py-16">
             <div className="h-20 w-20 rounded-[var(--radius-xl)] bg-[var(--accent)]/10 flex items-center justify-center">
@@ -350,14 +349,7 @@ export function DashboardPage() {
           </div>
         )}
 
-        {/* Empty sections nudge (has bins but all sections disabled) */}
-        {totalBins > 0 && !(
-          (dashSettings.showNeedsOrganizing && needsOrganizing > 0) ||
-          (dashSettings.showSavedViews && savedViews.length > 0) ||
-          (dashSettings.showPinnedBins && pinnedBins.length > 0) ||
-          (dashSettings.showRecentlyScanned && recentlyScanned.length > 0) ||
-          (dashSettings.showRecentlyUpdated && recentlyUpdated.length > 0)
-        ) && (
+        {totalBins > 0 && !anySectionVisible && (
           <div className="flex flex-col items-center justify-center gap-4 py-6 text-[var(--text-tertiary)]">
             <div className="text-center space-y-1.5">
               <p className="text-[17px] font-semibold text-[var(--text-secondary)]">Your dashboard is empty</p>
@@ -367,11 +359,11 @@ export function DashboardPage() {
               {([
                 { key: 'showStats' as const, label: 'Stats' },
                 { key: 'showNeedsOrganizing' as const, label: 'Needs Organizing' },
-                { key: 'showSavedViews' as const, label: 'Saved Views' },
+                { key: 'showSavedViews' as const, label: 'Saved searches' },
                 { key: 'showPinnedBins' as const, label: `Pinned ${t.Bins}` },
-                { key: 'showRecentlyScanned' as const, label: 'Recently Scanned' },
-                { key: 'showRecentlyUpdated' as const, label: 'Recently Updated' },
-                { key: 'showActivity' as const, label: 'Activity' },
+                { key: 'showRecentlyScanned' as const, label: 'Recent scans' },
+                { key: 'showCheckouts' as const, label: 'Checked out' },
+                { key: 'showActivity' as const, label: 'Activity & heatmap' },
               ]).map(({ key, label }) => (
                 <div key={key} className="flex items-center justify-between py-2 px-3 rounded-[var(--radius-md)]">
                   <span className="text-[14px] text-[var(--text-primary)]">{label}</span>
@@ -391,7 +383,7 @@ export function DashboardPage() {
         bulk={bulk} selectedIds={selectedIds} clearSelection={clearSelection}
         allTags={allTags} selectable={selectable} isAdmin={isAdmin} canWrite={canWrite}
         bulkDelete={bulkDelete} bulkPinToggle={bulkPinToggle} bulkDuplicate={bulkDuplicate}
-        pinLabel={pinLabel} isBusy={isBusy} bins={allDashboardBins} t={t}
+        pinLabel={pinLabel} isBusy={isBusy} bins={pinnedBins} t={t}
       />
 
       {__EE__ && (

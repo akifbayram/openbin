@@ -236,13 +236,13 @@ export function PreferencesSection() {
           }
         />
         <SettingsRow
-          label="Recently Updated"
+          label="Checked Out"
           border={false}
           control={
             <Switch
-              checked={dashSettings.showRecentlyUpdated}
+              checked={dashSettings.showCheckouts}
               onCheckedChange={(checked) =>
-                handleDashUpdate({ showRecentlyUpdated: checked })
+                handleDashUpdate({ showCheckouts: checked })
               }
             />
           }
@@ -268,29 +268,6 @@ export function PreferencesSection() {
                   DASHBOARD_LIMITS.recentBinsCount.max,
                 );
                 updateDashSettings({ recentBinsCount: clamped });
-                flash();
-              }}
-            />
-          </FormField>
-          <FormField label="Scan history entries" htmlFor="scanHistoryMax">
-            <Input
-              id="scanHistoryMax"
-              type="number"
-              min={DASHBOARD_LIMITS.scanHistoryMax.min}
-              max={DASHBOARD_LIMITS.scanHistoryMax.max}
-              value={dashSettings.scanHistoryMax}
-              onChange={(e) =>
-                updateDashSettings({
-                  scanHistoryMax: Number(e.target.value),
-                })
-              }
-              onBlur={(e) => {
-                const clamped = clamp(
-                  Number(e.target.value),
-                  DASHBOARD_LIMITS.scanHistoryMax.min,
-                  DASHBOARD_LIMITS.scanHistoryMax.max,
-                );
-                updateDashSettings({ scanHistoryMax: clamped });
                 flash();
               }}
             />

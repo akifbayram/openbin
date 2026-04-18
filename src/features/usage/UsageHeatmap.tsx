@@ -1,40 +1,33 @@
 import { useMemo } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn, haptic, plural } from '@/lib/utils';
-import type { LocationUsageDay, UsageDay, UsageGranularity } from '@/types';
-import { bucketByMonth, bucketByWeek, intensityStep, parseIsoDate, yearOf } from './usageBuckets';
-
-type AnyUsageDay = UsageDay | LocationUsageDay;
-type Intensity = 0 | 1 | 2 | 3;
+import type { UsageDay, UsageGranularity } from '@/types';
+import {
+  bucketByMonth,
+  bucketByWeek,
+  heatmapCellColor,
+  type Intensity,
+  intensityStep,
+  parseIsoDate,
+  toIsoUtc,
+  yearOf,
+} from './usageBuckets';
 
 interface UsageHeatmapProps {
-  data: AnyUsageDay[];
+  data: UsageDay[];
   year: number;
   granularity: UsageGranularity;
-  mode: 'per-bin' | 'aggregate';
   onDayClick?: (date: string) => void;
 }
 
 const CELL_SIZE = 10;
 const CELL_GAP = 3;
 const CELL_STEP = CELL_SIZE + CELL_GAP;
-const OPACITY_BY_STEP = [0, 0.22, 0.48, 0.82];
 // Full weekday list is kept for a11y; display filters to Mon/Wed/Fri to reduce clutter.
 const VISIBLE_DOW = new Set([1, 3, 5]);
 
 const CELL_TRANSITION =
   'transition-[background-color,outline-color] duration-150 ease-out motion-reduce:transition-none';
-
-function todayUtcIso(): string {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
-}
-
-function asCount(entry: AnyUsageDay, mode: 'per-bin' | 'aggregate'): number {
-  const raw = mode === 'aggregate' ? (entry as LocationUsageDay).binCount : (entry as UsageDay).count;
-  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0) return 0;
-  return raw;
-}
 
 // All formatters pin timeZone: 'UTC' because the Date inputs are UTC-constructed
 // (Date.UTC / ISO YYYY-MM-DD). Without this, locales west of UTC render midnight-UTC
@@ -70,14 +63,8 @@ function formatPrettyDate(isoDate: string): string {
   return DATE_FMT.format(new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d)));
 }
 
-function cellColor(intensity: Intensity): string {
-  if (intensity === 0) return 'var(--border-subtle)';
-  const pct = Math.round(OPACITY_BY_STEP[intensity] * 100);
-  return `color-mix(in srgb, var(--accent) ${pct}%, transparent)`;
-}
-
 function cellBoxStyle(intensity: Intensity, fill?: boolean): React.CSSProperties {
-  const base: React.CSSProperties = { backgroundColor: cellColor(intensity) };
+  const base: React.CSSProperties = { backgroundColor: heatmapCellColor(intensity) };
   if (!fill) {
     base.width = CELL_SIZE;
     base.height = CELL_SIZE;
@@ -206,8 +193,7 @@ function buildDailyGrid(
     cells.push({ key: `pad-lead-${year}-${i}`, date: null, count: 0 });
   }
   for (let i = 0; i < totalDays; i++) {
-    const t = new Date(yearStart + i * 86_400_000);
-    const iso = `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
+    const iso = toIsoUtc(new Date(yearStart + i * 86_400_000));
     cells.push({ key: iso, date: iso, count: byDate.get(iso) ?? 0 });
   }
   const weeks = Math.ceil(cells.length / 7);
@@ -266,7 +252,7 @@ function DailyView({
     [data, year],
   );
   const gridWidth = weeks * CELL_SIZE + (weeks - 1) * CELL_GAP;
-  const todayIso = todayUtcIso();
+  const todayIso = toIsoUtc(new Date());
 
   return (
     <div
@@ -489,15 +475,10 @@ export function InlineRetryError({
   );
 }
 
-export function UsageHeatmap({ data, year, granularity, mode, onDayClick }: UsageHeatmapProps) {
-  const normalized = useMemo(
-    () => data.map((d) => ({ date: d.date, count: asCount(d, mode) })),
-    [data, mode],
-  );
-
+export function UsageHeatmap({ data, year, granularity, onDayClick }: UsageHeatmapProps) {
   const safeYear = Number.isFinite(year) ? Math.trunc(year) : new Date().getUTCFullYear();
 
-  if (granularity === 'monthly') return <MonthlyView data={normalized} year={safeYear} />;
-  if (granularity === 'weekly') return <WeeklyView data={normalized} year={safeYear} />;
-  return <DailyView data={normalized} year={safeYear} onDayClick={onDayClick} />;
+  if (granularity === 'monthly') return <MonthlyView data={data} year={safeYear} />;
+  if (granularity === 'weekly') return <WeeklyView data={data} year={safeYear} />;
+  return <DailyView data={data} year={safeYear} onDayClick={onDayClick} />;
 }

@@ -71,14 +71,6 @@ export function useDashboard() {
   const totalAreas = stats?.total_areas ?? areas.length;
   const needsOrganizing = stats?.needs_organizing ?? clientNeedsOrganizing;
 
-  const recentlyUpdated = useMemo(
-    () =>
-      [...bins]
-        .sort((a, b) => (b.updated_at > a.updated_at ? 1 : -1))
-        .slice(0, dashSettings.recentBinsCount),
-    [bins, dashSettings.recentBinsCount]
-  );
-
   const recentlyScanned = useMemo(() => {
     const binMap = new Map(bins.map((b) => [b.id, b]));
     return scanHistory
@@ -96,5 +88,5 @@ export function useDashboard() {
 
   const isLoading = binsLoading || statsLoading || checkoutsLoading;
 
-  return { totalBins, totalItems, totalAreas, needsOrganizing, checkoutCount: checkouts.length, recentlyUpdated, recentlyScanned, scanTimeMap, pinnedBins, isLoading };
+  return { totalBins, totalItems, totalAreas, needsOrganizing, checkouts, checkoutCount: checkouts.length, recentlyScanned, scanTimeMap, pinnedBins, isLoading };
 }

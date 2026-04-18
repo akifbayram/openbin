@@ -59,7 +59,7 @@ export function CheckoutsPage() {
   }, [checkouts, search, sortColumn, sortDirection]);
 
   return (
-    <div className="page-content">
+    <div className="page-content-wide">
       <PageHeader title="Checked Out" />
 
       {(checkouts.length > 0 || search) && (

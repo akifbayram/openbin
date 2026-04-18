@@ -15,6 +15,7 @@ AI-powered bin inventory. Multi-user web app where AI does the organizing work: 
 - **Client**: React 18 + TypeScript 5 (strict) + Vite 6, Tailwind CSS 4, react-router-dom 6 (BrowserRouter)
 - **Server**: Express 4, SQLite (better-sqlite3) or PostgreSQL (pg), JWT auth, express-rate-limit
 - **Database engine**: Set `DATABASE_URL` env var for PostgreSQL; omit for SQLite. Engine is locked after first init (cannot switch). Dialect abstraction in `server/src/db/dialect.ts` (`d` object) handles SQL differences.
+- **Open-core split**: Proprietary cloud code lives in `src/ee/` (licensed separately; see `src/ee/LICENSE`). EE imports go through the compile-time global `__EE__` (injected by `vite.config.ts` when `BUILD_EDITION=cloud`). Pattern: `const UpgradeDialog = __EE__ ? lazy(() => import('@/ee/UpgradeDialog')...) : (() => null) as React.FC<…>`. Use `npm run dev:cloud:all` to build with `__EE__=true`; the default `npm run dev:all` leaves EE components as no-ops.
 - **Docker**: Single container (Express serves static frontend + API), reverse proxy optional
 - Features live in `src/features/`, server code in `server/src/`, shared types in @src/types.ts
 - No ESLint or Prettier — single root `biome.json` covers both `src/` and `server/src/`.
@@ -25,6 +26,7 @@ AI-powered bin inventory. Multi-user web app where AI does the organizing work: 
 - **Feature hooks pattern**: each feature exposes a hook (e.g. `useBinList`) for data via `apiFetch()` with event-based refresh, and plain async functions (e.g. `addBin`) for mutations. Same file.
 - **Data hooks return `{ data, isLoading }`** — e.g. `useBinList()` → `{ bins, isLoading }`.
 - **Key utilities**: `apiFetch()` in `lib/api.ts`, `useAuth()` in `lib/auth.tsx`, `useAppSettings()` in `lib/appSettings.ts`, `LocationProvider` in `features/locations/useLocations.tsx`, `usePermissions()` in `lib/usePermissions.ts`, `cn()` in `lib/utils.ts`. Read the source for signatures.
+- **List fetching**: Three helpers in `lib/useListQuery.ts` — `useListData<T>(path, events, transform?)` for simple lists, `usePaginatedList<T>(path, events, pageSize?)` for offset-based loadMore, `usePagedList<T>(…)` for page-based replace. All watch event-bus events, skip on null path, abort stale responses, and expose `error` + `isLoading`. Prefer these over hand-rolled `useEffect` fetches.
 - **Soft deletes**: `DELETE /api/bins/:id` sets `deleted_at`. All bin queries filter `WHERE deleted_at IS NULL`.
 - **API response envelopes**: Lists return `{ results: T[], count }`. Errors return `{ error: "CODE", message }`. See `server/openapi.yaml` for details.
 - **Icons**: `lucide-react` — import named icons (e.g. `import { Plus } from 'lucide-react'`).
