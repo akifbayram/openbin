@@ -1,5 +1,5 @@
 import {ArrowUpDown, CircleHelp,
-  Copy, FileText, FolderMinus, FolderPen, Image as ImageIcon, LogIn, LogOut, MapPin, Minus, Package, Palette, PenLine, Pin, PinOff,
+  Copy, FileText, FolderMinus, FolderPen, Hash, Image as ImageIcon, LogIn, LogOut, MapPin, Minus, Package, Palette, PenLine, Pin, PinOff,
   Plus, Tag, Trash2, Undo2,
 } from 'lucide-react';
 import type { Terminology } from '@/lib/terminology';
@@ -19,6 +19,7 @@ export function getActionIcon(action: CommandAction) {
     case 'add_items': return Plus;
     case 'remove_items': return Minus;
     case 'modify_item': return FileText;
+    case 'set_item_quantity': return Hash;
     case 'create_bin': return Package;
     case 'delete_bin': return Trash2;
     case 'add_tags': return Tag;
@@ -51,6 +52,10 @@ export function describeAction(action: CommandAction, t: Terminology): string {
       return `Remove ${action.items.join(', ')} from "${action.bin_name}"`;
     case 'modify_item':
       return `Rename "${action.old_item}" to "${action.new_item}" in "${action.bin_name}"`;
+    case 'set_item_quantity':
+      return action.quantity <= 0
+        ? `Remove "${action.item_name}" from "${action.bin_name}"`
+        : `Set quantity of "${action.item_name}" to ${action.quantity} in "${action.bin_name}"`;
     case 'create_bin': {
       let desc = `Create ${t.bin} "${action.name}"`;
       if (action.area_name) desc += ` in ${action.area_name}`;
@@ -77,6 +82,7 @@ export function describeAction(action: CommandAction, t: Terminology): string {
       return `Set color on "${action.bin_name}" to ${action.color}`;
     case 'update_bin': {
       const fields = ['name', 'notes', 'tags', 'area_name', 'icon', 'color', 'visibility'].filter((f) => (action as Record<string, unknown>)[f] !== undefined);
+      if (!action.bin_name) return `Invalid update: missing ${t.bin} — ${fields.join(', ')}`;
       return `Update "${action.bin_name}": ${fields.join(', ')}`;
     }
     case 'restore_bin':

@@ -113,8 +113,6 @@ export function ConversationThread({
             content = (
               <AiTurnQueryResult
                 queryResult={turn.queryResult}
-                streamingText={turn.streamingText}
-                isStreaming={turn.isStreaming}
                 onBinClick={onBinClick}
               />
             );

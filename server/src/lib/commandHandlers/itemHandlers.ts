@@ -59,6 +59,34 @@ export async function handleModifyItem(action: Extract<CommandAction, { type: 'm
   return { type: 'modify_item', success: true, details: `Renamed "${action.old_item}" to "${action.new_item}" in ${action.bin_name}`, bin_id: action.bin_id, bin_name: action.bin_name };
 }
 
+export async function handleSetItemQuantity(action: Extract<CommandAction, { type: 'set_item_quantity' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
+  const bin = await tx<{ id: string; name: string; visibility: string; created_by: string }>('SELECT id, name, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
+  if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
+  const existing = await tx<{ id: string; quantity: number | null }>('SELECT id, quantity FROM bin_items WHERE bin_id = $1 AND LOWER(name) = LOWER($2)', [action.bin_id, action.item_name]);
+  if (existing.rows.length === 0) throw new Error(`Item not found: ${action.item_name}`);
+  const { id: itemId, quantity: oldQuantity } = existing.rows[0];
+  const newQuantity = Math.floor(action.quantity);
+  if (newQuantity <= 0) {
+    await tx('DELETE FROM bin_items WHERE id = $1 AND bin_id = $2', [itemId, action.bin_id]);
+    await tx(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
+    ctx.pendingActivities.push({
+      locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
+      action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
+      changes: { items_removed: { old: [action.item_name], new: null } },
+    });
+    return { type: 'set_item_quantity', success: true, details: `Removed "${action.item_name}" from ${action.bin_name}`, bin_id: action.bin_id, bin_name: action.bin_name };
+  }
+  await tx(`UPDATE bin_items SET quantity = $1, updated_at = ${d.now()} WHERE id = $2 AND bin_id = $3`, [newQuantity, itemId, action.bin_id]);
+  await tx(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
+  ctx.pendingActivities.push({
+    locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
+    action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
+    changes: { items_quantity: { old: { name: action.item_name, qty: oldQuantity }, new: { name: action.item_name, qty: newQuantity } } },
+  });
+  return { type: 'set_item_quantity', success: true, details: `Set "${action.item_name}" quantity to ${newQuantity} in ${action.bin_name}`, bin_id: action.bin_id, bin_name: action.bin_name };
+}
+
 export async function handleReorderItems(action: Extract<CommandAction, { type: 'reorder_items' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
   const bin = await tx<{ id: string; visibility: string; created_by: string }>('SELECT id, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);

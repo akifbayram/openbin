@@ -17,6 +17,12 @@ export interface StreamOptions {
   abortSignal?: AbortSignal;
   /** Prior conversation turns to prepend before the current user message. */
   priorMessages?: ModelMessage[];
+  /**
+   * Optional post-processing hook. When set, the final parsed JSON is passed
+   * through this function before being emitted as the `done` event's text.
+   * Used by query routes to enrich AI-returned matches with DB-resolved data.
+   */
+  enrichResult?: (parsed: unknown) => Promise<unknown>;
 }
 
 /** Set SSE headers on an Express response and return a typed event writer. */
@@ -119,7 +125,21 @@ export async function pipeAiStreamToResponse(
   const writeEvent = initSseResponse(res);
   try {
     const result = await streamAiToWriter(writeEvent, model, opts);
-    if (result) writeEvent({ type: 'done', text: result });
+    if (result) {
+      let finalText = result;
+      if (opts.enrichResult) {
+        try {
+          const parsed = JSON.parse(result);
+          const enriched = await opts.enrichResult(parsed);
+          finalText = JSON.stringify(enriched);
+        } catch (err) {
+          log.error('enrichResult failed:', err instanceof Error ? err.message : '[non-Error]');
+          // Fall back to un-enriched result so the client isn't left hanging.
+        }
+      }
+      writeEvent({ type: 'done', text: finalText });
+      return finalText;
+    }
     return result;
   } finally {
     res.end();

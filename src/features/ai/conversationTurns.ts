@@ -18,9 +18,7 @@ export type Turn =
   | {
       kind: 'ai-query-result';
       id: string;
-      queryResult: QueryResult | null;
-      streamingText?: string;
-      isStreaming: boolean;
+      queryResult: QueryResult;
     }
   | { kind: 'ai-error'; id: string; error: string; canRetry: boolean };
 
@@ -57,7 +55,7 @@ export function buildHistoryPayload(turns: Turn[]): ConversationTurnPayload[] {
   for (const turn of turns) {
     if (turn.kind === 'user-text') {
       payload.push({ role: 'user', content: turn.text });
-    } else if (turn.kind === 'ai-query-result' && turn.queryResult) {
+    } else if (turn.kind === 'ai-query-result') {
       payload.push({
         role: 'assistant',
         kind: 'answer',

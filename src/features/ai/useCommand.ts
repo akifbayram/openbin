@@ -3,6 +3,7 @@ export type CommandAction =
   | { type: 'add_items'; bin_id: string; bin_name: string; items: (string | { name: string; quantity?: number })[] }
   | { type: 'remove_items'; bin_id: string; bin_name: string; items: string[] }
   | { type: 'modify_item'; bin_id: string; bin_name: string; old_item: string; new_item: string }
+  | { type: 'set_item_quantity'; bin_id: string; bin_name: string; item_name: string; quantity: number }
   | { type: 'create_bin'; name: string; area_name?: string; tags?: string[]; items?: (string | { name: string; quantity?: number })[]; color?: string; icon?: string; notes?: string }
   | { type: 'delete_bin'; bin_id: string; bin_name: string }
   | { type: 'add_tags'; bin_id: string; bin_name: string; tags: string[] }
