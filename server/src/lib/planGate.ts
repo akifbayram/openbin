@@ -223,24 +223,6 @@ export async function getUserFeatures(userId: string): Promise<PlanFeatures> {
   return overrides ? applyOverrides(base, overrides) : base;
 }
 
-export async function getLocationOwnerFeatures(locationId: string): Promise<PlanFeatures> {
-  if (config.selfHosted) return getFeatureMap(Plan.PRO);
-  const result = await query<{ plan: number }>(
-    'SELECT u.plan FROM locations l JOIN users u ON u.id = l.created_by WHERE l.id = $1',
-    [locationId],
-  );
-  if (result.rows.length === 0) return getFeatureMap(Plan.PRO);
-  return getFeatureMap(result.rows[0].plan as PlanTier);
-}
-
-/** Throws PlanRestrictedError with the user's upgrade URL. */
-export async function throwPlanRestricted(userId: string, message: string): Promise<never> {
-  const planInfo = await getUserPlanInfo(userId);
-  const upgradeUrl = planInfo ? await generateUpgradeUrl(userId, planInfo.email) : null;
-  throw new PlanRestrictedError(message, upgradeUrl);
-}
-
-
 export async function getUserBinCount(userId: string): Promise<number> {
   const result = await query<{ cnt: number }>(
     'SELECT COUNT(*) as cnt FROM bins WHERE created_by = $1 AND deleted_at IS NULL',
@@ -345,51 +327,6 @@ export interface AiCreditResult {
 }
 
 export type AiCreditInfo = Omit<AiCreditResult, 'allowed'>;
-
-/** Clamp an anchor day-of-month to the last day of the given month. */
-function clampAnchorDay(anchorDay: number, y: number, m: number): number {
-  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-  return Math.min(anchorDay, lastDay);
-}
-
-/**
- * Compute the current billing period boundaries from the anchor day in `activeUntil`.
- * The anchor day is the day-of-month of `activeUntil`. The period that contains "now"
- * runs from the most recent occurrence of that day to the next occurrence.
- */
-export function getCurrentBillingPeriod(activeUntil: string): { start: string; end: string } {
-  const anchor = new Date(activeUntil);
-  const anchorDay = anchor.getUTCDate();
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = now.getUTCMonth(); // 0-indexed
-
-  const currentAnchor = new Date(Date.UTC(year, month, clampAnchorDay(anchorDay, year, month)));
-
-  let periodStart: Date;
-  let periodEnd: Date;
-
-  if (now >= currentAnchor) {
-    // We're past this month's anchor — period is [this month's anchor, next month's anchor)
-    periodStart = currentAnchor;
-    const nextMonth = month + 1;
-    const nextYear = nextMonth > 11 ? year + 1 : year;
-    const nextM = nextMonth > 11 ? 0 : nextMonth;
-    periodEnd = new Date(Date.UTC(nextYear, nextM, clampAnchorDay(anchorDay, nextYear, nextM)));
-  } else {
-    // We're before this month's anchor — period is [last month's anchor, this month's anchor)
-    periodEnd = currentAnchor;
-    const prevMonth = month - 1;
-    const prevYear = prevMonth < 0 ? year - 1 : year;
-    const prevM = prevMonth < 0 ? 11 : prevMonth;
-    periodStart = new Date(Date.UTC(prevYear, prevM, clampAnchorDay(anchorDay, prevYear, prevM)));
-  }
-
-  return {
-    start: periodStart.toISOString(),
-    end: periodEnd.toISOString(),
-  };
-}
 
 export async function checkAndIncrementAiCredits(userId: string): Promise<AiCreditResult> {
   if (config.selfHosted) return { allowed: true, used: 0, limit: 0, resetsAt: null };
@@ -512,14 +449,6 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
   };
 }
 
-export async function getMemberCount(locationId: string): Promise<number> {
-  const result = await query<{ cnt: number }>(
-    'SELECT COUNT(*) as cnt FROM location_members WHERE location_id = $1',
-    [locationId],
-  );
-  return result.rows[0].cnt;
-}
-
 export async function getManagerToken(userId: string, email: string | null): Promise<string | null> {
   if (!config.managerUrl || !config.subscriptionJwtSecret) return null;
   return new jose.SignJWT({ userId, email })
@@ -620,14 +549,6 @@ export async function getUserOverLimits(userId: string): Promise<OverLimits> {
 export function validatePlanTransition(plan: PlanTier, status: SubStatusType): boolean {
   if (status === SubStatus.TRIAL && plan !== Plan.PLUS) return false;
   return true;
-}
-
-/** @deprecated Use getUserFeatures() or inline plan query inside withTransaction() instead. */
-export function getUserFeaturesSync(db: import('better-sqlite3').Database, userId: string): PlanFeatures {
-  if (config.selfHosted) return getFeatureMap(Plan.PRO);
-  const row = db.prepare('SELECT plan FROM users WHERE id = ?').get(userId) as { plan: number } | undefined;
-  if (!row) return getFeatureMap(Plan.PRO);
-  return getFeatureMap(row.plan as PlanTier);
 }
 
 /** Throws PlanRestrictedError if the location owner is over their plan limits. */

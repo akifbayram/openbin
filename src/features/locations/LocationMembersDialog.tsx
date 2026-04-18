@@ -41,6 +41,8 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   const [resetCopied, setResetCopied] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
   const [memberToRemove, setMemberToRemove] = useState<LocationMember | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   const location = locations.find((h) => h.id === locationId);
   const isAdmin = location?.role === 'admin';
@@ -79,12 +81,15 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
 
   async function handleRemoveConfirmed() {
     if (!memberToRemove) return;
+    setRemoving(true);
     try {
       await removeMember(locationId, memberToRemove.user_id);
       setMemberToRemove(null);
       showToast({ message: 'Member removed', variant: 'success' });
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to remove member'), variant: 'error' });
+    } finally {
+      setRemoving(false);
     }
   }
 
@@ -101,6 +106,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
 
   async function handleLeaveConfirmed() {
     if (!user) return;
+    setLeaving(true);
     try {
       await leaveLocation(locationId, user.id);
       if (activeLocationId === locationId) {
@@ -112,6 +118,8 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       showToast({ message: 'Left location', variant: 'success' });
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to leave'), variant: 'error' });
+    } finally {
+      setLeaving(false);
     }
   }
 
@@ -139,7 +147,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { setResetToken(null); setMemberSearch(''); setMemberToRemove(null); } onOpenChange(v); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { setResetToken(null); setMemberSearch(''); setMemberToRemove(null); setConfirmLeave(false); } onOpenChange(v); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{location?.name ?? 'Location'} Members</DialogTitle>
@@ -283,11 +291,11 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
               You&apos;ll lose access to all content in this location. Continue?
             </p>
             <div className="flex gap-2 justify-end">
-              <Button variant="ghost" size="sm" onClick={() => setConfirmLeave(false)}>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmLeave(false)} disabled={leaving}>
                 Cancel
               </Button>
-              <Button variant="destructive" size="sm" onClick={handleLeaveConfirmed}>
-                Leave
+              <Button variant="destructive" size="sm" onClick={handleLeaveConfirmed} disabled={leaving}>
+                {leaving ? 'Leaving...' : 'Leave'}
               </Button>
             </div>
           </div>
@@ -304,11 +312,11 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setMemberToRemove(null)}>
+            <Button variant="ghost" onClick={() => setMemberToRemove(null)} disabled={removing}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleRemoveConfirmed}>
-              Remove
+            <Button variant="destructive" onClick={handleRemoveConfirmed} disabled={removing}>
+              {removing ? 'Removing...' : 'Remove'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -395,11 +403,11 @@ const roleOptions = [
   { key: 'admin' as const, label: 'Admin' },
 ];
 
-function RoleSelector({ currentRole, onChangeRole }: { currentRole: string; onChangeRole: (role: 'admin' | 'member' | 'viewer') => void }) {
+function RoleSelector({ currentRole, onChangeRole }: { currentRole: LocationMember['role']; onChangeRole: (role: LocationMember['role']) => void }) {
   return (
     <OptionGroup
       options={roleOptions}
-      value={currentRole as 'viewer' | 'member' | 'admin'}
+      value={currentRole}
       onChange={onChangeRole}
       size="sm"
     />

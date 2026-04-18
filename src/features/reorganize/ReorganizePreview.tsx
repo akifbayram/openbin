@@ -19,7 +19,7 @@ interface ReorganizePreviewProps {
   originalItemCount: number;
   onAccept: () => void;
   onCancel: () => void;
-  onRegenerate?: () => void;
+  onRegenerate: () => void;
 }
 
 export function ReorganizePreview({
@@ -95,12 +95,10 @@ export function ReorganizePreview({
             )}
           </Button>
           <div className="flex gap-2 justify-center">
-            {onRegenerate && (
-              <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={isApplying}>
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                Regenerate
-              </Button>
-            )}
+            <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={isApplying}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              Regenerate
+            </Button>
             <Button variant="ghost" size="sm" onClick={onCancel} disabled={isApplying}>
               Start over
             </Button>

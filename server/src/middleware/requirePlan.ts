@@ -88,10 +88,6 @@ export function requirePro(): RequestHandler {
   return requirePlanAccess('This feature requires a Pro plan', isProUser);
 }
 
-export function requireWriteApi(): RequestHandler {
-  return requirePlanAccess('API write access requires a Pro plan', isProUser);
-}
-
 export function requirePlusOrAbove(): RequestHandler {
   return requirePlanAccess('This feature requires a Plus or Pro plan', isPlusOrAbove);
 }

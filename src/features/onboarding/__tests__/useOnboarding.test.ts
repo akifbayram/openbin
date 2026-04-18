@@ -2,22 +2,14 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/lib/auth', () => ({
-  useAuth: vi.fn(() => ({
-    user: { id: 'user-1', displayName: 'Test', email: 'testuser@example.com', avatarUrl: null, createdAt: '', updatedAt: '' },
-  })),
-}));
-
 vi.mock('@/lib/api', () => ({
   apiFetch: vi.fn(),
 }));
 
 import { apiFetch } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
 import { UserPreferencesProvider } from '@/lib/userPreferences';
 import { DEMO_ONBOARDING_TOTAL_STEPS, ONBOARDING_TOTAL_STEPS, useOnboarding } from '../useOnboarding';
 
-const mockUseAuth = vi.mocked(useAuth);
 const mockApiFetch = vi.mocked(apiFetch);
 
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -26,9 +18,6 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockUseAuth.mockReturnValue({
-    user: { id: 'user-1', displayName: 'Test', email: 'testuser@example.com', avatarUrl: null, createdAt: '', updatedAt: '' },
-  } as ReturnType<typeof useAuth>);
   mockApiFetch.mockResolvedValue(null);
 });
 

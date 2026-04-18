@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { AiProviderConfig, AiProviderType } from './aiCaller.js';
+import { DEMO_MEMBERS, DEMO_USERS } from './demoSeedData.js';
 
 function parseBool(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined || value === '') return fallback;
@@ -132,9 +133,8 @@ export const config = Object.freeze({
   emailTemplateDir: process.env.EMAIL_TEMPLATE_DIR || null,
 
   demoMode: parseBool(process.env.DEMO_MODE, false),
-  demoSeedPath: null as string | null,
   aiMock: parseBool(process.env.AI_MOCK, false),
-  demoEmails: new Set<string>(),
+  demoEmails: new Set<string>(DEMO_MEMBERS.map((m) => DEMO_USERS[m].email.toLowerCase())),
 
   // ClamAV malware scanning (opt-in for cloud deployments)
   clamavHost: process.env.CLAMAV_HOST || null,
@@ -213,7 +213,6 @@ export const config = Object.freeze({
   // Demo AI limits
   demoAiRateLimit: 10,
   demoAiMaxPhotosPerRequest: 3,
-  demoAiDailyBudget: 100,
 
   // Storage backend
   storageBackend: (() => {

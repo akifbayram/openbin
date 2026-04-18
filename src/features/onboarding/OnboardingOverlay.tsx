@@ -17,8 +17,6 @@ import { QrPreviewStep } from './steps/QrPreviewStep';
 import { WelcomeStep } from './steps/WelcomeStep';
 import { useOnboardingActions } from './useOnboardingActions';
 
-export type { OnboardingActions };
-
 const DEMO_COMPLETION_ACTIONS: CompletionAction[] = [
   { icon: PackagePlus, label: 'Browse all bins', description: 'Explore the 40+ pre-built demo bins', path: '/bins' },
   { icon: Printer, label: 'Print labels', description: 'Generate QR labels for your bins', path: '/print' },

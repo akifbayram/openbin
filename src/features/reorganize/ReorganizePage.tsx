@@ -93,7 +93,10 @@ export function ReorganizePage() {
       setShowProgress(true);
       return;
     }
-    if (!progressComplete) return;
+    if (!progressComplete) {
+      setShowProgress(false);
+      return;
+    }
     const id = setTimeout(() => setShowProgress(false), 800);
     return () => clearTimeout(id);
   }, [isStreaming, progressComplete]);
@@ -141,16 +144,12 @@ export function ReorganizePage() {
     reorgRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [selection.selectedBins, maxBinsVal, startReorg, selectedAreaId, selectedAreaName, hasValidationError, userNotes, strictness, granularity, ambiguousPolicy, duplicates, outliers, minVal, maxVal]);
 
-  const handleRegenerate = useCallback(() => {
-    clear();
-    handleReorganize();
-  }, [clear, handleReorganize]);
-
   const handleAccept = useCallback(() => {
     apply(
       selection.selectedBins.map((b) => b.id),
       selectedAreaId ?? undefined,
-    ).then(() => {
+    ).then((success) => {
+      if (!success) return;
       showToast({
         message: `Reorganization applied — ${result?.bins.length ?? 0} ${t.bins} created`,
         variant: 'success',
@@ -484,7 +483,7 @@ export function ReorganizePage() {
             </Card>
           )}
 
-          {!showProgress && (hasProposal || isStreaming) ? (
+          {!showProgress && !error && (hasProposal || isStreaming) ? (
             <Card>
               <CardContent>
                 <ReorganizePreview
@@ -496,11 +495,11 @@ export function ReorganizePage() {
                   originalItemCount={itemCount}
                   onAccept={() => setConfirmOpen(true)}
                   onCancel={handleCancel}
-                  onRegenerate={handleRegenerate}
+                  onRegenerate={handleReorganize}
                 />
               </CardContent>
             </Card>
-          ) : !showProgress && (
+          ) : !showProgress && !error && !applyError && (
             <div className="rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border-subtle)]">
               <div className="flex flex-col items-center justify-center py-10 lg:py-16 text-center">
                 <div className="rounded-[var(--radius-xl)] bg-[var(--bg-input)] p-3.5 mb-4">

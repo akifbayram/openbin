@@ -117,7 +117,7 @@ export function getActionLabel(entry: ActivityLogEntry, t: Terminology): string 
 }
 
 const ITEM_FIELDS = new Set(['items_added', 'items_removed', 'items_renamed', 'items']);
-const SKIP_FIELDS = new Set(['location', 'area_id']);
+const SKIP_FIELDS = new Set(['location', 'area_id', 'items_quantity']);
 
 export function renderChangeDiff(entry: ActivityLogEntry): { field: string; old: string; new: string }[] | null {
   if (!entry.changes) return null;

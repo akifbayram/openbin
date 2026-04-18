@@ -288,7 +288,7 @@ export function DashboardPage() {
               </section>
             )}
 
-            {dashSettings.showCheckouts && checkouts.length > 0 && (
+            {dashSettings.showCheckouts && (
               <div className="order-2 lg:order-none min-w-0">
                 <DashboardOpenCheckouts checkouts={checkouts} showTimestamps={dashSettings.showTimestamps} />
               </div>
@@ -299,7 +299,7 @@ export function DashboardPage() {
                 <DashboardRecentScans
                   bins={recentlyScanned}
                   scanTimeMap={scanTimeMap}
-                  limit={3}
+                  limit={dashSettings.recentBinsCount}
                   showTimestamps={dashSettings.showTimestamps}
                 />
               </div>

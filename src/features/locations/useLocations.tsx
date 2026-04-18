@@ -12,25 +12,24 @@ function notifyLocationsChanged() {
 interface LocationsContextValue {
   locations: Location[];
   isLoading: boolean;
-  error: string | null;
 }
 
 export const LocationsContext = createContext<LocationsContextValue | null>(null);
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
-  const { data: locations, isLoading, error } = useListData<Location>(
+  const { data: locations, isLoading } = useListData<Location>(
     token ? '/api/locations' : null,
     [Events.LOCATIONS],
   );
-  const value = useMemo(() => ({ locations, isLoading, error }), [locations, isLoading, error]);
+  const value = useMemo(() => ({ locations, isLoading }), [locations, isLoading]);
   return <LocationsContext.Provider value={value}>{children}</LocationsContext.Provider>;
 }
 
 export function useLocationList() {
   const ctx = useContext(LocationsContext);
   if (!ctx) throw new Error('useLocationList must be used within LocationProvider');
-  return { ...ctx, refresh: notifyLocationsChanged };
+  return ctx;
 }
 
 export function useLocationMembers(locationId: string | null) {
@@ -75,19 +74,14 @@ export async function joinLocation(inviteCode: string): Promise<Location> {
   return location;
 }
 
-export async function leaveLocation(locationId: string, userId: string): Promise<void> {
-  await apiFetch(`/api/locations/${locationId}/members/${userId}`, {
-    method: 'DELETE',
-  });
-  notifyLocationsChanged();
-}
-
 export async function removeMember(locationId: string, userId: string): Promise<void> {
   await apiFetch(`/api/locations/${locationId}/members/${userId}`, {
     method: 'DELETE',
   });
   notifyLocationsChanged();
 }
+
+export const leaveLocation = removeMember;
 
 export async function regenerateInvite(locationId: string): Promise<{ inviteCode: string }> {
   const result = await apiFetch<{ inviteCode: string }>(`/api/locations/${locationId}/regenerate-invite`, {

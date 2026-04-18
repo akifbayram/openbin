@@ -44,13 +44,6 @@ export class UnauthorizedError extends HttpError {
   }
 }
 
-export class GoneError extends HttpError {
-  constructor(message: string) {
-    super(410, 'GONE', message);
-    this.name = 'GoneError';
-  }
-}
-
 export class QuotaExceededError extends HttpError {
   constructor(code: string, message: string) {
     super(413, code, message);

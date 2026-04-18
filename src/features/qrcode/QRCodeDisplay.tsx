@@ -1,8 +1,4 @@
-import { Check, Copy, Printer } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { getBinUrl } from '@/lib/constants';
 import { generateQRDataURL, type QRColorOptions } from '@/lib/qr';
 
 interface QRCodeDisplayProps {
@@ -10,27 +6,17 @@ interface QRCodeDisplayProps {
   size?: number;
   /** Show short code text below the QR image, sized to fill the QR width. */
   shortCode?: string;
-  /** Hide the copy/print action buttons below the QR code. */
-  hideActions?: boolean;
   colors?: QRColorOptions;
   containerStyle?: React.CSSProperties;
   shortCodeStyle?: React.CSSProperties;
 }
 
-export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions, colors, containerStyle, shortCodeStyle }: QRCodeDisplayProps) {
-  const navigate = useNavigate();
+export function QRCodeDisplay({ binId, size = 200, shortCode, colors, containerStyle, shortCodeStyle }: QRCodeDisplayProps) {
   const [dataUrl, setDataUrl] = useState<string>('');
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     generateQRDataURL(binId, size, colors).then(setDataUrl);
   }, [binId, size, colors?.dark, colors?.light]);
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(getBinUrl(binId));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   if (!dataUrl) return null;
 
@@ -50,28 +36,6 @@ export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions, color
           </p>
         )}
       </div>
-      {!hideActions && (
-        <div className="flex gap-2.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleCopy}
-            className="gap-1.5"
-          >
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copied ? 'Copied' : 'Copy URL'}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate(`/print?ids=${binId}`)}
-            className="gap-1.5"
-          >
-            <Printer className="h-4 w-4" />
-            Print
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

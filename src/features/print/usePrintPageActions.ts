@@ -43,8 +43,6 @@ export interface FormatState {
   customState: CustomState;
   displayUnit: DisplayUnit;
   savedPresets: LabelFormat[];
-  labelFormat: LabelFormat;
-  iconSize: string;
   handleFormatChange: (key: string) => void;
   toggleCustomize: () => void;
   updateOverride: (key: keyof LabelFormat, raw: string) => void;
@@ -203,7 +201,6 @@ export function usePrintPageActions() {
 
   const format: FormatState = {
     formatKey, baseFormat, effectiveOrientation, customState, displayUnit, savedPresets,
-    labelFormat, iconSize,
     handleFormatChange, toggleCustomize, updateOverride, getOverrideValue,
     toggleOrientation, updateDisplayUnit,
     handleSavePreset, handleDeletePreset,

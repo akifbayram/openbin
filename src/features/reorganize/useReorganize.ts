@@ -25,8 +25,16 @@ export interface ReorgOptions {
 
 export function useReorganize() {
   const { activeLocationId } = useAuth();
-  const { result, isStreaming, error, partialText, retryCount, stream, cancel, clear } =
-    useAiStream<ReorgResponse>('/api/ai/reorganize/stream', 'Failed to generate reorganization');
+  const {
+    result,
+    isStreaming,
+    error,
+    partialText,
+    retryCount,
+    stream,
+    cancel,
+    clear: clearStream,
+  } = useAiStream<ReorgResponse>('/api/ai/reorganize/stream', 'Failed to generate reorganization');
   const [isApplying, setIsApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
 
@@ -58,8 +66,8 @@ export function useReorganize() {
   );
 
   const apply = useCallback(
-    async (originalBinIds: string[], areaId?: string) => {
-      if (!result || !activeLocationId) return;
+    async (originalBinIds: string[], areaId?: string): Promise<boolean> => {
+      if (!result || !activeLocationId) return false;
       setIsApplying(true);
       setApplyError(null);
       try {
@@ -77,14 +85,21 @@ export function useReorganize() {
         );
         notify(Events.BINS);
         notify(Events.AREAS);
+        return true;
       } catch (err) {
         setApplyError(getErrorMessage(err, 'Failed to apply reorganization'));
+        return false;
       } finally {
         setIsApplying(false);
       }
     },
     [result, activeLocationId],
   );
+
+  const clear = useCallback(() => {
+    clearStream();
+    setApplyError(null);
+  }, [clearStream]);
 
   return {
     result,

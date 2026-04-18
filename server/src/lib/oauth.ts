@@ -78,23 +78,6 @@ function getJwks(url: string): ReturnType<typeof jose.createRemoteJWKSet> {
 export const googleJwks = () => getJwks('https://www.googleapis.com/oauth2/v3/certs');
 export const appleJwks = () => getJwks('https://appleid.apple.com/auth/keys');
 
-// -- Apple client secret generation --
-
-export async function generateAppleClientSecret(): Promise<string> {
-  if (!config.applePrivateKey || !config.appleKeyId || !config.appleTeamId || !config.appleClientId) {
-    throw new Error('Apple OAuth not configured');
-  }
-  const key = await jose.importPKCS8(config.applePrivateKey, 'ES256');
-  return new jose.SignJWT({})
-    .setProtectedHeader({ alg: 'ES256', kid: config.appleKeyId })
-    .setIssuer(config.appleTeamId)
-    .setAudience('https://appleid.apple.com')
-    .setSubject(config.appleClientId)
-    .setIssuedAt()
-    .setExpirationTime('5m')
-    .sign(key);
-}
-
 // -- Find or create OAuth user --
 
 interface OAuthUserInput {

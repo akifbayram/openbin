@@ -60,11 +60,6 @@ export interface CommandRequest {
   };
 }
 
-export interface CommandResult {
-  actions: CommandAction[];
-  interpretation: string;
-}
-
 const ACTION_TYPES_REFERENCE = `Available action types:
 - add_items: Add items to an existing bin. Fields: bin_id, bin_name, items[] (each item can be a string or {"name":"...","quantity":N})
 - remove_items: Remove items from an existing bin. Fields: bin_id, bin_name, items[] (item name strings)

@@ -92,21 +92,6 @@ export interface ExportMember {
   joinedAt: string;
 }
 
-export interface ExportData {
-  version: 2;
-  exportedAt: string;
-  locationName: string;
-  locationSettings?: ExportLocationSettings;
-  bins: ExportBin[];
-  trashedBins?: ExportBin[];
-  areas?: ExportArea[];
-  tagColors?: ExportTagColor[];
-  customFieldDefinitions?: ExportCustomFieldDef[];
-  pinnedBins?: ExportPinnedBin[];
-  savedViews?: ExportSavedView[];
-  members?: ExportMember[];
-}
-
 async function fetchBinsForExport(locationId: string, userId: string | undefined, trashed: boolean) {
   const visibilityFilter = userId
     ? `AND (b.visibility = 'location' OR b.created_by = $2)`

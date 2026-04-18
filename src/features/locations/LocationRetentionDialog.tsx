@@ -10,11 +10,17 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { OptionGroup } from '@/components/ui/option-group';
 import { useToast } from '@/components/ui/toast';
 import { useTerminology } from '@/lib/terminology';
-import { cn, getErrorMessage } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/utils';
 import type { Location } from '@/types';
 import { updateLocation } from './useLocations';
+
+const joinRoleOptions = [
+  { key: 'member' as const, label: 'Member' },
+  { key: 'viewer' as const, label: 'Viewer' },
+];
 
 interface LocationRetentionDialogProps {
   location: Location | undefined;
@@ -97,23 +103,11 @@ export function LocationRetentionDialog({ location, open, onOpenChange }: Locati
           </div>
           <div className="space-y-1.5">
             <Label>Default role for new members</Label>
-            <div className="flex gap-2">
-              {(['member', 'viewer'] as const).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setDefaultJoinRole(r)}
-                  className={cn(
-                    'flex-1 rounded-[var(--radius-md)] border px-3 py-2 text-[13px] font-medium transition-colors',
-                    defaultJoinRole === r
-                      ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
-                      : 'border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
-                  )}
-                >
-                  {r === 'member' ? 'Member' : 'Viewer'}
-                </button>
-              ))}
-            </div>
+            <OptionGroup
+              options={joinRoleOptions}
+              value={defaultJoinRole}
+              onChange={setDefaultJoinRole}
+            />
             <p className="text-[11px] text-[var(--text-tertiary)]">
               {defaultJoinRole === 'viewer'
                 ? 'New members will be read-only until promoted.'

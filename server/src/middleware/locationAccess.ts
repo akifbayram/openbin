@@ -53,5 +53,3 @@ export function requireLocationAdmin(paramName = 'id') {
     next();
   };
 }
-
-export { isLocationAdmin };

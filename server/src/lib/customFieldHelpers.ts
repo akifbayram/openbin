@@ -123,17 +123,3 @@ export async function remapCustomFieldsForMove(
   }
 }
 
-/**
- * Fetch custom field values for a bin as Record<fieldId, value>.
- */
-export async function fetchCustomFieldValues(binId: string): Promise<Record<string, string>> {
-  const result = await query<{ field_id: string; value: string }>(
-    'SELECT field_id, value FROM bin_custom_field_values WHERE bin_id = $1',
-    [binId],
-  );
-  const values: Record<string, string> = {};
-  for (const row of result.rows) {
-    values[row.field_id] = row.value;
-  }
-  return values;
-}

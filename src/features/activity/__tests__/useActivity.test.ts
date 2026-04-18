@@ -84,7 +84,6 @@ describe('usePaginatedActivityLog', () => {
     const { result } = renderHook(() => usePaginatedActivityLog());
 
     expect(result.current.entries).toEqual(mockEntries);
-    expect(result.current.totalCount).toBe(1);
   });
 
   it('appends user_id filter to basePath', () => {

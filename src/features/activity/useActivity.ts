@@ -23,11 +23,11 @@ export function usePaginatedActivityLog(
     basePath = `/api/locations/${encodeURIComponent(activeLocationId)}/activity${qs ? `?${qs}` : ''}`;
   }
 
-  const { items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore } = usePaginatedList<ActivityLogEntry>(
+  const { items, isLoading, isLoadingMore, hasMore, error, loadMore } = usePaginatedList<ActivityLogEntry>(
     basePath,
     [],
     pageSize,
   );
 
-  return { entries: items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore };
+  return { entries: items, isLoading, isLoadingMore, hasMore, error, loadMore };
 }

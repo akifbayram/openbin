@@ -13,7 +13,6 @@ export interface LabelFormat {
   qrSize: string;
   padding: string;
   nameFontSize: string;
-  contentFontSize: string;
   codeFontSize: string;
   pageMarginTop: string;
   pageMarginBottom: string;
@@ -95,7 +94,6 @@ export const LABEL_FORMATS: LabelFormat[] = [
     qrSize: '4in',
     padding: '12pt 16pt',
     nameFontSize: '16pt',
-    contentFontSize: '11pt',
     codeFontSize: '28pt',
     pageMarginTop: '0in',
     pageMarginBottom: '0in',
@@ -113,7 +111,6 @@ export const LABEL_FORMATS: LabelFormat[] = [
     qrSize: '0.66in',
     padding: '2pt 4pt',
     nameFontSize: '8pt',
-    contentFontSize: '6.5pt',
     codeFontSize: '14pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
@@ -132,7 +129,6 @@ export const LABEL_FORMATS: LabelFormat[] = [
     qrSize: '1.4in',
     padding: '6pt 12pt',
     nameFontSize: '11pt',
-    contentFontSize: '8pt',
     codeFontSize: '18pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
@@ -151,7 +147,6 @@ export const LABEL_FORMATS: LabelFormat[] = [
     qrSize: '1.5in',
     padding: '6pt 4pt',
     nameFontSize: '10pt',
-    contentFontSize: '7.5pt',
     codeFontSize: '14pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
@@ -171,7 +166,6 @@ export const LABEL_FORMATS: LabelFormat[] = [
     qrSize: '2in',
     padding: '8pt 8pt',
     nameFontSize: '14pt',
-    contentFontSize: '10pt',
     codeFontSize: '24pt',
     pageMarginTop: '0in',
     pageMarginBottom: '0in',
@@ -190,7 +184,6 @@ export const LABEL_FORMATS: LabelFormat[] = [
     qrSize: '1.5in',
     padding: '6pt 12pt',
     nameFontSize: '11pt',
-    contentFontSize: '8pt',
     codeFontSize: '18pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
@@ -209,7 +202,6 @@ export const LABEL_FORMATS: LabelFormat[] = [
     qrSize: '1.75in',
     padding: '8pt 10pt',
     nameFontSize: '12pt',
-    contentFontSize: '9pt',
     codeFontSize: '20pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
@@ -229,7 +221,6 @@ export const LABEL_FORMATS: LabelFormat[] = [
     qrSize: '5in',
     padding: '16pt 16pt',
     nameFontSize: '18pt',
-    contentFontSize: '12pt',
     codeFontSize: '32pt',
     pageMarginTop: '0in',
     pageMarginBottom: '0in',
@@ -248,7 +239,6 @@ export const LABEL_FORMATS: LabelFormat[] = [
     qrSize: '5in',
     padding: '16pt 16pt',
     nameFontSize: '18pt',
-    contentFontSize: '12pt',
     codeFontSize: '32pt',
     pageMarginTop: '0in',
     pageMarginBottom: '0in',
@@ -295,7 +285,6 @@ export function getLabelFormat(key: string, customPresets?: LabelFormat[]): Labe
 }
 
 const PAGE_HEIGHT_INCHES = 11; // US Letter
-export const PAGE_WIDTH_INCHES = 8.5; // US Letter
 const EPS = 1e-6;
 
 export function applyOrientation(

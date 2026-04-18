@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
-import { lookupBinByCode } from '@/features/bins/useBins';
+import { lookupBinByCodeSafe } from '@/features/bins/useBins';
 import { recordScan } from '@/features/dashboard/scanHistory';
 import { recordBinUsage } from '@/features/usage/recordBinUsage';
 import { ApiError, apiFetch } from '@/lib/api';
@@ -52,12 +52,24 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
     setManualError('');
     setManualLoading(true);
     try {
-      const bin = await lookupBinByCode(code);
-      haptic();
-      recordScan(bin.id);
-      recordBinUsage(bin.id, 'manual');
-      onOpenChange(false);
-      navigate(`/bin/${bin.id}`);
+      const result = await lookupBinByCodeSafe(code);
+      if (result.status === 'found' && result.bin) {
+        haptic();
+        recordScan(result.bin.id);
+        recordBinUsage(result.bin.id, 'manual');
+        onOpenChange(false);
+        navigate(`/bin/${result.bin.id}`);
+        return;
+      }
+      if (result.status === 'deleted') {
+        setScanErrorType('deleted');
+        return;
+      }
+      if (result.status === 'forbidden') {
+        setScanErrorType('forbidden');
+        return;
+      }
+      setManualError(`No ${t.bin} found with that code`);
     } catch {
       setManualError(`No ${t.bin} found with that code`);
     } finally {

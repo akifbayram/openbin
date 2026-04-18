@@ -6,10 +6,9 @@ import { getErrorMessage } from '@/lib/utils';
 interface Html5QrcodePluginProps {
   paused?: boolean;
   onScanSuccess: (decodedText: string) => void;
-  onScanFailure?: (error: string) => void;
 }
 
-export function Html5QrcodePlugin({ paused, onScanSuccess, onScanFailure }: Html5QrcodePluginProps) {
+export function Html5QrcodePlugin({ paused, onScanSuccess }: Html5QrcodePluginProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerId = 'html5-qrcode-scanner';
   const [loading, setLoading] = useState(true);
@@ -32,9 +31,7 @@ export function Html5QrcodePlugin({ paused, onScanSuccess, onScanFailure }: Html
           (decodedText) => {
             onScanSuccess(decodedText);
           },
-          (errorMessage) => {
-            onScanFailure?.(errorMessage);
-          }
+          () => {},
         )
         .then(() => {
           // Component unmounted while start() was pending — stop now

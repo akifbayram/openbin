@@ -10,6 +10,7 @@ const JWT_SECRET_KEY = new TextEncoder().encode(config.jwtSecret);
 export interface AuthUser {
   id: string;
   email: string;
+  tokenVersion?: number;
 }
 
 declare global {
@@ -114,11 +115,6 @@ function checkUserStatus(userId: string): Promise<{ status: UserStatus; tokenVer
   });
 }
 
-/** Call after soft-deleting a user so the next request sees it immediately. */
-export function invalidateDeletedCache(userId: string): void {
-  deletedCache.delete(userId);
-}
-
 function handleUserStatus(
   res: Response,
   status: 'ok' | 'deleted' | 'suspended',
@@ -142,8 +138,16 @@ function handleUserStatus(
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   if (req.user) {
     const userId = req.user.id;
-    checkUserStatus(userId).then(({ status }) => {
+    const userTv = req.user.tokenVersion ?? 0;
+    const isJwt = req.authMethod === 'jwt';
+    checkUserStatus(userId).then(({ status, tokenVersion }) => {
       if (handleUserStatus(res, status, req)) return;
+      if (isJwt && userTv < tokenVersion) {
+        req.user = undefined;
+        req.authMethod = undefined;
+        res.status(401).json({ error: 'SESSION_REVOKED', message: 'Session has been revoked. Please log in again.' });
+        return;
+      }
       maybeUpdateLastActive(userId);
       next();
     }).catch(next);
@@ -207,7 +211,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
           res.status(401).json({ error: 'SESSION_REVOKED', message: 'Session has been revoked. Please log in again.' });
           return;
         }
-        req.user = { id: user.id, email: user.email };
+        req.user = { id: user.id, email: user.email, tokenVersion: user.tokenVersion };
         req.authMethod = 'jwt';
         maybeUpdateLastActive(user.id);
         next();

@@ -167,15 +167,6 @@ export async function verifyDeletedBinAccess(
   return { locationId: result.rows[0].location_id, name: result.rows[0].name };
 }
 
-/** Check if a user created a specific bin */
-export async function isBinCreator(binId: string, userId: string): Promise<boolean> {
-  const result = await query(
-    'SELECT id FROM bins WHERE id = $1 AND created_by = $2',
-    [binId, userId]
-  );
-  return result.rows.length > 0;
-}
-
 /** Verify that an area belongs to the given location */
 export async function verifyAreaInLocation(areaId: string, locationId: string): Promise<void> {
   const result = await query('SELECT id FROM areas WHERE id = $1 AND location_id = $2', [areaId, locationId]);

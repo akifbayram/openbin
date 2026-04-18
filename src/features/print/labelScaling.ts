@@ -31,19 +31,17 @@ export function applyAutoScale(base: LabelFormat, custom: LabelFormat): LabelFor
   return {
     ...custom,
     nameFontSize: scaleValue(base.nameFontSize, factor),
-    contentFontSize: scaleValue(base.contentFontSize, factor),
     codeFontSize: scaleValue(base.codeFontSize, factor),
     padding: scaleValue(base.padding, factor),
   };
 }
 
-/** Apply a font-size multiplier to name, content, and code fonts. */
+/** Apply a font-size multiplier to name and code fonts. */
 export function applyFontScale(fmt: LabelFormat, scale: number): LabelFormat {
   if (scale === 1) return fmt;
   return {
     ...fmt,
     nameFontSize: scaleValue(fmt.nameFontSize, scale),
-    contentFontSize: scaleValue(fmt.contentFontSize, scale),
     codeFontSize: scaleValue(fmt.codeFontSize, scale),
   };
 }

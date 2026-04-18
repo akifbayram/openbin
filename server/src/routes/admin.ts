@@ -17,7 +17,7 @@ import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getFeatureMap, invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
 import { restoreBackup } from '../lib/restore.js';
 import { validateDisplayName, validateLoginEmail, validatePassword } from '../lib/validation.js';
-import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
+import { authenticate, invalidateUserStatusCache } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 
 const log = createLogger('admin');
@@ -427,7 +427,7 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
     `UPDATE users SET deleted_at = ${d.now()}, updated_at = ${d.now()} WHERE id = $1`,
     [targetId],
   );
-  invalidateDeletedCache(targetId);
+  invalidateUserStatusCache(targetId);
 
   getEeHooks().onUserUpdate?.({ userId: targetId, action: 'delete_user' });
 

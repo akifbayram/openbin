@@ -19,7 +19,7 @@ vi.mock('@/lib/qr', () => ({
 }));
 
 vi.mock('@/features/bins/useBins', () => ({
-  lookupBinByCode: vi.fn(),
+  lookupBinByCodeSafe: vi.fn(),
 }));
 
 vi.mock('@/features/dashboard/scanHistory', () => ({
@@ -59,12 +59,12 @@ vi.mock('@/features/qrcode/Html5QrcodePlugin', () => ({
   ),
 }));
 
-import { lookupBinByCode } from '@/features/bins/useBins';
+import { lookupBinByCodeSafe } from '@/features/bins/useBins';
 import { ApiError, apiFetch } from '@/lib/api';
 import { ScanDialog } from '../ScanDialog';
 
 const mockApiFetch = vi.mocked(apiFetch);
-const mockLookup = vi.mocked(lookupBinByCode);
+const mockLookup = vi.mocked(lookupBinByCodeSafe);
 
 const MockApiError = ApiError as unknown as new (status: number, message: string) => Error & { status: number };
 
@@ -144,8 +144,11 @@ describe('ScanDialog', () => {
     expect(screen.getByPlaceholderText('Enter bin code')).toBeTruthy();
   });
 
-  it('manual lookup calls lookupBinByCode', async () => {
-    mockLookup.mockResolvedValue({ id: 'ABC123' } as Awaited<ReturnType<typeof lookupBinByCode>>);
+  it('manual lookup calls lookupBinByCodeSafe', async () => {
+    mockLookup.mockResolvedValue({
+      bin: { id: 'ABC123' } as Awaited<ReturnType<typeof lookupBinByCodeSafe>>['bin'],
+      status: 'found',
+    });
     renderDialog();
 
     const input = screen.getByPlaceholderText('Enter bin code');
@@ -158,7 +161,7 @@ describe('ScanDialog', () => {
   });
 
   it('manual lookup shows error on failure', async () => {
-    mockLookup.mockRejectedValue(new Error('Not found'));
+    mockLookup.mockResolvedValue({ bin: null, status: 'not_found' });
     renderDialog();
 
     const input = screen.getByPlaceholderText('Enter bin code');

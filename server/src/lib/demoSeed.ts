@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import fs from 'node:fs';
 import bcrypt from 'bcrypt';
 import type { TxQueryFn } from '../db.js';
 import { d, generateUuid, isUniqueViolation, withTransaction } from '../db.js';
@@ -33,59 +32,6 @@ import { createLogger } from './logger.js';
 import { generateShortCode } from './shortCode.js';
 
 const log = createLogger('demoSeed');
-
-interface ExternalDemoData {
-  users: Record<string, { email: string; displayName: string }>;
-  locations: { home: string; storage: string };
-  homeAreas: string[];
-  nestedAreas: Record<string, string[]>;
-  storageAreas: string[];
-  bins: DemoBin[];
-  trashedBins: DemoBin[];
-  tagColors: Record<string, string>;
-  tagHierarchy: Record<string, string[]>;
-  pinnedBinNames: string[];
-  pinnedBinNamesPat: string[];
-  scannedBinNames: Record<string, string[]>;
-  customFieldDefinitions: Array<{ name: string; position: number }>;
-  customFieldValues: Record<string, Record<string, string>>;
-  activityEntries: Array<{
-    user: DemoMember;
-    location: 'home' | 'storage';
-    action: string;
-    entityType: string;
-    entityName?: string;
-    binName?: string;
-    changes?: Record<string, { old: unknown; new: unknown }>;
-    daysAgo: number;
-  }>;
-  checkouts: Array<{ binName: string; itemName: string; checkedOutBy: DemoMember; daysAgo: number }>;
-  returnedCheckouts: Array<{ binName: string; itemName: string; checkedOutBy: DemoMember; returnedBy: DemoMember; checkedOutDaysAgo: number; returnedDaysAgo: number }>;
-  binShares: Array<{ binName: string; createdBy: DemoMember; visibility: 'public' | 'unlisted'; viewCount: number }>;
-}
-
-const REQUIRED_KEYS: (keyof ExternalDemoData)[] = [
-  'users', 'locations', 'homeAreas', 'storageAreas', 'bins',
-];
-
-function loadExternalDemoData(): ExternalDemoData | null {
-  const filePath = config.demoSeedPath;
-  if (!filePath) return null;
-
-  try {
-    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<string, unknown>;
-    for (const key of REQUIRED_KEYS) {
-      if (!(key in raw)) {
-        log.error(`Demo seed file missing required key: "${key}"`);
-        return null;
-      }
-    }
-    return raw as unknown as ExternalDemoData;
-  } catch (err) {
-    log.error(`Failed to load demo seed file "${filePath}":`, err instanceof Error ? err.message : err);
-    return null;
-  }
-}
 
 async function createLocation(tx: TxQueryFn, userId: string, name: string): Promise<string> {
   const locationId = generateUuid();
@@ -751,41 +697,40 @@ async function seedBinShares(
 export async function seedDemoData(): Promise<void> {
   if (!config.demoMode) return;
 
-  const external = loadExternalDemoData();
-  const users = external?.users ?? DEMO_USERS;
+  const users = DEMO_USERS;
   const members = Object.keys(users) as DemoMember[];
-  const locationNames = external?.locations ?? { home: 'Our House', storage: 'Self Storage Unit' };
-  const homeAreaNames = external?.homeAreas ?? HOME_AREAS;
-  const nestedAreaDefs = external?.nestedAreas ?? NESTED_AREAS;
-  const storageAreaNames = external?.storageAreas ?? STORAGE_AREAS;
-  const bins = external?.bins ?? DEMO_BINS;
-  const trashedBinsList = external?.trashedBins ?? TRASHED_BINS;
-  const tagColorDefs = external?.tagColors ?? TAG_COLORS;
-  const pinnedNames = external?.pinnedBinNames ?? PINNED_BIN_NAMES;
-  const pinnedNamesPat = external?.pinnedBinNamesPat ?? PINNED_BIN_NAMES_PAT;
-  const scannedNames = external?.scannedBinNames ?? {
+  const locationNames = { home: 'Our House', storage: 'Self Storage Unit' };
+  const homeAreaNames = HOME_AREAS;
+  const nestedAreaDefs = NESTED_AREAS;
+  const storageAreaNames = STORAGE_AREAS;
+  const bins = DEMO_BINS;
+  const trashedBinsList = TRASHED_BINS;
+  const tagColorDefs = TAG_COLORS;
+  const pinnedNames = PINNED_BIN_NAMES;
+  const pinnedNamesPat = PINNED_BIN_NAMES_PAT;
+  const scannedNames = {
     demo: SCANNED_BIN_NAMES,
     sarah: SCANNED_BIN_NAMES_SARAH,
     alex: SCANNED_BIN_NAMES_ALEX,
     pat: SCANNED_BIN_NAMES_PAT,
   };
-  const tagHierarchyDefs = external?.tagHierarchy ?? TAG_HIERARCHY;
-  const cfDefs = external?.customFieldDefinitions ?? CUSTOM_FIELD_DEFINITIONS;
-  const cfValues = external?.customFieldValues ?? CUSTOM_FIELD_VALUES;
-  const activityEntries = external?.activityEntries ?? DEMO_ACTIVITY_ENTRIES;
-  const checkouts = external?.checkouts ?? DEMO_CHECKOUTS;
-  const returnedCheckoutsList = external?.returnedCheckouts ?? DEMO_RETURNED_CHECKOUTS;
-  const binShares = external?.binShares ?? DEMO_BIN_SHARES;
+  const tagHierarchyDefs = TAG_HIERARCHY;
+  const cfDefs = CUSTOM_FIELD_DEFINITIONS;
+  const cfValues = CUSTOM_FIELD_VALUES;
+  const activityEntries = DEMO_ACTIVITY_ENTRIES;
+  const checkouts = DEMO_CHECKOUTS;
+  const returnedCheckoutsList = DEMO_RETURNED_CHECKOUTS;
+  const binShares = DEMO_BIN_SHARES;
 
   const startTime = Date.now();
 
   try {
     await withTransaction(async (tx) => {
-      await cleanupExistingDemoUsers(tx, members, users as Record<DemoMember, { email: string; displayName: string }>);
+      await cleanupExistingDemoUsers(tx, members, users);
 
       const randomPassword = crypto.randomBytes(32).toString('hex');
       const passwordHash = bcrypt.hashSync(randomPassword, 10);
-      const userIdMap = await createDemoUsers(tx, passwordHash, users as Record<DemoMember, { email: string; displayName: string }>);
+      const userIdMap = await createDemoUsers(tx, passwordHash, users);
       const userId = userIdMap.get('demo')!;
 
       const { homeLocationId, storageLocationId } = await setupLocations(tx, userId, locationNames);

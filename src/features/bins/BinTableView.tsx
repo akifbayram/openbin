@@ -1,4 +1,4 @@
-import { Check, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { BinIconBadge } from '@/components/ui/bin-icon-badge';
@@ -25,7 +25,6 @@ interface BinTableViewProps {
   searchQuery: string;
   filters?: BinFilters;
   onTagClick: (tag: string) => void;
-  onSelectAll?: () => void;
   isVisible?: (field: string) => boolean;
   customFields?: CustomField[];
 }
@@ -41,11 +40,9 @@ export function BinTableView({
   searchQuery,
   filters,
   onTagClick,
-  onSelectAll,
   isVisible,
   customFields,
 }: BinTableViewProps) {
-  const allSelected = bins.length > 0 && bins.every((b) => selectedIds.has(b.id));
   const sortedCustomFields = React.useMemo(
     () => customFields ? [...customFields].sort((a, b) => a.position - b.position) : [],
     [customFields],
@@ -56,21 +53,6 @@ export function BinTableView({
       {/* Header */}
       <TableHeader>
         <div className="flex-[2] flex items-center gap-2">
-          {selectable && onSelectAll && (
-            <button
-              type="button"
-              onClick={onSelectAll}
-              className={cn(
-                'shrink-0 h-5 w-5 rounded-[var(--radius-xs)] border-2 transition-all duration-200 flex items-center justify-center',
-                allSelected
-                  ? 'bg-[var(--accent)] border-[var(--accent)]'
-                  : 'border-[var(--text-tertiary)]',
-              )}
-              aria-label={allSelected ? 'Deselect all' : 'Select all'}
-            >
-              {allSelected && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
-            </button>
-          )}
           <SortHeader label="Name" column="name" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-1" />
         </div>
         {isVisible?.('area') !== false && (

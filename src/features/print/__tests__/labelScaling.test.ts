@@ -12,7 +12,6 @@ function makeFormat(overrides: Partial<LabelFormat> = {}): LabelFormat {
     qrSize: '0.75in',
     padding: '2pt 4pt',
     nameFontSize: '8pt',
-    contentFontSize: '6pt',
     codeFontSize: '14pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
@@ -93,11 +92,10 @@ describe('applyFontScale', () => {
     expect(applyFontScale(fmt, 1)).toBe(fmt);
   });
 
-  it('scales name, content, and code font sizes', () => {
-    const fmt = makeFormat({ nameFontSize: '10pt', contentFontSize: '8pt', codeFontSize: '14pt' });
+  it('scales name and code font sizes', () => {
+    const fmt = makeFormat({ nameFontSize: '10pt', codeFontSize: '14pt' });
     const result = applyFontScale(fmt, 1.5);
     expect(result.nameFontSize).toBe('15pt');
-    expect(result.contentFontSize).toBe('12pt');
     expect(result.codeFontSize).toBe('21pt');
   });
 

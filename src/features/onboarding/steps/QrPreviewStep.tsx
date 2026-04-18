@@ -19,7 +19,7 @@ export function QrPreviewStep({ createdBin, onPrint, onNext, t }: QrPreviewStepP
       <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
         Print this label and stick it on your {t.bin}. Scan with any phone camera to instantly see what's inside.
       </p>
-      <QRCodeDisplay binId={createdBin.id} size={160} shortCode={createdBin.short_code} hideActions />
+      <QRCodeDisplay binId={createdBin.id} size={160} shortCode={createdBin.short_code} />
       <div className="flex gap-3 w-full mt-6">
         <Button
           type="button"

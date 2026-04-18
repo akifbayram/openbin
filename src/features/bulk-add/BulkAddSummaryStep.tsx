@@ -33,7 +33,10 @@ export function BulkAddSummaryStep({
   const skipped = photos.filter((p) => p.status === 'skipped');
   const failed = photos.filter((p) => p.status === 'failed');
   const createReady = confirmedWithName.filter((p) => p.status !== 'created' && p.status !== 'creating');
-  const allCreated = confirmedWithName.length > 0 && confirmedWithName.every((p) => p.status === 'created');
+  const allCreated =
+    confirmedWithName.length > 0 &&
+    failed.length === 0 &&
+    confirmedWithName.every((p) => p.status === 'created');
   const totalToCreate = createReady.length + failed.length;
 
   return (

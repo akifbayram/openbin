@@ -27,7 +27,6 @@ function makeFormat(overrides: Partial<LabelFormat> = {}): LabelFormat {
     qrSize: '0.75in',
     padding: '2pt 4pt',
     nameFontSize: '8pt',
-    contentFontSize: '6.5pt',
     codeFontSize: '14pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',

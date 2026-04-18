@@ -35,7 +35,6 @@ export function DemoBrowseStep({ onNext }: { onNext: () => void }) {
           binId={DEMO_BIN.shortCode}
           size={120}
           shortCode={DEMO_BIN.shortCode}
-          hideActions
           colors={demoBinColors}
           containerStyle={demoBinContainerStyle}
           shortCodeStyle={demoBinShortCodeStyle}
