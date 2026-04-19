@@ -121,7 +121,7 @@ export function createPinnedFetch(resolvedIps: string[]): typeof globalThis.fetc
 }
 
 /** Safe client-facing messages keyed by AI error code (avoids leaking provider internals). */
-export const SAFE_AI_MESSAGES: Partial<Record<AiErrorCode, string>> = {
+const SAFE_AI_MESSAGES: Partial<Record<AiErrorCode, string>> = {
   INVALID_KEY: 'Invalid API key — check your AI provider settings',
   RATE_LIMITED: 'Rate limited by provider — try again later',
   MODEL_NOT_FOUND: 'Model not found — check your AI provider settings',

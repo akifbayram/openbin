@@ -7,7 +7,7 @@ export interface EmailTemplate {
   text: string;
 }
 
-export function logoHtml(): string {
+function logoHtml(): string {
   if (config.baseUrl) return `<img src="${config.baseUrl}/logo-horizontal.png" alt="OpenBin" width="140" height="31" style="display:block;border:0">`;
   return `<span style="font-size:18px;font-weight:700;color:#5e2fe0">OpenBin</span>`;
 }
@@ -46,7 +46,7 @@ export function btn(href: string, label: string): string {
 </td></tr></table>`;
 }
 
-export function escapeHtml(str: string): string {
+function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 

@@ -9,9 +9,9 @@ export interface BinAccessResult {
   name: string;
 }
 
-export type BinAttachmentKind = 'photo' | 'attachment';
+type BinAttachmentKind = 'photo' | 'attachment';
 
-export interface BinAttachmentAccessResult {
+interface BinAttachmentAccessResult {
   kind: BinAttachmentKind;
   binId: string;
   binName: string;

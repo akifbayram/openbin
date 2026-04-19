@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 import request from 'supertest';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../index.js';
 import * as planGate from '../lib/planGate.js';
 import { createTestLocation, createTestUser } from './helpers.js';

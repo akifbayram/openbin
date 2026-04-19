@@ -16,8 +16,8 @@ export interface LogActivityOptions {
   apiKeyId?: string;
 }
 
-export type Diff = { old: unknown; new: unknown };
-export type Changes = Record<string, Diff>;
+type Diff = { old: unknown; new: unknown };
+type Changes = Record<string, Diff>;
 
 type RenameEntry = { old: string; new: string };
 

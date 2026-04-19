@@ -16,7 +16,7 @@ export async function assertUserExists(userId: string): Promise<{ id: string; em
 }
 
 export const VALID_ROLES = ['admin', 'member', 'viewer'] as const;
-export type LocationRole = (typeof VALID_ROLES)[number];
+type LocationRole = (typeof VALID_ROLES)[number];
 
 export function isValidRole(role: unknown): role is LocationRole {
   return typeof role === 'string' && (VALID_ROLES as readonly string[]).includes(role);

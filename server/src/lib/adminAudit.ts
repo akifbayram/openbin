@@ -1,6 +1,6 @@
 import { generateUuid, query } from '../db.js';
 
-export interface AuditEntry {
+interface AuditEntry {
   actorId: string;
   actorName: string;
   action: string;

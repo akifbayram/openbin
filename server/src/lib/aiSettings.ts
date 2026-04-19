@@ -14,7 +14,7 @@ export const TASK_TYPES = ['analysis', 'command', 'query', 'structure', 'reorgan
 
 export type TaskType = (typeof TASK_TYPES)[number];
 
-export type TaskModelOverrides = Partial<Record<TaskType, string>>;
+type TaskModelOverrides = Partial<Record<TaskType, string>>;
 
 /** Parse a raw task_model_overrides value (string or object) into a typed map. */
 export function parseTaskModelOverrides(raw: unknown): TaskModelOverrides | null {

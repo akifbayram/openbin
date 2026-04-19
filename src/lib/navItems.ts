@@ -1,4 +1,4 @@
-import { LayoutDashboard, MapPin, Package, PackageSearch, Printer, ScanLine, Settings, Sparkles } from 'lucide-react';
+import { LayoutDashboard, MapPin, Package, PackageSearch, Printer, ScanLine, Sparkles } from 'lucide-react';
 import type { Terminology } from '@/lib/terminology';
 
 export type TermKey = keyof Terminology;
@@ -20,5 +20,3 @@ export const navItems: NavItem[] = [
   { path: '/reorganize', label: 'Reorganize', icon: Sparkles, proOnly: true },
   { path: '/scan', label: 'Scan', icon: ScanLine },
 ];
-
-export const settingsNavItem: NavItem = { path: '/settings', label: 'Settings', icon: Settings };

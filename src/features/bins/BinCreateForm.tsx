@@ -4,10 +4,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
 import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip } from '@/components/ui/tooltip';
 import { AiConfiguredIndicator, InlineAiSetup } from '@/features/ai/InlineAiSetup';
@@ -22,7 +20,7 @@ import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { useDictation } from '@/lib/useDictation';
-import { cn, focusRing, plural } from '@/lib/utils';
+import { cn, focusRing, plural, sectionHeader } from '@/lib/utils';
 import type { AiSuggestions, BinItem, BinVisibility } from '@/types';
 import { AiBadge } from './AiBadge';
 import { BinPreviewCard } from './BinPreviewCard';
@@ -466,7 +464,7 @@ export function BinCreateForm({
           {/* Name with validation and AI badge */}
           <div key={aiFilledFields.has('name') ? `name-${aiFillCycle}` : 'name'} className={cn('space-y-2', aiFilledFields.has('name') && 'ai-field-fill')} style={aiFilledFields.has('name') ? { '--stagger': 0 } as React.CSSProperties : undefined}>
             <div className="flex items-center justify-between">
-              <Label htmlFor="bin-name">Name</Label>
+              <label htmlFor="bin-name" className={sectionHeader}>Name</label>
               {aiFilledFields.has('name') && <AiBadge onUndo={() => handleUndoAiField('name')} />}
             </div>
             <Input
@@ -502,13 +500,13 @@ export function BinCreateForm({
           >
             <div className="space-y-5">
             <div className="space-y-2">
-              <Label>{t.Area}</Label>
+              <span className={sectionHeader}>{t.Area}</span>
               <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
             </div>
 
             <div key={aiFilledFields.has('notes') ? `notes-${aiFillCycle}` : 'notes'} className={cn('space-y-2', aiFilledFields.has('notes') && 'ai-field-fill')} style={aiFilledFields.has('notes') ? { '--stagger': 2 } as React.CSSProperties : undefined}>
               <div className="flex items-center justify-between">
-                <Label htmlFor="bin-notes">Notes</Label>
+                <label htmlFor="bin-notes" className={sectionHeader}>Notes</label>
                 {aiFilledFields.has('notes') && <AiBadge onUndo={() => handleUndoAiField('notes')} />}
               </div>
               <Textarea
@@ -523,27 +521,25 @@ export function BinCreateForm({
 
             <div key={aiFilledFields.has('tags') ? `tags-${aiFillCycle}` : 'tags'} className={cn('space-y-2', aiFilledFields.has('tags') && 'ai-field-fill')} style={aiFilledFields.has('tags') ? { '--stagger': 3 } as React.CSSProperties : undefined}>
               <div className="flex items-center justify-between">
-                <Label>Tags</Label>
+                <span className={sectionHeader}>Tags</span>
                 {aiFilledFields.has('tags') && <AiBadge onUndo={() => handleUndoAiField('tags')} />}
               </div>
               <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
             </div>
 
             {customFieldDefs.length > 0 && (
-              <Card>
-                <CardContent className="space-y-4 pt-3 pb-4">
-                  <Label>Custom Fields</Label>
-                  <CustomFieldsEditCard
-                    fields={customFieldDefs}
-                    values={customFields}
-                    onChange={setCustomFields}
-                  />
-                </CardContent>
-              </Card>
+              <div className="space-y-2">
+                <span className={sectionHeader}>Custom Fields</span>
+                <CustomFieldsEditCard
+                  fields={customFieldDefs}
+                  values={customFields}
+                  onChange={setCustomFields}
+                />
+              </div>
             )}
 
             <div className="space-y-3">
-              <Label>Appearance</Label>
+              <span className={sectionHeader}>Appearance</span>
               <BinPreviewCard
                 name={name}
                 color={color}
@@ -554,11 +550,11 @@ export function BinCreateForm({
                 areaName={areaName}
               />
               <div className="space-y-2">
-                <Label className="text-[12px]">Icon</Label>
+                <span className="text-[12px] text-[var(--text-tertiary)]">Icon</span>
                 <IconPicker value={icon} onChange={setIcon} />
               </div>
               <div className="space-y-2">
-                <Label className="text-[12px]">Color</Label>
+                <span className="text-[12px] text-[var(--text-tertiary)]">Color</span>
                 <ColorPicker
                   value={color}
                   onChange={setColor}
@@ -568,13 +564,13 @@ export function BinCreateForm({
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[12px]">Style</Label>
+                <span className="text-[12px] text-[var(--text-tertiary)]">Style</span>
                 <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Visibility</Label>
+              <span className={sectionHeader}>Visibility</span>
               <VisibilityPicker value={visibility} onChange={setVisibility} />
             </div>
             </div>

@@ -6,7 +6,7 @@ import { fetchCustomFieldDefs } from './customFieldHelpers.js';
 import { safePath } from './pathSafety.js';
 import { PHOTO_STORAGE_PATH } from './uploadConfig.js';
 
-export interface LoadedPhotos {
+interface LoadedPhotos {
   images: Array<{ buffer: Buffer; mimeType: string }>;
   locationId: string;
   existingTags: string[];

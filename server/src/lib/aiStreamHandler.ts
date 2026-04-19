@@ -43,7 +43,7 @@ export function streamOpts(
 }
 
 /** A loaded image ready for inclusion as a user-message image part. */
-export interface AnalysisImage {
+interface AnalysisImage {
   buffer: Buffer;
   mimeType: string;
 }

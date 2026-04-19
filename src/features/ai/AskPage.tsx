@@ -22,6 +22,7 @@ export function AskPage() {
         onPhotoClose={handleBack}
         onOpenAiSettings={() => navigate('/settings/ai')}
         onDismissAiSetup={handleBack}
+        photoFrameClassName="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-[calc(24px+var(--safe-bottom))]"
         renderChrome={({ conversation, photoMode }) => (
           <div
             className="flex items-center gap-2 px-3 border-b border-[var(--border-subtle)] bg-[var(--bg-base)]"

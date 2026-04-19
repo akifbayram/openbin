@@ -36,7 +36,6 @@ describe('PreviewPanel scaling', () => {
     disconnectSpy = vi.fn();
 
     vi.stubGlobal('ResizeObserver', class {
-      constructor(_cb: ResizeObserverCallback) {}
       observe = observeSpy;
       disconnect = disconnectSpy;
       unobserve = vi.fn();

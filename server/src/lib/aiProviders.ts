@@ -31,7 +31,7 @@ export function normalizeAiItems(raw: unknown[]): AiSuggestedItem[] {
     .filter((i): i is AiSuggestedItem => i !== null);
 }
 
-export interface AiSuggestionsResult {
+interface AiSuggestionsResult {
   name: string;
   items: AiSuggestedItem[];
   tags: string[];
@@ -140,7 +140,7 @@ export const IMAGE_TOKENS_SINGLE = 2500;
 /** Default maxOutputTokens for image analysis (multiple images). */
 export const IMAGE_TOKENS_MULTI = 3000;
 
-export interface AiOverrides {
+interface AiOverrides {
   temperature?: number | null;
   max_tokens?: number | null;
   top_p?: number | null;

@@ -1,4 +1,4 @@
-import { Camera, ChevronLeft, X } from 'lucide-react';
+import { ChevronLeft, Plus, X } from 'lucide-react';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -186,7 +186,7 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
 
   if (state.step === 'review') {
     return (
-      <div className="space-y-4">
+      <div className="space-y-5">
         <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
         <BulkAddReviewStep
           photos={state.photos}
@@ -201,7 +201,7 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
 
   if (state.step === 'summary') {
     return (
-      <div className="space-y-4">
+      <div className="space-y-5">
         <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
         <BulkAddSummaryStep
           photos={state.photos}
@@ -219,8 +219,8 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
   const singleBinDisabled = state.photos.length > MAX_AI_PHOTOS;
 
   return (
-    <div className="space-y-4">
-      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} className="mb-2" />
+    <div className="flex min-h-full flex-col gap-4">
+      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
 
       <input
         ref={fileInputRef}
@@ -231,10 +231,10 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
         onChange={handleAddMore}
       />
 
-      {/* Thumbnail grid */}
-      <div className="grid grid-cols-4 gap-2">
+      {/* Thumbnail strip — fixed-size tiles wrap as needed */}
+      <div className="flex flex-wrap gap-2">
         {state.photos.map((photo) => (
-          <div key={photo.id} className="relative aspect-square group">
+          <div key={photo.id} className="group relative h-20 w-20 shrink-0">
             <img
               src={photo.previewUrl}
               alt={`Preview ${state.photos.indexOf(photo) + 1}`}
@@ -243,9 +243,10 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
             <button
               type="button"
               onClick={() => handleRemove(photo.id)}
-              className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+              aria-label={`Remove photo ${state.photos.indexOf(photo) + 1}`}
+              className="absolute top-1 right-1 size-7 flex items-center justify-center rounded-[var(--radius-xs)] bg-[var(--overlay-button)] text-white opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-[var(--destructive)]"
             >
-              <X className="h-3 w-3" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         ))}
@@ -253,29 +254,27 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="aspect-square flex flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+            aria-label="Add more photos"
+            className="h-20 w-20 shrink-0 flex items-center justify-center rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
           >
-            <Camera className="h-4 w-4" />
-            <span className="text-[10px]">Add more</span>
+            <Plus className="h-5 w-5" />
           </button>
         )}
       </div>
 
       {/* Mode toggle */}
-      {!isDemo && (
-        <OptionGroup
-          options={[
-            { key: 'per-photo' as const, label: `One ${t.bin} per photo` },
-            { key: 'single-bin' as const, label: `All in one ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Up to ${MAX_AI_PHOTOS} photos in single-${t.bin} mode` },
-          ]}
-          value={mode}
-          onChange={setMode}
-        />
-      )}
+      <OptionGroup
+        options={[
+          { key: 'per-photo' as const, label: `One ${t.bin} per photo` },
+          { key: 'single-bin' as const, label: `All in one ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Up to ${MAX_AI_PHOTOS} photos in single-${t.bin} mode` },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
 
       {/* Shared area picker */}
       <div className="space-y-1.5">
-        <Label className="text-[13px]">
+        <Label className="text-[11px]">
           {mode === 'single-bin' ? `${t.Area} (optional)` : `${t.Area} for all ${t.bins} (optional)`}
         </Label>
         <AreaPicker
@@ -285,14 +284,10 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
         />
       </div>
 
-      {/* Actions */}
-      <div className="row-spread pt-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-        >
-          <ChevronLeft className="h-4 w-4 mr-0.5" />
+      {/* Actions — pinned to the bottom of the available space */}
+      <div className="row-spread mt-auto pt-2">
+        <Button variant="ghost" onClick={onBack}>
+          <ChevronLeft className="h-4 w-4 mr-1" />
           Back
         </Button>
         <Button
@@ -304,7 +299,6 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
             }
           }}
           disabled={state.photos.length === 0}
-          size="sm"
         >
           Continue
         </Button>

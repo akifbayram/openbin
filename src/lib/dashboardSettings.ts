@@ -22,22 +22,6 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.round(value)));
 }
 
-const DEFAULTS: DashboardSettings = {
-  recentBinsCount: DEFAULT_PREFERENCES.dashboard_recent_bins_count,
-  showStats: DEFAULT_PREFERENCES.dashboard_show_stats,
-  showNeedsOrganizing: DEFAULT_PREFERENCES.dashboard_show_needs_organizing,
-  showSavedViews: DEFAULT_PREFERENCES.dashboard_show_saved_views,
-  showPinnedBins: DEFAULT_PREFERENCES.dashboard_show_pinned_bins,
-  showRecentlyScanned: DEFAULT_PREFERENCES.dashboard_show_recently_scanned,
-  showCheckouts: DEFAULT_PREFERENCES.dashboard_show_checkouts,
-  showActivity: DEFAULT_PREFERENCES.dashboard_show_activity,
-  showTimestamps: DEFAULT_PREFERENCES.dashboard_show_timestamps,
-};
-
-export function getDashboardSettings(): DashboardSettings {
-  return { ...DEFAULTS };
-}
-
 export function useDashboardSettings() {
   const { preferences, isLoading, updatePreferences } = useUserPreferences();
 

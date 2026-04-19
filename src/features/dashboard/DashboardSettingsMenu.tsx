@@ -6,7 +6,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { DASHBOARD_LIMITS, type DashboardSettings } from '@/lib/dashboardSettings';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
-import { cn } from '@/lib/utils';
+import { cn, sectionHeader } from '@/lib/utils';
 
 interface DashboardSettingsMenuProps {
   settings: DashboardSettings;
@@ -49,7 +49,7 @@ export function DashboardSettingsMenu({ settings, onUpdate, onReset, terminology
           animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
           'absolute right-0 mt-1 w-60 rounded-[var(--radius-md)] flat-popover overflow-hidden z-20',
         )}>
-          <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+          <div className={cn(sectionHeader, 'px-3.5 py-2')}>
             Sections
           </div>
           {SECTION_TOGGLES.map(({ key, label }) => (
@@ -67,7 +67,7 @@ export function DashboardSettingsMenu({ settings, onUpdate, onReset, terminology
             </label>
           ))}
           <div className="border-t border-[var(--border-subtle)] mt-1 pt-1">
-            <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+            <div className={cn(sectionHeader, 'px-3.5 py-2')}>
               Display
             </div>
             <label

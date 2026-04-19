@@ -3,8 +3,8 @@ import { sanitizeBinForContext } from './aiSanitize.js';
 import type { CommandRequest } from './commandParser.js';
 import type { InventoryContext } from './inventoryQuery.js';
 
-export const AVAILABLE_COLORS = ['red', 'orange', 'amber', 'lime', 'green', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'purple', 'rose', 'pink', 'gray'];
-export const AVAILABLE_ICONS = [
+const AVAILABLE_COLORS = ['red', 'orange', 'amber', 'lime', 'green', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'purple', 'rose', 'pink', 'gray'];
+const AVAILABLE_ICONS = [
   'Package', 'Box', 'Archive', 'Wrench', 'Shirt', 'Book', 'Utensils', 'Laptop', 'Camera', 'Music',
   'Heart', 'Star', 'Home', 'Car', 'Bike', 'Plane', 'Briefcase', 'ShoppingBag', 'Gift', 'Lightbulb',
   'Scissors', 'Hammer', 'Paintbrush', 'Leaf', 'Apple', 'Coffee', 'Wine', 'Baby', 'Dog', 'Cat',
@@ -66,7 +66,7 @@ export function filterRelevantBins<T extends { id: string; name: string; items: 
 }
 
 /** ~4 chars per token. */
-export const CONTEXT_TOKEN_BUDGET = 6000;
+const CONTEXT_TOKEN_BUDGET = 6000;
 
 function estimateTokens(obj: unknown): number {
   return Math.ceil(JSON.stringify(obj).length / 4);
