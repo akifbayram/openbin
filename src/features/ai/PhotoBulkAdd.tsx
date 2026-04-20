@@ -1,25 +1,27 @@
-import { ChevronLeft, Plus, X } from 'lucide-react';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { OptionGroup } from '@/components/ui/option-group';
 import { StepIndicator } from '@/components/ui/stepper';
-import { AreaPicker } from '@/features/areas/AreaPicker';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
 import { addBin, notifyBinsChanged } from '@/features/bins/useBins';
-import { BulkAddReviewStep } from '@/features/bulk-add/BulkAddReviewStep';
-import { BulkAddSummaryStep } from '@/features/bulk-add/BulkAddSummaryStep';
-import type { BulkAddPhoto, BulkAddState } from '@/features/bulk-add/useBulkAdd';
-import { BULK_ADD_STEPS, bulkAddReducer, bulkAddStepIndex, createBulkAddPhoto, initialState } from '@/features/bulk-add/useBulkAdd';
+import { GroupReviewStep } from '@/features/bulk-add/GroupReviewStep';
+import { GroupSummaryStep } from '@/features/bulk-add/GroupSummaryStep';
+import { PhotoGroupingGrid } from '@/features/bulk-add/PhotoGroupingGrid';
+import {
+  BULK_ADD_STEPS,
+  type BulkAddState,
+  bulkAddReducer,
+  bulkAddStepIndex,
+  createGroupFromPhoto,
+  createPhoto,
+  type Group,
+  initialState,
+} from '@/features/bulk-add/useBulkGroupAdd';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
 import { binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import type { AiSettings } from '@/types';
-import { SingleBinReview } from './SingleBinReview';
-import { MAX_AI_PHOTOS } from './useAiAnalysis';
 
 const MAX_PHOTOS = 20;
 const DEMO_MAX_PHOTOS = 3;
@@ -34,7 +36,7 @@ interface PhotoBulkAddProps {
 function initState(files: File[]): BulkAddState {
   return {
     ...initialState,
-    photos: files.map((f) => createBulkAddPhoto(f, null)),
+    groups: files.map((f) => createGroupFromPhoto(createPhoto(f), null)),
   };
 }
 
@@ -44,91 +46,85 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
   const [state, dispatch] = useReducer(bulkAddReducer, initialFiles, initState);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hadPhotos = useRef(initialFiles.length > 0);
-  const [mode, setMode] = useState<'per-photo' | 'single-bin'>(isDemo ? 'single-bin' : 'per-photo');
-  const [singleBinReview, setSingleBinReview] = useState(false);
   const [successBins, setSuccessBins] = useState<CreatedBinInfo[] | null>(null);
 
-  const effectiveMax = isDemo ? DEMO_MAX_PHOTOS : (mode === 'single-bin' ? MAX_AI_PHOTOS : MAX_PHOTOS);
+  const effectiveMax = isDemo ? DEMO_MAX_PHOTOS : MAX_PHOTOS;
+  const totalPhotos = state.groups.reduce((acc, g) => acc + g.photos.length, 0);
 
-  // Cleanup ObjectURLs on unmount
-  // biome-ignore lint/correctness/useExhaustiveDependencies: cleanup-only effect captures final state via ref-like closure
+  // biome-ignore lint/correctness/useExhaustiveDependencies: cleanup-only effect
   useEffect(() => {
     return () => {
-      for (const p of state.photos) URL.revokeObjectURL(p.previewUrl);
+      for (const g of state.groups) {
+        for (const p of g.photos) URL.revokeObjectURL(p.previewUrl);
+      }
     };
   }, []);
 
-  // Auto-go back if all photos removed in upload step (only after having had photos)
+  // Auto-back when all photos removed in group step
   useEffect(() => {
-    if (state.photos.length > 0) hadPhotos.current = true;
-    if (state.step === 'upload' && hadPhotos.current && state.photos.length === 0) {
+    if (totalPhotos > 0) hadPhotos.current = true;
+    if (state.step === 'group' && hadPhotos.current && totalPhotos === 0) {
       onBack();
     }
-  }, [state.photos.length, state.step, onBack]);
+  }, [totalPhotos, state.step, onBack]);
 
   function handleAddMore(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    const remaining = effectiveMax - state.photos.length;
+    const remaining = effectiveMax - totalPhotos;
     const newFiles = Array.from(files).slice(0, remaining);
     if (newFiles.length === 0) return;
-    const newPhotos = newFiles.map((f) => createBulkAddPhoto(f, state.sharedAreaId));
-    dispatch({ type: 'ADD_PHOTOS', photos: newPhotos });
+    dispatch({ type: 'ADD_PHOTOS', photos: newFiles.map(createPhoto) });
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  function handleRemove(id: string) {
-    const photo = state.photos.find((p) => p.id === id);
-    if (photo) URL.revokeObjectURL(photo.previewUrl);
-    dispatch({ type: 'REMOVE_PHOTO', id });
-  }
-
   const createBins = useCallback(
-    async (toCreate: BulkAddPhoto[]) => {
+    async (toCreate: Group[]) => {
       if (toCreate.length === 0 || !activeLocationId) return;
 
       dispatch({ type: 'START_CREATING' });
 
       let successCount = 0;
       const createdBinInfos: CreatedBinInfo[] = [];
-      for (const photo of toCreate) {
-        dispatch({ type: 'SET_CREATING', id: photo.id });
+      for (const group of toCreate) {
+        dispatch({ type: 'SET_CREATING', id: group.id });
         try {
           const createdBin = await addBin({
-            name: photo.name.trim(),
+            name: group.name.trim(),
             locationId: activeLocationId,
-            items: binItemsToPayload(photo.items),
-            notes: photo.notes.trim(),
-            tags: photo.tags,
-            areaId: photo.areaId,
-            icon: photo.icon,
-            color: photo.color,
+            items: binItemsToPayload(group.items),
+            notes: group.notes.trim(),
+            tags: group.tags,
+            areaId: group.areaId,
+            icon: group.icon,
+            color: group.color,
           });
-          dispatch({ type: 'SET_CREATED', id: photo.id, binId: createdBin.id });
+          dispatch({ type: 'SET_CREATED', id: group.id, binId: createdBin.id });
           successCount++;
           createdBinInfos.push({
             id: createdBin.id,
-            name: photo.name.trim(),
-            icon: photo.icon,
-            color: photo.color,
-            itemCount: photo.items.length,
+            name: group.name.trim(),
+            icon: group.icon,
+            color: group.color,
+            itemCount: group.items.length,
           });
-          // Upload photo fire-and-forget
-          compressImage(photo.file)
-            .then((compressed) => {
-              const file =
-                compressed instanceof File
-                  ? compressed
-                  : new File([compressed], photo.file.name, {
-                      type: compressed.type || 'image/jpeg',
-                    });
-              return addPhoto(createdBin.id, file);
-            })
-            .catch(() => {});
+          for (const photo of group.photos) {
+            compressImage(photo.file)
+              .then((compressed) => {
+                const file =
+                  compressed instanceof File
+                    ? compressed
+                    : new File([compressed], photo.file.name, {
+                        type: compressed.type || 'image/jpeg',
+                      });
+                return addPhoto(createdBin.id, file);
+              })
+              .catch(() => {});
+          }
         } catch (err) {
           dispatch({
             type: 'SET_CREATE_ERROR',
-            id: photo.id,
+            id: group.id,
             error: err instanceof Error ? err.message : `Failed to create ${t.bin}`,
           });
         }
@@ -141,22 +137,20 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
         setSuccessBins(createdBinInfos);
       }
     },
-    [activeLocationId, t]
+    [activeLocationId, t],
   );
 
   const handleCreateAll = useCallback(() => {
-    const toCreate = state.photos.filter(
-      (p) => p.name.trim() && (p.status === 'reviewed' || p.status === 'pending')
+    const toCreate = state.groups.filter(
+      (g) => g.name.trim() && (g.status === 'reviewed' || g.status === 'pending'),
     );
     createBins(toCreate);
-  }, [state.photos, createBins]);
+  }, [state.groups, createBins]);
 
   const handleRetryFailed = useCallback(() => {
-    const failed = state.photos.filter((p) => p.status === 'failed');
+    const failed = state.groups.filter((g) => g.status === 'failed');
     createBins(failed);
-  }, [state.photos, createBins]);
-
-  const stepIndex = bulkAddStepIndex(state);
+  }, [state.groups, createBins]);
 
   if (successBins) {
     return (
@@ -171,138 +165,45 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
     );
   }
 
-  if (singleBinReview) {
-    return (
-      <SingleBinReview
-        files={state.photos.map((p) => p.file)}
-        previewUrls={state.photos.map((p) => p.previewUrl)}
-        sharedAreaId={state.sharedAreaId}
-        onBack={() => setSingleBinReview(false)}
-        onClose={onClose}
-        onRestart={onBack}
-      />
-    );
-  }
+  const stepIndex = bulkAddStepIndex(state);
 
-  if (state.step === 'review') {
-    return (
-      <div className="space-y-5">
-        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
-        <BulkAddReviewStep
-          photos={state.photos}
+  return (
+    <div className="space-y-5">
+      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
+
+      {state.step === 'group' && (
+        <PhotoGroupingGrid
+          state={state}
+          dispatch={dispatch}
+          effectiveMax={effectiveMax}
+          locationId={activeLocationId}
+          fileInputRef={fileInputRef}
+          onAddMore={handleAddMore}
+          onContinue={() => dispatch({ type: 'GO_TO_REVIEW' })}
+          onBack={onBack}
+        />
+      )}
+
+      {state.step === 'review' && (
+        <GroupReviewStep
+          groups={state.groups}
           currentIndex={state.currentIndex}
           editingFromSummary={state.editingFromSummary}
           aiSettings={aiSettings}
           dispatch={dispatch}
         />
-      </div>
-    );
-  }
+      )}
 
-  if (state.step === 'summary') {
-    return (
-      <div className="space-y-5">
-        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
-        <BulkAddSummaryStep
-          photos={state.photos}
+      {state.step === 'summary' && (
+        <GroupSummaryStep
+          groups={state.groups}
           isCreating={state.isCreating}
           createdCount={state.createdCount}
           dispatch={dispatch}
           onCreateAll={handleCreateAll}
           onRetryFailed={handleRetryFailed}
         />
-      </div>
-    );
-  }
-
-  // Upload step — compact inline version
-  const singleBinDisabled = state.photos.length > MAX_AI_PHOTOS;
-
-  return (
-    <div className="flex min-h-full flex-col gap-4">
-      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={handleAddMore}
-      />
-
-      {/* Thumbnail strip — fixed-size tiles wrap as needed */}
-      <div className="flex flex-wrap gap-2">
-        {state.photos.map((photo) => (
-          <div key={photo.id} className="group relative h-20 w-20 shrink-0">
-            <img
-              src={photo.previewUrl}
-              alt={`Preview ${state.photos.indexOf(photo) + 1}`}
-              className="h-full w-full rounded-[var(--radius-md)] object-cover"
-            />
-            <button
-              type="button"
-              onClick={() => handleRemove(photo.id)}
-              aria-label={`Remove photo ${state.photos.indexOf(photo) + 1}`}
-              className="absolute top-1 right-1 size-7 flex items-center justify-center rounded-[var(--radius-xs)] bg-[var(--overlay-button)] text-white opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-[var(--destructive)]"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ))}
-        {state.photos.length < effectiveMax && (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            aria-label="Add more photos"
-            className="h-20 w-20 shrink-0 flex items-center justify-center rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-        )}
-      </div>
-
-      {/* Mode toggle */}
-      <OptionGroup
-        options={[
-          { key: 'per-photo' as const, label: `One ${t.bin} per photo` },
-          { key: 'single-bin' as const, label: `All in one ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Up to ${MAX_AI_PHOTOS} photos in single-${t.bin} mode` },
-        ]}
-        value={mode}
-        onChange={setMode}
-      />
-
-      {/* Shared area picker */}
-      <div className="space-y-1.5">
-        <Label className="text-[11px]">
-          {mode === 'single-bin' ? `${t.Area} (optional)` : `${t.Area} for all ${t.bins} (optional)`}
-        </Label>
-        <AreaPicker
-          locationId={activeLocationId ?? undefined}
-          value={state.sharedAreaId}
-          onChange={(areaId) => dispatch({ type: 'SET_SHARED_AREA', areaId })}
-        />
-      </div>
-
-      {/* Actions — pinned to the bottom of the available space */}
-      <div className="row-spread mt-auto pt-2">
-        <Button variant="ghost" onClick={onBack}>
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
-        <Button
-          onClick={() => {
-            if (mode === 'single-bin') {
-              setSingleBinReview(true);
-            } else {
-              dispatch({ type: 'GO_TO_REVIEW' });
-            }
-          }}
-          disabled={state.photos.length === 0}
-        >
-          Continue
-        </Button>
-      </div>
+      )}
     </div>
   );
 }
