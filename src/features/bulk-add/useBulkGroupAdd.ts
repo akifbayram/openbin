@@ -41,6 +41,8 @@ export type BulkAddAction =
   | { type: 'REMOVE_PHOTO'; photoId: string }
   | { type: 'JOIN_AT'; boundaryIndex: number }
   | { type: 'SPLIT_AT'; boundaryIndex: number }
+  | { type: 'MOVE_PHOTO_TO_GROUP'; photoId: string; targetGroupId: string }
+  | { type: 'MOVE_PHOTO_TO_NEW_GROUP'; photoId: string }
   | { type: 'UNDO_LAST_TOGGLE' }
   | { type: 'CLEAR_LAST_TOGGLE' }
   | { type: 'SET_SHARED_AREA'; areaId: string | null }
@@ -236,6 +238,113 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
         updatedLeft,
         newRight,
         ...state.groups.slice(left.groupIndex + 1),
+      ];
+      return {
+        ...state,
+        groups: newGroups,
+        lastToggle: { snapshot: state.groups, verb: 'Split' },
+      };
+    }
+    case 'MOVE_PHOTO_TO_GROUP': {
+      let sourceIndex = -1;
+      let photo: Photo | null = null;
+      for (let i = 0; i < state.groups.length; i++) {
+        const found = state.groups[i].photos.find((p) => p.id === action.photoId);
+        if (found) {
+          sourceIndex = i;
+          photo = found;
+          break;
+        }
+      }
+      if (!photo || sourceIndex < 0) return state;
+      const targetIndex = state.groups.findIndex((g) => g.id === action.targetGroupId);
+      if (targetIndex < 0) return state;
+      if (sourceIndex === targetIndex) return state;
+      const targetGroup = state.groups[targetIndex];
+      if (targetGroup.photos.length + 1 > MAX_PHOTOS_PER_GROUP) return state;
+
+      const sourceGroup = state.groups[sourceIndex];
+      const newTarget: Group = {
+        ...targetGroup,
+        photos: [...targetGroup.photos, photo],
+        status: 'pending',
+        name: '',
+        items: [],
+        tags: [],
+        notes: '',
+        correctionCount: 0,
+        analyzeError: null,
+        createError: undefined,
+        createdBinId: undefined,
+      };
+      const remainingSourcePhotos = sourceGroup.photos.filter((p) => p.id !== action.photoId);
+      let newGroups: Group[];
+      if (remainingSourcePhotos.length === 0) {
+        newGroups = state.groups
+          .map((g, i) => (i === targetIndex ? newTarget : g))
+          .filter((_, i) => i !== sourceIndex);
+      } else {
+        const newSource: Group = {
+          ...sourceGroup,
+          photos: remainingSourcePhotos,
+          status: 'pending',
+          name: '',
+          items: [],
+          tags: [],
+          notes: '',
+          correctionCount: 0,
+          analyzeError: null,
+          createError: undefined,
+          createdBinId: undefined,
+        };
+        newGroups = state.groups.map((g, i) => {
+          if (i === sourceIndex) return newSource;
+          if (i === targetIndex) return newTarget;
+          return g;
+        });
+      }
+      const maxIndex = Math.max(0, newGroups.length - 1);
+      const currentIndex = Math.min(state.currentIndex, maxIndex);
+      return {
+        ...state,
+        groups: newGroups,
+        currentIndex,
+        lastToggle: { snapshot: state.groups, verb: 'Joined' },
+      };
+    }
+    case 'MOVE_PHOTO_TO_NEW_GROUP': {
+      let sourceIndex = -1;
+      let photo: Photo | null = null;
+      for (let i = 0; i < state.groups.length; i++) {
+        const found = state.groups[i].photos.find((p) => p.id === action.photoId);
+        if (found) {
+          sourceIndex = i;
+          photo = found;
+          break;
+        }
+      }
+      if (!photo || sourceIndex < 0) return state;
+      const sourceGroup = state.groups[sourceIndex];
+      if (sourceGroup.photos.length <= 1) return state;
+      const newSource: Group = {
+        ...sourceGroup,
+        photos: sourceGroup.photos.filter((p) => p.id !== action.photoId),
+        status: 'pending',
+        name: '',
+        items: [],
+        tags: [],
+        notes: '',
+        correctionCount: 0,
+        analyzeError: null,
+        createError: undefined,
+        createdBinId: undefined,
+      };
+      const newGroup = createGroupFromPhoto(photo, state.sharedAreaId);
+      const newGroups = [
+        ...state.groups.slice(0, sourceIndex),
+        newSource,
+        newGroup,
+        ...state.groups.slice(sourceIndex + 1),
       ];
       return {
         ...state,

@@ -82,20 +82,42 @@ describe('GroupSummaryStep', () => {
     expect(screen.getByText(/3 photos/)).toBeDefined();
   });
 
-  it('Edit dispatches SET_CURRENT_INDEX with the global groups index, not the confirmedWithName index', () => {
+  it('shows unnamed groups in the list with an "Untitled bin" placeholder', () => {
+    const p1 = createPhoto(new File([''], 'a.jpg', { type: 'image/jpeg' }));
+    const p2 = createPhoto(new File([''], 'b.jpg', { type: 'image/jpeg' }));
+    const g1 = { ...createGroupFromPhoto(p1, null), name: 'Named bin', status: 'reviewed' as const };
+    const g2 = { ...createGroupFromPhoto(p2, null), name: '', status: 'pending' as const };
+    const state: BulkAddState = { ...initialState, step: 'summary', groups: [g1, g2] };
+    renderStep(state);
+    expect(screen.getByText('Named bin')).toBeDefined();
+    expect(screen.getByText('Untitled bin')).toBeDefined();
+    expect(screen.getByText(/needs a name/)).toBeDefined();
+  });
+
+  it('Edit dispatches SET_CURRENT_INDEX with the global groups index even when unnamed groups precede the target', () => {
     const dispatch = vi.fn();
-    // 3 groups: middle one has no name (filtered out of confirmedWithName)
+    // 3 groups: middle one has no name. All three are now visible (the previous "filter out unnamed" behavior is gone).
     const p1 = createPhoto(new File([''], 'a.jpg', { type: 'image/jpeg' }));
     const p2 = createPhoto(new File([''], 'b.jpg', { type: 'image/jpeg' }));
     const p3 = createPhoto(new File([''], 'c.jpg', { type: 'image/jpeg' }));
     const g1 = { ...createGroupFromPhoto(p1, null), name: 'First', status: 'reviewed' as const };
-    const g2 = { ...createGroupFromPhoto(p2, null), name: '', status: 'pending' as const }; // filtered out
+    const g2 = { ...createGroupFromPhoto(p2, null), name: '', status: 'pending' as const };
     const g3 = { ...createGroupFromPhoto(p3, null), name: 'Third', status: 'reviewed' as const };
     const state: BulkAddState = { ...initialState, step: 'summary', groups: [g1, g2, g3] };
     renderStep(state, { dispatch });
-    // Only First and Third are in confirmedWithName; click edit on Third (the second visible row)
-    fireEvent.click(screen.getAllByRole('button', { name: /edit/i })[1]);
-    // Must dispatch index 2 (G3's position in state.groups), NOT index 1 (its position in confirmedWithName)
+    // All three rows are visible now; click edit on the third row (G3)
+    fireEvent.click(screen.getAllByRole('button', { name: /edit/i })[2]);
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_CURRENT_INDEX', index: 2 });
+  });
+
+  it('header notes how many bins will be skipped when there are unnamed groups', () => {
+    const p1 = createPhoto(new File([''], 'a.jpg', { type: 'image/jpeg' }));
+    const p2 = createPhoto(new File([''], 'b.jpg', { type: 'image/jpeg' }));
+    const g1 = { ...createGroupFromPhoto(p1, null), name: 'Named', status: 'reviewed' as const };
+    const g2 = { ...createGroupFromPhoto(p2, null), name: '', status: 'pending' as const };
+    const state: BulkAddState = { ...initialState, step: 'summary', groups: [g1, g2] };
+    renderStep(state);
+    expect(screen.getByText(/Create 1 Bin/)).toBeDefined();
+    expect(screen.getByText(/1 unnamed bin won't be created/)).toBeDefined();
   });
 });

@@ -136,9 +136,9 @@ function validateSuggestions(raw: unknown): AiSuggestionsResult {
 }
 
 /** Default maxOutputTokens for image analysis (single image). */
-export const IMAGE_TOKENS_SINGLE = 2500;
+export const IMAGE_TOKENS_SINGLE = 5000;
 /** Default maxOutputTokens for image analysis (multiple images). */
-export const IMAGE_TOKENS_MULTI = 3000;
+export const IMAGE_TOKENS_MULTI = 10000;
 
 interface AiOverrides {
   temperature?: number | null;

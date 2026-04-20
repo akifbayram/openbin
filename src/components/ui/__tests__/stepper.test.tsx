@@ -23,12 +23,10 @@ describe('StepIndicator', () => {
   });
 
   it('marks current step with aria-current="step"', () => {
-    render(<StepIndicator steps={threeSteps} currentStepIndex={1} />);
+    const { container } = render(<StepIndicator steps={threeSteps} currentStepIndex={1} />);
 
-    // Stepperize renders triggers with role="tab"
-    const currentTrigger = screen.getByRole('tab', { current: 'step' });
+    const currentTrigger = container.querySelector('[aria-current="step"]');
     expect(currentTrigger).toBeInTheDocument();
-    // The active step should contain the step number "2"
     expect(currentTrigger).toHaveTextContent('2');
   });
 
@@ -41,32 +39,27 @@ describe('StepIndicator', () => {
   });
 
   it('shows step numbers for active and future steps', () => {
-    render(<StepIndicator steps={threeSteps} currentStepIndex={1} />);
+    const { container } = render(<StepIndicator steps={threeSteps} currentStepIndex={1} />);
 
     // Step 0 is completed (check icon), step 1 is active (shows "2"), step 2 is future (shows "3")
     const checkIcons = screen.getAllByTestId('step-check');
     expect(checkIcons).toHaveLength(1);
 
     // Active step shows its 1-based number
-    const activeTrigger = screen.getByRole('tab', { current: 'step' });
-    expect(activeTrigger).toHaveTextContent('2');
+    expect(container.querySelector('[aria-current="step"]')).toHaveTextContent('2');
 
-    // Future step shows its 1-based number (no aria-current)
-    const allTabs = screen.getAllByRole('tab');
-    const futureTab = allTabs.find(
-      (tab) => tab.textContent?.includes('3') && tab.getAttribute('aria-current') !== 'step',
-    );
-    expect(futureTab).toBeTruthy();
+    // Future step renders its 1-based number and is not the current step
+    const futureNumber = screen.getByText('3');
+    expect(futureNumber.closest('[aria-current="step"]')).toBeNull();
   });
 
   it('renders with 2 steps', () => {
-    render(<StepIndicator steps={twoSteps} currentStepIndex={0} />);
+    const { container } = render(<StepIndicator steps={twoSteps} currentStepIndex={0} />);
 
     expect(screen.getByText('Edit')).toBeInTheDocument();
     expect(screen.getByText('Done')).toBeInTheDocument();
 
-    const activeTrigger = screen.getByRole('tab', { current: 'step' });
-    expect(activeTrigger).toHaveTextContent('1');
+    expect(container.querySelector('[aria-current="step"]')).toHaveTextContent('1');
   });
 
   it('applies custom className', () => {

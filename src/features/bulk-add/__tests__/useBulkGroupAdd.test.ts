@@ -355,6 +355,258 @@ describe('bulkAddReducer SPLIT_AT', () => {
   });
 });
 
+describe('bulkAddReducer MOVE_PHOTO_TO_GROUP', () => {
+  it('moves a photo from its source group to the target group', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const p3 = makePhoto();
+    const g1 = makeGroup([p1]);
+    const g2 = makeGroup([p2, p3]);
+    const state: BulkAddState = { ...initialState, groups: [g1, g2] };
+    const result = bulkAddReducer(state, {
+      type: 'MOVE_PHOTO_TO_GROUP',
+      photoId: p1.id,
+      targetGroupId: g2.id,
+    });
+    expect(result.groups).toHaveLength(1);
+    expect(result.groups[0].id).toBe(g2.id);
+    expect(result.groups[0].photos).toEqual([p2, p3, p1]);
+  });
+
+  it('removes the source group when it becomes empty', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const g1 = makeGroup([p1]);
+    const g2 = makeGroup([p2]);
+    const state: BulkAddState = { ...initialState, groups: [g1, g2] };
+    const result = bulkAddReducer(state, {
+      type: 'MOVE_PHOTO_TO_GROUP',
+      photoId: p1.id,
+      targetGroupId: g2.id,
+    });
+    expect(result.groups).toHaveLength(1);
+    expect(result.groups[0].photos).toEqual([p2, p1]);
+  });
+
+  it('keeps the source group when it still has photos left', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const p3 = makePhoto();
+    const g1 = makeGroup([p1, p2]);
+    const g2 = makeGroup([p3]);
+    const state: BulkAddState = { ...initialState, groups: [g1, g2] };
+    const result = bulkAddReducer(state, {
+      type: 'MOVE_PHOTO_TO_GROUP',
+      photoId: p1.id,
+      targetGroupId: g2.id,
+    });
+    expect(result.groups).toHaveLength(2);
+    expect(result.groups[0].photos).toEqual([p2]);
+    expect(result.groups[1].photos).toEqual([p3, p1]);
+  });
+
+  it('resets both groups AI state (name, items, tags, notes, correctionCount, status)', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const p3 = makePhoto();
+    const g1 = makeGroup([p1, p2], {
+      name: 'A',
+      items: [{ id: 'i1', name: 'x', quantity: null }],
+      tags: ['t'],
+      notes: 'n',
+      correctionCount: 2,
+      status: 'reviewed',
+    });
+    const g2 = makeGroup([p3], {
+      name: 'B',
+      items: [{ id: 'i2', name: 'y', quantity: null }],
+      tags: ['u'],
+      notes: 'm',
+      correctionCount: 1,
+      status: 'reviewed',
+    });
+    const state: BulkAddState = { ...initialState, groups: [g1, g2] };
+    const result = bulkAddReducer(state, {
+      type: 'MOVE_PHOTO_TO_GROUP',
+      photoId: p1.id,
+      targetGroupId: g2.id,
+    });
+    const [newSource, newTarget] = result.groups;
+    expect(newSource.name).toBe('');
+    expect(newSource.items).toEqual([]);
+    expect(newSource.tags).toEqual([]);
+    expect(newSource.notes).toBe('');
+    expect(newSource.correctionCount).toBe(0);
+    expect(newSource.status).toBe('pending');
+    expect(newTarget.name).toBe('');
+    expect(newTarget.items).toEqual([]);
+    expect(newTarget.tags).toEqual([]);
+    expect(newTarget.notes).toBe('');
+    expect(newTarget.correctionCount).toBe(0);
+    expect(newTarget.status).toBe('pending');
+  });
+
+  it('records lastToggle with verb=Joined and prior snapshot', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const g1 = makeGroup([p1]);
+    const g2 = makeGroup([p2]);
+    const state: BulkAddState = { ...initialState, groups: [g1, g2] };
+    const result = bulkAddReducer(state, {
+      type: 'MOVE_PHOTO_TO_GROUP',
+      photoId: p1.id,
+      targetGroupId: g2.id,
+    });
+    expect(result.lastToggle?.verb).toBe('Joined');
+    expect(result.lastToggle?.snapshot).toEqual([g1, g2]);
+  });
+
+  it('clamps currentIndex when the source group is removed', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const g1 = makeGroup([p1]);
+    const g2 = makeGroup([p2]);
+    const state: BulkAddState = { ...initialState, groups: [g1, g2], currentIndex: 1 };
+    const result = bulkAddReducer(state, {
+      type: 'MOVE_PHOTO_TO_GROUP',
+      photoId: p1.id,
+      targetGroupId: g2.id,
+    });
+    expect(result.groups).toHaveLength(1);
+    expect(result.currentIndex).toBe(0);
+  });
+
+  it('is a no-op when target is the same as source', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const g = makeGroup([p1, p2]);
+    const state: BulkAddState = { ...initialState, groups: [g] };
+    const result = bulkAddReducer(state, {
+      type: 'MOVE_PHOTO_TO_GROUP',
+      photoId: p1.id,
+      targetGroupId: g.id,
+    });
+    expect(result).toBe(state);
+  });
+
+  it('is a no-op when target would exceed MAX_PHOTOS_PER_GROUP', () => {
+    const g1 = makeGroup([makePhoto()]);
+    const g2 = makeGroup([makePhoto(), makePhoto(), makePhoto(), makePhoto(), makePhoto()]);
+    const state: BulkAddState = { ...initialState, groups: [g1, g2] };
+    const photoId = g1.photos[0].id;
+    const result = bulkAddReducer(state, {
+      type: 'MOVE_PHOTO_TO_GROUP',
+      photoId,
+      targetGroupId: g2.id,
+    });
+    expect(result).toBe(state);
+  });
+
+  it('is a no-op when photoId is not found', () => {
+    const g = makeGroup([makePhoto()]);
+    const state: BulkAddState = { ...initialState, groups: [g] };
+    const result = bulkAddReducer(state, {
+      type: 'MOVE_PHOTO_TO_GROUP',
+      photoId: 'missing',
+      targetGroupId: g.id,
+    });
+    expect(result).toBe(state);
+  });
+
+  it('is a no-op when targetGroupId is not found', () => {
+    const p1 = makePhoto();
+    const g = makeGroup([p1]);
+    const state: BulkAddState = { ...initialState, groups: [g] };
+    const result = bulkAddReducer(state, {
+      type: 'MOVE_PHOTO_TO_GROUP',
+      photoId: p1.id,
+      targetGroupId: 'missing',
+    });
+    expect(result).toBe(state);
+  });
+});
+
+describe('bulkAddReducer MOVE_PHOTO_TO_NEW_GROUP', () => {
+  it('promotes a photo out of a multi-photo group into a new singleton group', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const p3 = makePhoto();
+    const g = makeGroup([p1, p2, p3]);
+    const state: BulkAddState = { ...initialState, groups: [g] };
+    const result = bulkAddReducer(state, { type: 'MOVE_PHOTO_TO_NEW_GROUP', photoId: p2.id });
+    expect(result.groups).toHaveLength(2);
+    expect(result.groups[0].photos).toEqual([p1, p3]);
+    expect(result.groups[1].photos).toEqual([p2]);
+  });
+
+  it('inserts the new singleton immediately after the source group', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const p3 = makePhoto();
+    const p4 = makePhoto();
+    const gA = makeGroup([p1]);
+    const gB = makeGroup([p2, p3]);
+    const gC = makeGroup([p4]);
+    const state: BulkAddState = { ...initialState, groups: [gA, gB, gC] };
+    const result = bulkAddReducer(state, { type: 'MOVE_PHOTO_TO_NEW_GROUP', photoId: p2.id });
+    expect(result.groups).toHaveLength(4);
+    expect(result.groups[0].id).toBe(gA.id);
+    expect(result.groups[1].id).toBe(gB.id);
+    expect(result.groups[1].photos).toEqual([p3]);
+    expect(result.groups[2].photos).toEqual([p2]);
+    expect(result.groups[3].id).toBe(gC.id);
+  });
+
+  it('resets the source group AI state and uses sharedAreaId for the new group', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const g = makeGroup([p1, p2], {
+      name: 'src',
+      items: [{ id: 'i1', name: 'x', quantity: null }],
+      tags: ['t'],
+      notes: 'n',
+      correctionCount: 3,
+      status: 'reviewed',
+    });
+    const state: BulkAddState = { ...initialState, groups: [g], sharedAreaId: 'area-x' };
+    const result = bulkAddReducer(state, { type: 'MOVE_PHOTO_TO_NEW_GROUP', photoId: p1.id });
+    const [newSource, newGroup] = result.groups;
+    expect(newSource.name).toBe('');
+    expect(newSource.items).toEqual([]);
+    expect(newSource.tags).toEqual([]);
+    expect(newSource.notes).toBe('');
+    expect(newSource.correctionCount).toBe(0);
+    expect(newSource.status).toBe('pending');
+    expect(newGroup.areaId).toBe('area-x');
+    expect(newGroup.status).toBe('pending');
+  });
+
+  it('records lastToggle with verb=Split and prior snapshot', () => {
+    const p1 = makePhoto();
+    const p2 = makePhoto();
+    const g = makeGroup([p1, p2]);
+    const state: BulkAddState = { ...initialState, groups: [g] };
+    const result = bulkAddReducer(state, { type: 'MOVE_PHOTO_TO_NEW_GROUP', photoId: p1.id });
+    expect(result.lastToggle?.verb).toBe('Split');
+    expect(result.lastToggle?.snapshot).toEqual([g]);
+  });
+
+  it('is a no-op when the source group is already a singleton', () => {
+    const p = makePhoto();
+    const g = makeGroup([p]);
+    const state: BulkAddState = { ...initialState, groups: [g] };
+    const result = bulkAddReducer(state, { type: 'MOVE_PHOTO_TO_NEW_GROUP', photoId: p.id });
+    expect(result).toBe(state);
+  });
+
+  it('is a no-op when photoId is not found', () => {
+    const g = makeGroup([makePhoto(), makePhoto()]);
+    const state: BulkAddState = { ...initialState, groups: [g] };
+    const result = bulkAddReducer(state, { type: 'MOVE_PHOTO_TO_NEW_GROUP', photoId: 'missing' });
+    expect(result).toBe(state);
+  });
+});
+
 describe('bulkAddReducer UNDO_LAST_TOGGLE', () => {
   it('restores groups from snapshot and clears lastToggle', () => {
     const g1 = makeGroup([makePhoto()]);

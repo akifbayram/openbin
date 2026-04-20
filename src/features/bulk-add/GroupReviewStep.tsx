@@ -154,6 +154,21 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     }
   }, [isAnyActive, anyError]);
 
+  // Surface stream errors that arrive via the hook's `error` state but never get
+  // dispatched onto the group. Without this, a mid-stream error event makes the
+  // hook return null, leaving the group's status stuck on 'analyzing' — the
+  // progress bar spins forever and the error is hidden behind it.
+  // biome-ignore lint/correctness/useHookAtTopLevel: group guard returns null above only if groups array is empty
+  useEffect(() => {
+    if (!group || group.status !== 'analyzing') return;
+    const streamError = analyzeStreamError || reanalyzeError || correctionError;
+    if (streamError) {
+      dispatch({ type: 'SET_ANALYZE_ERROR', id: group.id, error: streamError });
+      expectingCompletionRef.current = false;
+      setCorrectionOpen(false);
+    }
+  }, [analyzeStreamError, reanalyzeError, correctionError, group?.id, group?.status, dispatch]);
+
   function applyPendingResult() {
     const result = pendingResult.current;
     if (!result) return;
@@ -342,6 +357,11 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     cancelAnalyze();
     cancelCorrection();
     cancelReanalyze();
+    // If user cancelled mid-stream, revert status so re-entering the group can re-trigger auto-analyze.
+    if (group.status === 'analyzing') {
+      dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { status: 'pending' } });
+      autoAnalyzedRef.current.delete(group.id);
+    }
     if (editingFromSummary) {
       dispatch({ type: 'GO_TO_SUMMARY' });
     } else if (isFirst) {
@@ -373,13 +393,28 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
 
   return (
     <div className="space-y-5">
-      {/* Group counter (hidden for single group) */}
-      {groups.length > 1 && (
-        <div className="row-spread text-[13px] text-[var(--text-secondary)]">
-          <span>Group {currentIndex + 1} of {groups.length}</span>
-          <span>{groups.filter((g) => g.status === 'reviewed').length}/{groups.length} reviewed</span>
+      {/* Step title + progress */}
+      <header className="space-y-1">
+        <div className="row-spread">
+          <h2 className="text-[17px] font-semibold leading-tight text-[var(--text-primary)]">
+            {editingFromSummary
+              ? `Edit ${t.bin}`
+              : groups.length > 1
+                ? `Review ${t.bin} ${currentIndex + 1}`
+                : `Review ${t.bin}`}
+          </h2>
+          {groups.length > 1 && (
+            <span className="text-[12px] text-[var(--text-tertiary)]">
+              {groups.filter((g) => g.status === 'reviewed').length}/{groups.length} reviewed
+            </span>
+          )}
         </div>
-      )}
+        <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
+          {isAnyActive || analyzeComplete
+            ? 'AI is identifying items in your photos.'
+            : `Confirm the details for this ${t.bin}.`}
+        </p>
+      </header>
 
       {/* Photo preview — always visible */}
       <div className="relative">

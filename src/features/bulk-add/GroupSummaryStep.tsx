@@ -26,21 +26,22 @@ export function GroupSummaryStep({
   const confirmed = groups.filter((g) =>
     ['reviewed', 'pending', 'creating', 'created'].includes(g.status),
   );
-  const confirmedWithName = confirmed.filter((g) => g.name.trim());
   const failed = groups.filter((g) => g.status === 'failed');
-  const createReady = confirmedWithName.filter(
-    (g) => g.status !== 'created' && g.status !== 'creating',
+  const createReady = confirmed.filter(
+    (g) => g.name.trim() && g.status !== 'created' && g.status !== 'creating',
   );
+  const unnamedCount = confirmed.filter((g) => !g.name.trim()).length;
+  const namedConfirmed = confirmed.filter((g) => g.name.trim());
   const allCreated =
-    confirmedWithName.length > 0 &&
+    namedConfirmed.length > 0 &&
     failed.length === 0 &&
-    confirmedWithName.every((g) => g.status === 'created');
+    namedConfirmed.every((g) => g.status === 'created');
   const totalToCreate = createReady.length + failed.length;
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
+      <header className="space-y-1">
+        <h2 className="text-[18px] font-semibold leading-tight text-[var(--text-primary)]">
           {isCreating
             ? `Creating ${createdCount}/${totalToCreate}...`
             : allCreated
@@ -48,11 +49,19 @@ export function GroupSummaryStep({
               : `Create ${createReady.length} ${createReady.length !== 1 ? t.Bins : t.Bin}`}
         </h2>
         {!isCreating && !allCreated && (
-          <p className="text-[13px] text-[var(--text-secondary)] mt-0.5">
+          <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
             Tap any {t.bin} to edit before creating.
+            {unnamedCount > 0 && (
+              <>
+                {' '}
+                <span className="text-[var(--text-tertiary)]">
+                  {unnamedCount} unnamed {unnamedCount === 1 ? t.bin : t.bins} won't be created.
+                </span>
+              </>
+            )}
           </p>
         )}
-      </div>
+      </header>
 
       {/* Progress bar during creation */}
       {isCreating && totalToCreate > 0 && (
@@ -64,12 +73,15 @@ export function GroupSummaryStep({
         </div>
       )}
 
-      {/* Confirmed groups list */}
+      {/* Confirmed groups list — includes unnamed bins (rendered as "Untitled") so users see what they grouped */}
       <div className="space-y-2">
-        {confirmedWithName.map((group) => {
+        {confirmed.map((group) => {
           const realIndex = groups.indexOf(group);
           const colorPreset = group.color ? resolveColor(group.color) : undefined;
           const bgColor = colorPreset?.bgCss;
+          const hasName = group.name.trim().length > 0;
+          const displayName = hasName ? group.name : 'Untitled bin';
+          const editLabel = hasName ? `Edit ${group.name}` : `Edit untitled bin ${realIndex + 1}`;
 
           return (
             <div
@@ -83,14 +95,23 @@ export function GroupSummaryStep({
                 className="h-10 w-10 rounded-[var(--radius-sm)] object-cover shrink-0"
               />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-[14px] text-[var(--text-primary)] truncate">
-                  {group.name}
+                <div
+                  className={`font-medium text-[14px] truncate ${
+                    hasName
+                      ? 'text-[var(--text-primary)]'
+                      : 'text-[var(--text-tertiary)] italic'
+                  }`}
+                >
+                  {displayName}
                 </div>
                 <div className="text-[12px] text-[var(--text-secondary)] flex gap-2">
                   <span>
                     {group.items.length} item{group.items.length !== 1 ? 's' : ''}
                   </span>
                   {group.photos.length > 1 && <span>· {group.photos.length} photos</span>}
+                  {!hasName && (
+                    <span className="text-[var(--text-tertiary)]">· needs a name</span>
+                  )}
                 </div>
               </div>
               {group.status === 'created' && (
@@ -105,7 +126,7 @@ export function GroupSummaryStep({
               {!isCreating && group.status !== 'created' && group.status !== 'failed' && (
                 <button
                   type="button"
-                  aria-label={`Edit ${group.name}`}
+                  aria-label={editLabel}
                   onClick={() => {
                     dispatch({ type: 'SET_EDITING_FROM_SUMMARY', value: true });
                     dispatch({ type: 'SET_CURRENT_INDEX', index: realIndex });

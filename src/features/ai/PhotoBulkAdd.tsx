@@ -23,7 +23,6 @@ import { binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import type { AiSettings } from '@/types';
 
-const MAX_PHOTOS = 20;
 const DEMO_MAX_PHOTOS = 3;
 
 interface PhotoBulkAddProps {
@@ -48,7 +47,8 @@ export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: Phot
   const hadPhotos = useRef(initialFiles.length > 0);
   const [successBins, setSuccessBins] = useState<CreatedBinInfo[] | null>(null);
 
-  const effectiveMax = isDemo ? DEMO_MAX_PHOTOS : MAX_PHOTOS;
+  // Per-bin cap of 5 photos is enforced in the reducer; total upload count is unlimited (demo mode aside)
+  const effectiveMax = isDemo ? DEMO_MAX_PHOTOS : Number.POSITIVE_INFINITY;
   const totalPhotos = state.groups.reduce((acc, g) => acc + g.photos.length, 0);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: cleanup-only effect

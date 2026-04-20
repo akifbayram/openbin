@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/ui/toast';
 import { GroupReviewStep } from '../GroupReviewStep';
@@ -53,10 +53,11 @@ vi.mock('@/features/ai/AiBadge', () => ({
 }));
 
 const mockStream = vi.fn();
+let mockStreamError: string | null = null;
 vi.mock('@/features/ai/useAiStream', () => ({
   useAiStream: () => ({
     isStreaming: false,
-    error: null,
+    error: mockStreamError,
     stream: mockStream,
     cancel: vi.fn(),
   }),
@@ -99,6 +100,7 @@ describe('GroupReviewStep skeleton', () => {
   beforeEach(() => {
     mockStream.mockReset();
     mockStream.mockResolvedValue(null);
+    mockStreamError = null;
   });
 
   it('renders the group name input bound to group.name', () => {
@@ -129,6 +131,7 @@ describe('GroupReviewStep AI flow', () => {
   beforeEach(() => {
     mockStream.mockReset();
     mockStream.mockResolvedValue(null);
+    mockStreamError = null;
   });
 
   it('auto-triggers analyze on entry to a pending group with aiSettings', async () => {
@@ -161,5 +164,19 @@ describe('GroupReviewStep AI flow', () => {
     const formData = mockStream.mock.calls[0][0] as FormData;
     expect(formData.getAll('photos')).toHaveLength(0);
     expect(formData.has('photo')).toBe(true);
+  });
+
+  it('surfaces a stream error via SET_ANALYZE_ERROR when group is stuck on analyzing', async () => {
+    mockStreamError = 'AI response was cut short — try a shorter query or increase max tokens';
+    const dispatch = vi.fn();
+    renderStep(makeState({ status: 'analyzing' }), { dispatch });
+    await waitFor(() => {
+      expect(dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'SET_ANALYZE_ERROR',
+          error: 'AI response was cut short — try a shorter query or increase max tokens',
+        }),
+      );
+    });
   });
 });
