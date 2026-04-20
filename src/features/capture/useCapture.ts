@@ -9,6 +9,7 @@ export interface CapturedPhoto {
   blob: Blob;
   thumbnailUrl: string;
   status: PhotoStatus;
+  groupId?: number;
   error?: string;
 }
 
@@ -135,37 +136,41 @@ export function useCapture(binId?: string) {
     startCamera(newFacing);
   }, [facingMode, stopCamera, startCamera]);
 
-  const capture = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || !isStreaming || video.videoWidth === 0) return;
+  const capture = useCallback(
+    (groupId?: number) => {
+      const video = videoRef.current;
+      if (!video || !isStreaming || video.videoWidth === 0) return;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    ctx.drawImage(video, 0, 0);
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) return;
-        const id = `capture-${nextId.current++}`;
-        const thumbnailUrl = URL.createObjectURL(blob);
-        const photo: CapturedPhoto = {
-          id,
-          blob,
-          thumbnailUrl,
-          status: binId ? 'pending' : 'uploaded',
-        };
-        updatePhotos((prev) => [...prev, photo]);
-        if (binId) {
-          doUpload(photo, binId);
-        }
-      },
-      'image/jpeg',
-      0.92,
-    );
-  }, [isStreaming, binId, updatePhotos, doUpload]);
+      ctx.drawImage(video, 0, 0);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return;
+          const id = `capture-${nextId.current++}`;
+          const thumbnailUrl = URL.createObjectURL(blob);
+          const photo: CapturedPhoto = {
+            id,
+            blob,
+            thumbnailUrl,
+            status: binId ? 'pending' : 'uploaded',
+            groupId,
+          };
+          updatePhotos((prev) => [...prev, photo]);
+          if (binId) {
+            doUpload(photo, binId);
+          }
+        },
+        'image/jpeg',
+        0.92,
+      );
+    },
+    [isStreaming, binId, updatePhotos, doUpload],
+  );
 
   const retryUpload = useCallback(
     (photoId: string) => {
@@ -186,6 +191,42 @@ export function useCapture(binId?: string) {
     }
   }, [stopCamera]);
 
+  const setPhotoGroupId = useCallback(
+    (photoId: string, groupId: number) => {
+      updatePhotos((prev) =>
+        prev.map((p) => (p.id === photoId ? { ...p, groupId } : p)),
+      );
+    },
+    [updatePhotos],
+  );
+
+  const appendImportedPhoto = useCallback(
+    (blob: Blob, groupId?: number) => {
+      const id = `import-${nextId.current++}`;
+      const thumbnailUrl = URL.createObjectURL(blob);
+      const photo: CapturedPhoto = {
+        id,
+        blob,
+        thumbnailUrl,
+        status: 'uploaded',
+        groupId,
+      };
+      updatePhotos((prev) => [...prev, photo]);
+    },
+    [updatePhotos],
+  );
+
+  const removePhoto = useCallback(
+    (photoId: string) => {
+      updatePhotos((prev) => {
+        const target = prev.find((p) => p.id === photoId);
+        if (target) URL.revokeObjectURL(target.thumbnailUrl);
+        return prev.filter((p) => p.id !== photoId);
+      });
+    },
+    [updatePhotos],
+  );
+
   return {
     videoRef,
     isStreaming,
@@ -197,6 +238,9 @@ export function useCapture(binId?: string) {
     flipCamera,
     capture,
     retryUpload,
+    setPhotoGroupId,
+    appendImportedPhoto,
+    removePhoto,
     cleanup,
   };
 }
