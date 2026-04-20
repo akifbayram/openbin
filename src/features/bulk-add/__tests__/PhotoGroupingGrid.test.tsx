@@ -209,3 +209,23 @@ describe('PhotoGroupingGrid cap-disabled state', () => {
     expect(await screen.findByText(/Max 5 photos per bin/)).toBeDefined();
   });
 });
+
+describe('PhotoGroupingGrid photo management', () => {
+  it('clicking the X on a photo dispatches REMOVE_PHOTO with that photoId', () => {
+    const dispatch = vi.fn();
+    let state = initialState;
+    const p = createPhoto(makeFile('a.jpg'));
+    state = { ...state, groups: [createGroupFromPhoto(p, null)] };
+    renderGrid(state, { dispatch });
+    fireEvent.click(screen.getByLabelText('Remove photo 1'));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'REMOVE_PHOTO', photoId: p.id });
+  });
+
+  it('clicking add-more triggers fileInputRef.click()', () => {
+    const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+    renderGrid(makeStateWithPhotos(1));
+    fireEvent.click(screen.getByLabelText('Add more photos'));
+    expect(click).toHaveBeenCalled();
+    click.mockRestore();
+  });
+});
