@@ -51,6 +51,10 @@
   --text-on-accent: #ffffff;
   --accent: #5e2fe0;
   --accent-hover: #4e1fd0;
+  --heatmap-cell-0: var(--border-subtle);
+  --heatmap-cell-1: color-mix(in srgb, var(--accent) 22%, transparent);
+  --heatmap-cell-2: color-mix(in srgb, var(--accent) 48%, transparent);
+  --heatmap-cell-3: color-mix(in srgb, var(--accent) 82%, transparent);
   --destructive: #db2b2b;
   --destructive-hover: #c42020;
   --shadow-flat: none;
@@ -112,6 +116,12 @@
   --text-on-accent: #ffffff;
   --accent: #7b52f5;
   --accent-hover: #9b7af7;
+  /* Hand-tuned opaque ramp: translucent accent over dark bg flattens
+     step 1 to near-L0 luminance. Re-tune alongside --accent on rebrand. */
+  --heatmap-cell-0: #2d2d2d;
+  --heatmap-cell-1: #4a2e91;
+  --heatmap-cell-2: #6d4ad8;
+  --heatmap-cell-3: #9b7af7;
   --destructive: #ff453a;
   --destructive-hover: #ff6961;
   --shadow-flat: none;
