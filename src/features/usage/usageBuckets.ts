@@ -35,13 +35,10 @@ export function toIsoUtc(date: Date): string {
 
 export type Intensity = 0 | 1 | 2 | 3;
 
-export const HEATMAP_OPACITY_BY_STEP: readonly number[] = [0, 0.22, 0.48, 0.82];
+export const INTENSITY_STEPS: readonly Intensity[] = [0, 1, 2, 3];
 
-/** Accent color-mix string for a given intensity step; step 0 falls back to the subtle border token. */
 export function heatmapCellColor(intensity: Intensity): string {
-  if (intensity === 0) return 'var(--border-subtle)';
-  const pct = Math.round(HEATMAP_OPACITY_BY_STEP[intensity] * 100);
-  return `color-mix(in srgb, var(--accent) ${pct}%, transparent)`;
+  return `var(--heatmap-cell-${intensity})`;
 }
 
 export function availableYears(data: { date: string }[]): number[] {

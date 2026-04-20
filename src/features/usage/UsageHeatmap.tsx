@@ -435,7 +435,7 @@ export function UsageHeatmapSkeleton() {
                   // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton, never reordered
                   key={i}
                   className="rounded-full animate-pulse motion-reduce:animate-none"
-                  style={{ backgroundColor: 'var(--border-subtle)', width: CELL_SIZE, height: CELL_SIZE }}
+                  style={{ backgroundColor: 'var(--heatmap-cell-0)', width: CELL_SIZE, height: CELL_SIZE }}
                 />
               ))}
             </div>

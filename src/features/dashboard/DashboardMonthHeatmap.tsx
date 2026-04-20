@@ -2,8 +2,8 @@ import { Flame } from 'lucide-react';
 import { useMemo } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
 import {
-  HEATMAP_OPACITY_BY_STEP,
   heatmapCellColor,
+  INTENSITY_STEPS,
   type Intensity,
   intensityStep,
   toIsoUtc,
@@ -23,8 +23,6 @@ const DATE_FMT = new Intl.DateTimeFormat(undefined, {
 });
 
 const WEEKDAY_FMT = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
-
-const INTENSITY_STEPS: readonly Intensity[] = HEATMAP_OPACITY_BY_STEP.map((_, i) => i as Intensity);
 
 interface DayCell {
   iso: string;

@@ -2,9 +2,21 @@ import { Camera, Check, RotateCcw, SwitchCamera } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { setCapturedPhotos } from './capturedPhotos';
+import { CapturePageBulkGroup } from './CapturePageBulkGroup';
+import { getCapturedReturnTarget, setCapturedPhotos } from './capturedPhotos';
 import type { CapturedPhoto } from './useCapture';
 import { useCapture } from './useCapture';
+
+type CaptureMode = 'single-bin' | 'bin-create' | 'bulk-group';
+
+function resolveCaptureMode(
+  binId: string | null,
+  returnTarget: ReturnType<typeof getCapturedReturnTarget>,
+): CaptureMode {
+  if (binId) return 'single-bin';
+  if (returnTarget === 'bin-create') return 'bin-create';
+  return 'bulk-group';
+}
 
 function StatusBadge({ photo, onRetry }: { photo: CapturedPhoto; onRetry: () => void }) {
   switch (photo.status) {
@@ -40,10 +52,8 @@ function StatusBadge({ photo, onRetry }: { photo: CapturedPhoto; onRetry: () => 
   }
 }
 
-export function CapturePage() {
+function CapturePageLegacy({ binId }: { binId?: string }) {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const binId = searchParams.get('binId') ?? undefined;
 
   const {
     videoRef,
@@ -175,7 +185,7 @@ export function CapturePage() {
 
             <button
               type="button"
-              onClick={capture}
+              onClick={() => capture()}
               className="h-[68px] w-[68px] rounded-[50%] border-[3px] border-white flex items-center justify-center active:scale-95 transition-transform"
               aria-label="Take photo"
             >
@@ -194,4 +204,16 @@ export function CapturePage() {
       )}
     </div>
   );
+}
+
+export function CapturePage() {
+  const [searchParams] = useSearchParams();
+  const binIdParam = searchParams.get('binId');
+  const mode = resolveCaptureMode(binIdParam, getCapturedReturnTarget());
+
+  if (mode === 'bulk-group') {
+    return <CapturePageBulkGroup />;
+  }
+
+  return <CapturePageLegacy binId={binIdParam ?? undefined} />;
 }

@@ -1,23 +1,32 @@
 /**
  * Module-level store for passing captured photos from the CapturePage
- * back to the AI CommandInput dialog without shared React state.
+ * back to downstream consumers without shared React state.
  *
  * returnTarget controls which consumer picks up the photos:
- * - null (default) → useAutoOpenOnCapture opens CommandInput
+ * - null (default) → useAutoOpenOnCapture opens CommandInput with a flat list
  * - 'bin-create'   → BinCreateForm picks them up, CommandInput ignores
+ * - 'bulk-add'     → ConversationUI hands them to PhotoBulkAdd with pre-grouped state
+ *
+ * `pendingGroups` is a parallel array where `pendingGroups[i]` is the groupId of
+ * `pending[i]`. Set only when the camera ran in `bulk-group` mode; flat captures
+ * (single-bin / bin-create / gallery upload) leave it null.
  */
 let pending: File[] = [];
-let returnTarget: 'bin-create' | null = null;
+let pendingGroups: number[] | null = null;
+let returnTarget: 'bin-create' | 'bulk-add' | null = null;
 
-export function setCapturedPhotos(files: File[]): void {
+export type CapturedReturnTarget = 'bin-create' | 'bulk-add' | null;
+
+export function setCapturedPhotos(files: File[], groups?: number[]): void {
 	pending = files;
+	pendingGroups = groups ?? null;
 }
 
-export function setCapturedReturnTarget(target: 'bin-create' | null): void {
+export function setCapturedReturnTarget(target: CapturedReturnTarget): void {
 	returnTarget = target;
 }
 
-export function getCapturedReturnTarget(): 'bin-create' | null {
+export function getCapturedReturnTarget(): CapturedReturnTarget {
 	return returnTarget;
 }
 
@@ -25,9 +34,11 @@ export function hasCapturedPhotos(): boolean {
 	return pending.length > 0;
 }
 
-export function takeCapturedPhotos(): File[] {
+export function takeCapturedPhotos(): { files: File[]; groups: number[] | null } {
 	const files = pending;
+	const groups = pendingGroups;
 	pending = [];
+	pendingGroups = null;
 	returnTarget = null;
-	return files;
+	return { files, groups };
 }

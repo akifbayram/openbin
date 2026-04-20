@@ -15,6 +15,7 @@ import {
   createPhoto,
   type Group,
   initialState,
+  type Photo,
 } from '@/features/bulk-add/useBulkGroupAdd';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
@@ -27,22 +28,59 @@ const DEMO_MAX_PHOTOS = 3;
 
 interface PhotoBulkAddProps {
   initialFiles: File[];
+  initialGroups?: number[] | null;
   aiSettings: AiSettings | null;
   onClose: () => void;
   onBack: () => void;
 }
 
-function initState(files: File[]): BulkAddState {
-  return {
-    ...initialState,
-    groups: files.map((f) => createGroupFromPhoto(createPhoto(f), null)),
-  };
+export function initBulkAddStateFromFiles(
+  files: File[],
+  groupIds: number[] | null | undefined,
+): BulkAddState {
+  if (!groupIds || groupIds.length === 0 || groupIds.length !== files.length) {
+    return {
+      ...initialState,
+      groups: files.map((f) => createGroupFromPhoto(createPhoto(f), null)),
+    };
+  }
+  const buckets = new Map<number, Photo[]>();
+  const order: number[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const gid = groupIds[i];
+    const photo = createPhoto(files[i]);
+    let bucket = buckets.get(gid);
+    if (!bucket) {
+      bucket = [];
+      buckets.set(gid, bucket);
+      order.push(gid);
+    }
+    bucket.push(photo);
+  }
+  const groups: Group[] = order.map((gid) => {
+    const photos = buckets.get(gid) ?? [];
+    return {
+      ...createGroupFromPhoto(photos[0], null),
+      photos,
+    };
+  });
+  return { ...initialState, groups };
 }
 
-export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: PhotoBulkAddProps) {
+export function PhotoBulkAdd({
+  initialFiles,
+  initialGroups,
+  aiSettings,
+  onClose,
+  onBack,
+}: PhotoBulkAddProps) {
   const t = useTerminology();
   const { activeLocationId, demoMode: isDemo } = useAuth();
-  const [state, dispatch] = useReducer(bulkAddReducer, initialFiles, initState);
+  const [state, dispatch] = useReducer(
+    bulkAddReducer,
+    { files: initialFiles, groups: initialGroups ?? null },
+    ({ files, groups }) => initBulkAddStateFromFiles(files, groups),
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hadPhotos = useRef(initialFiles.length > 0);
   const [successBins, setSuccessBins] = useState<CreatedBinInfo[] | null>(null);
