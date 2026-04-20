@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUserPreferences } from '@/lib/userPreferences';
-import { plural } from '@/lib/utils';
+import { flatCard, plural } from '@/lib/utils';
 import { GranularitySegmented } from './GranularitySegmented';
 import { InlineRetryError, UsageHeatmap, UsageHeatmapSkeleton } from './UsageHeatmap';
 import { availableYears, yearOf } from './usageBuckets';
@@ -51,39 +51,51 @@ export function BinUsageSection({ binId }: BinUsageSectionProps) {
     return count;
   }, [usage, selectedYear]);
 
+  if (isLoading) {
+    return (
+      <div className={`${flatCard} p-4`}>
+        <UsageHeatmapSkeleton />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <InlineRetryError
+        title="Couldn't load usage data"
+        detail={error}
+        onRetry={refresh}
+        className="py-1"
+      />
+    );
+  }
+
+  if (usage.length === 0) {
+    return (
+      <p className="text-[12px] text-[var(--text-tertiary)] leading-relaxed py-1">
+        No activity yet. Choose which actions count in{' '}
+        <Link to="/settings/preferences" className="underline text-[var(--accent)]">preferences</Link>.
+      </p>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      {isLoading ? (
-        <UsageHeatmapSkeleton />
-      ) : error ? (
-        <InlineRetryError
-          title="Couldn't load usage data"
-          detail={error}
-          onRetry={refresh}
-          className="py-1"
+      <p className="text-[12px] text-[var(--text-secondary)] tabular-nums">
+        {activeInYear} active {plural(activeInYear, 'day')} in {selectedYear}
+        {lastUse ? ` · last used ${formatRelativeFromNow(lastUse)}` : ''}
+      </p>
+      <div className={`${flatCard} p-4 flex flex-col gap-3`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <GranularitySegmented />
+          <YearChipPager years={years} selected={selectedYear} onSelect={setYear} />
+        </div>
+        <UsageHeatmap
+          data={usage}
+          year={selectedYear}
+          granularity={preferences.usage_granularity}
         />
-      ) : usage.length === 0 ? (
-        <p className="text-[12px] text-[var(--text-tertiary)] leading-relaxed py-1">
-          No activity yet. Choose which actions count in{' '}
-          <Link to="/settings/preferences" className="underline text-[var(--accent)]">preferences</Link>.
-        </p>
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <GranularitySegmented />
-            <YearChipPager years={years} selected={selectedYear} onSelect={setYear} />
-          </div>
-          <UsageHeatmap
-            data={usage}
-            year={selectedYear}
-            granularity={preferences.usage_granularity}
-          />
-          <p className="text-[11px] text-[var(--text-tertiary)] tabular-nums">
-            {activeInYear} active {plural(activeInYear, 'day')} in {selectedYear}
-            {lastUse ? ` · last used ${formatRelativeFromNow(lastUse)}` : ''}
-          </p>
-        </>
-      )}
+      </div>
     </div>
   );
 }

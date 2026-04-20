@@ -1,6 +1,5 @@
 import { AlertTriangle, Clock } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ActivityTableSkeleton } from '@/features/activity/ActivityTableSkeleton';
@@ -24,21 +23,12 @@ export function BinDetailActivitySection({ binId }: BinDetailActivitySectionProp
 
   const visibleEntries = expanded ? entries : entries.slice(0, PREVIEW_COUNT);
   const hasHiddenEntries = entries.length > PREVIEW_COUNT || hasMore;
+  const showToggle = hasHiddenEntries && !isLoading && !error;
 
   return (
     <section>
       <header className={sectionHeaderRow}>
         <h3 className={sectionHeader}>Activity</h3>
-        {hasHiddenEntries && !isLoading && !error && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setExpanded((prev) => !prev)}
-            aria-expanded={expanded}
-          >
-            {expanded ? 'Show less' : 'Show all'}
-          </Button>
-        )}
       </header>
 
       <Crossfade
@@ -69,6 +59,19 @@ export function BinDetailActivitySection({ binId }: BinDetailActivitySectionProp
           />
         )}
       </Crossfade>
+
+      {showToggle && (
+        <div className="mt-3 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            aria-expanded={expanded}
+            className="text-[13px] text-[var(--accent)] underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none rounded-sm"
+          >
+            {expanded ? 'Show less' : 'Show all events'}
+          </button>
+        </div>
+      )}
     </section>
   );
 }

@@ -5,12 +5,11 @@ import { resolveColor } from '@/lib/colorPalette';
 import { resolveIcon } from '@/lib/iconMap';
 import { generateQRDataURL } from '@/lib/qr';
 import { relativeTime, sectionHeader, sectionHeaderRow } from '@/lib/utils';
-import type { Bin, ItemCheckout } from '@/types';
+import type { Bin } from '@/types';
 import { BinDetailActivitySection } from './BinDetailActivitySection';
 
 interface BinDetailInformationTabProps {
   bin: Bin;
-  checkouts?: ItemCheckout[];
 }
 
 const QR_FG = '#000';
@@ -19,9 +18,7 @@ const QR_BG_FALLBACK = '#fff';
 // makes the library's integer-rounding leftover (proportional margin) negligible.
 const QR_GEN_SIZE = 540;
 
-export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformationTabProps) {
-  const openCheckouts = (checkouts ?? []).filter((c) => !c.returned_at);
-
+export function BinDetailInformationTab({ bin }: BinDetailInformationTabProps) {
   const Icon = resolveIcon(bin.icon);
   const colorPreset = useMemo(
     () => (bin.color ? resolveColor(bin.color) : null),
@@ -59,25 +56,38 @@ export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformation
     <div className="flex flex-col gap-8">
       <section>
         <header className={sectionHeaderRow}>
-          <h3 className={sectionHeader}>Usage</h3>
-        </header>
-        <BinUsageSection binId={bin.id} />
-      </section>
-
-      <section>
-        <header className={sectionHeaderRow}>
           <h3 className={sectionHeader}>Details</h3>
         </header>
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-start md:gap-8">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 items-start md:gap-8">
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-2.5 text-[13px] self-start">
+            {bin.created_by_name && (
+              <>
+                <dt className="text-[var(--text-tertiary)]">Creator</dt>
+                <dd className="text-[var(--text-primary)]">{bin.created_by_name}</dd>
+              </>
+            )}
+
+            <dt className="text-[var(--text-tertiary)]">Created</dt>
+            <dd className="text-[var(--text-primary)]">{createdAbsolute}</dd>
+
+            <dt className="text-[var(--text-tertiary)]">Updated</dt>
+            <dd className="text-[var(--text-primary)]">{relativeTime(bin.updated_at)}</dd>
+
+            <dt className="text-[var(--text-tertiary)]">Last scanned</dt>
+            <dd className="text-[var(--text-primary)]">
+              {lastScan ? relativeTime(lastScan.scannedAt) : 'Never'}
+            </dd>
+          </dl>
+
           <div
-            className="p-[5px] md:p-[7px]"
+            className="p-[4px] md:p-[6px]"
             style={{
               backgroundColor: cardBg,
               borderRadius: 'var(--radius-lg)',
               border: colorPreset ? 'none' : '1px solid var(--border-flat)',
             }}
           >
-            <div className="relative w-[128px] h-[128px] md:w-[180px] md:h-[180px]">
+            <div className="relative w-[80px] h-[80px] md:w-[108px] md:h-[108px]">
               {qrUrl && (
                 <img
                   src={qrUrl}
@@ -103,54 +113,17 @@ export function BinDetailInformationTab({ bin, checkouts }: BinDetailInformation
               )}
             </div>
           </div>
-
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-2.5 text-[13px] self-start">
-            {bin.created_by_name && (
-              <>
-                <dt className="text-[var(--text-tertiary)]">Creator</dt>
-                <dd className="text-[var(--text-primary)]">{bin.created_by_name}</dd>
-              </>
-            )}
-
-            <dt className="text-[var(--text-tertiary)]">Created</dt>
-            <dd className="text-[var(--text-primary)]">{createdAbsolute}</dd>
-
-            <dt className="text-[var(--text-tertiary)]">Updated</dt>
-            <dd className="text-[var(--text-primary)]">{relativeTime(bin.updated_at)}</dd>
-
-            <dt className="text-[var(--text-tertiary)]">Last scanned</dt>
-            <dd className="text-[var(--text-primary)]">
-              {lastScan ? relativeTime(lastScan.scannedAt) : 'Never'}
-            </dd>
-          </dl>
         </div>
       </section>
 
       <BinDetailActivitySection binId={bin.id} />
 
-      {openCheckouts.length > 0 && (
-        <section>
-          <header className={sectionHeaderRow}>
-            <h3 className={sectionHeader}>Checked out</h3>
-            <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">
-              {openCheckouts.length}
-            </span>
-          </header>
-          <ul className="divide-y divide-[var(--border-subtle)]">
-            {openCheckouts.map((c) => (
-              <li
-                key={c.id}
-                className="flex justify-between items-baseline py-2 text-[13px]"
-              >
-                <span className="text-[var(--text-primary)]">{c.checked_out_by_name}</span>
-                <span className="text-[var(--text-tertiary)] tabular-nums">
-                  {relativeTime(c.checked_out_at)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section>
+        <header className={sectionHeaderRow}>
+          <h3 className={sectionHeader}>Usage</h3>
+        </header>
+        <BinUsageSection binId={bin.id} />
+      </section>
     </div>
   );
 }

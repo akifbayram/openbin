@@ -132,9 +132,7 @@ export function BinDetailTabs({
         {tab === 'files' && (
           <BinDetailFilesTab binId={bin.id} photos={photos} canEdit={canEdit} />
         )}
-        {tab === 'information' && (
-          <BinDetailInformationTab bin={bin} checkouts={checkouts} />
-        )}
+        {tab === 'information' && <BinDetailInformationTab bin={bin} />}
       </div>
     </div>
   );
