@@ -226,7 +226,7 @@ export function BinCreateForm({
   useEffect(() => {
     function checkCapturedPhotos() {
       if (hasCapturedPhotos() && getCapturedReturnTarget() === 'bin-create') {
-        const files = takeCapturedPhotos();
+        const { files } = takeCapturedPhotos();
         addPhotosFromFiles(files);
       }
     }

@@ -78,7 +78,7 @@ vi.mock('@/features/bins/useBins', () => ({
 }));
 
 vi.mock('@/features/capture/capturedPhotos', () => ({
-  takeCapturedPhotos: () => [],
+  takeCapturedPhotos: () => ({ files: [], groups: null }),
 }));
 
 vi.mock('@/lib/audioRecorder', () => ({

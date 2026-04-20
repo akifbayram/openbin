@@ -80,6 +80,7 @@ export function ConversationUI({
 
   const [photoMode, setPhotoMode] = useState(false);
   const [initialFiles, setInitialFiles] = useState<File[]>([]);
+  const [initialGroups, setInitialGroups] = useState<number[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canTranscribe = !!settings && settings.provider !== 'anthropic' && isRecordingSupported();
@@ -98,6 +99,7 @@ export function ConversationUI({
       conversation.clearConversation();
       setPhotoMode(false);
       setInitialFiles([]);
+      setInitialGroups(null);
       transcription.cancel();
     }
   }, [active]);
@@ -122,8 +124,9 @@ export function ConversationUI({
     if (capturePickedUpRef.current) return;
     capturePickedUpRef.current = true;
     const captured = takeCapturedPhotos();
-    if (captured.length > 0) {
-      setInitialFiles(captured);
+    if (captured.files.length > 0) {
+      setInitialFiles(captured.files);
+      setInitialGroups(captured.groups);
       setPhotoMode(true);
     }
   }, [active]);
@@ -132,6 +135,7 @@ export function ConversationUI({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setInitialFiles(Array.from(files));
+    setInitialGroups(null);
     setPhotoMode(true);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
@@ -151,11 +155,13 @@ export function ConversationUI({
   const photoBulkAdd = (
     <PhotoBulkAdd
       initialFiles={initialFiles}
+      initialGroups={initialGroups}
       aiSettings={settings}
       onClose={onPhotoClose}
       onBack={() => {
         setPhotoMode(false);
         setInitialFiles([]);
+        setInitialGroups(null);
       }}
     />
   );
