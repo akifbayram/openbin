@@ -41,6 +41,60 @@ const PROMPT_TAB_META = [
   { key: 'reorganization', label: 'Reorganize', shortLabel: 'Reorg' },
 ] as const;
 
+interface ResettableNumberFieldProps {
+  id: string;
+  label: string;
+  hint: string;
+  value: string;
+  onChange: (value: string) => void;
+  min: number;
+  max: number;
+  step: number;
+  inputMode: 'numeric' | 'decimal';
+  placeholder?: string;
+}
+
+function ResettableNumberField({
+  id,
+  label,
+  hint,
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  inputMode,
+  placeholder = 'Default',
+}: ResettableNumberFieldProps) {
+  return (
+    <FormField label={label} htmlFor={id} hint={hint}>
+      <div className="relative">
+        <Input
+          id={id}
+          type="number"
+          inputMode={inputMode}
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            aria-label={`Reset ${label}`}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+          >
+            <RotateCcw className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+    </FormField>
+  );
+}
+
 export function AiSection() {
   const { demoMode } = useAuth();
   const { isSelfHosted, planInfo } = usePlan();
@@ -255,7 +309,11 @@ export function AiSection() {
                         onChange={setup.handleProviderChange}
                       />
 
-                      <FormField label="API Key" htmlFor="ai-api-key">
+                      <FormField
+                        label="API Key"
+                        htmlFor="ai-api-key"
+                        hint="Stored encrypted. Never sent to OpenBin."
+                      >
                         <div className="relative">
                           <Input
                             id="ai-api-key"
@@ -276,7 +334,11 @@ export function AiSection() {
                         </div>
                       </FormField>
 
-                      <FormField label="Model" htmlFor="ai-model">
+                      <FormField
+                        label="Model"
+                        htmlFor="ai-model"
+                        hint="Exact model ID from your provider."
+                      >
                         <Input
                           id="ai-model"
                           value={setup.model}
@@ -286,7 +348,11 @@ export function AiSection() {
                       </FormField>
 
                       {setup.provider === 'openai-compatible' && (
-                        <FormField label="Endpoint URL" htmlFor="ai-endpoint">
+                        <FormField
+                          label="Endpoint URL"
+                          htmlFor="ai-endpoint"
+                          hint="For Ollama, LM Studio, and OpenAI-compatible servers."
+                        >
                           <Input
                             id="ai-endpoint"
                             value={setup.endpointUrl}
@@ -374,89 +440,53 @@ export function AiSection() {
                     </div>
                   </SettingsSection>
 
-                  {/* Advanced AI Parameters */}
                   <SettingsSection label="Advanced" dividerAbove>
                     <div className="flex flex-col gap-3">
-                      <FormField label="Temperature" htmlFor="ai-temperature" hint="0.0–2.0">
-                        <div className="relative">
-                          <Input
-                            id="ai-temperature"
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            max={2}
-                            step={0.1}
-                            value={temperature}
-                            onChange={(e) => setTemperature(e.target.value)}
-                            placeholder="Default"
-                          />
-                          {temperature && (
-                            <button type="button" onClick={() => setTemperature('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                              <RotateCcw className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      </FormField>
-                      <FormField label="Max Tokens" htmlFor="ai-max-tokens" hint="100–16,000">
-                        <div className="relative">
-                          <Input
-                            id="ai-max-tokens"
-                            type="number"
-                            inputMode="numeric"
-                            min={100}
-                            max={16000}
-                            step={100}
-                            value={maxTokens}
-                            onChange={(e) => setMaxTokens(e.target.value)}
-                            placeholder="Default"
-                          />
-                          {maxTokens && (
-                            <button type="button" onClick={() => setMaxTokens('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                              <RotateCcw className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      </FormField>
-                      <FormField label="Top P" htmlFor="ai-top-p" hint="0.0–1.0">
-                        <div className="relative">
-                          <Input
-                            id="ai-top-p"
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            max={1}
-                            step={0.05}
-                            value={topP}
-                            onChange={(e) => setTopP(e.target.value)}
-                            placeholder="Default"
-                          />
-                          {topP && (
-                            <button type="button" onClick={() => setTopP('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                              <RotateCcw className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      </FormField>
-                      <FormField label="Request Timeout" htmlFor="ai-timeout" hint="10–300 seconds">
-                        <div className="relative">
-                          <Input
-                            id="ai-timeout"
-                            type="number"
-                            inputMode="numeric"
-                            min={10}
-                            max={300}
-                            step={5}
-                            value={requestTimeout}
-                            onChange={(e) => setRequestTimeout(e.target.value)}
-                            placeholder="Default (30)"
-                          />
-                          {requestTimeout && (
-                            <button type="button" onClick={() => setRequestTimeout('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                              <RotateCcw className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      </FormField>
+                      <ResettableNumberField
+                        id="ai-temperature"
+                        label="Temperature"
+                        hint="Higher = more creative. (0.0–2.0)"
+                        value={temperature}
+                        onChange={setTemperature}
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        inputMode="decimal"
+                      />
+                      <ResettableNumberField
+                        id="ai-max-tokens"
+                        label="Max Tokens"
+                        hint="Maximum length of each response. (100–16,000)"
+                        value={maxTokens}
+                        onChange={setMaxTokens}
+                        min={100}
+                        max={16000}
+                        step={100}
+                        inputMode="numeric"
+                      />
+                      <ResettableNumberField
+                        id="ai-top-p"
+                        label="Top P"
+                        hint="Nucleus sampling — leave blank if unsure. (0.0–1.0)"
+                        value={topP}
+                        onChange={setTopP}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        inputMode="decimal"
+                      />
+                      <ResettableNumberField
+                        id="ai-timeout"
+                        label="Request Timeout"
+                        hint="Cancel slow requests after N seconds. Default 30."
+                        value={requestTimeout}
+                        onChange={setRequestTimeout}
+                        min={10}
+                        max={300}
+                        step={5}
+                        inputMode="numeric"
+                        placeholder="Default (30)"
+                      />
                     </div>
                   </SettingsSection>
 

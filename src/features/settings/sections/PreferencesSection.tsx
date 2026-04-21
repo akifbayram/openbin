@@ -146,7 +146,7 @@ export function PreferencesSection() {
         />
         <SettingsRow
           label="Default granularity"
-          description="Heatmap display: day / week / month"
+          description="Initial zoom level for the usage heatmap"
           border={false}
           control={
             <OptionGroup

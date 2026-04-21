@@ -5,7 +5,7 @@ import { buildContextPreamble, buildCorrectionPrompt, buildReanalysisPrompt, bui
 import { extractPhotoIds, extractUploadedFiles, sanitizePreviousResult, validatePreviousResult, verifyLocationAndFetchMeta } from '../lib/aiRequestHelpers.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { sanitizeForPrompt } from '../lib/aiSanitize.js';
-import { QueryResultSchema } from '../lib/aiSchemas.js';
+import { AiSuggestionsSchema, QueryResultSchema } from '../lib/aiSchemas.js';
 import { initSseResponse, pipeAiStreamToResponse, streamAiToWriter } from '../lib/aiStream.js';
 import { defaultAnalysisSystem, defaultAnalysisUserContent, resolveUserModel, runAnalysisStream, streamOpts } from '../lib/aiStreamHandler.js';
 import type { CommandRequest } from '../lib/commandParser.js';
@@ -254,6 +254,7 @@ streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), check
   await pipeAiStreamToResponse(res, model, {
     system: buildCorrectionPrompt(),
     userContent: userMessage,
+    schema: AiSuggestionsSchema,
     ...streamOpts(settings, { maxTokens: 2500 }),
   });
 }));

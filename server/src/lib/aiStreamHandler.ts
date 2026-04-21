@@ -4,6 +4,7 @@ import { createPinnedFetch, validateEndpointUrl } from './aiCaller.js';
 import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildContextPreamble, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from './aiProviders.js';
 import type { LocationAiMeta } from './aiRequestHelpers.js';
 import { verifyLocationAndFetchMeta } from './aiRequestHelpers.js';
+import { AiSuggestionsSchema } from './aiSchemas.js';
 import type { TaskType, UserAiSettings } from './aiSettings.js';
 import { getConfigForTask, getUserAiSettings } from './aiSettings.js';
 import { pipeAiStreamToResponse } from './aiStream.js';
@@ -87,6 +88,7 @@ export async function runAnalysisStream(args: AnalysisStreamArgs): Promise<void>
   await pipeAiStreamToResponse(res, model, {
     system: buildSystem(settings),
     userContent: buildUserContent({ imageParts, preamble, imageCount: images.length }),
+    schema: AiSuggestionsSchema,
     ...streamOpts(settings, {
       maxTokens: maxTokens ?? (images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE),
     }),

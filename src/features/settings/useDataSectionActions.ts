@@ -28,10 +28,10 @@ function importErrorMessage(err: unknown): string {
   return 'Failed to read backup file';
 }
 
-export type ExportFormat = 'zip' | 'json' | 'csv';
-export type ImportFormat = 'zip' | 'json' | 'csv';
+type ExportFormat = 'zip' | 'json' | 'csv';
+type ImportFormat = 'zip' | 'json' | 'csv';
 
-export interface ImportPreview {
+interface ImportPreview {
   toCreate: { name: string; itemCount: number; tags: string[] }[];
   toSkip: { name: string; reason: string }[];
   totalBins: number;

@@ -148,7 +148,7 @@ export function DataSection() {
           label="Trash"
           description={
             activeLocation?.trash_retention_days
-              ? `Restore deleted bins within ${activeLocation.trash_retention_days} days`
+              ? `Restore within ${activeLocation.trash_retention_days} days — then permanently deleted`
               : 'Restore or permanently remove deleted bins'
           }
           onClick={() => navigate('/settings/trash')}

@@ -87,7 +87,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
   },
 ];
 
-export interface FilterOptions {
+interface FilterOptions {
   isAdmin: boolean;
   isEE: boolean;
   isSiteAdmin: boolean;

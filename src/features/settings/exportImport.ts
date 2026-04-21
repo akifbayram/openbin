@@ -136,7 +136,7 @@ export interface CSVImportResult {
 }
 
 /** Read CSV header (first line, handling quoted fields). */
-export function parseCSVHeader(text: string): string[] {
+function parseCSVHeader(text: string): string[] {
   let end = 0;
   let inQuoted = false;
   while (end < text.length) {

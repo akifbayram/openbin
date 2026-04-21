@@ -11,7 +11,6 @@ export const AiSuggestionsSchema = z.object({
   name: z.string(),
   items: z.array(AiItemSchema),
   tags: z.array(z.string()),
-  notes: z.string(),
   customFields: z.record(z.string(), z.string()).optional(),
 });
 

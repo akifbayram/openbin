@@ -9,7 +9,6 @@ interface SettingsRowProps {
   onClick?: () => void;
   icon?: React.ComponentType<{ className?: string }>;
   border?: boolean;
-  destructive?: boolean;
   disabled?: boolean;
 }
 
@@ -20,32 +19,15 @@ export function SettingsRow({
   onClick,
   icon: Icon,
   border = true,
-  destructive,
   disabled,
 }: SettingsRowProps) {
   const showChevron = onClick && !control;
 
   const content = (
     <>
-      {Icon && (
-        <Icon
-          className={cn(
-            'size-5 shrink-0',
-            destructive
-              ? 'text-[var(--destructive)]'
-              : 'text-[var(--text-secondary)]',
-          )}
-        />
-      )}
+      {Icon && <Icon className="size-5 shrink-0 text-[var(--text-secondary)]" />}
       <div className="flex-1 min-w-0">
-        <div
-          className={cn(
-            'settings-row-title',
-            destructive && 'text-[var(--destructive)]',
-          )}
-        >
-          {label}
-        </div>
+        <div className="settings-row-title">{label}</div>
         {description && <div className="settings-row-desc">{description}</div>}
       </div>
       {control}

@@ -8,9 +8,9 @@ import { SettingsSection } from '../SettingsSection';
 import { SavedBadge, useSavedFlash } from '../useSavedFlash';
 
 const TERM_ROWS = [
-  { key: 'termBin', singular: 'Bin', plural: 'Bins' },
-  { key: 'termLocation', singular: 'Location', plural: 'Locations' },
-  { key: 'termArea', singular: 'Area', plural: 'Areas' },
+  { key: 'termBin', singular: 'Bin', plural: 'Bins', hint: 'A container of items' },
+  { key: 'termLocation', singular: 'Location', plural: 'Locations', hint: 'The top-level workspace' },
+  { key: 'termArea', singular: 'Area', plural: 'Areas', hint: 'A section within a location' },
 ] as const;
 
 export function PersonalizationSection() {
@@ -43,12 +43,15 @@ export function PersonalizationSection() {
         description="Rename core concepts to match your workflow. Singular and plural are used throughout the UI."
       >
         <div className="flex flex-col gap-4">
-          {TERM_ROWS.map(({ key, singular, plural }) => {
+          {TERM_ROWS.map(({ key, singular, plural, hint }) => {
             const raw = settings[key];
             const parts = raw ? raw.split('|') : ['', ''];
             return (
-              <div key={key} className="grid grid-cols-1 gap-2 sm:grid-cols-[120px_1fr_1fr] sm:items-center">
-                <span className="settings-field-label">{singular}</span>
+              <div key={key} className="grid grid-cols-1 gap-2 sm:grid-cols-[160px_1fr_1fr] sm:items-start">
+                <div className="flex flex-col gap-0.5 sm:pt-2">
+                  <span className="settings-field-label">{singular}</span>
+                  <span className="settings-hint">{hint}</span>
+                </div>
                 <Input
                   value={parts[0] || ''}
                   onChange={(e) => {

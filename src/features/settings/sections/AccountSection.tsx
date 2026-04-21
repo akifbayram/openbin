@@ -303,7 +303,12 @@ export function AccountSection() {
         />
 
         <form onSubmit={handleSaveProfile} className="flex flex-col gap-3 pt-5">
-          <FormField label="Display Name" htmlFor="profile-name" error={profileErrors.displayName}>
+          <FormField
+            label="Display Name"
+            htmlFor="profile-name"
+            hint="Shown to other members of shared locations."
+            error={profileErrors.displayName}
+          >
             <Input
               id="profile-name"
               value={displayName}
@@ -352,7 +357,11 @@ export function AccountSection() {
       {hasPassword && (
         <SettingsSection label="Password" dividerAbove>
           <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
-            <FormField label="Current Password" htmlFor="current-password">
+            <FormField
+              label="Current Password"
+              htmlFor="current-password"
+              hint="Required to verify it's you."
+            >
               <Input
                 id="current-password"
                 type="password"
@@ -363,7 +372,11 @@ export function AccountSection() {
               />
             </FormField>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <FormField label="New Password" htmlFor="new-password">
+              <FormField
+                label="New Password"
+                htmlFor="new-password"
+                hint="Must meet the requirements below."
+              >
                 <div className="relative">
                   <Input
                     id="new-password"
@@ -388,7 +401,11 @@ export function AccountSection() {
                   </button>
                 </div>
               </FormField>
-              <FormField label="Confirm Password" htmlFor="confirm-password">
+              <FormField
+                label="Confirm Password"
+                htmlFor="confirm-password"
+                hint="Re-type the new password exactly."
+              >
                 <Input
                   id="confirm-password"
                   type="password"
@@ -634,15 +651,18 @@ export function AccountSection() {
             </div>
           ) : (
             <form onSubmit={handleCreateKey} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="key-name">Name</Label>
+              <FormField
+                label="Name"
+                htmlFor="key-name"
+                hint="A label to help you recognize this key later."
+              >
                 <Input
                   id="key-name"
                   value={keyName}
                   onChange={(e) => setKeyName(e.target.value)}
                   placeholder="e.g., Home Assistant, Alexa"
                 />
-              </div>
+              </FormField>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
                   Cancel
