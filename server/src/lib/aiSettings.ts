@@ -10,7 +10,7 @@ export class NoAiSettingsError extends Error {
   }
 }
 
-export const TASK_TYPES = ['analysis', 'command', 'query', 'structure', 'reorganization'] as const;
+export const TASK_TYPES = ['analysis', 'command', 'query', 'structure', 'reorganization', 'tagSuggestion'] as const;
 
 export type TaskType = (typeof TASK_TYPES)[number];
 
@@ -31,6 +31,7 @@ export interface UserAiSettings {
   query_prompt: string | null;
   structure_prompt: string | null;
   reorganization_prompt: string | null;
+  tag_suggestion_prompt: string | null;
   temperature: number | null;
   max_tokens: number | null;
   top_p: number | null;
@@ -50,7 +51,7 @@ export function getConfigForTask(settings: UserAiSettings, task: TaskType): AiPr
 /** Load and decrypt a user's AI settings. Falls back to env config. Throws NoAiSettingsError if neither exist. */
 export async function getUserAiSettings(userId: string): Promise<UserAiSettings> {
   const result = await query(
-    'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides FROM user_ai_settings WHERE user_id = $1 AND is_active = TRUE',
+    'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, tag_suggestion_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides FROM user_ai_settings WHERE user_id = $1 AND is_active = TRUE',
     [userId]
   );
   if (result.rows.length === 0) {
@@ -63,6 +64,7 @@ export async function getUserAiSettings(userId: string): Promise<UserAiSettings>
         query_prompt: null,
         structure_prompt: null,
         reorganization_prompt: null,
+        tag_suggestion_prompt: null,
         temperature: null,
         max_tokens: null,
         top_p: null,
@@ -85,6 +87,7 @@ export async function getUserAiSettings(userId: string): Promise<UserAiSettings>
     query_prompt: row.query_prompt || null,
     structure_prompt: row.structure_prompt || null,
     reorganization_prompt: row.reorganization_prompt || null,
+    tag_suggestion_prompt: row.tag_suggestion_prompt || null,
     temperature: row.temperature ?? null,
     max_tokens: row.max_tokens ?? null,
     top_p: row.top_p ?? null,

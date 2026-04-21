@@ -27,6 +27,7 @@ const MOCK_AI_SETTINGS = {
   queryPrompt: null,
   structurePrompt: null,
   reorganizationPrompt: null,
+  tagSuggestionPrompt: null,
   temperature: null,
   maxTokens: null,
   topP: null,
@@ -49,7 +50,7 @@ router.use(authenticate);
 router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', async (req, res) => {
   const demo = isDemoUser(req);
   const result = await query(
-    'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, is_active, task_model_overrides FROM user_ai_settings WHERE user_id = $1',
+    'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, tag_suggestion_prompt, temperature, max_tokens, top_p, request_timeout, is_active, task_model_overrides FROM user_ai_settings WHERE user_id = $1',
     [req.user!.id]
   );
 
@@ -68,6 +69,7 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
         queryPrompt: null,
         structurePrompt: null,
         reorganizationPrompt: null,
+        tagSuggestionPrompt: null,
         temperature: null,
         maxTokens: null,
         topP: null,
@@ -138,6 +140,7 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
     queryPrompt: activeRow.query_prompt || null,
     structurePrompt: activeRow.structure_prompt || null,
     reorganizationPrompt: activeRow.reorganization_prompt || null,
+    tagSuggestionPrompt: activeRow.tag_suggestion_prompt || null,
     temperature: activeRow.temperature ?? null,
     maxTokens: activeRow.max_tokens ?? null,
     topP: activeRow.top_p ?? null,
@@ -159,13 +162,13 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     if (hasApiKey || hasProviderApiKey) {
       throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot configure API keys. Use server-configured keys or mock mode.');
     }
-    const PROMPT_FIELDS = ['customPrompt', 'commandPrompt', 'queryPrompt', 'structurePrompt', 'reorganizationPrompt'] as const;
+    const PROMPT_FIELDS = ['customPrompt', 'commandPrompt', 'queryPrompt', 'structurePrompt', 'reorganizationPrompt', 'tagSuggestionPrompt'] as const;
     if (PROMPT_FIELDS.some(f => req.body[f] != null)) {
       throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot customize AI prompts');
     }
   }
 
-  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt, reorganizationPrompt } = req.body;
+  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt, reorganizationPrompt, tagSuggestionPrompt } = req.body;
   const { temperature: rawTemp, maxTokens: rawMaxTokens, topP: rawTopP, requestTimeout: rawTimeout } = req.body;
 
   if (!provider || !apiKey || !model) {
@@ -176,7 +179,7 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     throw new ValidationError('Invalid provider');
   }
 
-  for (const [field, value] of [['customPrompt', customPrompt], ['commandPrompt', commandPrompt], ['queryPrompt', queryPrompt], ['structurePrompt', structurePrompt], ['reorganizationPrompt', reorganizationPrompt]] as const) {
+  for (const [field, value] of [['customPrompt', customPrompt], ['commandPrompt', commandPrompt], ['queryPrompt', queryPrompt], ['structurePrompt', structurePrompt], ['reorganizationPrompt', reorganizationPrompt], ['tagSuggestionPrompt', tagSuggestionPrompt]] as const) {
     if (value && typeof value === 'string' && value.length > 10000) {
       throw new ValidationError(`${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()} must be 10000 characters or less`);
     }
@@ -210,6 +213,7 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
   const finalQueryPrompt = (queryPrompt && typeof queryPrompt === 'string' && queryPrompt.trim()) ? queryPrompt.trim() : null;
   const finalStructurePrompt = (structurePrompt && typeof structurePrompt === 'string' && structurePrompt.trim()) ? structurePrompt.trim() : null;
   const finalReorganizationPrompt = (reorganizationPrompt && typeof reorganizationPrompt === 'string' && reorganizationPrompt.trim()) ? reorganizationPrompt.trim() : null;
+  const finalTagSuggestionPrompt = (tagSuggestionPrompt && typeof tagSuggestionPrompt === 'string' && tagSuggestionPrompt.trim()) ? tagSuggestionPrompt.trim() : null;
 
   // Deactivate all other rows for this user
   await query(
@@ -220,12 +224,12 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
   // Upsert the row for this (user, provider) and set it active
   const newId = generateUuid();
   const result = await query(
-    `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides, is_active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, TRUE)
+    `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, tag_suggestion_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides, is_active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, TRUE)
      ON CONFLICT (user_id, provider) DO UPDATE SET
-       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, reorganization_prompt = $11, temperature = $12, max_tokens = $13, top_p = $14, request_timeout = $15, task_model_overrides = $16, is_active = TRUE, updated_at = ${d.now()}
-     RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides`,
-    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalReorganizationPrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout, null]
+       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, reorganization_prompt = $11, tag_suggestion_prompt = $12, temperature = $13, max_tokens = $14, top_p = $15, request_timeout = $16, task_model_overrides = $17, is_active = TRUE, updated_at = ${d.now()}
+     RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, tag_suggestion_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides`,
+    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalReorganizationPrompt, finalTagSuggestionPrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout, null]
   );
 
   // Fetch all rows to build providerConfigs
@@ -254,6 +258,7 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     queryPrompt: row.query_prompt || null,
     structurePrompt: row.structure_prompt || null,
     reorganizationPrompt: row.reorganization_prompt || null,
+    tagSuggestionPrompt: row.tag_suggestion_prompt || null,
     temperature: row.temperature ?? null,
     maxTokens: row.max_tokens ?? null,
     topP: row.top_p ?? null,

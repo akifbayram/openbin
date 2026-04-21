@@ -15,6 +15,7 @@ export const TASK_GROUP_MAP: Record<string, AiTaskGroup> = {
   'structure-text': 'quickText',
   'query': 'deepText',
   'reorganization': 'deepText',
+  'tagSuggestion': 'deepText',
 };
 
 /**

@@ -1,6 +1,6 @@
-import { PackageOpen, Plus, Tags as TagsIcon } from 'lucide-react';
+import { PackageOpen, Plus, Sparkles, Tags as TagsIcon } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,10 +12,12 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
+import { useBinList } from '@/features/bins/useBins';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
+import { usePlan } from '@/lib/usePlan';
 import { useTableSearchParams } from '@/lib/useTableSearchParams';
 import { cn, getErrorMessage, inputBase } from '@/lib/utils';
 import { CreateTagDialog } from './CreateTagDialog';
@@ -26,15 +28,28 @@ import { useTagStyle } from './useTagStyle';
 import { deleteTag, renameTag, usePaginatedTagList } from './useTags';
 
 export function TagsPage() {
+  const navigate = useNavigate();
   const { search, sortColumn, sortDirection, setSearch, setSort } = useTableSearchParams<TagSortColumn>('alpha');
   const debouncedSearch = useDebounce(search, 300);
   const { activeLocationId } = useAuth();
   const t = useTerminology();
   const { canWrite } = usePermissions();
   const { showToast } = useToast();
+  const { bins: allBins } = useBinList(undefined, 'name');
+  const { isSelfHosted, isGated } = usePlan();
   const { tags, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedTagList(debouncedSearch, sortColumn, sortDirection);
   const { tagColors, tagParents } = useTagColorsContext();
   const getTagBadgeStyle = useTagStyle();
+
+  const tagSuggestionGated = !isSelfHosted && isGated('reorganize');
+  const showSuggestButton = canWrite && !tagSuggestionGated && allBins.length > 0;
+
+  const suggestButton = (
+    <Button variant="outline" size="sm" onClick={() => navigate('/reorganize?mode=tags')}>
+      <Sparkles className="h-4 w-4 mr-1.5" />
+      Suggest with AI
+    </Button>
+  );
 
   // Rename dialog state
   const [renameTarget, setRenameTarget] = useState<string | null>(null);
@@ -131,10 +146,13 @@ export function TagsPage() {
       <PageHeader
         title="Tags"
         actions={canWrite ? (
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            Create Tag
-          </Button>
+          <div className="flex items-center gap-2">
+            {showSuggestButton && suggestButton}
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4 mr-1.5" />
+              Create Tag
+            </Button>
+          </div>
         ) : undefined}
       />
 
@@ -188,6 +206,7 @@ export function TagsPage() {
                     Create Tag
                   </Button>
                 )}
+                {showSuggestButton && suggestButton}
                 <Link to="/bins">
                   <Button variant="secondary" size="sm">Browse {t.bins}</Button>
                 </Link>

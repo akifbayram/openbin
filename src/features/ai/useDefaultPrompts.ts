@@ -7,6 +7,7 @@ interface DefaultPrompts {
   query: string;
   structure: string;
   reorganization: string;
+  tagSuggestion: string;
 }
 
 let cached: DefaultPrompts | null = null;

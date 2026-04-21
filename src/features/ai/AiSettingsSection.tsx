@@ -25,6 +25,7 @@ const PROMPT_TAB_META = [
   { key: 'query', label: 'Queries', shortLabel: 'Queries' },
   { key: 'structure', label: 'Extraction', shortLabel: 'Extract' },
   { key: 'reorganization', label: 'Reorganize', shortLabel: 'Reorg' },
+  { key: 'tagSuggestion', label: 'Tag Suggestion', shortLabel: 'Tags' },
 ] as const;
 
 interface AiSettingsSectionProps {
@@ -38,6 +39,7 @@ interface FormState {
   queryPrompt: string;
   structurePrompt: string;
   reorganizationPrompt: string;
+  tagSuggestionPrompt: string;
   temperature: string;
   maxTokens: string;
   topP: string;
@@ -50,6 +52,7 @@ const EMPTY_FORM: FormState = {
   queryPrompt: '',
   structurePrompt: '',
   reorganizationPrompt: '',
+  tagSuggestionPrompt: '',
   temperature: '',
   maxTokens: '',
   topP: '',
@@ -97,6 +100,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
         queryPrompt: settings.queryPrompt || '',
         structurePrompt: settings.structurePrompt || '',
         reorganizationPrompt: settings.reorganizationPrompt || '',
+        tagSuggestionPrompt: settings.tagSuggestionPrompt || '',
         temperature: numberToString(settings.temperature),
         maxTokens: numberToString(settings.maxTokens),
         topP: numberToString(settings.topP),
@@ -142,6 +146,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
         queryPrompt: form.queryPrompt.trim() || null,
         structurePrompt: form.structurePrompt.trim() || null,
         reorganizationPrompt: form.reorganizationPrompt.trim() || null,
+        tagSuggestionPrompt: form.tagSuggestionPrompt.trim() || null,
         temperature: parseOptionalNumber(form.temperature),
         maxTokens: parseOptionalNumber(form.maxTokens),
         topP: parseOptionalNumber(form.topP),
@@ -311,6 +316,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     query:     { value: form.queryPrompt,          key: 'queryPrompt' },
                     structure: { value: form.structurePrompt,      key: 'structurePrompt' },
                     reorganization: { value: form.reorganizationPrompt, key: 'reorganizationPrompt' },
+                    tagSuggestion: { value: form.tagSuggestionPrompt, key: 'tagSuggestionPrompt' },
                   };
                   const active = promptMap[activePromptTab];
                   const setActive = (value: string) => updateField(active.key, value);

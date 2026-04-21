@@ -73,11 +73,12 @@ describe('TASK_GROUP_MAP', () => {
     expect(TASK_GROUP_MAP['structure-text']).toBe('quickText');
     expect(TASK_GROUP_MAP.query).toBe('deepText');
     expect(TASK_GROUP_MAP.reorganization).toBe('deepText');
+    expect(TASK_GROUP_MAP.tagSuggestion).toBe('deepText');
   });
 
   it('covers all expected task keys', () => {
     const keys = Object.keys(TASK_GROUP_MAP);
-    expect(keys).toHaveLength(8);
+    expect(keys).toHaveLength(9);
   });
 });
 

@@ -1,13 +1,15 @@
 import { Router } from 'express';
+import { query } from '../db.js';
 import { buildCommandContext, buildInventoryContext } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import { buildContextPreamble, buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent } from '../lib/aiProviders.js';
 import { extractPhotoIds, extractUploadedFiles, sanitizePreviousResult, validatePreviousResult, verifyLocationAndFetchMeta } from '../lib/aiRequestHelpers.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { sanitizeForPrompt } from '../lib/aiSanitize.js';
-import { AiSuggestionsSchema, QueryResultSchema } from '../lib/aiSchemas.js';
+import { AiSuggestionsSchema, QueryResultSchema, TagProposalSchema } from '../lib/aiSchemas.js';
 import { initSseResponse, pipeAiStreamToResponse, streamAiToWriter } from '../lib/aiStream.js';
 import { defaultAnalysisSystem, defaultAnalysisUserContent, resolveUserModel, runAnalysisStream, streamOpts } from '../lib/aiStreamHandler.js';
+import { buildTagSuggestionPrompt, type TagSuggestionBin } from '../lib/buildTagSuggestionPrompt.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, buildUnifiedSystemPrompt } from '../lib/commandParser.js';
 import { config, isDemoUser } from '../lib/config.js';
@@ -27,6 +29,8 @@ import { checkAiCredits, requireAiAccess, requirePlusOrAbove } from '../middlewa
 
 const streamRouter = Router();
 streamRouter.use(authenticate);
+
+const MAX_TAG_BINS_PER_STREAM = 500;
 
 async function sendMockJsonStream(res: import('express').Response, data: object): Promise<void> {
   const writeEvent = initSseResponse(res);
@@ -367,6 +371,112 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
 
     if (finalText) writeEvent({ type: 'done', text: finalText });
     if (mismatch) await refundAiCredit(req.user!.id);
+  } finally {
+    res.end();
+  }
+}));
+
+// POST /api/ai/reorganize-tags/stream
+streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream tag suggestions', async (req, res) => {
+  const { bins: inputBins, locationId, changeLevel, granularity, maxTagsPerBin, userNotes } = req.body ?? {};
+
+  if (!Array.isArray(inputBins) || inputBins.length === 0) throw new ValidationError('bins array is required');
+  if (inputBins.length > MAX_TAG_BINS_PER_STREAM) throw new ValidationError(`At most ${MAX_TAG_BINS_PER_STREAM} bins per run`);
+  if (!['additive', 'moderate', 'full'].includes(changeLevel)) throw new ValidationError('changeLevel must be additive, moderate, or full');
+  if (!['broad', 'medium', 'specific'].includes(granularity)) throw new ValidationError('granularity must be broad, medium, or specific');
+  if (maxTagsPerBin != null && (typeof maxTagsPerBin !== 'number' || maxTagsPerBin < 1 || maxTagsPerBin > 10)) {
+    throw new ValidationError('maxTagsPerBin must be between 1 and 10');
+  }
+
+  const bins: TagSuggestionBin[] = inputBins.map((b: any) => ({
+    id: String(b.id ?? ''),
+    name: String(b.name ?? ''),
+    items: Array.isArray(b.items) ? b.items.map((i: unknown) => String(i)) : [],
+    tags: Array.isArray(b.tags) ? b.tags.map((t: unknown) => String(t)) : [],
+    areaName: b.areaName ? String(b.areaName) : null,
+  }));
+
+  const availableTagsRows = await query<{ tag: string; parent: string | null }>(
+    `SELECT tag, parent_tag AS parent FROM tag_colors WHERE location_id = $1 ORDER BY tag`,
+    [locationId],
+  );
+  const availableTags = availableTagsRows.rows.map((r) => ({ tag: r.tag, parent: r.parent }));
+
+  const inputBinIds = new Set(bins.map((b) => b.id));
+
+  const { settings, model } = await resolveUserModel(req.user!.id, 'tagSuggestion', isDemoUser(req));
+  const { system, userContent } = buildTagSuggestionPrompt({
+    inputBins: bins,
+    availableTags,
+    changeLevel,
+    granularity,
+    maxTagsPerBin,
+    userNotes,
+    promptOverride: settings.tag_suggestion_prompt ?? null,
+    demo: isDemoUser(req),
+  });
+
+  if (config.aiMock) {
+    await sendMockJsonStream(res, {
+      taxonomy: { newTags: [], renames: [], merges: [], parents: [] },
+      assignments: bins.slice(0, 1).map((b) => ({ binId: b.id, add: ['tools'], remove: [] })),
+      summary: 'Mock tag suggestion result.',
+    });
+    return;
+  }
+
+  const MAX_ATTEMPTS = 3;
+  const writeEvent = initSseResponse(res);
+  const sOpts = streamOpts(settings, { temperature: 0.3, maxTokens: 8000 });
+  let finalText: string | null = null;
+  let hardFailure = false;
+
+  try {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      if (attempt > 1) writeEvent({ type: 'retry', attempt });
+
+      finalText = await streamAiToWriter(writeEvent, model, { system, userContent, ...sOpts });
+      if (!finalText) break;
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(finalText);
+      } catch {
+        if (attempt === MAX_ATTEMPTS) hardFailure = true;
+        continue;
+      }
+      const schemaResult = TagProposalSchema.safeParse(parsed);
+      if (!schemaResult.success) {
+        if (attempt === MAX_ATTEMPTS) hardFailure = true;
+        continue;
+      }
+      const invalid = schemaResult.data.assignments.filter((a) => !inputBinIds.has(a.binId));
+      if (invalid.length > 0) {
+        if (attempt === MAX_ATTEMPTS) hardFailure = true;
+        continue;
+      }
+
+      // Preset enforcement — soft failure: strip and proceed
+      if (changeLevel === 'additive') {
+        schemaResult.data.taxonomy.renames = [];
+        schemaResult.data.taxonomy.merges = [];
+        schemaResult.data.taxonomy.parents = [];
+        schemaResult.data.assignments = schemaResult.data.assignments.map((a) => ({ ...a, remove: [] }));
+      } else if (changeLevel === 'moderate') {
+        schemaResult.data.assignments = schemaResult.data.assignments.map((a) => ({ ...a, remove: [] }));
+      }
+
+      finalText = JSON.stringify(schemaResult.data);
+      break;
+    }
+
+    if (hardFailure || !finalText) {
+      writeEvent({ type: 'error', message: 'AI returned an invalid response after 3 attempts' });
+      await refundAiCredit(req.user!.id);
+      return;
+    }
+
+    writeEvent({ type: 'done', text: finalText });
   } finally {
     res.end();
   }

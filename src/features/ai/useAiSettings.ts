@@ -69,6 +69,7 @@ export async function saveAiSettings(opts: {
   queryPrompt?: string | null;
   structurePrompt?: string | null;
   reorganizationPrompt?: string | null;
+  tagSuggestionPrompt?: string | null;
   temperature?: number | null;
   maxTokens?: number | null;
   topP?: number | null;

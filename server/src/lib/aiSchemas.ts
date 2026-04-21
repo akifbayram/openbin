@@ -31,3 +31,34 @@ export const QueryResultSchema = z.object({
     is_trashed: z.boolean().optional(),
   })),
 });
+
+const TagStringSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/);
+
+export const TagProposalSchema = z.object({
+  taxonomy: z.object({
+    newTags: z.array(z.object({
+      tag: TagStringSchema,
+      parent: TagStringSchema.nullable().optional(),
+    })),
+    renames: z.array(z.object({
+      from: TagStringSchema,
+      to: TagStringSchema,
+    })),
+    merges: z.array(z.object({
+      from: z.array(TagStringSchema).min(1),
+      to: TagStringSchema,
+    })),
+    parents: z.array(z.object({
+      tag: TagStringSchema,
+      parent: TagStringSchema.nullable(),
+    })),
+  }),
+  assignments: z.array(z.object({
+    binId: z.string().regex(/^[a-zA-Z0-9-]{1,36}$/),
+    add: z.array(TagStringSchema),
+    remove: z.array(TagStringSchema),
+  })),
+  summary: z.string(),
+});
+
+export type TagProposal = z.infer<typeof TagProposalSchema>;

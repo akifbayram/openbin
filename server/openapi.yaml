@@ -4241,6 +4241,144 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /tags/bulk-apply:
+    post:
+      tags: [Tags]
+      summary: Apply AI tag suggestions to bins
+      description: |
+        Applies tag taxonomy changes and per-bin assignments in a single transaction.
+        Supports creating tags, renaming tags, merging tag groups, setting parent-child
+        relationships, and adding/removing tags from bins.
+        Requires member role or above. Rate limited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locationId, taxonomy, assignments]
+              properties:
+                locationId:
+                  type: string
+                  format: uuid
+                  description: Location to apply suggestions to
+                taxonomy:
+                  type: object
+                  required: []
+                  properties:
+                    newTags:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          tag:
+                            type: string
+                            description: New tag name
+                          parent:
+                            type: string
+                            nullable: true
+                            description: Optional parent tag for hierarchy
+                      description: Tags to create
+                    renames:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          from:
+                            type: string
+                            description: Current tag name
+                          to:
+                            type: string
+                            description: New tag name
+                      description: Tags to rename
+                    merges:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          from:
+                            type: array
+                            items:
+                              type: string
+                            description: Source tags to merge
+                          to:
+                            type: string
+                            description: Target tag after merge
+                      description: Tag groups to merge
+                    parents:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          tag:
+                            type: string
+                            description: Tag name
+                          parent:
+                            type: string
+                            nullable: true
+                            description: Parent tag or null
+                      description: Parent-child relationships to set
+                assignments:
+                  type: object
+                  properties:
+                    add:
+                      type: object
+                      additionalProperties:
+                        type: array
+                        items:
+                          type: string
+                      description: "Map of bin ID to tags to add"
+                    remove:
+                      type: object
+                      additionalProperties:
+                        type: array
+                        items:
+                          type: string
+                      description: "Map of bin ID to tags to remove"
+      responses:
+        '200':
+          description: Suggestions applied successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tagsCreated:
+                    type: integer
+                    description: Number of tags created
+                  tagsRenamed:
+                    type: integer
+                    description: Number of tags renamed
+                  parentsSet:
+                    type: integer
+                    description: Number of parent relationships set
+                  binsAddedTo:
+                    type: integer
+                    description: Number of bins where tags were added
+                  binsRemovedFrom:
+                    type: integer
+                    description: Number of bins where tags were removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error or parent cycle detected
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum: [PARENT_CYCLE]
+                      message:
+                        type: string
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   # ════════════════════════════════════════════════════════
   # Items
   # ════════════════════════════════════════════════════════
@@ -5504,6 +5642,104 @@ paths:
             text/event-stream:
               schema:
                 type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/reorganize-tags/stream:
+    post:
+      tags: [AI]
+      summary: Stream tag suggestion and restructuring via SSE
+      description: |
+        AI-powered tag suggestion and taxonomy restructuring for a location's bins.
+        Analyzes bin contents and suggests optimal tag hierarchy. Streams the response
+        as SSE events with incremental JSON chunks.
+        Requires Plus plan or above. Rate limited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locationId, bins, changeLevel, granularity]
+              properties:
+                locationId:
+                  type: string
+                  format: uuid
+                  description: Location to generate suggestions for
+                bins:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, name, items, tags]
+                    properties:
+                      id:
+                        type: string
+                        description: Bin ID
+                      name:
+                        type: string
+                        description: Bin name
+                      items:
+                        type: array
+                        items:
+                          type: string
+                        description: List of item names in the bin
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                        description: Current tags on the bin
+                      areaName:
+                        type: string
+                        nullable: true
+                        description: Area containing the bin
+                  minItems: 1
+                  description: Bins to generate tag suggestions for
+                changeLevel:
+                  type: string
+                  enum: [additive, moderate, full]
+                  description: |
+                    How aggressively to restructure tags:
+                    - `additive` — only add new tags, no renames/merges
+                    - `moderate` — add, rename, and merge carefully
+                    - `full` — comprehensive restructuring allowed
+                granularity:
+                  type: string
+                  enum: [broad, medium, specific]
+                  description: |
+                    How specific to make tag names:
+                    - `broad` — high-level categories (Supplies, Tools)
+                    - `medium` — balanced (Screwdrivers, Hammers)
+                    - `specific` — detailed (Phillips Screwdrivers Size 2)
+                maxTagsPerBin:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  nullable: true
+                  description: Maximum tags per bin target (null for auto)
+                userNotes:
+                  type: string
+                  description: Additional guidance for the AI
+      responses:
+        '200':
+          description: SSE stream of tag proposal JSON chunks
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-sent events (SSE) stream. Each event has:
+                  - `delta`: Streaming JSON chunk (concatenate to build full response)
+                  - `retry`: Retry attempt number (if retry occurs)
+                  - `done`: Final object with `{ taxonomy: {...}, assignments: [...], summary: "..." }`
+                  - `error`: Error message if generation fails
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

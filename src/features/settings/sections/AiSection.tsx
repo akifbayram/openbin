@@ -39,6 +39,7 @@ const PROMPT_TAB_META = [
   { key: 'query', label: 'Queries', shortLabel: 'Queries' },
   { key: 'structure', label: 'Extraction', shortLabel: 'Extract' },
   { key: 'reorganization', label: 'Reorganize', shortLabel: 'Reorg' },
+  { key: 'tagSuggestion', label: 'Tag Suggestion', shortLabel: 'Tags' },
 ] as const;
 
 interface ResettableNumberFieldProps {
@@ -113,6 +114,7 @@ export function AiSection() {
   const [queryPrompt, setQueryPrompt] = useState('');
   const [structurePrompt, setStructurePrompt] = useState('');
   const [reorganizationPrompt, setReorganizationPrompt] = useState('');
+  const [tagSuggestionPrompt, setTagSuggestionPrompt] = useState('');
   const [activePromptTab, setActivePromptTab] = useState<PromptTab>('analysis');
   const [taskOverrides, setTaskOverrides] = useState<Partial<Record<AiTaskGroup, { provider: string | null; model: string | null; endpointUrl: string | null }>>>({});
   const [temperature, setTemperature] = useState<string>('');
@@ -134,6 +136,7 @@ export function AiSection() {
       setQueryPrompt(settings.queryPrompt || '');
       setStructurePrompt(settings.structurePrompt || '');
       setReorganizationPrompt(settings.reorganizationPrompt || '');
+      setTagSuggestionPrompt(settings.tagSuggestionPrompt || '');
       setTaskOverrides(settings.taskOverrides
         ? Object.fromEntries(
             Object.entries(settings.taskOverrides)
@@ -178,6 +181,7 @@ export function AiSection() {
         queryPrompt: queryPrompt.trim() || null,
         structurePrompt: structurePrompt.trim() || null,
         reorganizationPrompt: reorganizationPrompt.trim() || null,
+        tagSuggestionPrompt: tagSuggestionPrompt.trim() || null,
         temperature: temperature ? Number(temperature) : null,
         maxTokens: maxTokens ? Number(maxTokens) : null,
         topP: topP ? Number(topP) : null,
@@ -238,6 +242,7 @@ export function AiSection() {
     query:     { value: queryPrompt,     set: setQueryPrompt },
     structure: { value: structurePrompt, set: setStructurePrompt },
     reorganization: { value: reorganizationPrompt, set: setReorganizationPrompt },
+    tagSuggestion: { value: tagSuggestionPrompt, set: setTagSuggestionPrompt },
   };
   const activePrompt = promptMap[activePromptTab];
 

@@ -156,6 +156,50 @@ REANALYSIS DIRECTIVE. This is a SECOND analysis of photos you have already exami
 
 If the previous analysis was already fully accurate, refine at least one item name to be more specific (adding a brand, model, size, or type). NEVER return an identical copy of the previous output.`;
 
+export const DEFAULT_TAG_SUGGESTION_PROMPT = `You are a storage tagging assistant. You receive a list of storage bins with their names, items, area, and existing tags, plus the full tag vocabulary already in use in this location. Propose a clean set of tags and per-bin assignments.
+
+ABSOLUTE RULE — REUSE BEFORE YOU CREATE.
+The <available_tags> block is your PRIMARY source. Reusing is your default action; creating is the exception. An empty newTags array is a GOOD outcome. Proposing a new tag that overlaps, is a synonym of, or narrowly specializes an existing tag is a catastrophic failure of this task.
+
+Decision procedure — run this for EVERY tag you want to add to a bin:
+1. Scan <available_tags> end-to-end. Ask: does any existing tag reasonably apply to this bin's contents? Be generous. "Decorations" covers "ornaments". "Tools" covers "metal detectors", "drill bits", "screwdrivers". "Electronics" covers "cables", "chargers", "adapters".
+2. If YES — put the existing tag in the bin's "add" array. Do NOT add a newTags entry. Stop.
+3. Only if EVERY existing tag is clearly a poor fit for this bin's contents, propose a new tag via newTags.
+
+Good reuse (do this):
+- Bin has Christmas ornaments, <available_tags> has "decorations" → CORRECT: add "decorations" to the bin. WRONG: new tag "ornaments" or "holiday-decor".
+- Bin has a metal detector + pinpointer + headphones, <available_tags> has "tools" and "electronics" → CORRECT: add "tools" and "electronics" to the bin. WRONG: propose four new tags like "metal-detecting-gear", "detection-tools", "audio-equipment", "power-sources".
+- Bin has cables and chargers, <available_tags> has "electronics" → CORRECT: add "electronics". WRONG: new tag "cables" or "chargers".
+
+New-tag budget: propose AT MOST 2 new tags across the entire response. Zero is better than one. One is better than two. If you feel pressure to propose three or more, you are over-splitting — stop, go back to step 1, and reuse broader existing tags instead.
+
+Rules:
+
+1. Every tag MUST be lowercase, a single word or hyphenated compound (no spaces), a plural noun, 1-100 characters, matching /^[a-z0-9][a-z0-9-]{0,99}$/. Good: "fasteners", "hand-tools". Bad: "Fastener", "Hand Tools", "#1".
+2. Respect existing parent relationships. When you propose a new tag that belongs under an existing parent, set "parent" on the newTags entry.
+3. {tag_count_instruction} Prefer fewer, more meaningful tags over many loose ones.
+4. Tag by what the bin CONTAINS, not what it looks like or where it lives. Good: "electronics" for a bin of cables. Bad: "blue-bin", "shelf-3".
+5. {change_level_instruction}
+6. {granularity_instruction}
+7. Output valid JSON only, matching this EXACT shape (use these EXACT keys — not "name", not "description"):
+   {
+     "taxonomy": {
+       "newTags": [{"tag": "fasteners", "parent": "hardware"}],
+       "renames": [{"from": "tool", "to": "tools"}],
+       "merges": [{"from": ["screw", "screws"], "to": "fasteners"}],
+       "parents": [{"tag": "hand-tools", "parent": "tools"}]
+     },
+     "assignments": [{"binId": "abc-123", "add": ["fasteners"], "remove": []}],
+     "summary": "Brief one-sentence explanation."
+   }
+   Every newTags entry uses the key "tag" (not "name"). Every entry carries ONLY the listed keys — no "description", no "reason", no extra fields. Each array may be empty but MUST be present.
+8. Only include an assignment entry for a bin when you actually propose changes. Don't include no-op entries.
+9. binId values MUST appear verbatim in the input bin list. Never invent or modify binIds.
+10. Skip bins where you cannot confidently suggest tags. Do not invent assignments based on no evidence.
+11. {notes_instruction}
+
+FINAL CHECK — before emitting the JSON, review every entry in your newTags array. For each entry, silently name the closest-matching existing tag from <available_tags>. If that closest match could plausibly apply to the bin (even if imperfectly), DELETE the newTags entry and put the closest existing tag in the bin's "add" array instead. Err strongly on the side of reuse.`;
+
 export const ALL_DEFAULT_PROMPTS = {
   analysis: DEFAULT_AI_PROMPT,
   command: DEFAULT_COMMAND_PROMPT,
@@ -164,4 +208,5 @@ export const ALL_DEFAULT_PROMPTS = {
   correction: AI_CORRECTION_PROMPT,
   reorganization: DEFAULT_REORGANIZATION_PROMPT,
   reanalysis: AI_REANALYSIS_PROMPT,
+  tagSuggestion: DEFAULT_TAG_SUGGESTION_PROMPT,
 };

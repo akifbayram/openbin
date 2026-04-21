@@ -1,9 +1,13 @@
 import { Router } from 'express';
-import { d, query, withTransaction } from '../db.js';
+import { d, generateUuid, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
-import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, HttpError, ValidationError } from '../lib/httpErrors.js';
+import { logRouteActivity } from '../lib/routeHelpers.js';
 import { authenticate } from '../middleware/auth.js';
+
+const TAG_REGEX = /^[a-z0-9][a-z0-9-]{0,99}$/;
+const MAX_BINS_PER_APPLY = 500;
 
 const router = Router();
 
@@ -196,6 +200,182 @@ router.delete('/:tag', asyncHandler(async (req, res) => {
   });
 
   res.json({ deleted: true, binsUpdated, orphanedChildren });
+}));
+
+// POST /api/tags/bulk-apply — apply AI tag suggestions (taxonomy + per-bin assignments)
+router.post('/bulk-apply', asyncHandler(async (req, res) => {
+  const { locationId, taxonomy, assignments } = req.body ?? {};
+  if (!locationId || typeof locationId !== 'string') throw new ValidationError('locationId is required');
+  if (!taxonomy || typeof taxonomy !== 'object') throw new ValidationError('taxonomy is required');
+  if (!assignments || typeof assignments !== 'object') throw new ValidationError('assignments is required');
+
+  const newTags: Array<{ tag: string; parent?: string | null }> = Array.isArray(taxonomy.newTags) ? taxonomy.newTags : [];
+  const renames: Array<{ from: string; to: string }> = Array.isArray(taxonomy.renames) ? taxonomy.renames : [];
+  const merges: Array<{ from: string[]; to: string }> = Array.isArray(taxonomy.merges) ? taxonomy.merges : [];
+  const parents: Array<{ tag: string; parent: string | null }> = Array.isArray(taxonomy.parents) ? taxonomy.parents : [];
+  const adds: Record<string, string[]> = (assignments.add && typeof assignments.add === 'object') ? assignments.add : {};
+  const removes: Record<string, string[]> = (assignments.remove && typeof assignments.remove === 'object') ? assignments.remove : {};
+
+  const validateTag = (t: unknown): t is string => typeof t === 'string' && TAG_REGEX.test(t);
+  for (const n of newTags) {
+    if (!validateTag(n?.tag)) throw new ValidationError('Invalid newTag name');
+    if (n.parent != null && !validateTag(n.parent)) throw new ValidationError('Invalid newTag parent');
+  }
+  for (const r of renames) {
+    if (!validateTag(r?.from) || !validateTag(r?.to)) throw new ValidationError('Invalid rename entry');
+  }
+  for (const m of merges) {
+    if (!Array.isArray(m?.from) || m.from.length === 0 || !validateTag(m?.to)) throw new ValidationError('Invalid merge entry');
+    for (const f of m.from) if (!validateTag(f)) throw new ValidationError('Invalid merge source');
+  }
+  for (const p of parents) {
+    if (!validateTag(p?.tag)) throw new ValidationError('Invalid parent entry tag');
+    if (p.parent != null && !validateTag(p.parent)) throw new ValidationError('Invalid parent entry parent');
+  }
+  for (const [, tags] of [...Object.entries(adds), ...Object.entries(removes)]) {
+    if (!Array.isArray(tags)) throw new ValidationError('Assignment tags must be arrays');
+    for (const t of tags) if (!validateTag(t)) throw new ValidationError('Invalid assignment tag');
+  }
+
+  const allBinIds = new Set([...Object.keys(adds), ...Object.keys(removes)]);
+  if (allBinIds.size > MAX_BINS_PER_APPLY) throw new ValidationError(`At most ${MAX_BINS_PER_APPLY} bins per apply`);
+
+  const proposedParent = new Map<string, string | null>();
+  for (const p of parents) proposedParent.set(p.tag, p.parent);
+  for (const n of newTags) if (n.parent) proposedParent.set(n.tag, n.parent);
+  for (const [tag] of proposedParent) {
+    const seen = new Set<string>();
+    let cur: string | null | undefined = tag;
+    while (cur) {
+      if (seen.has(cur)) throw new HttpError(422, 'PARENT_CYCLE', `Tag "${tag}" would be its own ancestor`);
+      seen.add(cur);
+      cur = proposedParent.get(cur) ?? null;
+    }
+  }
+
+  await requireMemberOrAbove(locationId, req.user!.id, 'apply tag suggestions');
+
+  const allRenames: Array<{ from: string; to: string }> = [
+    ...renames,
+    ...merges.flatMap((m) => m.from.map((f) => ({ from: f, to: m.to }))),
+  ];
+
+  const counts = await withTransaction(async (txQuery) => {
+    let tagsCreated = 0;
+    let tagsRenamed = 0;
+    let parentsSet = 0;
+    let binsAddedTo = 0;
+    let binsRemovedFrom = 0;
+
+    const binIdList = [...allBinIds];
+    if (binIdList.length > 0) {
+      const placeholders = binIdList.map((_, i) => `$${i + 3}`).join(', ');
+      const visible = await txQuery<{ id: string }>(
+        `SELECT id FROM bins
+         WHERE location_id = $1 AND deleted_at IS NULL
+           AND (visibility = 'location' OR created_by = $2)
+           AND id IN (${placeholders})`,
+        [locationId, req.user!.id, ...binIdList],
+      );
+      const visibleSet = new Set(visible.rows.map((r) => r.id));
+      for (const id of binIdList) {
+        if (!visibleSet.has(id)) throw new ValidationError(`Bin ${id} not found in this location`);
+      }
+    }
+
+    for (const r of allRenames) {
+      const result = await txQuery<{ updated: number }>(
+        `UPDATE bins
+         SET tags = (
+           SELECT ${d.jsonGroupArray('tag')} FROM (
+             SELECT DISTINCT CASE WHEN jt.value = $2 THEN $3 ELSE jt.value END AS tag
+             FROM ${d.jsonEachFrom('bins.tags', 'jt')}
+           )
+         ),
+         updated_at = ${d.now()}
+         WHERE location_id = $1
+           AND deleted_at IS NULL
+           AND EXISTS (SELECT 1 FROM ${d.jsonEachFrom('tags', 'jt2')} WHERE jt2.value = $2)
+         RETURNING 1 AS updated`,
+        [locationId, r.from, r.to],
+      );
+      await txQuery(
+        `UPDATE tag_colors SET tag = $1, updated_at = ${d.now()}
+         WHERE location_id = $2 AND tag = $3`,
+        [r.to, locationId, r.from],
+      );
+      await txQuery(
+        `UPDATE tag_colors SET parent_tag = $1, updated_at = ${d.now()}
+         WHERE location_id = $2 AND parent_tag = $3`,
+        [r.to, locationId, r.from],
+      );
+      if (result.rows.length > 0) tagsRenamed += 1;
+    }
+
+    for (const n of newTags) {
+      await txQuery(
+        `INSERT INTO tag_colors (id, location_id, tag, color, parent_tag)
+         VALUES ($1, $2, $3, '', $4)
+         ON CONFLICT (location_id, tag) DO NOTHING`,
+        [generateUuid(), locationId, n.tag, n.parent ?? null],
+      );
+      tagsCreated += 1;
+    }
+
+    for (const p of parents) {
+      const result = await txQuery<{ updated: number }>(
+        `UPDATE tag_colors SET parent_tag = $1, updated_at = ${d.now()}
+         WHERE location_id = $2 AND tag = $3
+         RETURNING 1 AS updated`,
+        [p.parent, locationId, p.tag],
+      );
+      if (result.rows.length > 0) parentsSet += 1;
+    }
+
+    for (const [binId, tags] of Object.entries(adds)) {
+      if (tags.length === 0) continue;
+      const result = await txQuery<{ updated: number }>(
+        `UPDATE bins SET tags = (
+           SELECT ${d.jsonGroupArray('tag')} FROM (
+             SELECT DISTINCT jt.value AS tag FROM ${d.jsonEachFrom('bins.tags', 'jt')}
+             UNION SELECT value AS tag FROM ${d.jsonEachFrom('$1', 'jt_new')}
+           )
+         ), updated_at = ${d.now()}
+         WHERE id = $2 AND location_id = $3 AND deleted_at IS NULL
+         RETURNING 1 AS updated`,
+        [JSON.stringify(tags), binId, locationId],
+      );
+      if (result.rows.length > 0) binsAddedTo += 1;
+    }
+
+    for (const [binId, tags] of Object.entries(removes)) {
+      if (tags.length === 0) continue;
+      const result = await txQuery<{ updated: number }>(
+        `UPDATE bins SET tags = (
+           SELECT ${d.jsonGroupArray('jt.value')}
+           FROM ${d.jsonEachFrom('bins.tags', 'jt')}
+           WHERE jt.value NOT IN (SELECT value FROM ${d.jsonEachFrom('$1', 'jt_rem')})
+         ), updated_at = ${d.now()}
+         WHERE id = $2 AND location_id = $3 AND deleted_at IS NULL
+         RETURNING 1 AS updated`,
+        [JSON.stringify(tags), binId, locationId],
+      );
+      if (result.rows.length > 0) binsRemovedFrom += 1;
+    }
+
+    return { tagsCreated, tagsRenamed, parentsSet, binsAddedTo, binsRemovedFrom };
+  });
+
+  logRouteActivity(req, {
+    entityType: 'tag',
+    locationId,
+    action: 'bulk_suggest',
+    entityId: undefined,
+    entityName: undefined,
+    changes: { counts: { old: null, new: counts } },
+  });
+
+  res.json(counts);
 }));
 
 export default router;
