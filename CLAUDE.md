@@ -6,7 +6,7 @@ AI-powered bin inventory. Multi-user web app where AI does the organizing work: 
 
 **Data model**: Location → Area → **Bin** → Items. The bin is the core entity — not individual items. Items exist only inside a bin (name + optional quantity, no independent identity). Custom fields, photos, tags, and QR codes all attach to bins. This is a "what's in this container" tool, not an asset tracker.
 
-**AI capabilities**: Photo-to-bin suggestions (name + items + tags + custom fields), turn-based Ask AI chat, AI-powered bulk reorganize, per-task provider overrides (vision / quickText / deepText). Supported providers: OpenAI, Anthropic, Gemini, OpenAI-compatible (incl. Ollama).
+**AI capabilities**: Photo-to-bin suggestions (name + items + custom fields), turn-based Ask AI chat, AI-powered bulk reorganize, per-task provider overrides (vision / quickText / deepText). Supported providers: OpenAI, Anthropic, Gemini, OpenAI-compatible (incl. Ollama).
 
 **Core flows**: Register/login → Create/join location → Snap photo or create bin → Print QR label → Scan or ask AI to find contents.
 
@@ -17,7 +17,7 @@ AI-powered bin inventory. Multi-user web app where AI does the organizing work: 
 - **Database engine**: Set `DATABASE_URL` env var for PostgreSQL; omit for SQLite. Engine is locked after first init (cannot switch). Dialect abstraction in `server/src/db/dialect.ts` (`d` object) handles SQL differences.
 - **Open-core split**: Proprietary cloud code lives in `src/ee/` (licensed separately; see `src/ee/LICENSE`). EE imports go through the compile-time global `__EE__` (injected by `vite.config.ts` when `BUILD_EDITION=cloud`). Pattern: `const UpgradeDialog = __EE__ ? lazy(() => import('@/ee/UpgradeDialog')...) : (() => null) as React.FC<…>`. Use `npm run dev:cloud:all` to build with `__EE__=true`; the default `npm run dev:all` leaves EE components as no-ops.
 - **Docker**: Single container (Express serves static frontend + API), reverse proxy optional
-- Features live in `src/features/`, server code in `server/src/`, shared types in @src/types.ts
+- Features live in `src/features/` (notably: `bulk-add` = group-first photo-to-bins flow, `capture` = camera UI with grouping), server code in `server/src/`, shared types in @src/types.ts
 - No ESLint or Prettier — single root `biome.json` covers both `src/` and `server/src/`.
 
 ## Code Conventions
@@ -27,6 +27,7 @@ AI-powered bin inventory. Multi-user web app where AI does the organizing work: 
 - **Data hooks return `{ data, isLoading }`** — e.g. `useBinList()` → `{ bins, isLoading }`.
 - **Key utilities**: `apiFetch()` in `lib/api.ts`, `useAuth()` in `lib/auth.tsx`, `useAppSettings()` in `lib/appSettings.ts`, `LocationProvider` in `features/locations/useLocations.tsx`, `usePermissions()` in `lib/usePermissions.ts`, `cn()` in `lib/utils.ts`. Read the source for signatures.
 - **List fetching**: Three helpers in `lib/useListQuery.ts` — `useListData<T>(path, events, transform?)` for simple lists, `usePaginatedList<T>(path, events, pageSize?)` for offset-based loadMore, `usePagedList<T>(…)` for page-based replace. All watch event-bus events, skip on null path, abort stale responses, and expose `error` + `isLoading`. Prefer these over hand-rolled `useEffect` fetches.
+- **Dialog mount-on-open**: Use `useMountOnOpen(isOpen)` from `lib/useMountOnOpen.ts` for lazy-mounting dialog bodies — replaces hand-rolled `xxxMounted useRef` patterns.
 - **Soft deletes**: `DELETE /api/bins/:id` sets `deleted_at`. All bin queries filter `WHERE deleted_at IS NULL`.
 - **API response envelopes**: Lists return `{ results: T[], count }`. Errors return `{ error: "CODE", message }`. See `server/openapi.yaml` for details.
 - **Icons**: `lucide-react` — import named icons (e.g. `import { Plus } from 'lucide-react'`).
@@ -54,11 +55,12 @@ OpenAPI spec at `server/openapi.yaml`.
 - **`CORS_ORIGIN`**: Defaults to `http://localhost:5173`. Must be set to the production URL (e.g. `https://cloud.openbin.app`) in deployment — otherwise the dev origin leaks into production ACAO headers.
 - **Thumbnail generation**: Worker pool via `piscina` (`server/src/lib/thumbnailPool.ts`). Sharp runs off-main-thread to avoid blocking the event loop.
 - **Export streaming**: Large exports stream JSON via `res.write()` to prevent OOM. Don't buffer the full response in `server/src/routes/export.ts`.
-- **Ask AI chat**: `useConversation` in `src/features/ai/useConversation.ts` drives a turn-based chat model (replaces the old `useCommandInputState`). Per-session memory only — conversation clears on dialog close or route change. Desktop uses `CommandInput` dialog; mobile (`< 1024px`) navigates to `/ask` full-page route. Both consume `ConversationThread` + `ConversationComposer`. Server accepts optional `history` on the three streaming endpoints via `parseHistoryFromBody()` in `server/src/lib/conversationHistory.ts`.
+- **Ask AI chat**: `useConversation` in `src/features/ai/useConversation.ts` drives turn-based chat. Per-session memory only — conversation clears on dialog close or route change. Desktop uses `CommandInput` dialog; mobile (`< 1024px`) uses `/ask` full-page route. Both consume `ConversationThread` + `ConversationComposer`. Server accepts optional `history` on `/ai/ask/stream`, `/ai/query/stream`, `/ai/command/stream` via `parseHistoryFromBody()` (`server/src/lib/conversationHistory.ts`). Command-action turns execute in a single round-trip via `POST /api/batch` (`server/src/routes/batch.ts`).
 
 ## Security (non-obvious)
 
 - **JWT secret** auto-generated and persisted to `/data/.jwt_secret` if `JWT_SECRET` env var unset.
+- **CSRF protection**: Double-submit cookie pattern — `server/src/lib/csrf.ts`. `apiFetch()` sends the token header automatically; server rejects mutating requests without matching cookie+header.
 - **AI API key encryption**: AES-256-GCM when `AI_ENCRYPTION_KEY` env var set. Graceful fallback to plaintext.
 - **Dual auth**: Middleware supports JWT tokens and API keys (`sk_openbin_` prefix). `req.authMethod` is `'jwt' | 'api_key'`.
 - **Roles**: Three-tier role system — `admin`, `member`, `viewer`. Viewers are read-only (no create/edit/delete/pin). Use `usePermissions()` hook for client-side guards and `requireMemberOrAbove()` middleware for server-side.
