@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
-import { computeOverLimits, generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
+import { computeOverLimits, generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, SELF_HOSTED_USAGE_STUB, SELF_HOSTED_USAGE_SUMMARY_STUB, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -74,14 +74,7 @@ router.get('/usage', authenticate, asyncHandler(async (req, res) => {
     // No plan limits exist on self-hosted — return an empty usage snapshot with no over-limits.
     // Defense in depth: the client short-circuits this endpoint too, but direct API consumers
     // (older clients, API keys) may still call it.
-    res.json({
-      binCount: 0,
-      locationCount: 0,
-      photoCount: 0,
-      photoStorageMb: 0,
-      memberCounts: {},
-      overLimits: { locations: false, photos: false, members: [] },
-    });
+    res.json(SELF_HOSTED_USAGE_STUB);
     return;
   }
 
@@ -99,15 +92,7 @@ router.get('/usage', authenticate, asyncHandler(async (req, res) => {
 router.get('/usage-summary', authenticate, asyncHandler(async (req, res) => {
   if (isSelfHosted()) {
     // Self-hosted has no plan limits or AI credit quotas to report.
-    res.json({
-      binCount: 0,
-      photoCount: 0,
-      photoStorageMb: 0,
-      customFieldCount: 0,
-      aiCreditsUsed: 0,
-      aiCreditsLimit: 0,
-      aiCreditsResetsAt: null,
-    });
+    res.json(SELF_HOSTED_USAGE_SUMMARY_STUB);
     return;
   }
 

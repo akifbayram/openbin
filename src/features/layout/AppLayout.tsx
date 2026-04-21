@@ -25,6 +25,7 @@ import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTerminology } from '@/lib/terminology';
 import { useTheme } from '@/lib/theme';
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
+import { useMountOnOpen } from '@/lib/useMountOnOpen';
 import { usePermissions } from '@/lib/usePermissions';
 import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
@@ -58,8 +59,7 @@ export function AppLayout() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
-  const scanMounted = useRef(false);
-  if (scanDialogOpen) scanMounted.current = true;
+  const scanMounted = useMountOnOpen(scanDialogOpen);
   const openScanDialog = useCallback(() => setScanDialogOpen(true), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { preferences, updatePreferences } = useUserPreferences();
@@ -72,8 +72,7 @@ export function AppLayout() {
   const firstBinId = binIds.length > 0 ? binIds[0] : null;
   const [isMobile] = useState(() => !window.matchMedia('(min-width: 1024px)').matches);
   const [commandOpen, setCommandOpen] = useState(false);
-  const commandMounted = useRef(false);
-  if (commandOpen) commandMounted.current = true;
+  const commandMounted = useMountOnOpen(commandOpen);
   const aiEnabled = !!aiSettings && (isSelfHosted || !isGated('ai') || demoMode);
   const rawNavigate = useNavigate();
   const location = useLocation();
@@ -286,12 +285,12 @@ export function AppLayout() {
         onAction={(id) => shortcutActions[id]?.()}
       />
       <ShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
-      {scanMounted.current && (
+      {scanMounted && (
         <Suspense fallback={null}>
           <ScanDialog open={scanDialogOpen} onOpenChange={setScanDialogOpen} />
         </Suspense>
       )}
-      {aiEnabled && commandMounted.current && (
+      {aiEnabled && commandMounted && (
         <Suspense fallback={null}>
           <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />
         </Suspense>

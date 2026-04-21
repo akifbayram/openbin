@@ -1,7 +1,6 @@
 import { Paperclip } from 'lucide-react';
-import { useId } from 'react';
+import { lazy, Suspense, useId } from 'react';
 import { EmptyState } from '@/components/ui/empty-state';
-import { UpgradePrompt } from '@/ee/UpgradePrompt';
 import { AttachmentsList } from '@/features/attachments/AttachmentsList';
 import { useAttachments } from '@/features/attachments/useAttachments';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
@@ -9,6 +8,10 @@ import { isAttachmentsEnabled } from '@/lib/qrConfig';
 import { usePlan } from '@/lib/usePlan';
 import { sectionHeader } from '@/lib/utils';
 import type { Photo } from '@/types';
+
+const UpgradePrompt = __EE__
+  ? lazy(() => import('@/ee/UpgradePrompt').then(m => ({ default: m.UpgradePrompt })))
+  : (() => null) as React.FC<Record<string, unknown>>;
 
 interface BinDetailFilesTabProps {
   binId: string;
@@ -58,12 +61,14 @@ export function BinDetailFilesTab({ binId, photos, canEdit }: BinDetailFilesTabP
               Documents
             </h3>
           )}
-          {attachmentsGated && canEdit && (
-            <UpgradePrompt
-              feature="Document Attachments"
-              description="Upload PDFs, spreadsheets, and other files to bins."
-              upgradeUrl={planInfo.upgradeUrl}
-            />
+          {__EE__ && attachmentsGated && canEdit && (
+            <Suspense fallback={null}>
+              <UpgradePrompt
+                feature="Document Attachments"
+                description="Upload PDFs, spreadsheets, and other files to bins."
+                upgradeUrl={planInfo.upgradeUrl}
+              />
+            </Suspense>
           )}
           <AttachmentsList
             binId={binId}

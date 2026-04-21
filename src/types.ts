@@ -160,18 +160,19 @@ export interface Attachment {
   created_at: string;
 }
 
-export interface TagColor {
-  // The list endpoint (GET /api/tag-colors) only returns tag, color, parent_tag — the fields
-  // consumers actually render. id/location_id/created_at/updated_at are only present on
-  // mutation responses (PUT returns a full row). Marked optional so list responses typecheck
-  // without clients accidentally depending on absent fields.
-  id?: string;
-  location_id?: string;
+/** List response — trimmed projection (GET /api/tag-colors). */
+export interface TagColorSummary {
   tag: string;
   color: string;
   parent_tag: string | null;
-  created_at?: string;
-  updated_at?: string;
+}
+
+/** Full row — mutation responses (PUT/DELETE). */
+export interface TagColor extends TagColorSummary {
+  id: string;
+  location_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ExportedPhoto {

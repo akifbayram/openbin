@@ -12,7 +12,7 @@ import { useToast } from '@/components/ui/toast';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength';
-import { getAuthStatusConfig, isSelfHostedInstance, waitForConfig } from '@/lib/qrConfig';
+import { isSelfHostedInstance, useAuthStatusConfig } from '@/lib/qrConfig';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
 import { cn, EMAIL_REGEX, focusRing, getErrorMessage } from '@/lib/utils';
 import { SocialButtons, SocialDivider } from './SocialButtons';
@@ -30,11 +30,7 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [inviteCode, setInviteCode] = useState(searchParams.get('invite') ?? '');
-  const [registrationMode, setRegistrationMode] = useState<'open' | 'invite'>('open');
-  const [oauthProviders, setOAuthProviders] = useState<string[]>([]);
-  const [selfHosted, setSelfHosted] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [statusLoaded, setStatusLoaded] = useState(false);
   const [invitePreview, setInvitePreview] = useState<{ name: string; memberCount: number } | null>(null);
   const [inviteInvalid, setInviteInvalid] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -45,23 +41,18 @@ export function RegisterPage() {
   const confirmRef = useRef<HTMLInputElement>(null);
   const inviteRef = useRef<HTMLInputElement>(null);
 
+  const { config: authStatus, loaded: statusLoaded } = useAuthStatusConfig();
+  const registrationMode: 'open' | 'invite' = authStatus.registrationMode === 'invite' ? 'invite' : 'open';
+  const oauthProviders = authStatus.oauthProviders;
+  const selfHosted = isSelfHostedInstance();
+
   useEffect(() => {
-    let cancelled = false;
-    waitForConfig().then(() => {
-      if (cancelled) return;
-      const status = getAuthStatusConfig();
-      if (!status.registrationEnabled || status.registrationMode === 'closed') {
-        showToast({ message: 'Registration is currently disabled', variant: 'warning' });
-        navigate('/login');
-      }
-      setRegistrationMode(status.registrationMode === 'invite' ? 'invite' : 'open');
-      setOAuthProviders(status.oauthProviders);
-      setSelfHosted(isSelfHostedInstance());
-      setStatusLoaded(true);
-    });
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate, showToast]);
+    if (!statusLoaded) return;
+    if (!authStatus.registrationEnabled || authStatus.registrationMode === 'closed') {
+      showToast({ message: 'Registration is currently disabled', variant: 'warning' });
+      navigate('/login');
+    }
+  }, [statusLoaded, authStatus.registrationEnabled, authStatus.registrationMode, navigate, showToast]);
 
   // Debounced invite code preview with abort on change
   useEffect(() => {

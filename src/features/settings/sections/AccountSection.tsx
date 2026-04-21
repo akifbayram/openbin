@@ -21,6 +21,7 @@ import { compressImage } from '@/features/photos/compressImage';
 import { apiFetch, getAvatarUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength';
+import { useAuthStatusConfig } from '@/lib/qrConfig';
 import { usePlan } from '@/lib/usePlan';
 import { useWarnOnUnload } from '@/lib/useWarnOnUnload';
 import { cn, EMAIL_REGEX, getErrorMessage } from '@/lib/utils';
@@ -73,7 +74,8 @@ export function AccountSection() {
 
   // Connected accounts (OAuth)
   const [oauthLinks, setOauthLinks] = useState<{ provider: string; email: string | null; created_at: string }[]>([]);
-  const [oauthProviders, setOauthProviders] = useState<string[]>([]);
+  const { config: authStatus } = useAuthStatusConfig();
+  const oauthProviders = authStatus.oauthProviders;
   const [unlinking, setUnlinking] = useState<string | null>(null);
   const hasPassword = user?.hasPassword !== false;
 
@@ -102,13 +104,6 @@ export function AccountSection() {
 
   useEffect(() => {
     const abort = new AbortController();
-    fetch('/api/auth/status', { signal: abort.signal })
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data.oauthProviders)) setOauthProviders(data.oauthProviders);
-      })
-      .catch(() => {});
-
     apiFetch<{ results: { provider: string; email: string | null; created_at: string }[] }>(
       '/api/auth/oauth/links',
       { signal: abort.signal },
@@ -118,7 +113,7 @@ export function AccountSection() {
         if (abort.signal.aborted) return;
         showToast({ message: getErrorMessage(err, 'Failed to load connected accounts'), variant: 'error' });
       });
-    return () => abort.abort();
+    return () => { abort.abort(); };
   }, [showToast]);
 
   const passwordChecks = useMemo(() => computePasswordChecks(newPassword), [newPassword]);

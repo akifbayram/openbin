@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 export type QrPayloadMode = 'app' | 'url';
 export type RegistrationMode = 'open' | 'invite' | 'closed';
 
@@ -11,6 +13,7 @@ export interface AuthStatusConfig {
   registrationMode: RegistrationMode;
   registrationEnabled: boolean;
   oauthProviders: string[];
+  demoMode: boolean;
 }
 
 let cached: QrConfig = { qrPayloadMode: 'app' };
@@ -20,6 +23,7 @@ let authStatusCached: AuthStatusConfig = {
   registrationMode: 'open',
   registrationEnabled: true,
   oauthProviders: [],
+  demoMode: false,
 };
 let initPromise: Promise<void> | null = null;
 
@@ -37,7 +41,7 @@ export function isAttachmentsEnabled(): boolean {
   return attachmentsEnabledCached;
 }
 
-/** Snapshot of public auth-status fields (registration mode, OAuth providers). */
+/** Snapshot of public auth-status fields (registration mode, OAuth providers, demo mode). */
 export function getAuthStatusConfig(): AuthStatusConfig {
   return authStatusCached;
 }
@@ -51,6 +55,28 @@ export async function initQrConfig(): Promise<void> {
   const p = _doInit();
   initPromise = p;
   return p;
+}
+
+/**
+ * Subscribe once to the initial config fetch and expose the cached auth-status snapshot.
+ * Consumers narrow the snapshot themselves (e.g. RegisterPage narrows registrationMode
+ * to 'open' | 'invite'); this hook owns only the loading wiring.
+ */
+export function useAuthStatusConfig(): { config: AuthStatusConfig; loaded: boolean } {
+  const [loaded, setLoaded] = useState(false);
+  const [config, setConfig] = useState<AuthStatusConfig>(authStatusCached);
+
+  useEffect(() => {
+    let cancelled = false;
+    waitForConfig().then(() => {
+      if (cancelled) return;
+      setConfig(getAuthStatusConfig());
+      setLoaded(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  return { config, loaded };
 }
 
 async function _doInit(): Promise<void> {
@@ -77,6 +103,7 @@ async function _doInit(): Promise<void> {
       registrationMode: mode,
       registrationEnabled: data.registrationEnabled !== false,
       oauthProviders: Array.isArray(data.oauthProviders) ? data.oauthProviders : [],
+      demoMode: data.demoMode === true,
     };
   } catch {
     // Keep defaults on network failure

@@ -3,7 +3,7 @@ import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Events, notify } from '@/lib/eventBus';
 import { useListData } from '@/lib/useListData';
-import type { TagColor } from '@/types';
+import type { TagColorSummary } from '@/types';
 
 function notifyTagColorsChanged() {
   notify(Events.TAG_COLORS);
@@ -11,7 +11,7 @@ function notifyTagColorsChanged() {
 
 export function useTagColors() {
   const { activeLocationId, token } = useAuth();
-  const { data: rawTagColors, isLoading } = useListData<TagColor>(
+  const { data: rawTagColors, isLoading } = useListData<TagColorSummary>(
     token && activeLocationId
       ? `/api/tag-colors?location_id=${encodeURIComponent(activeLocationId)}`
       : null,

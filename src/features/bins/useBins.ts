@@ -59,16 +59,28 @@ export function countActiveFilters(f: BinFilters): number {
  * Used by the tour/onboarding layer in AppLayout so every route doesn't trigger a
  * full ~60KB `/api/bins` fetch. Server default sort is `updated_at DESC`, matching
  * what `useBinList` would pick as "first bin".
+ *
+ * Caches the returned IDs array by content equality so downstream memos (e.g. AppLayout's
+ * tourContext) don't invalidate on every BINS refresh when IDs are unchanged.
  */
 export function useFirstBinIds(limit = 6): { binIds: string[]; isLoading: boolean } {
   const { activeLocationId, token } = useAuth();
-  const { data, isLoading } = useListData<Bin>(
+  const prevIdsRef = useRef<string[]>([]);
+  const { data: binIds, isLoading } = useListData<string, Bin>(
     token && activeLocationId
       ? `/api/bins?location_id=${encodeURIComponent(activeLocationId)}&limit=${limit}`
       : null,
     [Events.BINS],
+    (rows) => {
+      const next = rows.map((r) => r.id);
+      const prev = prevIdsRef.current;
+      if (prev.length === next.length && prev.every((id, i) => id === next[i])) {
+        return prev;
+      }
+      prevIdsRef.current = next;
+      return next;
+    },
   );
-  const binIds = useMemo(() => data.map((b) => b.id), [data]);
   return { binIds, isLoading };
 }
 

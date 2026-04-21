@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/toast';
 import { apiFetch } from '@/lib/api';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
+import { useAuthStatusConfig } from '@/lib/qrConfig';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
 import { cn, focusRing, getErrorMessage } from '@/lib/utils';
 import { useOAuthReturn } from './OAuthReturn';
@@ -26,26 +27,17 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [registrationEnabled, setRegistrationEnabled] = useState(true);
-  const [demoMode, setDemoMode] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [demoFailed, setDemoFailed] = useState(false);
   const [formError, setFormError] = useState('');
-  const [oauthProviders, setOAuthProviders] = useState<string[]>([]);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
-  useOAuthReturn();
+  const { config: authStatus } = useAuthStatusConfig();
+  const { registrationEnabled, oauthProviders } = authStatus;
+  const demoMode = authStatus.demoMode && !demoFailed;
 
-  useEffect(() => {
-    fetch('/api/auth/status')
-      .then((r) => r.json())
-      .then((data) => {
-        setRegistrationEnabled(data.registrationEnabled !== false);
-        if (data.demoMode) setDemoMode(true);
-        if (Array.isArray(data.oauthProviders)) setOAuthProviders(data.oauthProviders);
-      })
-      .catch(() => {});
-  }, []);
+  useOAuthReturn();
 
   useEffect(() => {
     if (!demoMode) return;
@@ -64,7 +56,7 @@ export function LoginPage() {
       .catch(() => {
         if (!cancelled) {
           setDemoLoading(false);
-          setDemoMode(false);
+          setDemoFailed(true);
           showToast({ message: 'Demo login failed. Please sign in manually.', variant: 'error' });
         }
       });

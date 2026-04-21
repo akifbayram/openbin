@@ -1,10 +1,11 @@
-import { lazy, Suspense, useCallback, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/toast';
 import { BulkActionBar } from '@/features/bins/BulkActionBar';
 import { updateBin } from '@/features/bins/useBins';
 import type { BulkDialog } from '@/features/bins/useBulkDialogs';
 import type { Terminology } from '@/lib/terminology';
+import { useMountOnOpen } from '@/lib/useMountOnOpen';
 import type { Bin } from '@/types';
 
 const BinCreateDialog = lazy(() =>
@@ -65,23 +66,14 @@ export function DashboardDialogs({
 
   // Mount each lazy dialog only after it has been opened at least once.
   // Keep it mounted thereafter so exit/close animations can play out.
-  const createMounted = useRef(false);
-  if (createOpen) createMounted.current = true;
-
-  const tagMounted = useRef(false);
-  if (bulk.isOpen('tag')) tagMounted.current = true;
-  const areaMounted = useRef(false);
-  if (bulk.isOpen('area')) areaMounted.current = true;
-  const appearanceMounted = useRef(false);
-  if (bulk.isOpen('appearance')) appearanceMounted.current = true;
-  const visibilityMounted = useRef(false);
-  if (bulk.isOpen('visibility')) visibilityMounted.current = true;
-  const customFieldsMounted = useRef(false);
-  if (bulk.isOpen('customFields')) customFieldsMounted.current = true;
-  const locationMounted = useRef(false);
-  if (bulk.isOpen('location')) locationMounted.current = true;
-  const deleteMounted = useRef(false);
-  if (bulkDeleteOpen) deleteMounted.current = true;
+  const createMounted = useMountOnOpen(createOpen);
+  const tagMounted = useMountOnOpen(bulk.isOpen('tag'));
+  const areaMounted = useMountOnOpen(bulk.isOpen('area'));
+  const appearanceMounted = useMountOnOpen(bulk.isOpen('appearance'));
+  const visibilityMounted = useMountOnOpen(bulk.isOpen('visibility'));
+  const customFieldsMounted = useMountOnOpen(bulk.isOpen('customFields'));
+  const locationMounted = useMountOnOpen(bulk.isOpen('location'));
+  const deleteMounted = useMountOnOpen(bulkDeleteOpen);
 
   const handleCopyStyle = useCallback(() => {
     const [id] = selectedIds;
@@ -102,7 +94,7 @@ export function DashboardDialogs({
 
   return (
     <>
-      {createMounted.current && (
+      {createMounted && (
         <Suspense fallback={null}>
           <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} allTags={allTags} />
         </Suspense>
@@ -132,37 +124,37 @@ export function DashboardDialogs({
             isBusy={isBusy}
             onPrint={() => navigate(`/print?ids=${[...selectedIds].join(',')}`)}
           />
-          {tagMounted.current && (
+          {tagMounted && (
             <Suspense fallback={null}>
               <BulkTagDialog open={bulk.isOpen('tag')} onOpenChange={(v) => v ? bulk.open('tag') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} allTags={allTags} />
             </Suspense>
           )}
-          {areaMounted.current && (
+          {areaMounted && (
             <Suspense fallback={null}>
               <BulkAreaDialog open={bulk.isOpen('area')} onOpenChange={(v) => v ? bulk.open('area') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} />
             </Suspense>
           )}
-          {appearanceMounted.current && (
+          {appearanceMounted && (
             <Suspense fallback={null}>
               <BulkAppearanceDialog open={bulk.isOpen('appearance')} onOpenChange={(v) => v ? bulk.open('appearance') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} />
             </Suspense>
           )}
-          {visibilityMounted.current && (
+          {visibilityMounted && (
             <Suspense fallback={null}>
               <BulkVisibilityDialog open={bulk.isOpen('visibility')} onOpenChange={(v) => v ? bulk.open('visibility') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} />
             </Suspense>
           )}
-          {customFieldsMounted.current && (
+          {customFieldsMounted && (
             <Suspense fallback={null}>
               <BulkCustomFieldsDialog open={bulk.isOpen('customFields')} onOpenChange={(v) => v ? bulk.open('customFields') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} />
             </Suspense>
           )}
-          {locationMounted.current && (
+          {locationMounted && (
             <Suspense fallback={null}>
               <BulkLocationDialog open={bulk.isOpen('location')} onOpenChange={(v) => v ? bulk.open('location') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} />
             </Suspense>
           )}
-          {deleteMounted.current && (
+          {deleteMounted && (
             <Suspense fallback={null}>
               <DeleteBinDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen} binName={`${selectedIds.size} ${selectedIds.size === 1 ? t.bin : t.bins}`} onConfirm={bulkDelete} />
             </Suspense>

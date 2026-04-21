@@ -14,14 +14,15 @@ interface ListResponse {
 
 // GET /api/tag-colors returns a trimmed row shape (tag + color + parent_tag only);
 // the MCP tool only renders tag + color, so the slim shape is sufficient here.
-interface TagColor {
+// Matches client-side `TagColorSummary` in src/types.ts.
+interface TagColorSummary {
   tag: string;
   color: string;
   parent_tag?: string | null;
 }
 
 interface TagColorListResponse {
-  results: TagColor[];
+  results: TagColorSummary[];
   count: number;
 }
 

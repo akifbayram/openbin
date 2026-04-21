@@ -42,7 +42,10 @@ vi.mock('@/lib/usePlan', () => ({
 import { usePlan } from '@/lib/usePlan';
 
 describe('BinDetailFilesTab', () => {
-  it('renders UpgradePrompt when attachments feature is gated and user can edit', () => {
+  it('hides upload affordance when attachments feature is gated and user can edit', () => {
+    // In non-EE builds (test environment has __EE__=false) the UpgradePrompt
+    // is stripped by the compile-time gate — we only assert that the upload
+    // affordance is hidden when gated.
     vi.mocked(usePlan).mockReturnValue({
       planInfo: basePlanInfo,
       isLoading: false,
@@ -54,7 +57,6 @@ describe('BinDetailFilesTab', () => {
 
     render(<BinDetailFilesTab binId="bin1" photos={[]} canEdit />);
 
-    expect(screen.getByText(/upgrade to pro to unlock document attachments/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /add attachment/i })).toBeNull();
   });
 

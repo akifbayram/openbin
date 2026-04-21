@@ -494,6 +494,27 @@ export interface OverLimits {
 
 const EMPTY_OVER_LIMITS: OverLimits = { locations: false, photos: false, members: [] };
 
+/** Response stub for `/api/plan/usage` on self-hosted — no limits exist. */
+export const SELF_HOSTED_USAGE_STUB = {
+  binCount: 0,
+  locationCount: 0,
+  photoCount: 0,
+  photoStorageMb: 0,
+  memberCounts: {} as Record<string, number>,
+  overLimits: EMPTY_OVER_LIMITS,
+};
+
+/** Response stub for `/api/plan/usage-summary` on self-hosted — no plan/AI quotas to report. */
+export const SELF_HOSTED_USAGE_SUMMARY_STUB = {
+  binCount: 0,
+  photoCount: 0,
+  photoStorageMb: 0,
+  customFieldCount: 0,
+  aiCreditsUsed: 0,
+  aiCreditsLimit: 0,
+  aiCreditsResetsAt: null as string | null,
+};
+
 export function computeOverLimits(
   usage: { locationCount: number; photoStorageMb: number; memberCounts: Record<string, number> },
   features: PlanFeatures,
