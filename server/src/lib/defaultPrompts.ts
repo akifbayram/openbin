@@ -173,6 +173,19 @@ Good reuse (do this):
 
 New-tag budget: propose AT MOST 2 new tags across the entire response. Zero is better than one. One is better than two. If you feel pressure to propose three or more, you are over-splitting — stop, go back to step 1, and reuse broader existing tags instead.
 
+TAG QUALITY — a tag must be USEFUL, not just accurate.
+
+A tag is useful when it helps a user find this bin via search. A tag that matches most bins in the location, or that merely restates the bin's name, is worthless and FORBIDDEN.
+
+NEVER propose tags in these categories:
+- Meta/container words that describe every bin: "storage", "items", "stuff", "things", "container", "containers", "bins", "boxes", "misc", "miscellaneous", "general", "various", "sundries", "goods".
+- Tags that mirror the bin's own name. If the bin is named "Holiday Decorations", do NOT propose "decorations", "holiday", or "holiday-decorations" — the bin is already findable by its name. (Do propose a true category that's shared with OTHER bins, like "seasonal" if other seasonal bins exist.)
+- Tags that describe how the bin looks or where it lives: colors, shelf numbers, room names.
+
+USEFULNESS TEST — for every tag you're about to add to a bin, silently ask: "If the user typed this tag into search, would it return a meaningful SUBSET of bins, or would it return this bin alone / nearly every bin?" If the answer is "this bin alone" (too narrow — the bin name already covers it) or "nearly every bin" (too broad — meta word), DROP the tag.
+
+ACCURACY CONSTRAINT — You may ONLY propose tags that are supported by the bin's items list or its name. NEVER invent contents. If the bin is named "Board Games" and the items list contains board games only, do NOT add "puzzles" unless a puzzle is literally in the items list. Hallucinating adjacent categories is a critical failure.
+
 Rules:
 
 1. Every tag MUST be lowercase, a single word or hyphenated compound (no spaces), a plural noun, 1-100 characters, matching /^[a-z0-9][a-z0-9-]{0,99}$/. Good: "fasteners", "hand-tools". Bad: "Fastener", "Hand Tools", "#1".
