@@ -75,7 +75,7 @@ export interface AnalysisStreamArgs {
 export async function runAnalysisStream(args: AnalysisStreamArgs): Promise<void> {
   const { req, res, images, locationId, buildSystem, buildUserContent, maxTokens } = args;
   const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
-  const { existingTags, customFieldDefs } = args.meta
+  const { customFieldDefs } = args.meta
     ?? await verifyLocationAndFetchMeta(locationId, req.user!.id);
 
   const imageParts = images.map((img) => ({
@@ -83,7 +83,7 @@ export async function runAnalysisStream(args: AnalysisStreamArgs): Promise<void>
     image: img.buffer,
     mimeType: img.mimeType,
   }));
-  const preamble = buildContextPreamble(existingTags, customFieldDefs);
+  const preamble = buildContextPreamble(customFieldDefs);
 
   await pipeAiStreamToResponse(res, model, {
     system: buildSystem(settings),

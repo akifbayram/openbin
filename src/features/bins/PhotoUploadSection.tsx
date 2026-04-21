@@ -1,6 +1,6 @@
 import { Camera, Image, Plus, X } from 'lucide-react';
 import { useState } from 'react';
-import { MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
+import { MAX_AI_PHOTOS } from '@/features/ai/aiConstants';
 import { cn, focusRing } from '@/lib/utils';
 
 interface PhotoUploadSectionProps {

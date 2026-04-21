@@ -243,13 +243,3 @@ describe('POST /api/ai/test', () => {
   });
 });
 
-describe('POST /api/ai/analyze', () => {
-  it('422 for missing photoId', async () => {
-    const { token } = await createTestUser(app);
-    const res = await request(app)
-      .post('/api/ai/analyze')
-      .set('Authorization', `Bearer ${token}`)
-      .send({});
-    expect(res.status).toBe(422);
-  });
-});

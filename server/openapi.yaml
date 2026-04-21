@@ -1033,12 +1033,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AiSuggestedItem'
-        tags:
-          type: array
-          items:
-            type: string
-        notes:
-          type: string
         customFields:
           type: object
           additionalProperties:
@@ -4936,83 +4930,6 @@ paths:
         '403':
           $ref: '#/components/responses/PlanRestricted'
 
-  /ai/analyze:
-    post:
-      tags: [AI]
-      summary: Analyze stored photo(s) with AI
-      description: |
-        Sends one or more stored photos to the configured AI provider for analysis.
-        Returns suggested bin name, items, tags, and notes. Max 5 photos.
-        Rate limited to 30 per hour. Requires Pro plan.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AiAnalyzeRequest'
-      responses:
-        '200':
-          description: AI suggestions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AiSuggestions'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/PlanRestricted'
-        '404':
-          description: Photo not found or AI not configured
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-
-  /ai/analyze-image:
-    post:
-      tags: [AI]
-      summary: Analyze uploaded image(s) with AI
-      description: |
-        Directly uploads image(s) for AI analysis without storing them first.
-        Used during onboarding. Accepts up to 5 images, 5MB each.
-        Rate limited to 30 per hour. Requires Pro plan.
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                photos:
-                  type: array
-                  items:
-                    type: string
-                    format: binary
-                  maxItems: 5
-      responses:
-        '200':
-          description: AI suggestions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AiSuggestions'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/PlanRestricted'
-        '404':
-          description: AI not configured
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-
   /ai/test:
     post:
       tags: [AI]
@@ -5334,8 +5251,8 @@ paths:
       tags: [AI]
       summary: Stream AI analysis of uploaded image(s) via SSE
       description: |
-        Streaming version of /ai/analyze-image. Uploads image(s) and streams back
-        AI suggestions (name, items, tags, notes) as SSE events. Max 5 images, 5MB each.
+        Uploads image(s) for AI analysis without storing them first and streams back
+        AI suggestions (name, items, tags) as SSE events. Max 5 images, 5MB each.
         Requires Pro plan.
       requestBody:
         required: true
@@ -5382,8 +5299,8 @@ paths:
       tags: [AI]
       summary: Stream AI analysis of stored photo(s) via SSE
       description: |
-        Streaming version of /ai/analyze. Analyzes one or more stored photos and
-        streams back AI suggestions as SSE events. Max 5 photos. Requires Pro plan.
+        Analyzes one or more stored photos and streams back AI suggestions
+        as SSE events. Max 5 photos. Requires Pro plan.
       requestBody:
         required: true
         content:
@@ -5407,6 +5324,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/reanalyze/stream:
+    post:
+      tags: [AI]
+      summary: Stream AI reanalysis of stored photo(s) with previous result via SSE
+      description: |
+        Streaming reanalysis of one or more stored photos using a previous analysis
+        result as context. Streams back revised suggestions as SSE events.
+        Max 5 photos. Requires Pro plan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [previousResult]
+              properties:
+                photoId:
+                  type: string
+                  format: uuid
+                  description: Single photo to reanalyze
+                photoIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  maxItems: 5
+                  description: Multiple photos to reanalyze (max 5)
+                previousResult:
+                  type: object
+                  required: [name, items]
+                  properties:
+                    name:
+                      type: string
+                    items:
+                      type: array
+                      items:
+                        type: string
+                  description: The previous AI analysis result to refine
+      responses:
+        '200':
+          description: SSE stream of JSON chunks (final JSON matches AiSuggestions schema)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
+        '404':
+          description: Photo not found or AI not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/RateLimited'
 
@@ -5436,12 +5413,6 @@ paths:
                       type: array
                       items:
                         type: string
-                    tags:
-                      type: array
-                      items:
-                        type: string
-                    notes:
-                      type: string
                   description: The previous AI analysis result to correct
                 correction:
                   type: string

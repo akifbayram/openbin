@@ -733,14 +733,10 @@ describe('bulkAddReducer AI lifecycle', () => {
       id: g.id,
       name: 'A bin',
       items,
-      tags: ['t1'],
-      notes: 'n',
     });
     expect(result.groups[0].status).toBe('reviewed');
     expect(result.groups[0].name).toBe('A bin');
     expect(result.groups[0].items).toEqual(items);
-    expect(result.groups[0].tags).toEqual(['t1']);
-    expect(result.groups[0].notes).toBe('n');
     expect(result.groups[0].analyzeError).toBe(null);
   });
 

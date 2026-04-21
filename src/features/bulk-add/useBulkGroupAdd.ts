@@ -53,7 +53,7 @@ export type BulkAddAction =
   | { type: 'SET_EDITING_FROM_SUMMARY'; value: boolean }
   | { type: 'UPDATE_GROUP'; id: string; changes: Partial<Group> }
   | { type: 'SET_ANALYZING'; id: string }
-  | { type: 'SET_ANALYZE_RESULT'; id: string; name: string; items: BinItem[]; tags: string[]; notes: string }
+  | { type: 'SET_ANALYZE_RESULT'; id: string; name: string; items: BinItem[] }
   | { type: 'SET_ANALYZE_ERROR'; id: string; error: string }
   | { type: 'INCREMENT_CORRECTION'; id: string }
   | { type: 'RESET_CORRECTION_COUNT'; id: string }
@@ -408,8 +408,6 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
                 status: 'reviewed',
                 name: action.name,
                 items: action.items,
-                tags: action.tags,
-                notes: action.notes,
                 analyzeError: null,
               }
             : g,

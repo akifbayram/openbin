@@ -108,10 +108,10 @@ export function BinCreateForm({
   const { fields: customFieldDefs } = useCustomFields(locationId);
 
   // AI inline auto-populate state
-  type AiField = 'name' | 'items' | 'tags' | 'notes';
+  type AiField = 'name' | 'items';
   const [aiFilledFields, setAiFilledFields] = useState<Set<AiField>>(new Set());
   const [aiFillCycle, setAiFillCycle] = useState(0);
-  const preAiValues = useRef<{ name: string; items: BinItem[]; tags: string[]; notes: string } | null>(null);
+  const preAiValues = useRef<{ name: string; items: BinItem[] } | null>(null);
 
   // Progressive disclosure
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
@@ -159,25 +159,12 @@ export function BinCreateForm({
       setItems(aiItemsToBinItems(result.items));
       filled.add('items');
     }
-    if (result.tags?.length) {
-      const prev = preAiValues.current?.tags ?? [];
-      setTags([...new Set([...prev, ...result.tags.map(t => t.toLowerCase())])]);
-      filled.add('tags');
-    }
-    if (result.notes) {
-      setNotes(result.notes);
-      filled.add('notes');
-    }
     if (result.customFields && Object.keys(result.customFields).length > 0) {
       setCustomFields(result.customFields);
     }
 
     setAiFilledFields(filled);
     setAiFillCycle(c => c + 1);
-
-    if (filled.has('tags') || filled.has('notes')) {
-      setMoreOptionsOpen(true);
-    }
   }
 
   const {
@@ -196,7 +183,7 @@ export function BinCreateForm({
     aiConfigured: isFull ? aiReady : aiConfiguredInline,
     onApplyDirect: (result) => {
       // Snapshot current values for undo before the 600ms flash
-      preAiValues.current = { name, items, tags, notes };
+      preAiValues.current = { name, items };
       pendingAiResult.current = result;
       setAnalyzeComplete(true);
     },
@@ -235,13 +222,11 @@ export function BinCreateForm({
     return () => window.removeEventListener('focus', checkCapturedPhotos);
   }, [addPhotosFromFiles]);
 
-  function handleUndoAiField(field: 'name' | 'items' | 'tags' | 'notes') {
+  function handleUndoAiField(field: 'name' | 'items') {
     if (!preAiValues.current) return;
     switch (field) {
       case 'name': setName(preAiValues.current.name); break;
       case 'items': setItems(preAiValues.current.items); break;
-      case 'tags': setTags(preAiValues.current.tags); break;
-      case 'notes': setNotes(preAiValues.current.notes); break;
     }
     setAiFilledFields((prev) => {
       const next = new Set(prev);
@@ -369,8 +354,6 @@ export function BinCreateForm({
                         onClick={() => handleReanalyze({
                           name,
                           items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
-                          tags,
-                          notes,
                         })}
                         className={cn('shrink-0 h-6 w-6 inline-flex items-center justify-center rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 text-[var(--ai-accent)] hover:bg-[var(--ai-accent)]/20 transition-colors', focusRing)}
                         aria-label="Reanalyze photos with AI"
@@ -487,8 +470,20 @@ export function BinCreateForm({
 
           {/* Items */}
           <div key={aiFilledFields.has('items') ? `items-${aiFillCycle}` : 'items'} className={cn('space-y-2', aiFilledFields.has('items') && 'ai-field-fill')} style={aiFilledFields.has('items') ? { '--stagger': 1 } as React.CSSProperties : undefined}>
-            <ItemList items={items} onItemsChange={setItems} hideWhenEmpty headerExtra={aiFilledFields.has('items') ? <AiBadge onUndo={() => handleUndoAiField('items')} /> : undefined} />
-            <QuickAddWidget quickAdd={quickAdd} aiEnabled={showAi} dictation={dictation} canTranscribe={canTranscribe} />
+            <ItemList
+              items={items}
+              onItemsChange={setItems}
+              headerExtra={aiFilledFields.has('items') ? <AiBadge onUndo={() => handleUndoAiField('items')} /> : undefined}
+              footerSlot={
+                <QuickAddWidget
+                  quickAdd={quickAdd}
+                  aiEnabled={showAi}
+                  dictation={dictation}
+                  canTranscribe={canTranscribe}
+                  variant="inline"
+                />
+              }
+            />
           </div>
 
           {/* More Options accordion with optional fields */}
@@ -504,11 +499,8 @@ export function BinCreateForm({
               <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
             </div>
 
-            <div key={aiFilledFields.has('notes') ? `notes-${aiFillCycle}` : 'notes'} className={cn('space-y-2', aiFilledFields.has('notes') && 'ai-field-fill')} style={aiFilledFields.has('notes') ? { '--stagger': 2 } as React.CSSProperties : undefined}>
-              <div className="flex items-center justify-between">
-                <label htmlFor="bin-notes" className={sectionHeader}>Notes</label>
-                {aiFilledFields.has('notes') && <AiBadge onUndo={() => handleUndoAiField('notes')} />}
-              </div>
+            <div className="space-y-2">
+              <label htmlFor="bin-notes" className={sectionHeader}>Notes</label>
               <Textarea
                 id="bin-notes"
                 value={notes}
@@ -519,11 +511,8 @@ export function BinCreateForm({
               />
             </div>
 
-            <div key={aiFilledFields.has('tags') ? `tags-${aiFillCycle}` : 'tags'} className={cn('space-y-2', aiFilledFields.has('tags') && 'ai-field-fill')} style={aiFilledFields.has('tags') ? { '--stagger': 3 } as React.CSSProperties : undefined}>
-              <div className="flex items-center justify-between">
-                <span className={sectionHeader}>Tags</span>
-                {aiFilledFields.has('tags') && <AiBadge onUndo={() => handleUndoAiField('tags')} />}
-              </div>
+            <div className="space-y-2">
+              <span className={sectionHeader}>Tags</span>
               <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
             </div>
 
@@ -593,8 +582,19 @@ export function BinCreateForm({
 
           {/* Items */}
           <div className="text-left">
-            <ItemList items={items} onItemsChange={setItems} hideWhenEmpty />
-            <QuickAddWidget quickAdd={quickAdd} aiEnabled={showAi} dictation={dictation} canTranscribe={canTranscribe} />
+            <ItemList
+              items={items}
+              onItemsChange={setItems}
+              footerSlot={
+                <QuickAddWidget
+                  quickAdd={quickAdd}
+                  aiEnabled={showAi}
+                  dictation={dictation}
+                  canTranscribe={canTranscribe}
+                  variant="inline"
+                />
+              }
+            />
           </div>
 
           {/* Area */}

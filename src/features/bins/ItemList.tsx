@@ -466,7 +466,7 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
       ) : (
         <div className="rounded-[var(--radius-sm)] bg-[var(--bg-input)] border border-[var(--border-flat)] overflow-hidden">
           {displayItems.length > 0 && showColumnHeader && (
-            <div className="row-tight px-3.5 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-hover)]">
+            <div className="row-tight min-h-[44px] px-3.5 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-hover)]">
               {showSortHeaders ? (
                 <>
                   <SortHeader label="Qty" column="qty" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleHeaderSort} defaultDirection="desc" className="shrink-0 w-8 justify-center" />

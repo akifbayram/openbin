@@ -136,12 +136,12 @@ describe('AI route plan gating', () => {
     expect(getUserPlanInfo).not.toHaveBeenCalled();
   });
 
-  it('POST /api/ai/analyze returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+  it('POST /api/ai/analyze/stream returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
     mockFreeUser();
     const { token } = await createTestUser(app);
 
     const res = await request(app)
-      .post('/api/ai/analyze')
+      .post('/api/ai/analyze/stream')
       .set('Authorization', `Bearer ${token}`)
       .send({ photoId: 'some-photo-id' });
 

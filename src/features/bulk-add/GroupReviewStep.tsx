@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { AiAnalyzeError } from '@/features/ai/AiStreamingPreview';
+import { MAX_AI_PHOTOS } from '@/features/ai/aiConstants';
 import { mapAiError } from '@/features/ai/aiErrors';
-import { MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
 import { useAiStream } from '@/features/ai/useAiStream';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { ColorPicker } from '@/features/bins/ColorPicker';
@@ -65,8 +65,6 @@ interface PendingResult {
   id: string;
   name: string;
   items: ReturnType<typeof aiItemsToBinItems>;
-  tags: string[];
-  notes: string;
   isCorrection?: boolean;
 }
 
@@ -159,6 +157,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   // hook return null, leaving the group's status stuck on 'analyzing' — the
   // progress bar spins forever and the error is hidden behind it.
   // biome-ignore lint/correctness/useHookAtTopLevel: group guard returns null above only if groups array is empty
+  // biome-ignore lint/correctness/useExhaustiveDependencies: group?.status is intentionally narrower than group to avoid re-running on unrelated field changes
   useEffect(() => {
     if (!group || group.status !== 'analyzing') return;
     const streamError = analyzeStreamError || reanalyzeError || correctionError;
@@ -179,8 +178,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       id: result.id,
       name: result.name,
       items: result.items,
-      tags: result.tags,
-      notes: result.notes,
     });
 
     if (result.isCorrection) {
@@ -244,8 +241,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           id: target.id,
           name: result.name || '',
           items: aiItemsToBinItems(result.items || []),
-          tags: result.tags || [],
-          notes: result.notes || '',
         };
         setAnalyzeComplete(true);
       }
@@ -269,8 +264,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       const previousResult = {
         name: target.name,
         items: target.items.map((i) => ({ name: i.name, quantity: i.quantity })),
-        tags: target.tags,
-        notes: target.notes,
       };
       formData.append('previousResult', JSON.stringify(previousResult));
       if (activeLocationId) formData.append('locationId', activeLocationId);
@@ -282,8 +275,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           id: target.id,
           name: result.name || '',
           items: aiItemsToBinItems(result.items || []),
-          tags: result.tags || [],
-          notes: result.notes || '',
         };
         setAnalyzeComplete(true);
       }
@@ -300,8 +291,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     const previousResult = {
       name: target.name,
       items: target.items.map((i) => ({ name: i.name, quantity: i.quantity })),
-      tags: target.tags,
-      notes: target.notes,
     };
 
     expectingCompletionRef.current = true;
@@ -316,8 +305,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
         id: target.id,
         name: result.name || '',
         items: aiItemsToBinItems(result.items || []),
-        tags: result.tags || [],
-        notes: result.notes || '',
         isCorrection: true,
       };
       setAnalyzeComplete(true);

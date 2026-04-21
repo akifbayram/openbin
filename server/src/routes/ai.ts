@@ -1,10 +1,6 @@
 import { Router } from 'express';
 import { d, generateUuid, query } from '../db.js';
 import { testProviderConnection } from '../lib/aiCaller.js';
-import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
-import type { ImageInput } from '../lib/aiProviders.js';
-import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
-import { extractPhotoIds, extractUploadedFiles, sanitizePreviousResult, validatePreviousResult, verifyLocationAndFetchMeta } from '../lib/aiRequestHelpers.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, getEnvGroupOverride, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
@@ -16,9 +12,9 @@ import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
 import { resolveTaskConfig } from '../lib/taskRouting.js';
 import { transcribeAudio } from '../lib/transcribe.js';
-import { memoryAudioUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
+import { memoryAudioUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
-import { checkAiCredits, requireAiAccess, requirePlusOrAbove } from '../middleware/requirePlan.js';
+import { checkAiCredits, requireAiAccess } from '../middleware/requirePlan.js';
 
 const MOCK_AI_SETTINGS = {
   id: null,
@@ -272,78 +268,6 @@ router.delete('/settings', requireAiAccess(), aiRouteHandler('delete AI settings
   await query('DELETE FROM user_ai_task_overrides WHERE user_id = $1', [req.user!.id]);
   await query('DELETE FROM user_ai_settings WHERE user_id = $1', [req.user!.id]);
   res.json({ deleted: true });
-}));
-
-// POST /api/ai/analyze-image — analyze raw uploaded image(s) (no stored photo required)
-router.post('/analyze-image', memoryPhotoUpload.fields([
-  { name: 'photo', maxCount: 1 },
-  { name: 'photos', maxCount: 5 },
-]), ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('analyze image', async (req, res) => {
-  const allFiles = extractUploadedFiles(req);
-
-  if (config.aiMock) { res.json(buildMockAnalysisResult()); return; }
-
-  const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
-
-  const images: ImageInput[] = allFiles.map((f) => ({
-    base64: f.buffer.toString('base64'),
-    mimeType: f.mimetype,
-  }));
-
-  const { existingTags } = await verifyLocationAndFetchMeta(req.body?.locationId, req.user!.id);
-
-  const suggestions = await analyzeImages(taskConfig, images, existingTags, settings.custom_prompt, settings, isDemoUser(req));
-  res.json(suggestions);
-}));
-
-// POST /api/ai/analyze — analyze stored photo(s)
-router.post('/analyze', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('analyze photo', async (req, res) => {
-  const ids = extractPhotoIds(req.body);
-
-  if (config.aiMock) { res.json(buildMockAnalysisResult()); return; }
-
-  const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
-
-  const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
-  if (!loaded) {
-    res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found or access denied' });
-    return;
-  }
-
-  const images: ImageInput[] = loaded.images.map((img) => ({
-    base64: img.buffer.toString('base64'),
-    mimeType: img.mimeType,
-  }));
-
-  const suggestions = await analyzeImages(taskConfig, images, loaded.existingTags, settings.custom_prompt, settings, isDemoUser(req));
-  res.json(suggestions);
-}));
-
-// POST /api/ai/reanalyze — reanalyze stored photo(s) with previous result context
-router.post('/reanalyze', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('reanalyze photo', async (req, res) => {
-  const previousResult = sanitizePreviousResult(validatePreviousResult(req.body.previousResult));
-  const ids = extractPhotoIds(req.body);
-
-  if (config.aiMock) { res.json(buildMockAnalysisResult()); return; }
-
-  const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
-
-  const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
-  if (!loaded) {
-    res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found or access denied' });
-    return;
-  }
-
-  const images: ImageInput[] = loaded.images.map((img) => ({
-    base64: img.buffer.toString('base64'),
-    mimeType: img.mimeType,
-  }));
-
-  const suggestions = await reanalyzeImages(taskConfig, images, previousResult, loaded.existingTags, loaded.customFieldDefs, settings, isDemoUser(req));
-  res.json(suggestions);
 }));
 
 // POST /api/ai/structure-text — structure dictated/typed text into items

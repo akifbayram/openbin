@@ -6,8 +6,6 @@ const INJECTION_PATTERN = /ignore previous|ignore above|ignore all|disregard|for
 
 const EXCESSIVE_NEWLINES = /\n{3,}/g;
 
-const HTML_TAG = /<[^>]*>/g;
-
 /**
  * Prompt-injection guard placed at the TOP of every composed system prompt by
  * the builder functions. Gemini attention decays over long prompts, so
@@ -65,37 +63,3 @@ export function sanitizeBinForContext<
   };
 }
 
-/** Strip HTML tags and enforce length limit. */
-function cleanString(value: string, maxLength: number): string {
-  return value.replace(HTML_TAG, '').trim().slice(0, maxLength);
-}
-
-/** Validate and harden AI-generated output: strip HTML, enforce tighter length limits, normalize. */
-export function validateAiOutput(suggestions: {
-  name: string;
-  items: Array<{ name: string; quantity?: number | null }>;
-  tags: string[];
-  notes: string;
-  customFields?: Record<string, string>;
-}): typeof suggestions {
-  const name = cleanString(suggestions.name, 100);
-
-  const items = suggestions.items
-    .map((item) => ({ ...item, name: cleanString(item.name, 200) }))
-    .filter((item) => item.name.length > 0);
-
-  const tags = suggestions.tags
-    .map((tag) => cleanString(tag, 50).toLowerCase())
-    .filter((tag) => tag.length > 0);
-
-  const notes = cleanString(suggestions.notes, 2000);
-
-  let customFields: Record<string, string> | undefined;
-  if (suggestions.customFields) {
-    customFields = Object.fromEntries(
-      Object.entries(suggestions.customFields).map(([k, v]) => [k, cleanString(v, 500)]),
-    );
-  }
-
-  return { name, items, tags, notes, customFields };
-}

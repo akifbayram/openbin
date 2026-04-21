@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/toast';
-import { useAiAnalysis } from '@/features/ai/useAiAnalysis';
 import { useAiSettings } from '@/features/ai/useAiSettings';
+import { useAiStream } from '@/features/ai/useAiStream';
 import { useLocationList } from '@/features/locations/useLocations';
 import { usePhotos } from '@/features/photos/usePhotos';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
@@ -29,7 +29,12 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
 
   const { photos } = usePhotos(id);
   const { settings: aiSettings } = useAiSettings();
-  const { suggestions, isAnalyzing, error: aiError, analyzeMultiple, reanalyzeMultiple, clearSuggestions } = useAiAnalysis();
+  const analyze = useAiStream<AiSuggestions>('/api/ai/analyze/stream', "Couldn't analyze the photo — try again");
+  const reanalyze = useAiStream<AiSuggestions>('/api/ai/reanalyze/stream', "Couldn't reanalyze the photo — try again");
+  const suggestions = analyze.result ?? reanalyze.result;
+  const isAnalyzing = analyze.isStreaming || reanalyze.isStreaming;
+  const aiError = analyze.error ?? reanalyze.error;
+  const clearSuggestions = useCallback(() => { analyze.clear(); reanalyze.clear(); }, [analyze.clear, reanalyze.clear]);
   const [lastSuggestions, setLastSuggestions] = useState<AiSuggestions | null>(null);
 
   const [moveOpen, setMoveOpen] = useState(false);
@@ -102,19 +107,20 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     }
     if (photos.length > 0) {
       const photoIds = photos.map((p) => p.id);
-      // Use reanalysis when we have previous suggestions or existing bin data
-      const context = lastSuggestions ?? (bin && (bin.name || bin.items.length > 0 || bin.tags.length > 0)
-        ? { name: bin.name, items: bin.items.map((i) => ({ name: i.name, quantity: i.quantity })), tags: bin.tags, notes: bin.notes }
+      const context = lastSuggestions ?? (bin && (bin.name || bin.items.length > 0)
+        ? { name: bin.name, items: bin.items.map((i) => ({ name: i.name, quantity: i.quantity })) }
         : null);
       if (context) {
-        reanalyzeMultiple(photoIds, context);
+        analyze.clear();
+        reanalyze.stream({ photoIds, previousResult: context });
       } else {
-        analyzeMultiple(photoIds);
+        reanalyze.clear();
+        analyze.stream({ photoIds });
       }
     }
   }
 
-  async function handleApplySuggestions(changes: Partial<{ name: string; items: { name: string; quantity?: number | null }[]; tags: string[]; notes: string; customFields: Record<string, string> }>) {
+  async function handleApplySuggestions(changes: Partial<{ name: string; items: { name: string; quantity?: number | null }[]; customFields: Record<string, string> }>) {
     if (!id || Object.keys(changes).length === 0) return;
     try {
       await updateBin(id, changes);
@@ -167,7 +173,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
   const canEdit = bin ? canWrite : false;
   const canDelete = isAdmin;
   const showAiButton = (aiEnabled || aiGated) && photos.length > 0;
-  const isReanalysis = !!(lastSuggestions || (bin && (bin.name || bin.items.length > 0 || bin.tags.length > 0)));
+  const isReanalysis = !!(lastSuggestions || (bin && (bin.name || bin.items.length > 0)));
 
   return {
     // Actions

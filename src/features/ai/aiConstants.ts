@@ -1,5 +1,7 @@
 import type { AiProvider, AiTaskGroup } from '@/types';
 
+export const MAX_AI_PHOTOS = 5;
+
 export const AI_PROVIDERS: { key: AiProvider; label: string }[] = [
   { key: 'openai', label: 'OpenAI' },
   { key: 'anthropic', label: 'Anthropic' },

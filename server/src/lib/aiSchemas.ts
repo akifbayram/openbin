@@ -6,11 +6,10 @@ const AiItemSchema = z.object({
   quantity: z.number().nullable().optional(),
 });
 
-/** Schema for image analysis results. Used with generateObject() in aiProviders.ts. */
+/** Schema for image analysis results. */
 export const AiSuggestionsSchema = z.object({
   name: z.string(),
   items: z.array(AiItemSchema),
-  tags: z.array(z.string()),
   customFields: z.record(z.string(), z.string()).optional(),
 });
 

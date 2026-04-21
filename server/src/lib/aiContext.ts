@@ -284,12 +284,3 @@ export async function buildInventoryContext(locationId: string, userId: string, 
   const budgeted = applyContextLimits(allBins, userText);
   return { ...budgeted, areas, trash_bins };
 }
-
-/** Fetch distinct tags for a location (for tag reuse suggestions). */
-export async function fetchExistingTags(locationId: string): Promise<string[]> {
-  const tagsResult = await query(
-    `SELECT DISTINCT je.value AS tag FROM bins, ${d.jsonEachFrom('bins.tags', 'je')} WHERE bins.location_id = $1 AND bins.deleted_at IS NULL`,
-    [locationId]
-  );
-  return tagsResult.rows.map((r) => r.tag as string).sort();
-}

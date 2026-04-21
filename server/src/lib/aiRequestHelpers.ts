@@ -1,5 +1,4 @@
 import type { Request } from 'express';
-import { fetchExistingTags } from './aiContext.js';
 import { verifyOptionalLocationMembership } from './binAccess.js';
 import type { CustomFieldDef } from './customFieldHelpers.js';
 import { fetchCustomFieldDefs } from './customFieldHelpers.js';
@@ -40,11 +39,10 @@ export function extractPhotoIds(body: Record<string, unknown>): string[] {
 // ── Location membership + AI metadata ──────────────────────────────
 
 export interface LocationAiMeta {
-  existingTags: string[] | undefined;
   customFieldDefs: CustomFieldDef[] | undefined;
 }
 
-/** Verify optional location membership, then fetch existing tags + custom field defs in parallel. */
+/** Verify optional location membership, then fetch custom field defs. */
 export async function verifyLocationAndFetchMeta(
   locationId: string | undefined,
   userId: string,
@@ -52,12 +50,9 @@ export async function verifyLocationAndFetchMeta(
   if (!await verifyOptionalLocationMembership(locationId, userId)) {
     throw new ForbiddenError('Not a member of this location');
   }
-  if (!locationId) return { existingTags: undefined, customFieldDefs: undefined };
-  const [existingTags, customFieldDefs] = await Promise.all([
-    fetchExistingTags(locationId),
-    fetchCustomFieldDefs(locationId),
-  ]);
-  return { existingTags, customFieldDefs };
+  if (!locationId) return { customFieldDefs: undefined };
+  const customFieldDefs = await fetchCustomFieldDefs(locationId);
+  return { customFieldDefs };
 }
 
 // ── Previous-result validation & sanitization ──────────────────────
@@ -90,10 +85,6 @@ export function sanitizePreviousResult(previousResult: Record<string, unknown>) 
       }
       return { name: String(i).slice(0, 500) };
     }),
-    tags: Array.isArray(previousResult.tags)
-      ? (previousResult.tags as unknown[]).filter((t): t is string => typeof t === 'string').slice(0, 20)
-      : [],
-    notes: typeof previousResult.notes === 'string' ? previousResult.notes.slice(0, 2000) : '',
     ...(previousResult.customFields && typeof previousResult.customFields === 'object'
       ? { customFields: previousResult.customFields }
       : {}),

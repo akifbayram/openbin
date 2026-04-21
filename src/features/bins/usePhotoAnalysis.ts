@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { mapAiError } from '@/features/ai/aiErrors';
-import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
+import { MAX_AI_PHOTOS } from '@/features/ai/aiConstants';
+import { useAiStream } from '@/features/ai/useAiStream';
 import { compressImage } from '@/features/photos/compressImage';
-import { apiStream } from '@/lib/apiStream';
-import { getErrorMessage } from '@/lib/utils';
 import type { AiSuggestions } from '@/types';
 
 interface UsePhotoAnalysisOptions {
@@ -24,6 +22,18 @@ async function compressPhotos(photos: File[]): Promise<File[]> {
   );
 }
 
+function buildPhotoFormData(photos: File[], locationId?: string, previousResult?: AiSuggestions): FormData {
+  const formData = new FormData();
+  if (photos.length === 1) {
+    formData.append('photo', photos[0]);
+  } else {
+    for (const file of photos) formData.append('photos', file);
+  }
+  if (previousResult) formData.append('previousResult', JSON.stringify(previousResult));
+  if (locationId) formData.append('locationId', locationId);
+  return formData;
+}
+
 export function usePhotoAnalysis({
   locationId,
   aiConfigured,
@@ -33,14 +43,15 @@ export function usePhotoAnalysis({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+
+  const analyze = useAiStream<AiSuggestions>('/api/ai/analyze-image/stream', 'Failed to analyze photos');
+  const reanalyze = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', 'Failed to reanalyze photos');
+  const analyzing = analyze.isStreaming || reanalyze.isStreaming;
+  const analyzeError = analyze.error ?? reanalyze.error;
 
   useEffect(() => {
     return () => {
       for (const url of photoPreviews) URL.revokeObjectURL(url);
-      abortRef.current?.abort();
     };
   }, [photoPreviews]);
 
@@ -52,7 +63,8 @@ export function usePhotoAnalysis({
     const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
     setPhotos((prev) => [...prev, ...newFiles]);
     setPhotoPreviews((prev) => [...prev, ...newPreviews]);
-    setAnalyzeError(null);
+    analyze.clear();
+    reanalyze.clear();
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -60,7 +72,8 @@ export function usePhotoAnalysis({
     URL.revokeObjectURL(photoPreviews[index]);
     setPhotos((prev) => prev.filter((_, i) => i !== index));
     setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
-    setAnalyzeError(null);
+    analyze.clear();
+    reanalyze.clear();
   }
 
   const addPhotosFromFiles = useCallback((files: File[]) => {
@@ -70,7 +83,6 @@ export function usePhotoAnalysis({
       const newFiles = files.slice(0, remaining);
       const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
       setPhotoPreviews((prevPreviews) => [...prevPreviews, ...newPreviews]);
-      setAnalyzeError(null);
       return [...prev, ...newFiles];
     });
   }, []);
@@ -81,17 +93,10 @@ export function usePhotoAnalysis({
       onAiSetupNeeded?.();
       return;
     }
-    setAnalyzing(true);
-    setAnalyzeError(null);
-    try {
-      const compressed = await compressPhotos(photos);
-      const result = await analyzeImageFiles(compressed, locationId);
-      onApplyDirect?.(result);
-    } catch (err) {
-      setAnalyzeError(getErrorMessage(err, 'Failed to analyze photos'));
-    } finally {
-      setAnalyzing(false);
-    }
+    reanalyze.clear();
+    const compressed = await compressPhotos(photos);
+    const result = await analyze.stream(buildPhotoFormData(compressed, locationId));
+    if (result) onApplyDirect?.(result);
   }
 
   async function handleReanalyze(previousResult: AiSuggestions) {
@@ -100,45 +105,10 @@ export function usePhotoAnalysis({
       onAiSetupNeeded?.();
       return;
     }
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setAnalyzing(true);
-    setAnalyzeError(null);
-    try {
-      const compressed = await compressPhotos(photos);
-      const formData = new FormData();
-      if (compressed.length === 1) {
-        formData.append('photo', compressed[0]);
-      } else {
-        for (const file of compressed) formData.append('photos', file);
-      }
-      formData.append('previousResult', JSON.stringify(previousResult));
-      if (locationId) formData.append('locationId', locationId);
-
-      let result: AiSuggestions | null = null;
-      for await (const event of apiStream('/api/ai/reanalyze-image/stream', { body: formData, signal: controller.signal })) {
-        if (event.type === 'done') {
-          const text = event.text.trim();
-          if (text) result = JSON.parse(text) as AiSuggestions;
-        } else if (event.type === 'error') {
-          throw new Error(event.message);
-        }
-      }
-      if (result) {
-        onApplyDirect?.(result);
-      } else {
-        throw new Error('Empty response from AI');
-      }
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        setAnalyzeError(mapAiError(err, 'Failed to reanalyze photos'));
-      }
-    } finally {
-      setAnalyzing(false);
-      abortRef.current = null;
-    }
+    analyze.clear();
+    const compressed = await compressPhotos(photos);
+    const result = await reanalyze.stream(buildPhotoFormData(compressed, locationId, previousResult));
+    if (result) onApplyDirect?.(result);
   }
 
   return {

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiStream } from '@/lib/apiStream';
 import { Events, notify } from '@/lib/eventBus';
 import { mapAiError } from './aiErrors';
@@ -78,6 +78,8 @@ export function useAiStream<T>(
     setError(null);
     setPartialText('');
   }, []);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   return { result, isStreaming, error, partialText, retryCount, stream, cancel, clear };
 }

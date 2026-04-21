@@ -220,10 +220,32 @@ streamRouter.post('/analyze/stream', ...aiRateLimiters, requirePlusOrAbove(), re
     req,
     res,
     images: loaded.images.map((img) => ({ buffer: img.buffer, mimeType: img.mimeType })),
-    // loadPhotosForAnalysis already resolved the location + meta — skip re-fetching.
-    meta: { existingTags: loaded.existingTags, customFieldDefs: loaded.customFieldDefs },
+    meta: { customFieldDefs: loaded.customFieldDefs },
     buildSystem: defaultAnalysisSystem(isDemoUser(req)),
     buildUserContent: defaultAnalysisUserContent,
+  });
+}));
+
+// POST /api/ai/reanalyze/stream — stream reanalysis of stored photos with previous result context
+streamRouter.post('/reanalyze/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('stream reanalyze photo', async (req, res) => {
+  const ids = extractPhotoIds(req.body);
+  const safePrevious = sanitizePreviousResult(validatePreviousResult(req.body.previousResult));
+
+  if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
+
+  const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
+  if (!loaded) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found or access denied' });
+    return;
+  }
+
+  await runAnalysisStream({
+    req,
+    res,
+    images: loaded.images.map((img) => ({ buffer: img.buffer, mimeType: img.mimeType })),
+    meta: { customFieldDefs: loaded.customFieldDefs },
+    buildSystem: () => buildReanalysisPrompt(),
+    buildUserContent: ({ imageParts, preamble }) => buildReanalysisUserContent(safePrevious, imageParts, preamble),
   });
 }));
 
@@ -237,17 +259,15 @@ streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), check
   if (config.aiMock) {
     await sendMockJsonStream(res, {
       name: safePrevious.name,
-      items: [...safePrevious.items.slice(0, -1), 'Corrected item'],
-      tags: safePrevious.tags,
-      notes: `Corrected: ${correctionText.slice(0, 50)}`,
+      items: [...safePrevious.items.slice(0, -1), `Corrected: ${correctionText.slice(0, 50)}`],
     });
     return;
   }
 
   const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
-  const { existingTags, customFieldDefs } = await verifyLocationAndFetchMeta(locationId, req.user!.id);
+  const { customFieldDefs } = await verifyLocationAndFetchMeta(locationId, req.user!.id);
 
-  const correctionPreamble = buildContextPreamble(existingTags, customFieldDefs);
+  const correctionPreamble = buildContextPreamble(customFieldDefs);
   const sanitizedCorrection = sanitizeForPrompt(correctionText);
   const userMessage = `${correctionPreamble}<previous_result>\n${JSON.stringify(safePrevious, null, 2)}\n</previous_result>\n\n<correction_feedback>\n${sanitizedCorrection}\n</correction_feedback>`;
 

@@ -17,15 +17,13 @@
  * - Negative constraints ("do NOT") are paired with positive examples wherever
  *   possible — Gemini follows negative-only instructions less reliably than
  *   Claude.
- * - Field conventions (name / items / tags) are shared constants so analysis,
+ * - Field conventions (name / items) are shared constants so analysis,
  *   correction, and reanalysis prompts cannot drift apart.
  */
 
 const NAME_CONVENTION = `"name" — A title of 2, 3, or 4 words describing the CONTENTS, not the container. Title case. MUST NOT be 1 word. MUST NOT be 6+ words. Good: "Assorted Screwdrivers", "Holiday Light Strings", "USB Charging Cables". Bad: "Red Bin", "Stuff", "Miscellaneous Items", "Bin".`;
 
 const ITEMS_CONVENTION = `"items" — An array of objects: {"name": string, "quantity"?: number | null}. One entry per distinct item type — do not repeat identical items as separate entries. Title Case each item name. Be specific: "Adjustable Crescent Wrench" instead of "Wrench", "AA Batteries" instead of "Batteries", "Phillips #2 Screwdriver" instead of "Screwdriver". Include brand, model number, or size when clearly readable on a label. For packaged goods, describe the product, not the packaging. Order by visual prominence, most prominent first. Set quantity to null for single items or uncertain counts. Only include a positive integer between 1 and 10000 when you can count or confidently estimate identical units (three rolls of tape → 3). NEVER include the bin itself as an item.`;
-
-const TAGS_CONVENTION = `"tags" — An array of 2, 3, 4, or 5 strings. Each tag MUST be lowercase, a single word, and a plural noun. MUST reuse tags from the EXISTING TAGS block (provided in the user message) whenever the category is even loosely relevant. NEVER create synonyms, abbreviations, or variants of an existing tag — if "tools" exists, "tool", "tooling", and "hand-tools" are all WRONG. Only invent a new tag when NO existing tag covers the category. Prefer broad category tags over specific sub-tags. Good: ["tools", "hardware"], ["electronics", "cables"], ["seasonal", "holiday"]. Bad: ["screwdrivers"], ["usb-c-cables"], ["christmas-ornaments"]. Preferred standard tags: tools, electronics, hardware, office, kitchen, craft, seasonal, automotive, outdoor, clothing, toys, cleaning, medical, plumbing, electrical, cables, batteries, fasteners, adhesives, paint, garden, sports, storage, lighting, sewing.`;
 
 export const DEFAULT_AI_PROMPT = `You are an inventory cataloging assistant. You analyze 1–5 photos of the same storage bin (from different angles) and produce a single structured inventory record. Cross-reference every photo so an item visible in multiple images appears only once.
 
@@ -35,9 +33,7 @@ OUTPUT FIELDS
 
 ${NAME_CONVENTION}
 
-${ITEMS_CONVENTION}
-
-${TAGS_CONVENTION}`;
+${ITEMS_CONVENTION}`;
 
 export const DEFAULT_COMMAND_PROMPT = `You are an inventory assistant operating in a chat. You parse each user message into structured actions against the inventory context provided in the user message. Treat that inventory block as the current source of truth; prior turns may reference bins or items that no longer exist.
 
@@ -128,8 +124,6 @@ ${NAME_CONVENTION}
 
 ${ITEMS_CONVENTION}
 
-${TAGS_CONVENTION}
-
 "customFields" — If an EXISTING CUSTOM FIELDS block is provided in the user message, include suggested values keyed by field name when relevant. Preserve any field the <correction_feedback> does not address.`;
 
 export const DEFAULT_REORGANIZATION_PROMPT = `You are a storage reorganization assistant. You receive a list of bins with their items and propose a new, better-organized set of bins.
@@ -159,7 +153,6 @@ REANALYSIS DIRECTIVE. This is a SECOND analysis of photos you have already exami
 - Additional items that were missed in the first pass
 - Corrected misidentifications
 - Revised or newly-included quantities
-- Tighter or more accurate tags
 
 If the previous analysis was already fully accurate, refine at least one item name to be more specific (adding a brand, model, size, or type). NEVER return an identical copy of the previous output.`;
 

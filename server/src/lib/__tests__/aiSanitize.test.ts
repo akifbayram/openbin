@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sanitizeBinForContext, sanitizeForPrompt, validateAiOutput } from '../aiSanitize.js';
+import { sanitizeBinForContext, sanitizeForPrompt } from '../aiSanitize.js';
 
 describe('sanitizeForPrompt', () => {
   it('strips "IGNORE PREVIOUS INSTRUCTIONS" (case-insensitive)', () => {
@@ -88,78 +88,3 @@ describe('sanitizeBinForContext', () => {
   });
 });
 
-describe('validateAiOutput', () => {
-  it('truncates oversized name to 100 chars', () => {
-    const result = validateAiOutput({
-      name: 'A'.repeat(150),
-      items: [],
-      tags: [],
-      notes: '',
-    });
-    expect(result.name).toHaveLength(100);
-  });
-
-  it('strips HTML from item names', () => {
-    const result = validateAiOutput({
-      name: 'Bin',
-      items: [{ name: '<b>Bold</b> item' }],
-      tags: [],
-      notes: '',
-    });
-    expect(result.items[0].name).toBe('Bold item');
-  });
-
-  it('removes empty items after sanitization', () => {
-    const result = validateAiOutput({
-      name: 'Bin',
-      items: [{ name: '<script></script>' }, { name: 'Valid item' }],
-      tags: [],
-      notes: '',
-    });
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0].name).toBe('Valid item');
-  });
-
-  it('lowercases and trims tags, removes empty ones', () => {
-    const result = validateAiOutput({
-      name: 'Bin',
-      items: [],
-      tags: ['  TAG  ', '<b></b>', 'Normal'],
-      notes: '',
-    });
-    expect(result.tags).toEqual(['tag', 'normal']);
-  });
-
-  it('strips HTML from notes and custom fields', () => {
-    const result = validateAiOutput({
-      name: 'Bin',
-      items: [],
-      tags: [],
-      notes: '<script>alert("xss")</script>Safe text',
-      customFields: { f1: '<img src=x>value' },
-    });
-    expect(result.notes).toBe('alert("xss")Safe text');
-    expect(result.customFields!.f1).toBe('value');
-  });
-
-  it('truncates custom field values to 500 chars', () => {
-    const result = validateAiOutput({
-      name: 'Bin',
-      items: [],
-      tags: [],
-      notes: '',
-      customFields: { f1: 'X'.repeat(600) },
-    });
-    expect(result.customFields!.f1).toHaveLength(500);
-  });
-
-  it('preserves item quantities', () => {
-    const result = validateAiOutput({
-      name: 'Bin',
-      items: [{ name: 'Bolt', quantity: 5 }],
-      tags: [],
-      notes: '',
-    });
-    expect(result.items[0].quantity).toBe(5);
-  });
-});
