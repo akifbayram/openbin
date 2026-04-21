@@ -43,11 +43,11 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
       <Table>
         <TableHeader>
           <span className="w-8 shrink-0" />
-          <span className="hidden lg:block w-[72px] shrink-0 text-[12px] font-medium text-[var(--text-tertiary)]">Action</span>
-          <span className="flex-[2] text-[12px] font-medium text-[var(--text-tertiary)]">Description</span>
-          <span className="hidden lg:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)]">User</span>
-          <span className="hidden lg:block w-[72px] shrink-0 text-[12px] font-medium text-[var(--text-tertiary)]">Type</span>
-          <span className="w-20 shrink-0 text-[12px] font-medium text-[var(--text-tertiary)] text-right">Time</span>
+          <span className="hidden lg:block w-[72px] shrink-0 ui-col-header">Action</span>
+          <span className="flex-[2] ui-col-header">Description</span>
+          <span className="hidden lg:block flex-1 ui-col-header">User</span>
+          <span className="hidden lg:block w-[72px] shrink-0 ui-col-header">Type</span>
+          <span className="w-20 shrink-0 ui-col-header text-right">Time</span>
           <span className="w-5 shrink-0" />
         </TableHeader>
 

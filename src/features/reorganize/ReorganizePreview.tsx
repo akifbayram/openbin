@@ -45,7 +45,7 @@ export function ReorganizePreview({
   return (
     <div className="space-y-4">
       <div className="row-spread">
-        <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal">
+        <Label className="text-[15px] font-semibold text-[var(--text-primary)]">
           Proposal
         </Label>
         <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">

@@ -48,8 +48,8 @@ export function WelcomeStep({
 
       {/* Areas section */}
       <div className="w-full text-left mb-4 space-y-2">
-        <h3 className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-          {t.Areas} <span className="normal-case tracking-normal font-normal opacity-60">(optional)</span>
+        <h3 className="ui-group-label font-semibold">
+          {t.Areas} <span className="font-normal opacity-60">(optional)</span>
         </h3>
         <div className="flex flex-col gap-2">
           {areaNames.map((name) => (

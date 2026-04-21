@@ -22,7 +22,7 @@ export function Switch({ checked, onCheckedChange, id, disabled, className, 'ari
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'relative inline-flex h-[28px] w-[50px] shrink-0 cursor-pointer rounded-full transition-colors duration-200',
+        'relative inline-flex h-[20px] w-[36px] shrink-0 cursor-pointer rounded-full transition-colors duration-200',
         'before:absolute before:-inset-2 before:content-[""]',
         focusRing,
         disabledClasses,
@@ -31,7 +31,7 @@ export function Switch({ checked, onCheckedChange, id, disabled, className, 'ari
       )}
     >
       <span
-        className={cn('pointer-events-none inline-block h-[24px] w-[24px] rounded-full bg-[var(--bg-popover)] border border-[var(--border-flat)] transition-transform duration-200 mt-[2px]', checked ? 'translate-x-[24px]' : 'translate-x-[2px]')}
+        className={cn('pointer-events-none inline-block h-[16px] w-[16px] rounded-full bg-[var(--bg-popover)] border border-[var(--border-flat)] transition-transform duration-200 mt-[2px]', checked ? 'translate-x-[18px]' : 'translate-x-[2px]')}
       />
     </button>
   );

@@ -82,7 +82,7 @@ export function ItemListOptionsCard({ options, onUpdate, expanded, onExpandedCha
         >
           <div className="row">
             <ListOrdered className="h-4 w-4 text-[var(--text-tertiary)]" />
-            <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">List Options</Label>
+            <Label className="text-[15px] font-semibold text-[var(--text-primary)] pointer-events-none">List Options</Label>
           </div>
           <ChevronDown className={cn(
             'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
@@ -118,7 +118,7 @@ export function ItemListOptionsCard({ options, onUpdate, expanded, onExpandedCha
 
 function SubsectionHeader({ title }: { title: string }) {
   return (
-    <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] px-2 pt-3 pb-1">
+    <div className="ui-eyebrow px-2 pt-3 pb-1">
       {title}
     </div>
   );

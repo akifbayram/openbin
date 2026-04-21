@@ -9,7 +9,6 @@ interface SettingsCategoryListProps {
 }
 
 function CategoryRow({ cat, onClick }: { cat: SettingsCategory; onClick: () => void }) {
-  const Icon = cat.icon;
   return (
     <button
       type="button"
@@ -19,7 +18,6 @@ function CategoryRow({ cat, onClick }: { cat: SettingsCategory; onClick: () => v
         focusRing,
       )}
     >
-      <Icon className="h-5 w-5 shrink-0 text-[var(--text-tertiary)]" />
       <div className="flex-1 min-w-0">
         <div className="text-[var(--text-md)] font-medium text-[var(--text-primary)]">{cat.label}</div>
         <div className="text-[var(--text-sm)] text-[var(--text-tertiary)]">{cat.description}</div>

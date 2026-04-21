@@ -405,7 +405,7 @@ export function AreasPage() {
               </EmptyState>
             ) : (
               <div className="flex flex-col gap-3">
-                <h2 className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t.Areas}</h2>
+                <h2 className="ui-group-label font-semibold">{t.Areas}</h2>
                 <div className="flex flex-col gap-2">
                 {flattenAreaTree(areaTree).map((node: AreaTreeNode, index: number) => (
                   <div key={node.id} className="animate-card-stagger" style={{ '--stagger-index': index } as React.CSSProperties}>

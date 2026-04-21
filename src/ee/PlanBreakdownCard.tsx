@@ -75,9 +75,9 @@ export function PlanBreakdownCard() {
           <table className="w-full text-[14px]">
             <thead>
               <tr className="border-b border-[var(--border-subtle)]">
-                <th className="text-left py-2 pr-4 text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Metric</th>
+                <th className="text-left py-2 pr-4 ui-col-header">Metric</th>
                 {PLANS.map((p) => (
-                  <th key={p} className="text-right py-2 px-3 text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">{PLAN_LABELS[p]}</th>
+                  <th key={p} className="text-right py-2 px-3 ui-col-header">{PLAN_LABELS[p]}</th>
                 ))}
               </tr>
             </thead>

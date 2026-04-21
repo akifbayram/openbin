@@ -13,12 +13,12 @@ interface SettingsPageHeaderProps {
  */
 export function SettingsPageHeader({ title, description, action }: SettingsPageHeaderProps) {
   return (
-    <div className="mb-6 max-lg:mb-1">
-      <div className="hidden items-center gap-2 lg:flex">
-        <h2 className="text-[var(--text-xl)] font-bold text-[var(--text-primary)]">{title}</h2>
+    <header className="mb-8 max-lg:mb-2">
+      <div className="hidden items-end justify-between gap-3 lg:flex">
+        <h2 className="settings-page-title">{title}</h2>
         {action}
       </div>
-      <p className="text-[var(--text-sm)] text-[var(--text-tertiary)]">{description}</p>
-    </div>
+      <p className="settings-page-desc lg:mt-2.5">{description}</p>
+    </header>
   );
 }

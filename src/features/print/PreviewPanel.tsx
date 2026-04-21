@@ -103,7 +103,7 @@ export function PreviewPanel({ selectedBins, expandedBins, expandedBinCount, pdf
         <Card>
           <CardContent>
             <div className="row-spread mb-3">
-              <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal">Preview</Label>
+              <Label className="text-[15px] font-semibold text-[var(--text-primary)]">Preview</Label>
               {pageCount > 1 && (
                 <div className="flex items-center gap-1">
                   <button

@@ -156,7 +156,7 @@ export function ShareBinDialog({ binId, open, onOpenChange }: ShareBinDialogProp
 
             {/* Visibility selector */}
             <div className="space-y-2">
-              <span className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Visibility</span>
+              <span className="ui-group-label">Visibility</span>
               <div className="flex flex-col gap-2">
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
@@ -193,7 +193,7 @@ export function ShareBinDialog({ binId, open, onOpenChange }: ShareBinDialogProp
 
             {/* Expiration selector */}
             <div className="space-y-2">
-              <span className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Expiration</span>
+              <span className="ui-group-label">Expiration</span>
               <select
                 value={expiry}
                 onChange={(e) => setExpiry(e.target.value)}

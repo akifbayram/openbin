@@ -325,7 +325,7 @@ export function PhotoGroupingGrid({
       />
 
       <div className="mt-6 space-y-2">
-        <Label className="text-[13px] font-medium normal-case tracking-normal text-[var(--text-primary)]">
+        <Label className="text-[13px] font-medium text-[var(--text-primary)]">
           {t.Area} for all {t.bins}
           <span className="ml-1 text-[12px] font-normal text-[var(--text-tertiary)]">· optional</span>
         </Label>

@@ -110,7 +110,7 @@ export function TagColorPicker({ currentColor, onColorChange, tagName }: TagColo
       {/* Preview badge */}
       {tagName && (
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Preview</span>
+          <span className="text-[11px] font-medium text-[var(--text-quaternary)]">Preview</span>
           <Badge variant="secondary" className="text-[13px]" style={previewStyle}>
             {tagName}
           </Badge>

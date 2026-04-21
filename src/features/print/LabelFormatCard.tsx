@@ -63,7 +63,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
         >
           <div className="row">
             <LayoutGrid className="h-4 w-4 text-[var(--text-tertiary)]" />
-            <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Format</Label>
+            <Label className="text-[15px] font-semibold text-[var(--text-primary)] pointer-events-none">Label Format</Label>
             {!expanded && (
               <span className="text-[13px] text-[var(--text-tertiary)]">({f.baseFormat.name})</span>
             )}

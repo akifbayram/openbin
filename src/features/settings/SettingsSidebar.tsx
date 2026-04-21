@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { categoryHeader, cn, focusRing } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
 import type { SettingsCategory } from './settingsCategories';
 
 interface SettingsSidebarProps {
@@ -8,7 +8,12 @@ interface SettingsSidebarProps {
 }
 
 const itemBase =
-  'flex items-center gap-2.5 rounded-[var(--radius-xs)] px-3 py-2 text-[var(--text-base)] font-medium transition-colors';
+  'flex items-center rounded-[var(--radius-sm)] px-3 py-2 text-[var(--text-base)] font-medium transition-colors';
+
+const itemActive = 'bg-[var(--bg-hover)] text-[var(--text-primary)]';
+
+const itemIdle =
+  'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]';
 
 export function SettingsSidebar({ mainCategories, adminCategories }: SettingsSidebarProps) {
   const navigate = useNavigate();
@@ -16,25 +21,39 @@ export function SettingsSidebar({ mainCategories, adminCategories }: SettingsSid
   return (
     <nav
       aria-label="Settings"
-      className="flex w-[220px] shrink-0 flex-col overflow-y-auto border-r border-[var(--border-flat)] bg-[var(--bg-input)]/50"
+      className="flex w-[232px] shrink-0 flex-col overflow-y-auto"
     >
-      <div className="px-4 pt-5 pb-3">
-        <h1 className="text-[var(--text-lg)] font-bold text-[var(--text-primary)]">Settings</h1>
+      <div className="px-5 pt-6 pb-4">
+        <h1 className="font-heading text-[24px] font-bold leading-none tracking-[-0.02em] text-[var(--text-primary)]">
+          Settings
+        </h1>
       </div>
+
+      {adminCategories.length > 0 && (
+        <div className="flex flex-col gap-0.5 px-2 pb-3 mb-3 border-b border-[var(--border-subtle)]">
+          {adminCategories.map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => navigate(cat.path)}
+              className={cn(itemBase, focusRing, itemIdle)}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-1 flex-col gap-0.5 px-2 pb-4">
         {mainCategories.map((cat) => {
-          const Icon = cat.icon;
-
           if (cat.external) {
             return (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => navigate(cat.path)}
-                className={cn(itemBase, focusRing, 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}
+                className={cn(itemBase, focusRing, itemIdle)}
               >
-                <Icon className="h-4 w-4 text-[var(--text-tertiary)]" />
                 {cat.label}
               </button>
             );
@@ -45,43 +64,14 @@ export function SettingsSidebar({ mainCategories, adminCategories }: SettingsSid
               key={cat.id}
               to={`/settings/${cat.path}`}
               className={({ isActive }) =>
-                cn(
-                  itemBase,
-                  focusRing,
-                  isActive
-                    ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
-                )
+                cn(itemBase, focusRing, isActive ? itemActive : itemIdle)
               }
             >
-              <Icon className="h-4 w-4 text-[var(--text-tertiary)]" />
               {cat.label}
             </NavLink>
           );
         })}
       </div>
-
-      {adminCategories.length > 0 && (
-        <div className="border-t border-[var(--border-subtle)] px-2 pt-3 pb-4">
-          <span className={cn(categoryHeader, 'px-3 pb-1.5 block')}>Admin</span>
-          <div className="flex flex-col gap-0.5">
-            {adminCategories.map((cat) => {
-              const Icon = cat.icon;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => navigate(cat.path)}
-                  className={cn(itemBase, focusRing, 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}
-                >
-                  <Icon className="h-4 w-4 text-[var(--text-tertiary)]" />
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

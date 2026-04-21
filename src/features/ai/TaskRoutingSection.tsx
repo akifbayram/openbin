@@ -1,6 +1,6 @@
 import { RotateCcw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { cn, inputBase } from '@/lib/utils';
+import { Select } from '@/components/ui/select';
 import type { AiProvider, AiSettings, AiTaskGroup } from '@/types';
 import { AI_PROVIDERS, MODEL_HINTS, TASK_GROUP_META } from './aiConstants';
 
@@ -39,24 +39,22 @@ export function TaskRoutingSection({ settings, overrides, onChange, disabled }: 
               </div>
 
               {isLocked && (
-                <div className="px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 border border-[var(--accent)]/20">
-                  <p className="text-[12px] text-[var(--text-secondary)]">
-                    Configured by server
-                    {envOverride?.provider && ` \u2014 ${envOverride.provider}`}
-                    {envOverride?.model && ` / ${envOverride.model}`}
-                  </p>
+                <div className="settings-section-banner settings-section-banner-info">
+                  Configured by server
+                  {envOverride?.provider && ` \u2014 ${envOverride.provider}`}
+                  {envOverride?.model && ` / ${envOverride.model}`}
                 </div>
               )}
 
               {!isLocked && (
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
-                  <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex flex-col gap-2">
+                  <div className="min-w-0 space-y-1">
                     <label htmlFor={`task-provider-${group.key}`} className="text-[12px] text-[var(--text-tertiary)]">Provider</label>
-                    <select
+                    <Select<string>
                       id={`task-provider-${group.key}`}
                       value={selectedProvider}
-                      onChange={(e) => {
-                        const provider = e.target.value || null;
+                      onChange={(v) => {
+                        const provider = v || null;
                         onChange(group.key, {
                           provider,
                           model: provider ? selectedModel : null,
@@ -64,18 +62,21 @@ export function TaskRoutingSection({ settings, overrides, onChange, disabled }: 
                         });
                       }}
                       disabled={disabled}
-                      className={cn(inputBase, 'text-[13px]')}
-                    >
-                      <option value="">Default ({AI_PROVIDERS.find((p) => p.key === settings.provider)?.label ?? settings.provider})</option>
-                      {configuredProviders.map((p) => (
-                        <option key={p} value={p}>
-                          {AI_PROVIDERS.find((ap) => ap.key === p)?.label ?? p}
-                        </option>
-                      ))}
-                    </select>
+                      ariaLabel="Provider"
+                      options={[
+                        {
+                          value: '',
+                          label: `Default (${AI_PROVIDERS.find((p) => p.key === settings.provider)?.label ?? settings.provider})`,
+                        },
+                        ...configuredProviders.map((p) => ({
+                          value: p,
+                          label: AI_PROVIDERS.find((ap) => ap.key === p)?.label ?? p,
+                        })),
+                      ]}
+                    />
                   </div>
 
-                  <div className="flex-1 min-w-0 space-y-1">
+                  <div className="min-w-0 space-y-1">
                     <label htmlFor={`task-model-${group.key}`} className="text-[12px] text-[var(--text-tertiary)]">Model</label>
                     <Input
                       id={`task-model-${group.key}`}
@@ -101,7 +102,7 @@ export function TaskRoutingSection({ settings, overrides, onChange, disabled }: 
                     <button
                       type="button"
                       onClick={() => onChange(group.key, null)}
-                      className="self-end sm:self-center p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                      className="self-end p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                       title="Reset to default"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />

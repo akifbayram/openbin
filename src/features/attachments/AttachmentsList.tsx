@@ -137,7 +137,7 @@ export function AttachmentsList({ binId, attachments, canUpload, canDelete }: At
           >
             <div className="flex h-14 w-12 flex-shrink-0 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-xs)] border border-[var(--border-subtle)]">
               <FileText className="h-5 w-5 text-[var(--text-secondary)]" aria-hidden="true" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+              <span className="ui-eyebrow text-[10px]">
                 {getExtensionLabel(a.filename)}
               </span>
             </div>

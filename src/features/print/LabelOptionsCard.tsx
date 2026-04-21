@@ -38,7 +38,7 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, copies, onUpdat
         >
           <div className="row">
             <Tag className="h-4 w-4 text-[var(--text-tertiary)]" />
-            <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Options</Label>
+            <Label className="text-[15px] font-semibold text-[var(--text-primary)] pointer-events-none">Label Options</Label>
           </div>
           <ChevronDown className={cn(
             'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',

@@ -318,7 +318,7 @@ export function RegisterPage() {
                     <legend className="sr-only">Invitation</legend>
                     <div className="space-y-2">
                       <Label htmlFor="reg-invite">
-                        Invite Code{registrationMode !== 'invite' && <> <span className="font-normal normal-case tracking-normal text-[var(--text-tertiary)]">(optional)</span></>}
+                        Invite Code{registrationMode !== 'invite' && <> <span className="font-normal text-[var(--text-tertiary)]">(optional)</span></>}
                       </Label>
                       <Input
                         ref={inviteRef}

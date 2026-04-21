@@ -60,7 +60,7 @@ function formatUptime(seconds: number): string {
 function HealthCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex flex-col gap-0.5 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
-      <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">{label}</span>
+      <span className="ui-col-header">{label}</span>
       <span className="text-[20px] font-bold text-[var(--text-primary)] leading-tight tabular-nums">{value}</span>
     </div>
   );
@@ -341,19 +341,19 @@ function AuditLogTab() {
         <Table>
           <TableHeader>
             <div className="w-28">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Time</span>
+              <span className="ui-col-header">Time</span>
             </div>
             <div className="w-24">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Actor</span>
+              <span className="ui-col-header">Actor</span>
             </div>
             <div className="w-28">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Action</span>
+              <span className="ui-col-header">Action</span>
             </div>
             <div className="flex-1">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Target</span>
+              <span className="ui-col-header">Target</span>
             </div>
             <div className="hidden lg:block flex-1">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Details</span>
+              <span className="ui-col-header">Details</span>
             </div>
           </TableHeader>
           {entries.map((entry) => (
@@ -451,22 +451,22 @@ function LocationsTab() {
         <Table>
           <TableHeader>
             <div className="flex-1">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Name</span>
+              <span className="ui-col-header">Name</span>
             </div>
             <div className="w-24">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Owner</span>
+              <span className="ui-col-header">Owner</span>
             </div>
             <div className="hidden sm:block w-16">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Members</span>
+              <span className="ui-col-header">Members</span>
             </div>
             <div className="hidden sm:block w-14">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Bins</span>
+              <span className="ui-col-header">Bins</span>
             </div>
             <div className="hidden lg:block w-14">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Areas</span>
+              <span className="ui-col-header">Areas</span>
             </div>
             <div className="hidden sm:block w-24">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Created</span>
+              <span className="ui-col-header">Created</span>
             </div>
           </TableHeader>
           {locations.map((loc) => (

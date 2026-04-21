@@ -70,9 +70,8 @@ export const flatCard = 'flat-card rounded-[var(--radius-lg)]';
 export const overlayBackdrop =
   'fixed inset-0 bg-[var(--overlay-backdrop)] transition-opacity';
 
-/** Small uppercase category/section header text. */
-export const categoryHeader =
-  'text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]';
+/** Small uppercase category/section header text. See `.ui-eyebrow` in index.css. */
+export const categoryHeader = 'ui-eyebrow';
 
 /** Section header: 10px semibold in primary text color. */
 export const sectionHeader = 'text-[13px] text-[var(--text-primary)]';
@@ -86,10 +85,6 @@ export const iconButton = 'shrink-0 flex items-center justify-center size-9';
 /** Fade-in-on-hover remove button for list rows (visible at 30% on mobile). */
 export const rowAction =
   'shrink-0 flex items-center justify-center size-9 text-[var(--text-tertiary)] opacity-30 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity';
-
-/** Disclosure label for collapsible card sections (Photos, QR Code). */
-export const disclosureSectionLabel =
-  'py-4 text-[var(--text-tertiary)] uppercase tracking-wider';
 
 /** Human-readable relative time string from an ISO timestamp (e.g. "5m ago", "3d ago"). */
 export function relativeTime(iso: string | null): string {

@@ -7,10 +7,7 @@ const Label = React.forwardRef<HTMLLabelElement, React.LabelHTMLAttributes<HTMLL
       // biome-ignore lint/a11y/noLabelWithoutControl: generic base component; consumers provide htmlFor
       <label
         ref={ref}
-        className={cn(
-          'text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider',
-          className
-        )}
+        className={cn('ui-group-label', className)}
         {...props}
       />
     );

@@ -8,7 +8,7 @@ import { useAdminMetrics } from './useAdminMetrics';
 function MetricCard({ label, value, sub, large }: { label: string; value: string | number; sub?: string; large?: boolean }) {
   return (
     <div className={cn('flex flex-col gap-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)]', large ? 'p-4' : 'p-3')}>
-      <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">{label}</span>
+      <span className="ui-col-header">{label}</span>
       <span className={cn('font-bold text-[var(--text-primary)] leading-tight tabular-nums', large ? 'text-[28px]' : 'text-[20px]')}>{value}</span>
       {sub && <span className="text-[12px] text-[var(--text-tertiary)]">{sub}</span>}
     </div>

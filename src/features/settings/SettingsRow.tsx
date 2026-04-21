@@ -40,19 +40,13 @@ export function SettingsRow({
       <div className="flex-1 min-w-0">
         <div
           className={cn(
-            'text-[var(--text-base)]',
-            destructive
-              ? 'text-[var(--destructive)]'
-              : 'text-[var(--text-primary)]',
+            'settings-row-title',
+            destructive && 'text-[var(--destructive)]',
           )}
         >
           {label}
         </div>
-        {description && (
-          <div className="text-[var(--text-sm)] text-[var(--text-tertiary)]">
-            {description}
-          </div>
-        )}
+        {description && <div className="settings-row-desc">{description}</div>}
       </div>
       {control}
       {showChevron && (
@@ -62,8 +56,8 @@ export function SettingsRow({
   );
 
   const shared = cn(
-    'flex items-center gap-3 w-full py-3 text-left',
-    border && 'border-b border-[var(--border-subtle)]',
+    'flex items-center gap-3 w-full py-3.5 text-left',
+    border && 'border-b border-[var(--border-subtle)] last:border-b-0',
     disabled && 'opacity-50 pointer-events-none',
   );
 

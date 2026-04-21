@@ -47,7 +47,7 @@ export function AdminUsersTable({
         )}
         {isVisible('role') && (
           <div className="w-16">
-            <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Role</span>
+            <span className="ui-col-header">Role</span>
           </div>
         )}
         <div className="w-16">

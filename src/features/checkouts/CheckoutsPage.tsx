@@ -114,8 +114,8 @@ export function CheckoutsPage() {
             <Table>
               <TableHeader>
                 <SortHeader label="Item" column="alpha" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="flex-[2]" />
-                <span className="flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Bin</span>
-                <span className="hidden md:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">By</span>
+                <span className="flex-1 ui-col-header">Bin</span>
+                <span className="hidden md:block flex-1 ui-col-header">By</span>
                 <SortHeader label="Time" column="time" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleSort} defaultDirection="desc" className="w-20 justify-end" />
                 {canWrite && <span className="w-10 shrink-0" />}
               </TableHeader>

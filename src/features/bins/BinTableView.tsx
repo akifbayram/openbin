@@ -59,23 +59,23 @@ export function BinTableView({
           <SortHeader label="Area" column="area" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="hidden md:flex flex-1" />
         )}
         {isVisible?.('items') !== false && (
-          <span className="hidden lg:block flex-[1.5] text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Items</span>
+          <span className="hidden lg:block flex-[1.5] ui-col-header">Items</span>
         )}
         {isVisible?.('tags') !== false && (
-          <span className="hidden sm:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Tags</span>
+          <span className="hidden sm:block flex-1 ui-col-header">Tags</span>
         )}
         {isVisible?.('notes') && (
-          <span className="hidden lg:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Notes</span>
+          <span className="hidden lg:block flex-1 ui-col-header">Notes</span>
         )}
         {sortedCustomFields.map((field) =>
           isVisible?.(`cf_${field.id}`) && (
-            <span key={field.id} className="hidden lg:block flex-1 min-w-0 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide truncate">
+            <span key={field.id} className="hidden lg:block flex-1 min-w-0 ui-col-header truncate">
               {field.name}
             </span>
           ),
         )}
         {isVisible?.('createdBy') && (
-          <span className="hidden md:block w-24 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Created By</span>
+          <span className="hidden md:block w-24 ui-col-header">Created By</span>
         )}
         {isVisible?.('created') && (
           <SortHeader label="Created" column="created" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} defaultDirection="desc" className="w-20 justify-end" />

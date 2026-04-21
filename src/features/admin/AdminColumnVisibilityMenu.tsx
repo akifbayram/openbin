@@ -36,7 +36,7 @@ export function AdminColumnVisibilityMenu({ visibility, onToggle }: AdminColumnV
           animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
           'absolute right-0 mt-1 w-52 max-h-80 overflow-y-auto rounded-[var(--radius-md)] flat-popover z-20',
         )}>
-          <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+          <div className="ui-eyebrow px-3.5 py-2">
             Visible Columns
           </div>
           {TOGGLEABLE_FIELDS.map((field) => (

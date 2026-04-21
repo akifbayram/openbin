@@ -1,7 +1,6 @@
 import { ArrowUpRight, Download, X } from 'lucide-react';
 import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { PageTransition } from '@/components/page-transition';
 import { Button } from '@/components/ui/button';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
@@ -272,9 +271,7 @@ export function AppLayout() {
           </div>
         )}
         <div className="mx-auto w-full max-w-7xl">
-          <PageTransition>
-            <Outlet />
-          </PageTransition>
+          <Outlet />
         </div>
       </main>
       </DrawerProvider>

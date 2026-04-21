@@ -1,13 +1,31 @@
-import { ExternalLink, Sparkles } from 'lucide-react';
+import { Box, Github, MapPin, Sparkles, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLocationList } from '@/features/locations/useLocations';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { useUserPreferences } from '@/lib/userPreferences';
-import { cn, focusRing } from '@/lib/utils';
 import { SettingsPageHeader } from '../SettingsPageHeader';
+import { SettingsRow } from '../SettingsRow';
 import { SettingsSection } from '../SettingsSection';
+
+interface StatCellProps {
+  icon: React.ComponentType<{ className?: string }>;
+  value: number;
+  label: string;
+}
+
+function StatCell({ icon: Icon, value, label }: StatCellProps) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Icon className="size-4 text-[var(--text-tertiary)]" aria-hidden="true" />
+      <div className="mt-1.5 text-[22px] leading-none font-semibold tabular-nums text-[var(--text-primary)]">
+        {value}
+      </div>
+      <div className="settings-row-desc mt-0.5">{label}</div>
+    </div>
+  );
+}
 
 export function AboutSection() {
   const navigate = useNavigate();
@@ -18,57 +36,72 @@ export function AboutSection() {
   const { updatePreferences } = useUserPreferences();
 
   const activeLocation = locations.find((l) => l.id === activeLocationId);
-  const binCount = activeLocation?.bin_count ?? 0;
 
   return (
     <>
-      <SettingsPageHeader title="About" description="Version info and resources." />
+      <SettingsPageHeader
+        title="About"
+        description="Version info, workspace stats, and resources."
+      />
 
-      <SettingsSection label="Info">
-        <div className="py-3 border-b border-[var(--border-subtle)]">
-          <div className="flex items-baseline gap-2">
-            <p className="text-[var(--text-md)] font-semibold text-[var(--text-primary)]">{settings.appName}</p>
-            <span className="text-[var(--text-sm)] text-[var(--text-tertiary)]">v{__APP_VERSION__}</span>
-          </div>
+      <SettingsSection label="App">
+        <div className="flex items-baseline gap-3 py-2">
+          <span className="settings-entity-title">{settings.appName}</span>
+          <span className="settings-hint tabular-nums tracking-wide">
+            v{__APP_VERSION__}
+          </span>
         </div>
-        {activeLocation && (
-          <div className="py-3 border-b border-[var(--border-subtle)]">
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[var(--text-sm)] text-[var(--text-secondary)]">
-              <span>{binCount} {binCount !== 1 ? t.bins : t.bin}</span>
-              {activeLocation.area_count != null && (
-                <span>{activeLocation.area_count} {activeLocation.area_count !== 1 ? t.areas : t.area}</span>
-              )}
-              {activeLocation.member_count != null && (
-                <span>{activeLocation.member_count} {activeLocation.member_count === 1 ? 'member' : 'members'}</span>
-              )}
-            </div>
-          </div>
-        )}
       </SettingsSection>
 
-      <SettingsSection label="Links">
-        <div className="flex gap-4 py-3">
-          <a
-            href="https://github.com/akifbayram/openbin"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn('inline-flex items-center gap-1.5 text-[var(--text-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors rounded-[var(--radius-xs)]', focusRing)}
-          >
-            GitHub
-            <ExternalLink className="h-3 w-3" />
-          </a>
-          <button
-            type="button"
-            onClick={() => {
-              updatePreferences({ tour_completed: false, tour_version: 0 });
-              navigate('/bins', { state: { startTour: true } });
-            }}
-            className={cn('inline-flex items-center gap-1.5 text-[var(--text-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors rounded-[var(--radius-xs)]', focusRing)}
-          >
-            <Sparkles className="h-3 w-3" />
-            Replay Tour
-          </button>
-        </div>
+      {activeLocation && (
+        <SettingsSection label="Workspace" dividerAbove>
+          <div className="grid grid-cols-3 gap-6 py-2">
+            <StatCell
+              icon={Box}
+              value={activeLocation.bin_count ?? 0}
+              label={(activeLocation.bin_count ?? 0) === 1 ? t.bin : t.bins}
+            />
+            {activeLocation.area_count != null && (
+              <StatCell
+                icon={MapPin}
+                value={activeLocation.area_count}
+                label={activeLocation.area_count === 1 ? t.area : t.areas}
+              />
+            )}
+            {activeLocation.member_count != null && (
+              <StatCell
+                icon={Users}
+                value={activeLocation.member_count}
+                label={activeLocation.member_count === 1 ? 'member' : 'members'}
+              />
+            )}
+          </div>
+        </SettingsSection>
+      )}
+
+      <SettingsSection label="Resources" dividerAbove>
+        <SettingsRow
+          icon={Github}
+          label="GitHub"
+          description="Source code, issues, and releases"
+          onClick={() =>
+            window.open(
+              'https://github.com/akifbayram/openbin',
+              '_blank',
+              'noopener,noreferrer',
+            )
+          }
+        />
+        <SettingsRow
+          icon={Sparkles}
+          label="Replay tour"
+          description="Revisit the guided product walkthrough"
+          border={false}
+          onClick={() => {
+            updatePreferences({ tour_completed: false, tour_version: 0 });
+            navigate('/bins', { state: { startTour: true } });
+          }}
+        />
       </SettingsSection>
     </>
   );

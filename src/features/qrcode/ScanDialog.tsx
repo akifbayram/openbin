@@ -233,7 +233,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
 
           {/* Manual lookup by short code */}
           <div className="mt-4">
-            <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal mb-3 block">
+            <Label className="text-[15px] font-semibold text-[var(--text-primary)] mb-3 block">
               Manual Lookup
             </Label>
             <div className="flex gap-2">

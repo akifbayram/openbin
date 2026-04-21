@@ -22,7 +22,7 @@ const sortLabels: Record<SortOption, string> = {
 function SectionHeader({ label, count }: { label: string; count?: number }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
+      <span className="ui-group-label">
         {label}
       </span>
       {count != null && count > 0 && (

@@ -1,5 +1,5 @@
-import { Calendar, Check, Copy, Eye, EyeOff, Key, Link2, Link2Off, Loader2, MapPin, Plus, Trash2, X } from 'lucide-react';
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Calendar, Check, Copy, Eye, EyeOff, Key, Link2, Link2Off, Loader2, MapPin, Plus, Trash2 } from 'lucide-react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,7 +15,6 @@ import { Label } from '@/components/ui/label';
 import { PasswordChecklist } from '@/components/ui/password-checklist';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
-import { UserAvatar } from '@/components/ui/user-avatar';
 import { useLocationList } from '@/features/locations/useLocations';
 import { compressImage } from '@/features/photos/compressImage';
 import { apiFetch, getAvatarUrl } from '@/lib/api';
@@ -24,9 +23,11 @@ import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength'
 import { useAuthStatusConfig } from '@/lib/qrConfig';
 import { usePlan } from '@/lib/usePlan';
 import { useWarnOnUnload } from '@/lib/useWarnOnUnload';
-import { cn, EMAIL_REGEX, getErrorMessage } from '@/lib/utils';
+import { EMAIL_REGEX, getErrorMessage } from '@/lib/utils';
 import type { User } from '@/types';
+import { SettingsListRow } from '../SettingsListRow';
 import { SettingsPageHeader } from '../SettingsPageHeader';
+import { SettingsProfileHeader } from '../SettingsProfileHeader';
 import { SettingsSection } from '../SettingsSection';
 import { createApiKey, revokeApiKey, useApiKeys } from '../useApiKeys';
 
@@ -52,7 +53,6 @@ export function AccountSection() {
   const { user, updateUser, deleteAccount } = useAuth();
   const { showToast } = useToast();
   const { locations } = useLocationList();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Profile form
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -189,13 +189,12 @@ export function AccountSection() {
     }
   }
 
-  async function handleAvatarSelected(files: FileList | null) {
-    if (!files?.[0]) return;
+  async function handleAvatarUpload(file: File) {
     setUploadingAvatar(true);
     try {
-      const compressed = await compressImage(files[0]);
+      const compressed = await compressImage(file);
       const formData = new FormData();
-      formData.append('avatar', compressed, files[0].name);
+      formData.append('avatar', compressed, file.name);
       const result = await apiFetch<{ avatarUrl: string }>('/api/auth/avatar', {
         method: 'POST',
         body: formData,
@@ -207,7 +206,6 @@ export function AccountSection() {
       showToast({ message: getErrorMessage(err, 'Failed to upload avatar'), variant: 'error' });
     } finally {
       setUploadingAvatar(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
 
@@ -277,49 +275,21 @@ export function AccountSection() {
 
   return (
     <>
-      <SettingsPageHeader title="Account" description="Manage your profile and account settings." />
+      <SettingsPageHeader
+        title="Account"
+        description="Manage your profile, password, and access keys."
+      />
 
-      {/* Avatar + identity */}
       <SettingsSection label="Profile">
-        <div className="flex items-center gap-4 py-3 border-b border-[var(--border-subtle)]">
-          <div className="relative group shrink-0">
-            {avatarSrc && (
-              <button
-                type="button"
-                onClick={handleRemoveAvatar}
-                disabled={uploadingAvatar}
-                className="absolute -top-1 -right-1 z-10 h-8 w-8 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-flat)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors duration-150 disabled:opacity-50 opacity-0 group-hover:opacity-100 max-lg:opacity-100"
-                aria-label="Remove avatar"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingAvatar}
-              className="relative cursor-pointer hover:opacity-80 transition-opacity duration-150 disabled:opacity-50 rounded-full"
-              aria-label="Change avatar"
-            >
-              <UserAvatar
-                avatarUrl={avatarSrc}
-                displayName={user.displayName || user.email}
-                size="lg"
-              />
-              <div
-                className={cn(
-                  'absolute inset-0 rounded-full bg-black/30 flex items-center justify-center transition-opacity duration-200',
-                  uploadingAvatar ? 'opacity-100' : 'opacity-0 pointer-events-none',
-                )}
-              >
-                <Loader2 className="h-5 w-5 animate-spin text-white" />
-              </div>
-            </button>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[var(--text-md)] font-semibold text-[var(--text-primary)] truncate">{user.displayName || user.email}</p>
-            <p className="text-[var(--text-sm)] text-[var(--text-tertiary)]">{user.email}</p>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[var(--text-xs)] text-[var(--text-tertiary)]">
+        <SettingsProfileHeader
+          avatarUrl={avatarSrc}
+          displayName={user.displayName || user.email}
+          email={user.email}
+          uploading={uploadingAvatar}
+          onAvatarUpload={handleAvatarUpload}
+          onAvatarRemove={handleRemoveAvatar}
+          meta={
+            <>
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {memberSince}
@@ -328,20 +298,11 @@ export function AccountSection() {
                 <MapPin className="h-3 w-3" />
                 {locations.length} location{locations.length !== 1 ? 's' : ''}
               </span>
-            </div>
-          </div>
-        </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={(e) => handleAvatarSelected(e.target.files)}
+            </>
+          }
         />
 
-        {/* Profile info form */}
-        <form onSubmit={handleSaveProfile} className="flex flex-col gap-3 py-4">
+        <form onSubmit={handleSaveProfile} className="flex flex-col gap-3 pt-5">
           <FormField label="Display Name" htmlFor="profile-name" error={profileErrors.displayName}>
             <Input
               id="profile-name"
@@ -359,12 +320,20 @@ export function AccountSection() {
               aria-invalid={!!profileErrors.displayName}
             />
           </FormField>
-          <FormField label="Email" htmlFor="profile-email" hint="Optional — used for account recovery" error={profileErrors.email}>
+          <FormField
+            label="Email"
+            htmlFor="profile-email"
+            hint="Optional — used for account recovery"
+            error={profileErrors.email}
+          >
             <Input
               id="profile-email"
               type="email"
               value={email}
-              onChange={(e) => { setEmail(e.target.value); if (profileErrors.email) setProfileErrors((prev) => ({ ...prev, email: undefined })); }}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (profileErrors.email) setProfileErrors((prev) => ({ ...prev, email: undefined }));
+              }}
               placeholder="you@example.com"
               autoComplete="email"
               aria-invalid={!!profileErrors.email}
@@ -380,10 +349,9 @@ export function AccountSection() {
         </form>
       </SettingsSection>
 
-      {/* Change password — hidden for OAuth-only users */}
       {hasPassword && (
-        <SettingsSection label="Password">
-          <form onSubmit={handleChangePassword} className="flex flex-col gap-3 py-2">
+        <SettingsSection label="Password" dividerAbove>
+          <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
             <FormField label="Current Password" htmlFor="current-password">
               <Input
                 id="current-password"
@@ -438,7 +406,7 @@ export function AccountSection() {
             {newPassword && <PasswordChecklist checks={passwordChecks} />}
 
             {passwordError && (
-              <p role="alert" className="text-[var(--text-sm)] text-[var(--destructive)]">{passwordError}</p>
+              <p role="alert" className="settings-row-desc text-[var(--destructive)]">{passwordError}</p>
             )}
 
             <Button
@@ -452,35 +420,29 @@ export function AccountSection() {
         </SettingsSection>
       )}
 
-      {/* Connected accounts */}
       {oauthProviders.length > 0 && (
-        <SettingsSection label="Connected Accounts">
-          <div className="divide-y divide-[var(--border-subtle)]">
-            {oauthProviders.map((provider) => {
-              const link = oauthLinks.find((l) => l.provider === provider);
-              const providerLabel = provider === 'google' ? 'Google' : 'Apple';
-              const canUnlink = oauthLinks.length > 1 || hasPassword;
+        <SettingsSection label="Connected Accounts" dividerAbove>
+          {oauthProviders.map((provider) => {
+            const link = oauthLinks.find((l) => l.provider === provider);
+            const providerLabel = provider === 'google' ? 'Google' : 'Apple';
+            const canUnlink = oauthLinks.length > 1 || hasPassword;
+            const hintId = `${provider}-unlink-hint`;
 
-              const hintId = `${provider}-unlink-hint`;
-              return (
-                <div key={provider} className="flex items-center justify-between gap-3 py-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-active)] flex items-center justify-center shrink-0">
-                      <Link2 className="h-4 w-4 text-[var(--text-secondary)]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[var(--text-base)] font-medium text-[var(--text-primary)]">{providerLabel}</p>
-                      <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">
-                        {link ? (link.email || 'Connected') : 'Not connected'}
-                      </p>
-                      {link && !canUnlink && (
-                        <p id={hintId} className="text-[var(--text-xs)] text-[var(--text-tertiary)] mt-0.5">
-                          Set a password to disconnect
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {link ? (
+            return (
+              <SettingsListRow
+                key={provider}
+                icon={Link2}
+                title={providerLabel}
+                meta={
+                  <>
+                    {link ? (link.email || 'Connected') : 'Not connected'}
+                    {link && !canUnlink && (
+                      <span id={hintId} className="block mt-0.5">Set a password to disconnect</span>
+                    )}
+                  </>
+                }
+                action={
+                  link ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -511,15 +473,14 @@ export function AccountSection() {
                       <Link2 className="h-4 w-4 mr-1.5" />
                       Connect
                     </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  )
+                }
+              />
+            );
+          })}
         </SettingsSection>
       )}
 
-      {/* API Keys */}
       {apiKeysGated ? (
         __EE__ && (
           <Suspense fallback={null}>
@@ -533,6 +494,7 @@ export function AccountSection() {
       ) : (
         <SettingsSection
           label="API Keys"
+          dividerAbove
           description="API keys are tied to your account and work across all your locations. Use them for smart home integrations and automation."
           action={
             <Tooltip content="Create API key" side="bottom">
@@ -547,30 +509,22 @@ export function AccountSection() {
           }
         >
           {keysLoading ? null : keys.length === 0 ? (
-            <p className="text-[var(--text-sm)] text-[var(--text-tertiary)] py-4 text-center">
+            <p className="settings-row-desc py-4 text-center">
               No API keys yet. Create one to connect integrations.
             </p>
           ) : (
-            <div className="divide-y divide-[var(--border-subtle)]">
-              {keys.map((k) => (
-                <div
-                  key={k.id}
-                  className="flex items-center justify-between py-3"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-active)] flex items-center justify-center shrink-0">
-                      <Key className="h-4 w-4 text-[var(--text-secondary)]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[var(--text-base)] font-medium text-[var(--text-primary)] truncate">
-                        {k.name || k.key_prefix}
-                      </p>
-                      <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">
-                        {k.key_prefix}... &middot; Created {formatDate(k.created_at)}
-                        {k.last_used_at ? ` \u00b7 Last used ${formatDate(k.last_used_at)}` : ''}
-                      </p>
-                    </div>
-                  </div>
+            keys.map((k) => (
+              <SettingsListRow
+                key={k.id}
+                icon={Key}
+                title={k.name || k.key_prefix}
+                meta={
+                  <>
+                    {k.key_prefix}... &middot; Created {formatDate(k.created_at)}
+                    {k.last_used_at ? ` \u00b7 Last used ${formatDate(k.last_used_at)}` : ''}
+                  </>
+                }
+                action={
                   <Tooltip content="Revoke API key" side="bottom">
                     <Button
                       variant="ghost"
@@ -582,20 +536,21 @@ export function AccountSection() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </Tooltip>
-                </div>
-              ))}
-            </div>
+                }
+              />
+            ))
           )}
         </SettingsSection>
       )}
 
-      {/* Danger zone */}
       <SettingsSection
         label="Danger Zone"
-        description="Permanent actions that cannot be undone."
-        labelClassName="text-[var(--destructive)]"
+        dividerAbove
+        status="danger"
+        tintLabel
+        statusMessage="Deleting your account removes all locations where you are the only member. Shared locations are preserved. This action cannot be undone."
       >
-        <div className="py-3">
+        <div className="pt-1">
           <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
             <Trash2 className="h-4 w-4 mr-2.5" />
             Delete Account
@@ -645,7 +600,6 @@ export function AccountSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Create API Key Dialog */}
       <Dialog open={createOpen} onOpenChange={(open) => !open && setCreateOpen(false)}>
         <DialogContent>
           <DialogHeader>
@@ -702,7 +656,6 @@ export function AccountSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Revoke Confirmation Dialog */}
       <Dialog open={!!revokeId} onOpenChange={(open) => !open && setRevokeId(null)}>
         <DialogContent>
           <DialogHeader>

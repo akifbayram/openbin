@@ -1,6 +1,7 @@
 import { Eye, EyeOff, Loader2, RotateCcw } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { OptionGroup } from '@/components/ui/option-group';
 import { Switch } from '@/components/ui/switch';
@@ -188,7 +189,10 @@ export function AiSection() {
 
   return (
     <>
-      <SettingsPageHeader title="AI" description="Configure AI provider, models, and prompts." />
+      <SettingsPageHeader
+        title="AI"
+        description="Configure AI provider, models, and prompts."
+      />
 
       {/* AI gating check */}
       {aiGated ? (
@@ -225,37 +229,33 @@ export function AiSection() {
               'grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none',
               aiEnabled ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
             )}>
-              <div className="overflow-hidden min-h-0">
+              <div className="overflow-hidden min-h-0 px-1 -mx-1 py-1 -my-1">
                 <div className={cn(
                   'transition-opacity duration-200 motion-reduce:transition-none',
                   aiEnabled ? 'opacity-100' : 'opacity-0',
                 )}>
-                  <SettingsSection label="Provider">
-                    {settings === null && !touched && (
-                      <p className="text-[var(--text-sm)] text-[var(--text-secondary)] mb-3">
-                        Connect an AI provider to unlock photo analysis, item extraction from text and voice, and natural language commands for managing your bins.
-                      </p>
-                    )}
-
-                    {settings?.source === 'env' && (
-                      <div className="mb-3 px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 border border-[var(--accent)]/20">
-                        <p className="text-[var(--text-sm)] text-[var(--text-secondary)]">
-                          AI configured by server. Save your own settings to override.
-                        </p>
-                      </div>
-                    )}
-
+                  <SettingsSection
+                    label="Provider"
+                    description={
+                      settings === null && !touched
+                        ? 'Connect an AI provider to unlock photo analysis, item extraction from text and voice, and natural language commands for managing your bins.'
+                        : undefined
+                    }
+                    status={settings?.source === 'env' ? 'info' : undefined}
+                    statusMessage={
+                      settings?.source === 'env'
+                        ? 'AI is configured by the server. Save your own settings to override.'
+                        : undefined
+                    }
+                  >
                     <div className="flex flex-col gap-4">
-                      {/* Provider selector */}
                       <OptionGroup
                         options={AI_PROVIDERS}
                         value={setup.provider}
                         onChange={setup.handleProviderChange}
                       />
 
-                      {/* API Key */}
-                      <div className="space-y-1.5">
-                        <label htmlFor="ai-api-key" className="text-[var(--text-sm)] text-[var(--text-secondary)]">API Key</label>
+                      <FormField label="API Key" htmlFor="ai-api-key">
                         <div className="relative">
                           <Input
                             id="ai-api-key"
@@ -274,35 +274,30 @@ export function AiSection() {
                             {setup.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </button>
                         </div>
-                      </div>
+                      </FormField>
 
-                      {/* Model */}
-                      <div className="space-y-1.5">
-                        <label htmlFor="ai-model" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Model</label>
+                      <FormField label="Model" htmlFor="ai-model">
                         <Input
                           id="ai-model"
                           value={setup.model}
                           onChange={(e) => { setup.setModel(e.target.value); setup.setTestResult(null); setTouched(true); }}
                           placeholder={MODEL_HINTS[setup.provider]}
                         />
-                      </div>
+                      </FormField>
 
-                      {/* Endpoint URL — only for openai-compatible */}
                       {setup.provider === 'openai-compatible' && (
-                        <div className="space-y-1.5">
-                          <label htmlFor="ai-endpoint" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Endpoint URL</label>
+                        <FormField label="Endpoint URL" htmlFor="ai-endpoint">
                           <Input
                             id="ai-endpoint"
                             value={setup.endpointUrl}
                             onChange={(e) => { setup.setEndpointUrl(e.target.value); setup.setTestResult(null); }}
                             placeholder="http://localhost:11434/v1"
                           />
-                        </div>
+                        </FormField>
                       )}
 
-                      {/* Required fields hint */}
                       {touched && !setup.apiKey && !setup.model && (
-                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]" role="alert">
+                        <p className="settings-hint" role="alert">
                           API key and model are required.
                         </p>
                       )}
@@ -311,7 +306,7 @@ export function AiSection() {
 
                   {/* Task Routing */}
                   {settings && (
-                    <SettingsSection label="Task Routing">
+                    <SettingsSection label="Task Routing" dividerAbove>
                       <TaskRoutingSection
                         settings={settings}
                         overrides={taskOverrides}
@@ -330,7 +325,7 @@ export function AiSection() {
                   )}
 
                   {/* Custom Prompts */}
-                  <SettingsSection label="Custom Prompts">
+                  <SettingsSection label="Custom Prompts" dividerAbove>
                     <div className="space-y-2">
                       <OptionGroup
                         options={PROMPT_TAB_META.map((tab) => ({ key: tab.key, label: tab.label, shortLabel: tab.shortLabel }))}
@@ -350,45 +345,39 @@ export function AiSection() {
                         )}
                       />
                       {demoMode && (
-                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)] italic">Custom prompts are disabled for demo accounts.</p>
+                        <p className="settings-hint italic">Custom prompts are disabled for demo accounts.</p>
                       )}
                       <Textarea
-                        value={activePrompt.value}
-                        onChange={(e) => activePrompt.set(e.target.value)}
-                        placeholder={defaultPrompts?.[activePromptTab] ?? ''}
+                        value={activePrompt.value || (defaultPrompts?.[activePromptTab] ?? '')}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          const defaultText = defaultPrompts?.[activePromptTab] ?? '';
+                          activePrompt.set(next === defaultText ? '' : next);
+                        }}
                         className="font-mono text-[var(--text-sm)] min-h-[200px] resize-y"
                         maxLength={10000}
                         disabled={demoMode}
                       />
                       <div className="row-spread">
-                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">{PROMPT_HELP_TEXT[activePromptTab]}</p>
-                        {!demoMode && (activePrompt.value.trim() ? (
+                        <p className="settings-hint">{PROMPT_HELP_TEXT[activePromptTab]}</p>
+                        {!demoMode && activePrompt.value.trim() && (
                           <button
                             type="button"
                             onClick={() => activePrompt.set('')}
-                            className="flex items-center gap-1 text-[var(--text-xs)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
+                            className="settings-hint flex items-center gap-1 hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
                           >
                             <RotateCcw className="h-3 w-3" />
                             Reset to Default
                           </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => activePrompt.set(defaultPrompts?.[activePromptTab] ?? '')}
-                            className="text-[var(--text-xs)] text-[var(--accent)] hover:underline shrink-0 ml-2"
-                          >
-                            Load default to customize
-                          </button>
-                        ))}
+                        )}
                       </div>
                     </div>
                   </SettingsSection>
 
                   {/* Advanced AI Parameters */}
-                  <SettingsSection label="Advanced">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label htmlFor="ai-temperature" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Temperature</label>
+                  <SettingsSection label="Advanced" dividerAbove>
+                    <div className="flex flex-col gap-3">
+                      <FormField label="Temperature" htmlFor="ai-temperature" hint="0.0–2.0">
                         <div className="relative">
                           <Input
                             id="ai-temperature"
@@ -407,10 +396,8 @@ export function AiSection() {
                             </button>
                           )}
                         </div>
-                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">0.0–2.0</p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label htmlFor="ai-max-tokens" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Max Tokens</label>
+                      </FormField>
+                      <FormField label="Max Tokens" htmlFor="ai-max-tokens" hint="100–16,000">
                         <div className="relative">
                           <Input
                             id="ai-max-tokens"
@@ -429,10 +416,8 @@ export function AiSection() {
                             </button>
                           )}
                         </div>
-                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">100–16,000</p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label htmlFor="ai-top-p" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Top P</label>
+                      </FormField>
+                      <FormField label="Top P" htmlFor="ai-top-p" hint="0.0–1.0">
                         <div className="relative">
                           <Input
                             id="ai-top-p"
@@ -451,10 +436,8 @@ export function AiSection() {
                             </button>
                           )}
                         </div>
-                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">0.0–1.0</p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label htmlFor="ai-timeout" className="text-[var(--text-sm)] text-[var(--text-secondary)]">Request Timeout</label>
+                      </FormField>
+                      <FormField label="Request Timeout" htmlFor="ai-timeout" hint="10–300 seconds">
                         <div className="relative">
                           <Input
                             id="ai-timeout"
@@ -473,12 +456,10 @@ export function AiSection() {
                             </button>
                           )}
                         </div>
-                        <p className="text-[var(--text-xs)] text-[var(--text-tertiary)]">10–300 seconds</p>
-                      </div>
+                      </FormField>
                     </div>
                   </SettingsSection>
 
-                  {/* Test result */}
                   {setup.testResult === 'success' && (
                     <p className="text-[var(--text-sm)] text-[var(--color-success)] mb-3" aria-live="polite">Connected to {setup.model} successfully</p>
                   )}

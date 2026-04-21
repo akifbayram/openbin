@@ -46,7 +46,7 @@ const brandIcon = <BrandIcon className="h-8 w-8 text-[var(--accent)] shrink-0" /
 function SectionLabel({ children, collapsed }: { children: React.ReactNode; collapsed?: boolean }) {
   return (
     <span className={cn(
-      'px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] block',
+      'ui-eyebrow px-2 pb-1 block',
       collapsed ? 'pt-3 w-0 opacity-0 overflow-hidden' : 'pt-8',
     )} aria-hidden={collapsed || undefined}>
       {children}

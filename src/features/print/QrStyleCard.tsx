@@ -212,7 +212,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
         >
           <div className="row">
             <QrCode className="h-4 w-4 text-[var(--text-tertiary)]" />
-            <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">QR Style</Label>
+            <Label className="text-[15px] font-semibold text-[var(--text-primary)] pointer-events-none">QR Style</Label>
           </div>
           <ChevronDown className={cn(
             'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',

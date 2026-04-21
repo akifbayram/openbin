@@ -58,7 +58,7 @@ const OVERRIDE_FIELDS: Array<{ key: NumericOverrideKey; label: string; htmlId: s
 function StatItem({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex flex-col gap-0.5 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
-      <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">{label}</span>
+      <span className="ui-col-header">{label}</span>
       <span className="text-[20px] font-bold text-[var(--text-primary)] leading-tight">{value}</span>
     </div>
   );
@@ -70,7 +70,7 @@ function LimitStatItem({ label, used, limit, unit }: { label: string; used: numb
   const color = pct >= 90 ? 'bg-[var(--destructive)]' : pct >= 75 ? 'bg-[var(--color-warning)]' : 'bg-[var(--accent)]';
   return (
     <div className="flex flex-col gap-1.5 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
-      <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">{label}</span>
+      <span className="ui-col-header">{label}</span>
       <span className="text-[20px] font-bold text-[var(--text-primary)] leading-tight tabular-nums">
         {used}{unit ? ` ${unit}` : ''} <span className="text-[14px] font-normal text-[var(--text-tertiary)]">/ {limit}{unit ? ` ${unit}` : ''}</span>
       </span>
@@ -429,25 +429,25 @@ export function AdminUserDetailPage() {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Email</span>
+              <span className="ui-col-header">Email</span>
               <p className="text-[15px] text-[var(--text-primary)]">{detail.email || '—'}</p>
             </div>
             <div>
-              <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Display Name</span>
+              <span className="ui-col-header">Display Name</span>
               <p className="text-[15px] text-[var(--text-primary)]">{detail.displayName || '—'}</p>
             </div>
             {__EE__ && !planInfo.selfHosted && (
               <div>
-                <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Active Until</span>
+                <span className="ui-col-header">Active Until</span>
                 <p className="text-[15px] text-[var(--text-primary)]">{detail.activeUntil ? new Date(detail.activeUntil).toLocaleString() : '—'}</p>
               </div>
             )}
             <div>
-              <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Created</span>
+              <span className="ui-col-header">Created</span>
               <p className="text-[15px] text-[var(--text-primary)]">{createdAt.toLocaleString()}</p>
             </div>
             <div>
-              <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Updated</span>
+              <span className="ui-col-header">Updated</span>
               <p className="text-[15px] text-[var(--text-primary)]">{new Date(detail.updatedAt).toLocaleString()}</p>
             </div>
           </div>

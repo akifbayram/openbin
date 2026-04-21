@@ -59,7 +59,7 @@ export function BinSelectorCard({
             onClick={() => onExpandedChange(!expanded)}
           >
             <Package className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
-            <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Select {t.Bins}</Label>
+            <Label className="text-[15px] font-semibold text-[var(--text-primary)] pointer-events-none">Select {t.Bins}</Label>
             {selectedIds.size > 0 && (
               <span className="text-[13px] text-[var(--text-tertiary)]">
                 ({selectedIds.size}/{allBins.length})

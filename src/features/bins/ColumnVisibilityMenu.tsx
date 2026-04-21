@@ -70,7 +70,7 @@ export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle, c
           animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
           'absolute right-0 mt-1 w-52 rounded-[var(--radius-md)] flat-popover overflow-hidden z-20',
         )}>
-          <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+          <div className="ui-eyebrow px-3.5 py-2">
             Visible Fields
           </div>
           <FieldToggleList fields={applicableFields} visibility={visibility} onToggle={onToggle} customFieldLabels={customFieldLabels} />
