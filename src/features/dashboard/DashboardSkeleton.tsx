@@ -53,24 +53,18 @@ export function DashboardSkeleton({ settings }: { settings: DashboardSettings })
         )}
 
         {settings.showActivity && (
-          <>
-            <div className="flex flex-col gap-2 order-7 lg:order-none min-w-0">
-              <Skeleton className="h-5 w-32" />
-              <div className="flat-card rounded-[var(--radius-lg)] p-2 space-y-1">
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3 px-2.5 py-2">
-                    <Skeleton className="h-7 w-7 rounded-full" />
-                    <Skeleton className="h-3.5 flex-1" />
-                    <Skeleton className="h-3 w-10" />
-                  </div>
-                ))}
-              </div>
+          <div className="flex flex-col gap-2 order-7 lg:order-none min-w-0">
+            <Skeleton className="h-5 w-32" />
+            <div className="flat-card rounded-[var(--radius-lg)] p-2 space-y-1">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3 px-2.5 py-2">
+                  <Skeleton className="h-7 w-7 rounded-full" />
+                  <Skeleton className="h-3.5 flex-1" />
+                  <Skeleton className="h-3 w-10" />
+                </div>
+              ))}
             </div>
-            <div className="flex flex-col gap-2 order-8 lg:order-none min-w-0">
-              <Skeleton className="h-5 w-28" />
-              <div className="flat-card rounded-[var(--radius-lg)] p-4 h-[76px]" />
-            </div>
-          </>
+          </div>
         )}
       </div>
 

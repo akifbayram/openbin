@@ -12,13 +12,12 @@ interface ListResponse {
   count: number;
 }
 
+// GET /api/tag-colors returns a trimmed row shape (tag + color + parent_tag only);
+// the MCP tool only renders tag + color, so the slim shape is sufficient here.
 interface TagColor {
-  id: string;
-  location_id: string;
   tag: string;
   color: string;
-  created_at: string;
-  updated_at: string;
+  parent_tag?: string | null;
 }
 
 interface TagColorListResponse {

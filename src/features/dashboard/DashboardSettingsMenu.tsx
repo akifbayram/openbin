@@ -83,7 +83,7 @@ const SECTION_TILES: SectionTile[] = [
   { key: 'showPinnedBins', label: 'Pinned', icon: Pin },
   { key: 'showRecentlyScanned', label: 'Recent scans', icon: ScanLine },
   { key: 'showCheckouts', label: 'Checked out', icon: PackageCheck },
-  { key: 'showActivity', label: 'Activity & heatmap', icon: Activity, fullWidth: true },
+  { key: 'showActivity', label: 'Activity', icon: Activity, fullWidth: true },
 ];
 
 export function DashboardSettingsMenu({ settings, onUpdate, onReset, terminology }: DashboardSettingsMenuProps) {

@@ -70,6 +70,21 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
 }));
 
 router.get('/usage', authenticate, asyncHandler(async (req, res) => {
+  if (isSelfHosted()) {
+    // No plan limits exist on self-hosted — return an empty usage snapshot with no over-limits.
+    // Defense in depth: the client short-circuits this endpoint too, but direct API consumers
+    // (older clients, API keys) may still call it.
+    res.json({
+      binCount: 0,
+      locationCount: 0,
+      photoCount: 0,
+      photoStorageMb: 0,
+      memberCounts: {},
+      overLimits: { locations: false, photos: false, members: [] },
+    });
+    return;
+  }
+
   const userId = req.user!.id;
   const usage = await getUserUsage(userId);
   const planInfo = await getUserPlanInfo(userId);
@@ -82,6 +97,20 @@ router.get('/usage', authenticate, asyncHandler(async (req, res) => {
 }));
 
 router.get('/usage-summary', authenticate, asyncHandler(async (req, res) => {
+  if (isSelfHosted()) {
+    // Self-hosted has no plan limits or AI credit quotas to report.
+    res.json({
+      binCount: 0,
+      photoCount: 0,
+      photoStorageMb: 0,
+      customFieldCount: 0,
+      aiCreditsUsed: 0,
+      aiCreditsLimit: 0,
+      aiCreditsResetsAt: null,
+    });
+    return;
+  }
+
   const userId = req.user!.id;
   const [usage, aiCredits, fieldCount] = await Promise.all([
     getUserUsage(userId),

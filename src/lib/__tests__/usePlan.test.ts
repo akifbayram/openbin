@@ -13,6 +13,14 @@ vi.mock('@/lib/auth', () => ({
   })),
 }));
 
+// Default to cloud (not self-hosted) so the provider exercises its fetch path.
+// Individual tests can override isSelfHostedInstance() via mockIsSelfHosted.
+const mockIsSelfHosted = vi.fn(() => false);
+vi.mock('@/lib/qrConfig', () => ({
+  isSelfHostedInstance: () => mockIsSelfHosted(),
+  waitForConfig: () => Promise.resolve(),
+}));
+
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { PlanProvider, usePlan } from '@/lib/usePlan';
@@ -168,6 +176,7 @@ function mockPlanFetch(plan: PlanInfo) {
 describe('usePlan', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsSelfHosted.mockReturnValue(false);
     mockUseAuth.mockReturnValue({ token: 'cookie' } as ReturnType<typeof useAuth>);
   });
 
@@ -188,6 +197,22 @@ describe('usePlan', () => {
     expect(result.current.isPro).toBe(true);
     expect(result.current.isPlus).toBe(false);
     expect(result.current.isFree).toBe(false);
+  });
+
+  it('does not fetch /api/plan or /api/plan/usage on self-hosted builds', async () => {
+    mockIsSelfHosted.mockReturnValue(true);
+
+    const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(mockApiFetch).not.toHaveBeenCalled();
+    expect(result.current.planInfo.selfHosted).toBe(true);
+    expect(result.current.planInfo.plan).toBe('pro');
+    expect(result.current.isSelfHosted).toBe(true);
+    expect(result.current.usage).toBeNull();
+    expect(result.current.overLimits).toBeNull();
+    expect(result.current.isOverAnyLimit).toBe(false);
   });
 
   it('provides free plan info for free users', async () => {

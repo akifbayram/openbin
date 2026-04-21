@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Events, useRefreshOn } from '@/lib/eventBus';
+import { isSelfHostedInstance, waitForConfig } from '@/lib/qrConfig';
 import type { OverLimits, PlanFeatures, PlanInfo, PlanUsage } from '@/types';
 
 export function getLockedMessage(previousSubStatus: 'trial' | 'active' | null): string {
@@ -102,12 +103,31 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [usage, setUsage] = useState<PlanUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Gate fetches until qrConfig resolves so we know whether this is self-hosted.
+  // Self-hosted instances skip every /api/plan and /api/plan/usage request and
+  // use the static SELF_HOSTED_PLAN constant instead. isSelfHostedInstance()
+  // defaults to true before init resolves, so we must wait for the config fetch
+  // (or observe it already resolved) before trusting the value.
+  const [selfHostedResolved, setSelfHostedResolved] = useState<boolean | null>(null);
 
   const usageRefresh = useRefreshOn(Events.LOCATIONS, Events.PHOTOS);
   const planRefresh = useRefreshOn(Events.PLAN);
 
+  useEffect(() => {
+    let cancelled = false;
+    waitForConfig().then(() => {
+      if (cancelled) return;
+      setSelfHostedResolved(isSelfHostedInstance());
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   const fetchPlan = useCallback(async (): Promise<PlanInfo | null> => {
     if (!token) return null;
+    if (isSelfHostedInstance()) {
+      setPlanInfo(SELF_HOSTED_PLAN);
+      return SELF_HOSTED_PLAN;
+    }
     try {
       const data = await apiFetch<PlanInfo>('/api/plan');
       const info = data.selfHosted ? SELF_HOSTED_PLAN : data;
@@ -123,6 +143,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUsage = useCallback(async (): Promise<void> => {
     if (!token) return;
+    // Self-hosted has no plan limits — skip the request entirely.
+    if (isSelfHostedInstance()) return;
     try {
       const data = await apiFetch<PlanUsage>('/api/plan/usage');
       setUsage(data);
@@ -136,24 +158,34 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       return;
     }
+    // Wait for qrConfig to resolve before deciding whether to fetch at all.
+    if (selfHostedResolved === null) return;
 
     let cancelled = false;
     setIsLoading(true);
+
+    if (selfHostedResolved) {
+      setPlanInfo(SELF_HOSTED_PLAN);
+      setIsLoading(false);
+      return;
+    }
 
     Promise.all([fetchPlan(), fetchUsage()]).finally(() => {
       if (!cancelled) setIsLoading(false);
     });
 
     return () => { cancelled = true; };
-  }, [fetchPlan, fetchUsage, token]);
+  }, [fetchPlan, fetchUsage, token, selfHostedResolved]);
 
   useEffect(() => {
+    if (selfHostedResolved) return;
     if (usageRefresh > 0) fetchUsage();
-  }, [usageRefresh, fetchUsage]);
+  }, [usageRefresh, fetchUsage, selfHostedResolved]);
 
   useEffect(() => {
+    if (selfHostedResolved) return;
     if (planRefresh > 0) fetchPlan();
-  }, [planRefresh, fetchPlan]);
+  }, [planRefresh, fetchPlan, selfHostedResolved]);
 
   const value = useMemo<PlanContextValue>(() => {
     const info = planInfo ?? LOCKED_FALLBACK;

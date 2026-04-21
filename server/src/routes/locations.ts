@@ -418,33 +418,6 @@ router.get('/:id/stats', asyncHandler(async (req, res) => {
   res.json(result.rows[0]);
 }));
 
-// GET /api/locations/:id/usage — daily aggregate across all bins in the location
-router.get('/:id/usage', asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const isMember = await verifyLocationMembership(id, req.user!.id);
-  if (!isMember) throw new ForbiddenError('Not a member of this location');
-
-  const result = await query<{ date: string; bin_count: number; total_count: number }>(
-    `SELECT bud.date,
-            COUNT(DISTINCT bud.bin_id) AS bin_count,
-            SUM(bud.count) AS total_count
-     FROM bin_usage_days bud
-     JOIN bins b ON b.id = bud.bin_id AND b.location_id = $1 AND b.deleted_at IS NULL
-     GROUP BY bud.date
-     ORDER BY bud.date DESC`,
-    [id],
-  );
-
-  const results = result.rows.map((r) => ({
-    date: r.date,
-    binCount: Number(r.bin_count),
-    totalCount: Number(r.total_count),
-  }));
-
-  res.json({ results, count: result.rowCount });
-}));
-
 // GET /api/locations/:id/members — list members
 router.get('/:id/members', asyncHandler(async (req, res) => {
   const locationId = req.params.id;

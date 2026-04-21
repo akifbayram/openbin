@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
 import { useAiSettings } from '@/features/ai/useAiSettings';
-import { useBinList } from '@/features/bins/useBins';
+import { useFirstBinIds } from '@/features/bins/useBins';
 import { useAutoOpenOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useLocationList } from '@/features/locations/useLocations';
 import { DemoCtaOverlay } from '@/features/onboarding/DemoCtaOverlay';
@@ -68,8 +68,8 @@ export function AppLayout() {
   const showLockedBanner = isLocked && !isSelfHosted && !planLoading;
   const { settings: aiSettings } = useAiSettings();
   const terminology = useTerminology();
-  const { bins } = useBinList();
-  const firstBinId = bins.length > 0 ? bins[0].id : null;
+  const { binIds } = useFirstBinIds();
+  const firstBinId = binIds.length > 0 ? binIds[0] : null;
   const [isMobile] = useState(() => !window.matchMedia('(min-width: 1024px)').matches);
   const [commandOpen, setCommandOpen] = useState(false);
   const commandMounted = useRef(false);
@@ -107,12 +107,12 @@ export function AppLayout() {
     canWrite,
     aiEnabled: aiSettings !== null,
     firstBinId,
-    binIds: bins.map(b => b.id),
+    binIds,
     terminology,
     isMobile,
     openCommandInput: () => getCommandInputRef().current?.open(),
     closeCommandInput: () => getCommandInputRef().current?.close(),
-  }), [canWrite, aiSettings, firstBinId, bins, terminology, isMobile]);
+  }), [canWrite, aiSettings, firstBinId, binIds, terminology, isMobile]);
 
   const tour = useTour({ context: tourContext, navigate, updatePreferences });
 

@@ -3824,34 +3824,6 @@ paths:
         '404': { description: Bin not found }
         '422': { description: Invalid trigger value }
 
-  /locations/{id}/usage:
-    get:
-      summary: Get aggregate usage for a location
-      tags: [Locations]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Aggregated daily rows across all bins in the location
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  results:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        date: { type: string, format: date }
-                        binCount: { type: integer }
-                        totalCount: { type: integer }
-                  count: { type: integer }
-        '403': { description: Not a member of this location }
-
   # ════════════════════════════════════════════════════════
   # Photos
   # ════════════════════════════════════════════════════════

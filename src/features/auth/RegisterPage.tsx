@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength';
+import { getAuthStatusConfig, isSelfHostedInstance, waitForConfig } from '@/lib/qrConfig';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
 import { cn, EMAIL_REGEX, focusRing, getErrorMessage } from '@/lib/utils';
 import { SocialButtons, SocialDivider } from './SocialButtons';
@@ -45,19 +46,20 @@ export function RegisterPage() {
   const inviteRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch('/api/auth/status')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.registrationMode === 'closed' || data.registrationEnabled === false) {
-          showToast({ message: 'Registration is currently disabled', variant: 'warning' });
-          navigate('/login');
-        }
-        setRegistrationMode(data.registrationMode ?? 'open');
-        if (Array.isArray(data.oauthProviders)) setOAuthProviders(data.oauthProviders);
-        if (typeof data.selfHosted === 'boolean') setSelfHosted(data.selfHosted);
-      })
-      .catch(() => {})
-      .finally(() => setStatusLoaded(true));
+    let cancelled = false;
+    waitForConfig().then(() => {
+      if (cancelled) return;
+      const status = getAuthStatusConfig();
+      if (!status.registrationEnabled || status.registrationMode === 'closed') {
+        showToast({ message: 'Registration is currently disabled', variant: 'warning' });
+        navigate('/login');
+      }
+      setRegistrationMode(status.registrationMode === 'invite' ? 'invite' : 'open');
+      setOAuthProviders(status.oauthProviders);
+      setSelfHosted(isSelfHostedInstance());
+      setStatusLoaded(true);
+    });
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, showToast]);
 

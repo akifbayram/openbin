@@ -54,6 +54,24 @@ export function countActiveFilters(f: BinFilters): number {
   return n;
 }
 
+/**
+ * Lightweight hook that fetches only a handful of bin IDs from the active location.
+ * Used by the tour/onboarding layer in AppLayout so every route doesn't trigger a
+ * full ~60KB `/api/bins` fetch. Server default sort is `updated_at DESC`, matching
+ * what `useBinList` would pick as "first bin".
+ */
+export function useFirstBinIds(limit = 6): { binIds: string[]; isLoading: boolean } {
+  const { activeLocationId, token } = useAuth();
+  const { data, isLoading } = useListData<Bin>(
+    token && activeLocationId
+      ? `/api/bins?location_id=${encodeURIComponent(activeLocationId)}&limit=${limit}`
+      : null,
+    [Events.BINS],
+  );
+  const binIds = useMemo(() => data.map((b) => b.id), [data]);
+  return { binIds, isLoading };
+}
+
 export function useBinList(searchQuery?: string, sort: SortOption = 'updated', filters?: BinFilters, skip?: boolean) {
   const { activeLocationId, token } = useAuth();
   const { data: rawBins, isLoading, refresh } = useListData<Bin>(

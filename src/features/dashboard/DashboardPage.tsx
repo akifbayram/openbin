@@ -33,7 +33,6 @@ import { cn, getErrorMessage } from '@/lib/utils';
 import { DashboardActivityFeed } from './DashboardActivityFeed';
 import { DashboardChecklist } from './DashboardChecklist';
 import { DashboardDialogs } from './DashboardDialogs';
-import { DashboardMonthHeatmap } from './DashboardMonthHeatmap';
 import { DashboardOpenCheckouts } from './DashboardOpenCheckouts';
 import { DashboardRecentScans } from './DashboardRecentScans';
 import { DashboardSettingsMenu } from './DashboardSettingsMenu';
@@ -199,7 +198,7 @@ export function DashboardPage() {
 
         {/*
           Mobile order is driven by action gradient (act → shortcut → recall → orient → analyze):
-          1 onboarding · 2 checkouts · 3 pinned · 4 recent scans · 5 saved · 6 stats · 7 activity · 8 heatmap.
+          1 onboarding · 2 checkouts · 3 pinned · 4 recent scans · 5 saved · 6 stats · 7 activity.
           Wrappers use `display: contents` on mobile so sections participate directly in the outer grid;
           on `lg:` they become real 2:1 columns with natural DOM order restored.
         */}
@@ -248,12 +247,6 @@ export function DashboardPage() {
             {dashSettings.showActivity && isAdmin && (
               <div className="order-7 lg:order-none min-w-0">
                 <DashboardActivityFeed showTimestamps={dashSettings.showTimestamps} />
-              </div>
-            )}
-
-            {dashSettings.showActivity && activeLocationId && (
-              <div className="order-8 lg:order-none min-w-0">
-                <DashboardMonthHeatmap locationId={activeLocationId} />
               </div>
             )}
           </div>
@@ -363,7 +356,7 @@ export function DashboardPage() {
                 { key: 'showPinnedBins' as const, label: `Pinned ${t.Bins}` },
                 { key: 'showRecentlyScanned' as const, label: 'Recent scans' },
                 { key: 'showCheckouts' as const, label: 'Checked out' },
-                { key: 'showActivity' as const, label: 'Activity & heatmap' },
+                { key: 'showActivity' as const, label: 'Activity' },
               ]).map(({ key, label }) => (
                 <div key={key} className="flex items-center justify-between py-2 px-3 rounded-[var(--radius-md)]">
                   <span className="text-[14px] text-[var(--text-primary)]">{label}</span>

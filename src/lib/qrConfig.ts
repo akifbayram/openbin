@@ -1,13 +1,26 @@
 export type QrPayloadMode = 'app' | 'url';
+export type RegistrationMode = 'open' | 'invite' | 'closed';
 
 interface QrConfig {
   qrPayloadMode: QrPayloadMode;
   baseUrl?: string;
 }
 
+/** Public fields from GET /api/auth/status that other modules consume. */
+export interface AuthStatusConfig {
+  registrationMode: RegistrationMode;
+  registrationEnabled: boolean;
+  oauthProviders: string[];
+}
+
 let cached: QrConfig = { qrPayloadMode: 'app' };
 let selfHostedCached = true; // default true (safe: hides cloud-only UI until confirmed)
 let attachmentsEnabledCached = false; // default false — feature is hidden until server confirms
+let authStatusCached: AuthStatusConfig = {
+  registrationMode: 'open',
+  registrationEnabled: true,
+  oauthProviders: [],
+};
 let initPromise: Promise<void> | null = null;
 
 export function getQrConfig(): QrConfig {
@@ -22,6 +35,11 @@ export function isSelfHostedInstance(): boolean {
 /** Whether the non-image attachments feature is enabled on this server. */
 export function isAttachmentsEnabled(): boolean {
   return attachmentsEnabledCached;
+}
+
+/** Snapshot of public auth-status fields (registration mode, OAuth providers). */
+export function getAuthStatusConfig(): AuthStatusConfig {
+  return authStatusCached;
 }
 
 /** Wait for the initial config fetch to complete. */
@@ -51,6 +69,15 @@ async function _doInit(): Promise<void> {
     if (typeof data.attachmentsEnabled === 'boolean') {
       attachmentsEnabledCached = data.attachmentsEnabled;
     }
+    const mode: RegistrationMode =
+      data.registrationMode === 'closed' || data.registrationMode === 'invite'
+        ? data.registrationMode
+        : 'open';
+    authStatusCached = {
+      registrationMode: mode,
+      registrationEnabled: data.registrationEnabled !== false,
+      oauthProviders: Array.isArray(data.oauthProviders) ? data.oauthProviders : [],
+    };
   } catch {
     // Keep defaults on network failure
   }
