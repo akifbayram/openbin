@@ -1,6 +1,7 @@
 import type { UserContent } from 'ai';
 import type { Request, Response } from 'express';
 import { createPinnedFetch, validateEndpointUrl } from './aiCaller.js';
+import { resizeImageForAi } from './aiImageResize.js';
 import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildContextPreamble, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from './aiProviders.js';
 import type { LocationAiMeta } from './aiRequestHelpers.js';
 import { verifyLocationAndFetchMeta } from './aiRequestHelpers.js';
@@ -78,7 +79,10 @@ export async function runAnalysisStream(args: AnalysisStreamArgs): Promise<void>
   const { customFieldDefs } = args.meta
     ?? await verifyLocationAndFetchMeta(locationId, req.user!.id);
 
-  const imageParts = images.map((img) => ({
+  const resized = await Promise.all(
+    images.map((img) => resizeImageForAi(img.buffer, img.mimeType)),
+  );
+  const imageParts = resized.map((img) => ({
     type: 'image' as const,
     image: img.buffer,
     mimeType: img.mimeType,

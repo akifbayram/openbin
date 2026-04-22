@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MAX_AI_PHOTOS } from '@/features/ai/aiConstants';
 import { useAiStream } from '@/features/ai/useAiStream';
-import { compressImage } from '@/features/photos/compressImage';
+import { compressImageForAi } from '@/features/photos/compressImageForAi';
 import type { AiSuggestions } from '@/types';
 
 interface UsePhotoAnalysisOptions {
@@ -14,7 +14,7 @@ interface UsePhotoAnalysisOptions {
 async function compressPhotos(photos: File[]): Promise<File[]> {
   return Promise.all(
     photos.map(async (p) => {
-      const compressed = await compressImage(p);
+      const compressed = await compressImageForAi(p);
       return compressed instanceof File
         ? compressed
         : new File([compressed], p.name, { type: compressed.type || 'image/jpeg' });

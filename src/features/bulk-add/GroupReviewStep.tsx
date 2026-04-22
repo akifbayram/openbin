@@ -19,7 +19,7 @@ import { QuickAddWidget } from '@/features/bins/QuickAddWidget';
 import { TagInput } from '@/features/bins/TagInput';
 import { useAllTags } from '@/features/bins/useBins';
 import { useQuickAdd } from '@/features/bins/useQuickAdd';
-import { compressImage } from '@/features/photos/compressImage';
+import { compressImageForAi } from '@/features/photos/compressImageForAi';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { aiItemsToBinItems } from '@/lib/itemQuantities';
@@ -33,7 +33,7 @@ const MAX_CORRECTIONS = 3;
 async function buildPhotosFormData(photos: Photo[]): Promise<FormData> {
   const compressed = await Promise.all(
     photos.map(async (p) => {
-      const blob = await compressImage(p.file);
+      const blob = await compressImageForAi(p.file);
       return blob instanceof File
         ? blob
         : new File([blob], p.file.name, { type: blob.type || 'image/jpeg' });
