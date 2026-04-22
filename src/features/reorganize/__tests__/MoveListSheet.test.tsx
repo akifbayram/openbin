@@ -67,14 +67,12 @@ const baseProps = {
   totalItems: 2,
   totalMoves: 1,
   totalDestinationBins: 1,
-  summary: 'Group by type',
 };
 
 describe('MoveListSheet', () => {
   it('renders header with title, date, and counts', async () => {
     render(<MoveListSheet {...baseProps} />);
     await waitFor(() => expect(screen.getByText('Move List')).toBeTruthy());
-    expect(screen.getByText('Group by type')).toBeTruthy();
     expect(screen.getByText(/1 → 1 bin · 2 items · 1 move/)).toBeTruthy();
   });
 

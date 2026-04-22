@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Area, Bin } from '@/types';
 import { ReorganizePreview } from '../ReorganizePreview';
+import type { ResolvedReorgPartial } from '../resolveReorgIndexes';
 import type { ReorgResponse } from '../useReorganize';
 
 vi.mock('@/lib/terminology', () => ({
@@ -43,7 +44,7 @@ function makeBin(overrides: Partial<Bin> = {}): Bin {
 const baseProps = {
   isStreaming: false,
   isApplying: false,
-  partialResult: { bins: [], summary: '' },
+  partialResult: { bins: [] } as ResolvedReorgPartial,
   areas: [] as Area[],
   onAccept: vi.fn(),
   onCancel: vi.fn(),
@@ -58,7 +59,6 @@ describe('ReorganizePreview — source-oriented', () => {
     ];
     const result: ReorgResponse = {
       bins: [{ name: 'Tools', items: ['Hammer', 'Wrench'], tags: [] }],
-      summary: '',
     };
     render(<ReorganizePreview {...baseProps} inputBins={inputBins} result={result} />);
     const alpha = screen.getAllByText('Alpha Bin')[0];
@@ -74,7 +74,6 @@ describe('ReorganizePreview — source-oriented', () => {
     })];
     const result: ReorgResponse = {
       bins: [{ name: 'Hand Tools', items: ['Hammer'], tags: [] }],
-      summary: '',
     };
     render(<ReorganizePreview {...baseProps} inputBins={inputBins} result={result} />);
     expect(screen.getAllByText(/will be kept/)[0]).toBeTruthy();
@@ -88,7 +87,6 @@ describe('ReorganizePreview — source-oriented', () => {
     })];
     const result: ReorgResponse = {
       bins: [{ name: 'Tools', items: ['Hammer'], tags: [] }],
-      summary: '',
     };
     render(<ReorganizePreview {...baseProps} inputBins={inputBins} result={result} />);
     expect(screen.getAllByText(/will be emptied/)[0]).toBeTruthy();
@@ -102,7 +100,6 @@ describe('ReorganizePreview — source-oriented', () => {
     })];
     const result: ReorgResponse = {
       bins: [{ name: 'Tools', items: ['Hammer'], tags: [] }],
-      summary: '',
     };
     render(<ReorganizePreview {...baseProps} inputBins={inputBins} result={result} />);
     expect(screen.getAllByText('kept')[0]).toBeTruthy();
@@ -119,7 +116,6 @@ describe('ReorganizePreview — source-oriented', () => {
         { name: 'D1', items: ['Batteries'], tags: [] },
         { name: 'D2', items: ['Batteries'], tags: [] },
       ],
-      summary: '',
     };
     render(<ReorganizePreview {...baseProps} inputBins={inputBins} result={result} />);
     expect(screen.getAllByText(/×2 destinations/).length).toBeGreaterThanOrEqual(1);
@@ -134,7 +130,6 @@ describe('ReorganizePreview — source-oriented', () => {
       bins: [
         { name: 'Hand Tools', items: ['Hammer', 'Wrench'], tags: [] },
       ],
-      summary: '',
     };
     render(<ReorganizePreview {...baseProps} inputBins={inputBins} result={result} />);
     expect(screen.getByRole('button', { name: /keep 1 bin/ })).toBeTruthy();
@@ -144,7 +139,6 @@ describe('ReorganizePreview — source-oriented', () => {
     const inputBins = [makeBin({ id: 'b1', name: 'Src', items: [{ id: 'i1', name: 'A', quantity: null }, { id: 'i2', name: 'B', quantity: null }] })];
     const result: ReorgResponse = {
       bins: [{ name: 'Dest', items: ['A', 'B'], tags: [] }],
-      summary: '',
     };
     render(<ReorganizePreview {...baseProps} inputBins={inputBins} result={result} />);
     expect(screen.getByRole('button', { name: /Accept — Move 2 items, create 1 bin/ })).toBeTruthy();

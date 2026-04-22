@@ -1,77 +1,92 @@
 import { describe, expect, it } from 'vitest';
-import { detectReorganizeMismatch, normalizeItemName } from '../lib/reorganizeMismatch.js';
+import { detectReorganizeMismatchByIndex } from '../lib/reorganizeMismatch.js';
 
-describe('normalizeItemName', () => {
-  it('trims, lowercases, collapses whitespace', () => {
-    expect(normalizeItemName('  Hammer  ')).toBe('hammer');
-    expect(normalizeItemName('USB  Cable')).toBe('usb cable');
-    expect(normalizeItemName('Tape\tMeasure')).toBe('tape measure');
-  });
-});
-
-describe('detectReorganizeMismatch — force-single', () => {
+describe('detectReorganizeMismatchByIndex — force-single', () => {
   const opts = { allowDupes: false };
 
-  it('matches when multisets are equal', () => {
-    const r = detectReorganizeMismatch(['hammer', 'screw', 'screw'], ['screw', 'hammer', 'screw'], opts);
-    expect(r).toEqual({ mismatch: false, dropped: [], invented: [] });
+  it('matches when every input index appears exactly once', () => {
+    expect(detectReorganizeMismatchByIndex(3, [1, 2, 3], opts)).toEqual({
+      mismatch: false, dropped: [], invented: [],
+    });
   });
 
-  it('flags dropped items', () => {
-    const r = detectReorganizeMismatch(['hammer', 'screw'], ['hammer'], opts);
+  it('order-independent', () => {
+    expect(detectReorganizeMismatchByIndex(3, [3, 1, 2], opts)).toEqual({
+      mismatch: false, dropped: [], invented: [],
+    });
+  });
+
+  it('flags missing indices as dropped', () => {
+    const r = detectReorganizeMismatchByIndex(3, [1, 3], opts);
     expect(r.mismatch).toBe(true);
-    expect(r.dropped).toEqual(['screw']);
+    expect(r.dropped).toEqual([2]);
     expect(r.invented).toEqual([]);
   });
 
-  it('flags invented items', () => {
-    const r = detectReorganizeMismatch(['hammer'], ['hammer', 'wrench'], opts);
+  it('flags duplicate indices as invented', () => {
+    const r = detectReorganizeMismatchByIndex(2, [1, 2, 2], opts);
     expect(r.mismatch).toBe(true);
     expect(r.dropped).toEqual([]);
-    expect(r.invented).toEqual(['wrench']);
+    expect(r.invented).toEqual([2]);
   });
 
-  it('flags count mismatch for repeated names', () => {
-    const r = detectReorganizeMismatch(['screw', 'screw'], ['screw'], opts);
+  it('flags out-of-range indices as invented', () => {
+    const r = detectReorganizeMismatchByIndex(2, [1, 2, 99], opts);
     expect(r.mismatch).toBe(true);
-    expect(r.dropped).toEqual(['screw']);
+    expect(r.invented).toEqual([99]);
   });
 
-  it('flags invented for a name over-represented in output', () => {
-    const r = detectReorganizeMismatch(['screw'], ['screw', 'screw'], opts);
+  it('flags zero and negative indices as invented', () => {
+    const r = detectReorganizeMismatchByIndex(2, [0, 1, 2, -5], opts);
     expect(r.mismatch).toBe(true);
-    expect(r.dropped).toEqual([]);
-    expect(r.invented).toEqual(['screw']);
+    expect(r.invented).toEqual(expect.arrayContaining([0, -5]));
+    expect(r.invented).toHaveLength(2);
   });
 
-  it('normalizes case and whitespace when comparing', () => {
-    const r = detectReorganizeMismatch(['Hammer', '  screw '], ['HAMMER', 'screw'], opts);
-    expect(r.mismatch).toBe(false);
+  it('flags non-integer (fractional) indices as invented', () => {
+    const r = detectReorganizeMismatchByIndex(2, [1, 1.5, 2], opts);
+    expect(r.mismatch).toBe(true);
+    expect(r.invented).toEqual([1.5]);
   });
 
-  it('returns empty result for both sides empty', () => {
-    expect(detectReorganizeMismatch([], [], opts)).toEqual({ mismatch: false, dropped: [], invented: [] });
+  it('handles zero total items', () => {
+    expect(detectReorganizeMismatchByIndex(0, [], opts)).toEqual({
+      mismatch: false, dropped: [], invented: [],
+    });
+  });
+
+  it('flags any output index when totalInputItems is zero', () => {
+    const r = detectReorganizeMismatchByIndex(0, [1], opts);
+    expect(r.mismatch).toBe(true);
+    expect(r.invented).toEqual([1]);
   });
 });
 
-describe('detectReorganizeMismatch — duplicates allowed', () => {
+describe('detectReorganizeMismatchByIndex — allow duplicates', () => {
   const opts = { allowDupes: true };
 
-  it('allows output count greater than input count', () => {
-    const r = detectReorganizeMismatch(['batteries'], ['batteries', 'batteries'], opts);
-    expect(r.mismatch).toBe(false);
+  it('matches when output references all input indices (any multiplicity)', () => {
+    expect(detectReorganizeMismatchByIndex(3, [1, 2, 3, 1, 3], opts)).toEqual({
+      mismatch: false, dropped: [], invented: [],
+    });
   });
 
-  it('flags dropped names even when dupes are allowed', () => {
-    const r = detectReorganizeMismatch(['batteries', 'bulbs'], ['batteries', 'batteries'], opts);
+  it('flags missing input indices as dropped (once each)', () => {
+    const r = detectReorganizeMismatchByIndex(3, [1, 1, 1], opts);
     expect(r.mismatch).toBe(true);
-    expect(r.dropped).toEqual(['bulbs']);
+    expect(r.dropped).toEqual(expect.arrayContaining([2, 3]));
+    expect(r.dropped).toHaveLength(2);
     expect(r.invented).toEqual([]);
   });
 
-  it('flags invented names when they are not in input', () => {
-    const r = detectReorganizeMismatch(['batteries'], ['batteries', 'fuses'], opts);
+  it('flags out-of-range as invented even under allowDupes', () => {
+    const r = detectReorganizeMismatchByIndex(2, [1, 2, 99], opts);
     expect(r.mismatch).toBe(true);
-    expect(r.invented).toEqual(['fuses']);
+    expect(r.invented).toEqual([99]);
+  });
+
+  it('duplicates do not count as invented under allowDupes', () => {
+    const r = detectReorganizeMismatchByIndex(2, [1, 1, 2, 2], opts);
+    expect(r.mismatch).toBe(false);
   });
 });

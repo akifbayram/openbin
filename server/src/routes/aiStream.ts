@@ -19,7 +19,7 @@ import { classifyIntent } from '../lib/intentClassifier.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg, enrichQueryMatches, type RawMatch } from '../lib/inventoryQuery.js';
 import { refundAiCredit } from '../lib/planGate.js';
 import { aiRateLimiters } from '../lib/rateLimiters.js';
-import { detectReorganizeMismatch } from '../lib/reorganizeMismatch.js';
+import { detectReorganizeMismatchByIndex } from '../lib/reorganizeMismatch.js';
 import { buildReorganizePrompt } from '../lib/reorganizePrompt.js';
 import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../lib/structureText.js';
 import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
@@ -326,7 +326,7 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
   }
 
   const { settings, model } = await resolveUserModel(req.user!.id, 'reorganization', isDemoUser(req));
-  const { system, userContent } = buildReorganizePrompt({
+  const { system, userContent, totalInputItems } = buildReorganizePrompt({
     inputBins, maxBins, areaName, userNotes, strictness, granularity, ambiguousPolicy,
     duplicates, outliers, minItemsPerBin, maxItemsPerBin,
     reorganizationPromptOverride: settings.reorganization_prompt,
@@ -334,19 +334,25 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
   });
 
   if (config.aiMock) {
+    const totalItems = inputBins.reduce(
+      (sum: number, b: { items?: string[] }) => sum + (b.items?.length ?? 0),
+      0,
+    );
     await sendMockJsonStream(res, {
-      bins: [{ name: 'Reorganized Bin', items: inputBins.flatMap((b: { items: string[] }) => b.items) }],
-      summary: 'Mock reorganization result.',
+      bins: [{
+        name: 'Reorganized Bin',
+        items: Array.from({ length: totalItems }, (_, i) => i + 1),
+        tags: [],
+      }],
     });
     return;
   }
 
-  // Retry up to 3 times if the AI drops or invents items (per-item identity, not just totals)
+  // Retry up to 3 times if the AI drops or invents items
   const MAX_ATTEMPTS = 3;
   const writeEvent = initSseResponse(res);
   const sOpts = streamOpts(settings, { temperature: 0.2, maxTokens: 16000 });
   const allowDupes = ambiguousPolicy === 'multi-bin' || duplicates === 'allow';
-  const inputItemNames = inputBins.flatMap((b: { items?: string[] }) => b.items ?? []);
   let finalText: string | null = null;
   let mismatch = false;
 
@@ -356,27 +362,28 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
 
       finalText = await streamAiToWriter(writeEvent, model, { system, userContent, ...sOpts });
 
-      if (!finalText) break; // upstream stream error or truncation — error already surfaced
+      if (!finalText) break;
 
-      let outputItemNames: string[];
+      let outputIndices: number[];
       try {
         const parsed = JSON.parse(finalText);
-        outputItemNames = Array.isArray(parsed.bins)
-          ? parsed.bins.flatMap((b: { items?: string[] }) => b.items ?? [])
+        outputIndices = Array.isArray(parsed.bins)
+          ? parsed.bins.flatMap((b: { items?: unknown[] }) =>
+              Array.isArray(b.items) ? b.items.filter((x): x is number => typeof x === 'number') : [],
+            )
           : [];
       } catch {
         finalText = null;
         break;
       }
 
-      const result = detectReorganizeMismatch(inputItemNames, outputItemNames, { allowDupes });
+      const result = detectReorganizeMismatchByIndex(totalInputItems, outputIndices, { allowDupes });
       mismatch = result.mismatch;
 
-      if (!mismatch) break; // per-item preservation satisfied — done
+      if (!mismatch) break;
     }
 
     if (!finalText) {
-      // Upstream error / parse failure. streamAiToWriter already surfaced an error event.
       return;
     }
 

@@ -18,7 +18,6 @@ interface MoveListSheetProps {
   totalItems: number;
   totalMoves: number;
   totalDestinationBins: number;
-  summary?: string;
 }
 
 export function MoveListSheet({
@@ -28,7 +27,6 @@ export function MoveListSheet({
   totalItems,
   totalMoves,
   totalDestinationBins,
-  summary,
 }: MoveListSheetProps) {
   const t = useTerminology();
   const [qrMap, setQrMap] = useState<Map<string, string>>(new Map());
@@ -70,7 +68,6 @@ export function MoveListSheet({
         <div className="move-list-counts">
           {sourceCards.length} → {totalDestinationBins} {totalDestinationBins === 1 ? t.bin : t.bins} · {totalItems} item{totalItems !== 1 ? 's' : ''} · {totalMoves} move{totalMoves !== 1 ? 's' : ''}
         </div>
-        {summary && <p className="move-list-summary">{summary}</p>}
       </div>
 
       {sourceCards.map((card) => (
