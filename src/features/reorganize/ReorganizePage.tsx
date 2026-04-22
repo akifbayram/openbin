@@ -1,6 +1,6 @@
 import { AlertCircle, ChevronDown, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,8 +30,11 @@ import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 import { ReorganizePreview } from './ReorganizePreview';
+import { ReorganizeTagsOptions } from './ReorganizeTagsOptions';
+import { ReorganizeTagsPreview } from './ReorganizeTagsPreview';
 import type { ReorgOptions } from './useReorganize';
 import { useReorganize } from './useReorganize';
+import { type TagSuggestOptions, type TagUserSelections, useReorganizeTags } from './useReorganizeTags';
 
 const UpgradePrompt = __EE__
   ? lazy(() => import('@/ee/UpgradePrompt').then(m => ({ default: m.UpgradePrompt })))
@@ -57,6 +60,26 @@ export function ReorganizePage() {
   const { areas } = useAreaList(activeLocationId);
   const selection = useBinSelection(allBins);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [mode, setModeRaw] = useState<'bins' | 'tags'>(() => {
+    const urlMode = searchParams.get('mode');
+    if (urlMode === 'tags' || urlMode === 'bins') return urlMode;
+    const stored = localStorage.getItem('openbin-reorganize-mode');
+    return stored === 'tags' ? 'tags' : 'bins';
+  });
+
+  const setMode = useCallback(
+    (next: 'bins' | 'tags') => {
+      setModeRaw(next);
+      localStorage.setItem('openbin-reorganize-mode', next);
+      const params = new URLSearchParams(searchParams);
+      if (next === 'tags') params.set('mode', 'tags');
+      else params.delete('mode');
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
   const [maxBins, setMaxBins] = useState<string>('');
   const [userNotes, setUserNotes] = useState('');
   const [strictness, setStrictness] = useState<NonNullable<ReorgOptions['strictness']>>('moderate');
@@ -70,6 +93,21 @@ export function ReorganizePage() {
   const [optionsExpanded, setOptionsExpanded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const reorgRef = useRef<HTMLDivElement>(null);
+
+  const tagsHook = useReorganizeTags();
+  const [tagsChangeLevel, setTagsChangeLevel] = useState<NonNullable<TagSuggestOptions['changeLevel']>>('additive');
+  const [tagsGranularity, setTagsGranularity] = useState<NonNullable<TagSuggestOptions['granularity']>>('medium');
+  const [tagsMaxPerBin, setTagsMaxPerBin] = useState('');
+  const [tagsNotes, setTagsNotes] = useState('');
+  const [tagsOptionsExpanded, setTagsOptionsExpanded] = useState(false);
+  const [tagsConfirmOpen, setTagsConfirmOpen] = useState(false);
+  const [tagsSelections, setTagsSelections] = useState<TagUserSelections>({
+    newTags: new Set(),
+    renames: new Set(),
+    merges: new Set(),
+    parents: new Set(),
+    assignments: new Set(),
+  });
 
   const {
     result,
@@ -100,6 +138,26 @@ export function ReorganizePage() {
     const id = setTimeout(() => setShowProgress(false), 800);
     return () => clearTimeout(id);
   }, [isStreaming, progressComplete]);
+
+  useEffect(() => {
+    if (!tagsHook.result) return;
+    setTagsSelections({
+      newTags: new Set(tagsHook.result.taxonomy.newTags.map((n) => n.tag)),
+      renames: new Set(tagsHook.result.taxonomy.renames.map((r) => `${r.from}->${r.to}`)),
+      merges: new Set(tagsHook.result.taxonomy.merges.map((m) => m.to)),
+      parents: new Set(tagsHook.result.taxonomy.parents.map((p) => `${p.tag}->${p.parent}`)),
+      assignments: new Set(tagsHook.result.assignments.map((a) => a.binId)),
+    });
+  }, [tagsHook.result]);
+
+  const prevModeRef = useRef(mode);
+  useEffect(() => {
+    if (prevModeRef.current !== mode) {
+      clear();
+      tagsHook.clear();
+      prevModeRef.current = mode;
+    }
+  }, [mode, clear, tagsHook]);
 
   const selectedAreaId = useMemo(() => {
     if (selection.selectedBins.length === 0) return undefined;
@@ -146,13 +204,20 @@ export function ReorganizePage() {
 
   const handleAccept = useCallback(() => {
     apply(
-      selection.selectedBins.map((b) => b.id),
+      selection.selectedBins,
       selectedAreaId ?? undefined,
-    ).then((success) => {
-      if (!success) return;
+    ).then((outcome) => {
+      if (!outcome.success) return;
+      const binCount = result?.bins.length ?? outcome.newBinIds.length;
       showToast({
-        message: `Reorganization applied — ${result?.bins.length ?? 0} ${t.bins} created`,
+        message: `Reorganization applied — ${binCount} ${t.bins} created`,
         variant: 'success',
+        action: outcome.newBinIds.length > 0
+          ? {
+              label: 'Print labels',
+              onClick: () => navigate(`/print?ids=${outcome.newBinIds.join(',')}`),
+            }
+          : undefined,
       });
       navigate('/bins');
     });
@@ -162,6 +227,13 @@ export function ReorganizePage() {
     if (isStreaming) cancel();
     clear();
   }, [isStreaming, cancel, clear]);
+
+  const handlePrintMoveList = useCallback(() => {
+    document.body.classList.add('printing-move-list');
+    const cleanup = () => document.body.classList.remove('printing-move-list');
+    window.addEventListener('afterprint', cleanup, { once: true });
+    window.print();
+  }, []);
 
   const hasProposal = result || partialResult.bins.length > 0;
   const itemCount = useMemo(
@@ -288,6 +360,15 @@ export function ReorganizePage() {
 
       <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
         <div className="flex flex-col gap-4">
+          <OptionGroup
+            options={[
+              { key: 'bins', label: t.bins[0].toUpperCase() + t.bins.slice(1) },
+              { key: 'tags', label: 'Tags' },
+            ]}
+            value={mode}
+            onChange={(v) => setMode(v as 'bins' | 'tags')}
+          />
+
           <BinSelectorCard
             allBins={allBins}
             areas={areas}
@@ -302,143 +383,182 @@ export function ReorganizePage() {
 
           <Card>
             <CardContent>
-              <button
-                type="button"
-                className="row-spread w-full"
-                aria-expanded={optionsExpanded}
-                aria-controls="reorganize-options"
-                onClick={() => setOptionsExpanded(!optionsExpanded)}
-              >
-                <div className="row">
-                  <SlidersHorizontal className="h-4 w-4 text-[var(--text-tertiary)]" />
-                  <Label className="text-[15px] font-semibold text-[var(--text-primary)] pointer-events-none">Options</Label>
-                </div>
-                <ChevronDown className={cn(
-                  'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
-                  optionsExpanded && 'rotate-180'
-                )} />
-              </button>
-
-              <div
-                id="reorganize-options"
-                className="grid transition-[grid-template-rows] duration-200 ease-out"
-                style={{ gridTemplateRows: optionsExpanded ? '1fr' : '0fr' }}
-              >
-                <div className="overflow-hidden">
-                  <div className="mt-3 space-y-4">
-                    <div>
-                      <Label htmlFor="reorg-max-bins" className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                        Number of {t.bins}
-                      </Label>
-                      <Input
-                        id="reorg-max-bins"
-                        type="number"
-                        min={1}
-                        value={maxBins}
-                        onChange={(e) => setMaxBins(e.target.value)}
-                        placeholder="Auto"
-                        aria-describedby={maxBinsError ? 'reorg-max-bins-error' : undefined}
-                        aria-invalid={!!maxBinsError}
-                      />
-                      {maxBinsError && (
-                        <p id="reorg-max-bins-error" className="text-[12px] text-[var(--destructive)] mt-1" role="alert">
-                          {maxBinsError}
-                        </p>
-                      )}
+              {mode === 'bins' ? (
+                <>
+                  <button
+                    type="button"
+                    className="row-spread w-full"
+                    aria-expanded={optionsExpanded}
+                    aria-controls="reorganize-options"
+                    onClick={() => setOptionsExpanded(!optionsExpanded)}
+                  >
+                    <div className="row">
+                      <SlidersHorizontal className="h-4 w-4 text-[var(--text-tertiary)]" />
+                      <Label className="text-[15px] font-semibold text-[var(--text-primary)] pointer-events-none">Options</Label>
                     </div>
+                    <ChevronDown className={cn(
+                      'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
+                      optionsExpanded && 'rotate-180'
+                    )} />
+                  </button>
 
-                    <div>
-                      <Label htmlFor="reorg-min-items" className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                        Items per {t.bin}
-                      </Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="reorg-min-items"
-                          type="number"
-                          min={1}
-                          value={minItemsPerBin}
-                          onChange={(e) => setMinItemsPerBin(e.target.value)}
-                          placeholder="Min"
-                          aria-invalid={!!rangeError}
-                        />
-                        <Input
-                          id="reorg-max-items"
-                          type="number"
-                          min={1}
-                          value={maxItemsPerBin}
-                          onChange={(e) => setMaxItemsPerBin(e.target.value)}
-                          placeholder="Max"
-                          aria-label={`Max items per ${t.bin}`}
-                          aria-invalid={!!rangeError}
-                        />
+                  <div
+                    id="reorganize-options"
+                    className="grid transition-[grid-template-rows] duration-200 ease-out"
+                    style={{ gridTemplateRows: optionsExpanded ? '1fr' : '0fr' }}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="mt-3 space-y-4">
+                        <div>
+                          <Label htmlFor="reorg-max-bins" className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
+                            Number of {t.bins}
+                          </Label>
+                          <Input
+                            id="reorg-max-bins"
+                            type="number"
+                            min={1}
+                            value={maxBins}
+                            onChange={(e) => setMaxBins(e.target.value)}
+                            placeholder="Auto"
+                            aria-describedby={maxBinsError ? 'reorg-max-bins-error' : undefined}
+                            aria-invalid={!!maxBinsError}
+                          />
+                          {maxBinsError && (
+                            <p id="reorg-max-bins-error" className="text-[12px] text-[var(--destructive)] mt-1" role="alert">
+                              {maxBinsError}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <Label htmlFor="reorg-min-items" className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
+                            Items per {t.bin}
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="reorg-min-items"
+                              type="number"
+                              min={1}
+                              value={minItemsPerBin}
+                              onChange={(e) => setMinItemsPerBin(e.target.value)}
+                              placeholder="Min"
+                              aria-invalid={!!rangeError}
+                            />
+                            <Input
+                              id="reorg-max-items"
+                              type="number"
+                              min={1}
+                              value={maxItemsPerBin}
+                              onChange={(e) => setMaxItemsPerBin(e.target.value)}
+                              placeholder="Max"
+                              aria-label={`Max items per ${t.bin}`}
+                              aria-invalid={!!rangeError}
+                            />
+                          </div>
+                          {rangeError && (
+                            <p className="text-[12px] text-[var(--destructive)] mt-1" role="alert">
+                              {rangeError}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <Label htmlFor="reorg-notes" className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
+                            Additional instructions
+                          </Label>
+                          <Textarea
+                            id="reorg-notes"
+                            value={userNotes}
+                            onChange={(e) => setUserNotes(e.target.value)}
+                            placeholder="e.g. Keep kitchen items separate from garage tools"
+                            rows={2}
+                          />
+                        </div>
+
+                        {optionFields.map((field) => (
+                          <fieldset key={field.legend} className="border-0 p-0 m-0">
+                            <legend className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2 p-0">
+                              {field.legend}
+                            </legend>
+                            <OptionGroup
+                              options={field.options}
+                              value={field.value}
+                              onChange={field.onChange}
+                              size="sm"
+                            />
+                            {field.hint && (
+                              <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5">
+                                {field.hint}
+                              </p>
+                            )}
+                          </fieldset>
+                        ))}
+
+                        <div className="text-[12px] text-[var(--text-tertiary)]">
+                          {itemCount} item{itemCount !== 1 ? 's' : ''} across selected {t.bins}
+                        </div>
                       </div>
-                      {rangeError && (
-                        <p className="text-[12px] text-[var(--destructive)] mt-1" role="alert">
-                          {rangeError}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="reorg-notes" className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                        Additional instructions
-                      </Label>
-                      <Textarea
-                        id="reorg-notes"
-                        value={userNotes}
-                        onChange={(e) => setUserNotes(e.target.value)}
-                        placeholder="e.g. Keep kitchen items separate from garage tools"
-                        rows={2}
-                      />
-                    </div>
-
-                    {optionFields.map((field) => (
-                      <fieldset key={field.legend} className="border-0 p-0 m-0">
-                        <legend className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2 p-0">
-                          {field.legend}
-                        </legend>
-                        <OptionGroup
-                          options={field.options}
-                          value={field.value}
-                          onChange={field.onChange}
-                          size="sm"
-                        />
-                        {field.hint && (
-                          <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5">
-                            {field.hint}
-                          </p>
-                        )}
-                      </fieldset>
-                    ))}
-
-                    <div className="text-[12px] text-[var(--text-tertiary)]">
-                      {itemCount} item{itemCount !== 1 ? 's' : ''} across selected {t.bins}
                     </div>
                   </div>
-                </div>
-              </div>
+                </>
+              ) : (
+                <ReorganizeTagsOptions
+                  changeLevel={tagsChangeLevel}
+                  granularity={tagsGranularity}
+                  maxTagsPerBin={tagsMaxPerBin}
+                  userNotes={tagsNotes}
+                  expanded={tagsOptionsExpanded}
+                  onExpandedChange={setTagsOptionsExpanded}
+                  onChangeLevelChange={setTagsChangeLevel}
+                  onGranularityChange={setTagsGranularity}
+                  onMaxTagsChange={setTagsMaxPerBin}
+                  onUserNotesChange={setTagsNotes}
+                />
+              )}
             </CardContent>
           </Card>
         </div>
 
         <div ref={reorgRef} className="lg:sticky lg:top-6 flex flex-col gap-4">
-          <Button
-            data-tour="reorganize-submit"
-            onClick={handleReorganize}
-            disabled={!canSubmit}
-            className="h-12 text-[17px] rounded-[var(--radius-md)]"
-            fullWidth
-          >
-            <Sparkles className="h-5 w-5 mr-2.5" />
-            Reorganize {selection.selectedIds.size} {selection.selectedIds.size === 1 ? t.bin : t.bins}
-          </Button>
+          {mode === 'bins' ? (
+            <Button
+              data-tour="reorganize-submit"
+              onClick={handleReorganize}
+              disabled={!canSubmit}
+              className="h-12 text-[17px] rounded-[var(--radius-md)]"
+              fullWidth
+            >
+              <Sparkles className="h-5 w-5 mr-2.5" />
+              Reorganize {selection.selectedIds.size} {selection.selectedIds.size === 1 ? t.bin : t.bins}
+            </Button>
+          ) : (
+            <Button
+              onClick={() => {
+                if (selection.selectedBins.length < 1) return;
+                tagsHook.start(selection.selectedBins, {
+                  changeLevel: tagsChangeLevel,
+                  granularity: tagsGranularity,
+                  maxTagsPerBin: tagsMaxPerBin
+                    ? Math.max(1, Math.min(10, Number.parseInt(tagsMaxPerBin, 10)))
+                    : undefined,
+                  userNotes: tagsNotes || undefined,
+                });
+              }}
+              disabled={selection.selectedIds.size < 1 || tagsHook.isStreaming}
+              className="h-12 text-[17px] rounded-[var(--radius-md)]"
+              fullWidth
+            >
+              <Sparkles className="h-5 w-5 mr-2.5" />
+              Suggest tags for {selection.selectedIds.size} {selection.selectedIds.size === 1 ? t.bin : t.bins}
+            </Button>
+          )}
           {selection.selectedIds.size >= 2 && (
             <p className="text-[12px] text-[var(--text-tertiary)] text-center -mt-2">
               {itemCount} item{itemCount !== 1 ? 's' : ''} across {selection.selectedIds.size} {t.bins}
             </p>
           )}
 
-          {(error || applyError) && (
+          {mode === 'bins' && (error || applyError) && (
             <Card className="border-t-2 border-t-[var(--destructive)]">
               <CardContent>
                 <div className="flex items-start gap-3">
@@ -464,7 +584,30 @@ export function ReorganizePage() {
             </Card>
           )}
 
-          {showProgress && (
+          {mode === 'tags' && (tagsHook.error || tagsHook.applyError) && (
+            <Card className="border-t-2 border-t-[var(--destructive)]">
+              <CardContent>
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-[var(--destructive)]">
+                      {tagsHook.error || tagsHook.applyError}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={tagsHook.clear}
+                    className="shrink-0 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center -mr-2 -mt-1"
+                    aria-label="Dismiss error"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {mode === 'bins' && showProgress && (
             <Card>
               <CardContent>
                 <AiProgressBar
@@ -483,23 +626,76 @@ export function ReorganizePage() {
             </Card>
           )}
 
-          {!showProgress && !error && (hasProposal || isStreaming) ? (
+          {mode === 'tags' && tagsHook.isStreaming && (
+            <Card>
+              <CardContent>
+                <AiProgressBar
+                  active={tagsHook.isStreaming}
+                  complete={false}
+                  label={
+                    tagsHook.retryCount > 0
+                      ? `Retrying (attempt ${tagsHook.retryCount + 1} of 3)`
+                      : 'Analyzing tags'
+                  }
+                />
+                <div className="flex justify-end mt-3">
+                  <Button variant="ghost" size="sm" onClick={tagsHook.cancel}>
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {mode === 'bins' && !showProgress && !error && (hasProposal || isStreaming) ? (
             <Card>
               <CardContent>
                 <ReorganizePreview
+                  inputBins={selection.selectedBins}
                   result={result}
                   partialResult={partialResult}
                   isStreaming={isStreaming}
                   isApplying={isApplying}
-                  originalCount={selection.selectedIds.size}
-                  originalItemCount={itemCount}
+                  areas={areas}
                   onAccept={() => setConfirmOpen(true)}
                   onCancel={handleCancel}
                   onRegenerate={handleReorganize}
+                  onPrint={handlePrintMoveList}
                 />
               </CardContent>
             </Card>
-          ) : !showProgress && !error && !applyError && (
+          ) : mode === 'tags' && (tagsHook.result || tagsHook.partialResult.summary) && !tagsHook.error ? (
+            <Card>
+              <CardContent>
+                <ReorganizeTagsPreview
+                  result={tagsHook.result}
+                  partialResult={tagsHook.partialResult}
+                  binMap={
+                    new Map(
+                      selection.selectedBins.map((b) => [b.id, { id: b.id, name: b.name, tags: b.tags }]),
+                    )
+                  }
+                  isStreaming={tagsHook.isStreaming}
+                  isApplying={tagsHook.isApplying}
+                  onAccept={() => setTagsConfirmOpen(true)}
+                  onCancel={() => {
+                    if (tagsHook.isStreaming) tagsHook.cancel();
+                    tagsHook.clear();
+                  }}
+                  onRegenerate={() =>
+                    tagsHook.start(selection.selectedBins, {
+                      changeLevel: tagsChangeLevel,
+                      granularity: tagsGranularity,
+                      maxTagsPerBin: tagsMaxPerBin ? Number.parseInt(tagsMaxPerBin, 10) : undefined,
+                      userNotes: tagsNotes || undefined,
+                    })
+                  }
+                  selections={tagsSelections}
+                  onSelectionsChange={setTagsSelections}
+                />
+              </CardContent>
+            </Card>
+          ) : mode === 'bins' && !showProgress && !error && !applyError ? (
             <div className="rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border-subtle)]">
               <div className="flex flex-col items-center justify-center py-10 lg:py-16 text-center">
                 <div className="rounded-[var(--radius-xl)] bg-[var(--bg-input)] p-3.5 mb-4">
@@ -513,7 +709,21 @@ export function ReorganizePage() {
                 </p>
               </div>
             </div>
-          )}
+          ) : mode === 'tags' && !tagsHook.isStreaming && !tagsHook.error && !tagsHook.applyError ? (
+            <div className="rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border-subtle)]">
+              <div className="flex flex-col items-center justify-center py-10 lg:py-16 text-center">
+                <div className="rounded-[var(--radius-xl)] bg-[var(--bg-input)] p-3.5 mb-4">
+                  <Sparkles className="h-6 w-6 text-[var(--text-tertiary)]" />
+                </div>
+                <p className="text-[15px] font-medium text-[var(--text-secondary)] mb-1">
+                  No proposal yet
+                </p>
+                <p className="text-[13px] text-[var(--text-tertiary)] max-w-xs px-4">
+                  Select {t.bins} and click Suggest tags to let AI propose a better taxonomy.
+                </p>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -539,6 +749,43 @@ export function ReorganizePage() {
               disabled={isApplying}
             >
               Delete & recreate {t.bins}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={tagsConfirmOpen} onOpenChange={setTagsConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Apply tag suggestions?</DialogTitle>
+            <DialogDescription>
+              This will update the selected {t.bins} and create/rename tags. This can't be undone
+              automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setTagsConfirmOpen(false)}
+              disabled={tagsHook.isApplying}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setTagsConfirmOpen(false);
+                const ok = await tagsHook.apply(
+                  selection.selectedBins.map((b) => b.id),
+                  tagsSelections,
+                );
+                if (ok) {
+                  showToast({ message: 'Tag suggestions applied', variant: 'success' });
+                  navigate('/tags');
+                }
+              }}
+              disabled={tagsHook.isApplying}
+            >
+              Apply
             </Button>
           </DialogFooter>
         </DialogContent>

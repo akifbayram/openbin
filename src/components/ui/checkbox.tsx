@@ -8,10 +8,11 @@ interface CheckboxProps {
   onCheckedChange?: (checked: boolean) => void;
   className?: string;
   disabled?: boolean;
+  'aria-label'?: string;
 }
 
 const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
-  ({ id, className, checked, onCheckedChange, disabled }, ref) => {
+  ({ id, className, checked, onCheckedChange, disabled, 'aria-label': ariaLabel }, ref) => {
     return (
       // biome-ignore lint/a11y/useSemanticElements: intentional custom checkbox with button for consistent styling
       <button
@@ -20,6 +21,7 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
         role="checkbox"
         id={id}
         aria-checked={checked}
+        aria-label={ariaLabel}
         disabled={disabled}
         className={cn(
           'h-[22px] w-[22px] shrink-0 rounded-[6px] border-2 transition-all duration-200 flex items-center justify-center',

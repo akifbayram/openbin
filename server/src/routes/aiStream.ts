@@ -19,6 +19,7 @@ import { classifyIntent } from '../lib/intentClassifier.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg, enrichQueryMatches, type RawMatch } from '../lib/inventoryQuery.js';
 import { refundAiCredit } from '../lib/planGate.js';
 import { aiRateLimiters } from '../lib/rateLimiters.js';
+import { detectReorganizeMismatch } from '../lib/reorganizeMismatch.js';
 import { buildReorganizePrompt } from '../lib/reorganizePrompt.js';
 import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../lib/structureText.js';
 import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
@@ -325,7 +326,7 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
   }
 
   const { settings, model } = await resolveUserModel(req.user!.id, 'reorganization', isDemoUser(req));
-  const { system, userContent, totalInputItems } = buildReorganizePrompt({
+  const { system, userContent } = buildReorganizePrompt({
     inputBins, maxBins, areaName, userNotes, strictness, granularity, ambiguousPolicy,
     duplicates, outliers, minItemsPerBin, maxItemsPerBin,
     reorganizationPromptOverride: settings.reorganization_prompt,
@@ -340,10 +341,12 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
     return;
   }
 
-  // Retry up to 3 times if the AI drops or duplicates items
+  // Retry up to 3 times if the AI drops or invents items (per-item identity, not just totals)
   const MAX_ATTEMPTS = 3;
   const writeEvent = initSseResponse(res);
   const sOpts = streamOpts(settings, { temperature: 0.3, maxTokens: 16000 });
+  const allowDupes = ambiguousPolicy === 'multi-bin' || duplicates === 'allow';
+  const inputItemNames = inputBins.flatMap((b: { items?: string[] }) => b.items ?? []);
   let finalText: string | null = null;
   let mismatch = false;
 
@@ -353,24 +356,39 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
 
       finalText = await streamAiToWriter(writeEvent, model, { system, userContent, ...sOpts });
 
-      if (!finalText) break; // error or truncation — stop retrying
+      if (!finalText) break; // upstream stream error or truncation — error already surfaced
 
+      let outputItemNames: string[];
       try {
         const parsed = JSON.parse(finalText);
-        const outputItems = Array.isArray(parsed.bins)
-          ? parsed.bins.reduce((sum: number, b: { items?: string[] }) => sum + (b.items?.length ?? 0), 0)
-          : 0;
-        mismatch = outputItems !== totalInputItems;
+        outputItemNames = Array.isArray(parsed.bins)
+          ? parsed.bins.flatMap((b: { items?: string[] }) => b.items ?? [])
+          : [];
       } catch {
         finalText = null;
         break;
       }
 
-      if (!mismatch) break; // counts match — done
+      const result = detectReorganizeMismatch(inputItemNames, outputItemNames, { allowDupes });
+      mismatch = result.mismatch;
+
+      if (!mismatch) break; // per-item preservation satisfied — done
     }
 
-    if (finalText) writeEvent({ type: 'done', text: finalText });
-    if (mismatch) await refundAiCredit(req.user!.id);
+    if (!finalText) {
+      // Upstream error / parse failure. streamAiToWriter already surfaced an error event.
+      return;
+    }
+
+    if (mismatch) {
+      writeEvent({
+        type: 'error',
+        message: "Couldn't preserve all items after 3 attempts. Try adjusting options or regenerate.",
+      });
+      await refundAiCredit(req.user!.id);
+    } else {
+      writeEvent({ type: 'done', text: finalText });
+    }
   } finally {
     res.end();
   }

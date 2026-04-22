@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react';
 import { useAiStream } from '@/features/ai/useAiStream';
-import { addBin, deleteBin } from '@/features/bins/useBins';
+import { addBin, deleteBin, updateBin } from '@/features/bins/useBins';
 import { useAuth } from '@/lib/auth';
 import { Events, notify } from '@/lib/eventBus';
 import { getErrorMessage } from '@/lib/utils';
 import type { Bin } from '@/types';
+import { buildReorganizePlan } from './deriveMoveList';
 import { type PartialReorgResult, parsePartialReorg } from './parsePartialReorg';
 
 export interface ReorgResponse {
@@ -22,6 +23,10 @@ export interface ReorgOptions {
   minItemsPerBin?: number;
   maxItemsPerBin?: number;
 }
+
+export type ApplyOutcome =
+  | { success: true; newBinIds: string[] }
+  | { success: false };
 
 export function useReorganize() {
   const { activeLocationId } = useAuth();
@@ -66,14 +71,29 @@ export function useReorganize() {
   );
 
   const apply = useCallback(
-    async (originalBinIds: string[], areaId?: string): Promise<boolean> => {
-      if (!result || !activeLocationId) return false;
+    async (inputBins: Bin[], areaId?: string): Promise<ApplyOutcome> => {
+      if (!result || !activeLocationId) return { success: false };
       setIsApplying(true);
       setApplyError(null);
       try {
-        await Promise.all(originalBinIds.map((id) => deleteBin(id)));
-        await Promise.all(
-          result.bins.map((b) =>
+        const plan = buildReorganizePlan(inputBins, result);
+
+        // Phase 1 — update preserved bins in place (name unchanged, items + tags replaced)
+        const preservedIds = await Promise.all(
+          plan.preservations.map(({ sourceBinId, destBin }) =>
+            updateBin(sourceBinId, {
+              items: destBin.items,
+              tags: destBin.tags ?? [],
+            }).then(() => sourceBinId),
+          ),
+        );
+
+        // Phase 2 — delete unmatched sources
+        await Promise.all(plan.deletions.map((id) => deleteBin(id)));
+
+        // Phase 3 — create fresh destinations
+        const created = await Promise.all(
+          plan.creations.map((b) =>
             addBin({
               name: b.name,
               locationId: activeLocationId,
@@ -83,12 +103,13 @@ export function useReorganize() {
             }),
           ),
         );
+
         notify(Events.BINS);
         notify(Events.AREAS);
-        return true;
+        return { success: true, newBinIds: [...preservedIds, ...created.map((bin) => bin.id)] };
       } catch (err) {
         setApplyError(getErrorMessage(err, 'Failed to apply reorganization'));
-        return false;
+        return { success: false };
       } finally {
         setIsApplying(false);
       }
