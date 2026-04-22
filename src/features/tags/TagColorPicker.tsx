@@ -15,6 +15,8 @@ interface TagColorPickerProps {
   currentColor: string;
   onColorChange: (color: string) => void;
   tagName?: string;
+  /** Render the picker body inline (no popover trigger). */
+  inline?: boolean;
 }
 
 function getShadePreview(hue: number | 'neutral', shade: number): string {
@@ -29,15 +31,17 @@ function shadeRingColor(shade: number): string {
 
 const HUE_STEP = 15;
 
-export function TagColorPicker({ currentColor, onColorChange, tagName }: TagColorPickerProps) {
-  const dialogPortal = useDialogPortal();
-  const { theme } = useTheme();
-  const { visible, animating, close, toggle } = usePopover();
-  const ref = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
-  useClickOutside(ref, close);
+interface TagColorPickerBodyProps {
+  currentColor: string;
+  onColorChange: (color: string) => void;
+  tagName?: string;
+  /** Optional callback fired when the user picks "None" — used by the popover variant to close itself. */
+  onClearClose?: () => void;
+}
 
+/** Inline picker body — preview + swatch buttons + hue slider + shade swatches. */
+function TagColorPickerBody({ currentColor, onColorChange, tagName, onClearClose }: TagColorPickerBodyProps) {
+  const { theme } = useTheme();
   const {
     barRef,
     isBlack,
@@ -53,60 +57,32 @@ export function TagColorPicker({ currentColor, onColorChange, tagName }: TagColo
   } = useColorGradient({ value: currentColor, onChange: onColorChange });
   const currentPreset = currentColor ? resolveColor(currentColor) : undefined;
 
-  // Viewport-aware positioning
-  const reposition = useCallback(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    const popoverHeight = 160;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const flip = spaceBelow < popoverHeight && rect.top > popoverHeight;
-    setPos({
-      top: flip ? rect.top : rect.bottom + 4,
-      left: rect.right,
-      flip,
-    });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!visible) return;
-    reposition();
-  }, [visible, reposition]);
-
-  // Keyboard navigation for hue slider
-  const handleHueKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const hue = currentHue ?? 0;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      emitHue(Math.min(360, hue + HUE_STEP));
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      emitHue(Math.max(0, hue - HUE_STEP));
-    } else if (e.key === 'Home') {
-      e.preventDefault();
-      emitHue(0);
-    } else if (e.key === 'End') {
-      e.preventDefault();
-      emitHue(360);
-    }
-  }, [currentHue, emitHue]);
+  const handleHueKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const hue = currentHue ?? 0;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        emitHue(Math.min(360, hue + HUE_STEP));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        emitHue(Math.max(0, hue - HUE_STEP));
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        emitHue(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        emitHue(360);
+      }
+    },
+    [currentHue, emitHue],
+  );
 
   const previewStyle = currentPreset
     ? { backgroundColor: currentPreset.bgCss, color: getTagTextColor(currentPreset, theme) }
     : undefined;
 
-  const popoverContent = visible && pos && createPortal(
-    <div
-      ref={ref}
-      className={cn(
-        animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-        'fixed z-50 flat-card rounded-[var(--radius-lg)] p-3 w-[220px] space-y-3',
-      )}
-      style={{
-        top: pos.flip ? undefined : pos.top,
-        bottom: pos.flip ? window.innerHeight - pos.top : undefined,
-        right: window.innerWidth - pos.left,
-      }}
-    >
+  return (
+    <div className="space-y-3">
       {/* Preview badge */}
       {tagName && (
         <div className="flex items-center gap-2">
@@ -124,7 +100,7 @@ export function TagColorPicker({ currentColor, onColorChange, tagName }: TagColo
           onClick={(e) => {
             e.stopPropagation();
             onColorChange('');
-            close();
+            onClearClose?.();
           }}
           className={cn(
             'h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-flat)]',
@@ -135,9 +111,7 @@ export function TagColorPicker({ currentColor, onColorChange, tagName }: TagColo
           aria-label="None"
           title="None"
         >
-          {!currentColor && (
-            <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
-          )}
+          {!currentColor && <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />}
         </button>
         <button
           type="button"
@@ -234,8 +208,9 @@ export function TagColorPicker({ currentColor, onColorChange, tagName }: TagColo
           {Array.from({ length: SHADE_COUNT }, (_, i) => {
             const isActive = currentShade === i;
             return (
-              // biome-ignore lint/suspicious/noArrayIndexKey: fixed-size shade swatches
-              <button key={i}
+              <button
+                // biome-ignore lint/suspicious/noArrayIndexKey: fixed-size shade swatches
+                key={i}
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -249,18 +224,82 @@ export function TagColorPicker({ currentColor, onColorChange, tagName }: TagColo
                 )}
                 style={{
                   backgroundColor: getShadePreview(activeHue, i),
-                  ...(isActive ? {
-                    boxShadow: `inset 0 0 0 2px ${shadeRingColor(i)}`,
-                  } : {}),
+                  ...(isActive
+                    ? {
+                        boxShadow: `inset 0 0 0 2px ${shadeRingColor(i)}`,
+                      }
+                    : {}),
                 }}
               />
             );
           })}
         </div>
       )}
-    </div>,
-    dialogPortal ?? document.body,
+    </div>
   );
+}
+
+export function TagColorPicker({ currentColor, onColorChange, tagName, inline }: TagColorPickerProps) {
+  if (inline) {
+    return <TagColorPickerBody currentColor={currentColor} onColorChange={onColorChange} tagName={tagName} />;
+  }
+  return <TagColorPickerPopover currentColor={currentColor} onColorChange={onColorChange} tagName={tagName} />;
+}
+
+function TagColorPickerPopover({ currentColor, onColorChange, tagName }: TagColorPickerProps) {
+  const dialogPortal = useDialogPortal();
+  const { visible, animating, close, toggle } = usePopover();
+  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
+  useClickOutside(ref, close);
+
+  const currentPreset = currentColor ? resolveColor(currentColor) : undefined;
+
+  // Viewport-aware positioning
+  const reposition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const popoverHeight = 160;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const flip = spaceBelow < popoverHeight && rect.top > popoverHeight;
+    setPos({
+      top: flip ? rect.top : rect.bottom + 4,
+      left: rect.right,
+      flip,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!visible) return;
+    reposition();
+  }, [visible, reposition]);
+
+  const popoverContent =
+    visible &&
+    pos &&
+    createPortal(
+      <div
+        ref={ref}
+        className={cn(
+          animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+          'fixed z-50 flat-card rounded-[var(--radius-lg)] p-3 w-[220px]',
+        )}
+        style={{
+          top: pos.flip ? undefined : pos.top,
+          bottom: pos.flip ? window.innerHeight - pos.top : undefined,
+          right: window.innerWidth - pos.left,
+        }}
+      >
+        <TagColorPickerBody
+          currentColor={currentColor}
+          onColorChange={onColorChange}
+          tagName={tagName}
+          onClearClose={close}
+        />
+      </div>,
+      dialogPortal ?? document.body,
+    );
 
   return (
     <div className="relative">
@@ -276,10 +315,7 @@ export function TagColorPicker({ currentColor, onColorChange, tagName }: TagColo
           aria-label="Pick tag color"
         >
           {currentPreset ? (
-            <span
-              className="h-[18px] w-[18px] rounded-full"
-              style={{ backgroundColor: currentPreset.bgCss }}
-            />
+            <span className="h-[18px] w-[18px] rounded-full" style={{ backgroundColor: currentPreset.bgCss }} />
           ) : (
             <Palette className="h-4 w-4 text-[var(--text-tertiary)]" />
           )}

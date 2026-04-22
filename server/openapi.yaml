@@ -4560,6 +4560,239 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /tags/bulk-delete:
+    post:
+      tags: [Tags]
+      summary: Bulk-delete tags from all bins in a location
+      description: |
+        Removes up to N tags (cap configured via `BULK_MAX_SELECTION`, default 200) from every
+        bin in a location and deletes their `tag_colors` rows. Any child tags whose `parent_tag`
+        pointed at one of the deleted tags have their `parent_tag` cleared (orphaned). Requires
+        member role or above.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locationId, tags]
+              properties:
+                locationId:
+                  type: string
+                  format: uuid
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 200
+                  description: Tag names to delete
+      responses:
+        '200':
+          description: Tags deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tagsDeleted, binsUpdated, orphanedChildren]
+                properties:
+                  tagsDeleted:
+                    type: integer
+                    minimum: 0
+                  binsUpdated:
+                    type: integer
+                    minimum: 0
+                    description: Number of bins whose tag list changed
+                  orphanedChildren:
+                    type: integer
+                    minimum: 0
+                    description: Number of child tags whose parent_tag was cleared
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error, invalid tag name, or selection over cap
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tags/bulk-set-parent:
+    post:
+      tags: [Tags]
+      summary: Set the same parent on N tags
+      description: |
+        Sets `parent_tag` on every selected tag to one parent (or `null` to clear).
+        Rejects with `PARENT_CYCLE` if the resulting taxonomy would create a cycle.
+        Requires member role or above. Cap configured via `BULK_MAX_SELECTION` (default 200).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locationId, tags, parentTag]
+              properties:
+                locationId:
+                  type: string
+                  format: uuid
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 200
+                parentTag:
+                  type: string
+                  nullable: true
+                  description: Parent tag name, or null to clear parent on the selection
+      responses:
+        '200':
+          description: Parents set
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tagsUpdated]
+                properties:
+                  tagsUpdated:
+                    type: integer
+                    minimum: 0
+                    description: Number of tags whose parent_tag actually changed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error, parentTag in selection, or parent cycle detected
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum: [PARENT_CYCLE]
+                      message:
+                        type: string
+
+  /tags/bulk-set-color:
+    post:
+      tags: [Tags]
+      summary: Set the same color on N tags
+      description: |
+        Upserts the same hex color on every selected tag's `tag_colors` row. An empty string
+        clears the color (leaving the tag in `tag_colors` with `color = ''`). Requires member
+        role or above. Cap configured via `BULK_MAX_SELECTION` (default 200).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locationId, tags, color]
+              properties:
+                locationId:
+                  type: string
+                  format: uuid
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 200
+                color:
+                  type: string
+                  description: Hex color (e.g. `#ff0000` or `#f00`) or empty string to clear
+                  pattern: '^(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|)$'
+      responses:
+        '200':
+          description: Colors set
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tagsUpdated]
+                properties:
+                  tagsUpdated:
+                    type: integer
+                    minimum: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error, invalid color format, or selection over cap
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tags/bulk-merge:
+    post:
+      tags: [Tags]
+      summary: Merge N source tags into a single target tag
+      description: |
+        Renames every tag in `fromTags` to `toTag` across all bins in the location, then deletes
+        the source `tag_colors` rows. Child tags that pointed at a source tag have their
+        `parent_tag` reassigned to `toTag`. `toTag` must not appear in `fromTags`. Requires
+        member role or above. Cap configured via `BULK_MAX_SELECTION` (default 200).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locationId, fromTags, toTag]
+              properties:
+                locationId:
+                  type: string
+                  format: uuid
+                fromTags:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 200
+                  description: Source tags to merge away
+                toTag:
+                  type: string
+                  description: Target tag (must not be in fromTags)
+      responses:
+        '200':
+          description: Tags merged
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tagsMerged, binsUpdated, childrenReassigned]
+                properties:
+                  tagsMerged:
+                    type: integer
+                    minimum: 0
+                    description: Number of merge operations applied (currently 1 per call)
+                  binsUpdated:
+                    type: integer
+                    minimum: 0
+                    description: Number of bins whose tag list changed
+                  childrenReassigned:
+                    type: integer
+                    minimum: 0
+                    description: Number of child tags whose parent_tag was reassigned to toTag
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error, toTag in fromTags, or selection over cap
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   # ════════════════════════════════════════════════════════
   # Items
   # ════════════════════════════════════════════════════════
