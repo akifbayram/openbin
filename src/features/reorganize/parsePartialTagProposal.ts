@@ -1,3 +1,5 @@
+import { QUOTED_STRING, unescapeString } from './partialJsonHelpers';
+
 export interface PartialTagTaxonomy {
   newTags: Array<{ tag: string; parent?: string }>;
   renames: Array<{ from: string; to: string }>;
@@ -15,12 +17,6 @@ export interface PartialTagProposal {
   taxonomy: PartialTagTaxonomy;
   assignments: PartialTagAssignment[];
   summary: string;
-}
-
-const QUOTED = /"((?:[^"\\]|\\.)*)"/g;
-
-function unescapeString(s: string): string {
-  return s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
 }
 
 function extractStringField(text: string, field: string): string | null {
@@ -83,7 +79,7 @@ function parseArray(text: string, field: string): string | null {
 
 function parseStringArrayRegion(region: string): string[] {
   const out: string[] = [];
-  for (const m of region.matchAll(QUOTED)) out.push(unescapeString(m[1]));
+  for (const m of region.matchAll(QUOTED_STRING)) out.push(unescapeString(m[1]));
   return out;
 }
 

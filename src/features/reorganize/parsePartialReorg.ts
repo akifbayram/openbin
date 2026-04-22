@@ -1,21 +1,9 @@
+import { findObjectEnd, QUOTED_STRING, unescapeString } from './partialJsonHelpers';
 import type { PartialReorgBinIndexed, PartialReorgResultIndexed } from './resolveReorgIndexes';
 
 const TAGS_PATTERN = /"tags"\s*:\s*\[([^\]]*)\]/;
-const QUOTED_STRING = /"((?:[^"\\]|\\.)*)"/g;
 /** Matches a complete integer (possibly negative) only when followed by `,` or `]`. */
 const DELIMITED_INTEGER = /(-?\d+)\s*(?=[,\]])/g;
-
-function findBinObjectEnd(text: string, startIdx: number): number {
-  let depth = 1;
-  for (let i = startIdx; i < text.length; i++) {
-    if (text[i] === '{') depth++;
-    else if (text[i] === '}') {
-      depth--;
-      if (depth === 0) return i;
-    }
-  }
-  return -1;
-}
 
 export function parsePartialReorg(text: string): PartialReorgResultIndexed {
   const bins: PartialReorgBinIndexed[] = [];
@@ -30,7 +18,7 @@ export function parsePartialReorg(text: string): PartialReorgResultIndexed {
 
   const binPattern = /\{\s*"name"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"items"\s*:\s*\[/g;
   for (const match of afterBracket.matchAll(binPattern)) {
-    const name = match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    const name = unescapeString(match[1]);
     const itemsStart = match.index + match[0].length;
     const remaining = afterBracket.slice(itemsStart);
 
@@ -46,13 +34,13 @@ export function parsePartialReorg(text: string): PartialReorgResultIndexed {
     const tags: string[] = [];
     if (closeBracket !== -1) {
       const afterItemsOffset = itemsStart + closeBracket + 1;
-      const binEnd = findBinObjectEnd(afterBracket, match.index + 1);
+      const binEnd = findObjectEnd(afterBracket, match.index + 1);
       const searchEnd = binEnd !== -1 ? binEnd : afterBracket.length;
       const binRemainder = afterBracket.slice(afterItemsOffset, searchEnd);
       const tagsMatch = binRemainder.match(TAGS_PATTERN);
       if (tagsMatch) {
         for (const tagMatch of tagsMatch[1].matchAll(QUOTED_STRING)) {
-          tags.push(tagMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+          tags.push(unescapeString(tagMatch[1]));
         }
       }
     }

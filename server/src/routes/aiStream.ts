@@ -334,14 +334,10 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
   });
 
   if (config.aiMock) {
-    const totalItems = inputBins.reduce(
-      (sum: number, b: { items?: string[] }) => sum + (b.items?.length ?? 0),
-      0,
-    );
     await sendMockJsonStream(res, {
       bins: [{
         name: 'Reorganized Bin',
-        items: Array.from({ length: totalItems }, (_, i) => i + 1),
+        items: Array.from({ length: totalInputItems }, (_, i) => i + 1),
         tags: [],
       }],
     });
@@ -369,7 +365,7 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
         const parsed = JSON.parse(finalText);
         outputIndices = Array.isArray(parsed.bins)
           ? parsed.bins.flatMap((b: { items?: unknown[] }) =>
-              Array.isArray(b.items) ? b.items.filter((x): x is number => typeof x === 'number') : [],
+              Array.isArray(b.items) ? b.items.filter((x): x is number => Number.isInteger(x)) : [],
             )
           : [];
       } catch {

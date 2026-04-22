@@ -10,13 +10,11 @@ import { parsePartialReorg } from './parsePartialReorg';
 import type { PartialReorgResultIndexed, ResolvedReorgPartial } from './resolveReorgIndexes';
 import { resolveReorgIndexes } from './resolveReorgIndexes';
 
-export interface ReorgResponse {
-  bins: Array<{ name: string; items: string[]; tags?: string[] }>;
+interface ReorgResponseBase<T> {
+  bins: Array<{ name: string; items: T[]; tags?: string[] }>;
 }
-
-interface ReorgResponseIndexed {
-  bins: Array<{ name: string; items: number[]; tags?: string[] }>;
-}
+export type ReorgResponse = ReorgResponseBase<string>;
+type ReorgResponseIndexed = ReorgResponseBase<number>;
 
 export interface ReorgOptions {
   userNotes?: string;
