@@ -11,7 +11,7 @@ export async function handleAddItems(action: Extract<CommandAction, { type: 'add
   const bin = await tx<{ id: string; name: string; visibility: string; created_by: string }>('SELECT id, name, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
   assertBinVisible(bin.rows[0], ctx.userId);
-  const maxResult = await tx<{ max_pos: number | null }>('SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1', [action.bin_id]);
+  const maxResult = await tx<{ max_pos: number | null }>('SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL', [action.bin_id]);
   let nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
   const itemNames: string[] = [];
   for (const item of action.items) {
@@ -63,7 +63,7 @@ export async function handleSetItemQuantity(action: Extract<CommandAction, { typ
   const bin = await tx<{ id: string; name: string; visibility: string; created_by: string }>('SELECT id, name, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
   assertBinVisible(bin.rows[0], ctx.userId);
-  const existing = await tx<{ id: string; quantity: number | null }>('SELECT id, quantity FROM bin_items WHERE bin_id = $1 AND LOWER(name) = LOWER($2)', [action.bin_id, action.item_name]);
+  const existing = await tx<{ id: string; quantity: number | null }>('SELECT id, quantity FROM bin_items WHERE bin_id = $1 AND LOWER(name) = LOWER($2) AND deleted_at IS NULL', [action.bin_id, action.item_name]);
   if (existing.rows.length === 0) throw new Error(`Item not found: ${action.item_name}`);
   const { id: itemId, quantity: oldQuantity } = existing.rows[0];
   const newQuantity = Math.floor(action.quantity);
@@ -92,7 +92,7 @@ export async function handleReorderItems(action: Extract<CommandAction, { type: 
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
   assertBinVisible(bin.rows[0], ctx.userId);
   // Verify all item IDs belong to this bin
-  const existing = await tx<{ id: string }>('SELECT id FROM bin_items WHERE bin_id = $1', [action.bin_id]);
+  const existing = await tx<{ id: string }>('SELECT id FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL', [action.bin_id]);
   const binItemIds = new Set(existing.rows.map((r) => r.id));
   for (const itemId of action.item_ids) {
     if (!binItemIds.has(itemId)) throw new Error('One or more item IDs do not belong to this bin');

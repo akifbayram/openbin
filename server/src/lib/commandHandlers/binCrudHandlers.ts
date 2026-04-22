@@ -139,7 +139,7 @@ export async function handleDuplicateBin(action: Extract<CommandAction, { type: 
   }
 
   // Copy items
-  const srcItems = await tx<{ name: string; quantity: number | null }>('SELECT name, quantity FROM bin_items WHERE bin_id = $1 ORDER BY position', [action.bin_id]);
+  const srcItems = await tx<{ name: string; quantity: number | null }>('SELECT name, quantity FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL ORDER BY position', [action.bin_id]);
   for (let i = 0; i < srcItems.rows.length; i++) {
     await tx('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)', [generateUuid(), binId, srcItems.rows[i].name, srcItems.rows[i].quantity, i]);
   }

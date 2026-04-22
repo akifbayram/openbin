@@ -23,7 +23,7 @@ router.post('/:id/items/:itemId/checkout', asyncHandler(async (req, res) => {
 
   // Verify item exists in this bin
   const itemResult = await query<{ name: string }>(
-    'SELECT name FROM bin_items WHERE id = $1 AND bin_id = $2',
+    'SELECT name FROM bin_items WHERE id = $1 AND bin_id = $2 AND deleted_at IS NULL',
     [itemId, binId]
   );
   if (itemResult.rows.length === 0) {
@@ -121,13 +121,13 @@ router.post('/:id/items/:itemId/return', asyncHandler(async (req, res) => {
   );
 
   // Get item name for activity logging (used in both branches)
-  const itemResult = await query<{ name: string }>('SELECT name FROM bin_items WHERE id = $1', [itemId]);
+  const itemResult = await query<{ name: string }>('SELECT name FROM bin_items WHERE id = $1 AND deleted_at IS NULL', [itemId]);
   const itemName = itemResult.rows[0]?.name ?? 'Unknown item';
 
   // If returning to a different bin, move the item
   if (returnBinId !== checkoutRow.origin_bin_id) {
     const maxResult = await query<{ max_pos: number | null }>(
-      'SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1',
+      'SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL',
       [returnBinId]
     );
     const nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
@@ -211,7 +211,7 @@ router.get('/:id/checkouts', asyncHandler(async (req, res) => {
      FROM item_checkouts ic
      JOIN bin_items bi ON bi.id = ic.item_id
      JOIN users u ON u.id = ic.checked_out_by
-     WHERE ic.origin_bin_id = $1 AND ic.returned_at IS NULL
+     WHERE ic.origin_bin_id = $1 AND ic.returned_at IS NULL AND bi.deleted_at IS NULL
      ORDER BY ic.checked_out_at DESC`,
     [binId]
   );
@@ -248,7 +248,7 @@ locationCheckoutsRouter.get('/:locationId/checkouts', requireLocationMember('loc
      JOIN bin_items bi ON bi.id = ic.item_id
      JOIN bins b ON b.id = ic.origin_bin_id
      JOIN users u ON u.id = ic.checked_out_by
-     WHERE ic.location_id = $1 AND ic.returned_at IS NULL
+     WHERE ic.location_id = $1 AND ic.returned_at IS NULL AND bi.deleted_at IS NULL
      ORDER BY ic.checked_out_at DESC`,
     [locationId]
   );

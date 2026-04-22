@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ItemTableView } from '../ItemTableView';
@@ -73,5 +73,48 @@ describe('ItemTableView icon+color badge', () => {
     // The old pattern had a h-2 w-2 rounded-full dot — should no longer exist
     const dots = container.querySelectorAll('.rounded-full');
     expect(dots.length).toBe(0);
+  });
+});
+
+describe('ItemTableView selection', () => {
+  const items: ItemEntry[] = [
+    makeItem({ id: 'a', name: 'Hammer', quantity: 1, bin_id: 'bin-1', bin_name: 'Garage', bin_icon: '', bin_color: '' }),
+    makeItem({ id: 'b', name: 'Saw', quantity: 2, bin_id: 'bin-1', bin_name: 'Garage', bin_icon: '', bin_color: '' }),
+  ];
+
+  it('renders checkboxes when selectable', () => {
+    const onSelect = vi.fn();
+    render(
+      <MemoryRouter>
+        <ItemTableView
+          items={items}
+          {...defaultProps}
+          selectable
+          selectedIds={new Set(['a'])}
+          onSelect={onSelect}
+        />
+      </MemoryRouter>,
+    );
+    const checkboxes = screen.getAllByRole('checkbox');
+    expect(checkboxes).toHaveLength(2);
+    expect(checkboxes[0]).toBeChecked();
+    expect(checkboxes[1]).not.toBeChecked();
+  });
+
+  it('clicking a checkbox calls onSelect', () => {
+    const onSelect = vi.fn();
+    render(
+      <MemoryRouter>
+        <ItemTableView
+          items={items}
+          {...defaultProps}
+          selectable
+          selectedIds={new Set()}
+          onSelect={onSelect}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    expect(onSelect).toHaveBeenCalledWith('a', 0, false);
   });
 });

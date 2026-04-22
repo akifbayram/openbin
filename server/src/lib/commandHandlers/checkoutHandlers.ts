@@ -13,7 +13,7 @@ export async function handleCheckoutItem(action: Extract<CommandAction, { type: 
   assertBinVisible(bin.rows[0], ctx.userId);
 
   const item = await tx<{ id: string; name: string }>(
-    'SELECT id, name FROM bin_items WHERE bin_id = $1 AND LOWER(name) = LOWER($2)',
+    'SELECT id, name FROM bin_items WHERE bin_id = $1 AND LOWER(name) = LOWER($2) AND deleted_at IS NULL',
     [action.bin_id, action.item_name],
   );
   if (item.rows.length === 0) throw new Error(`Item not found: ${action.item_name}`);
@@ -52,7 +52,7 @@ export async function handleReturnItem(action: Extract<CommandAction, { type: 'r
   assertBinVisible(bin.rows[0], ctx.userId);
 
   const item = await tx<{ id: string; name: string }>(
-    'SELECT id, name FROM bin_items WHERE bin_id = $1 AND LOWER(name) = LOWER($2)',
+    'SELECT id, name FROM bin_items WHERE bin_id = $1 AND LOWER(name) = LOWER($2) AND deleted_at IS NULL',
     [action.bin_id, action.item_name],
   );
   if (item.rows.length === 0) throw new Error(`Item not found: ${action.item_name}`);
@@ -80,7 +80,7 @@ export async function handleReturnItem(action: Extract<CommandAction, { type: 'r
     if (targetBin.rows.length === 0) throw new Error(`Target bin not found: ${action.target_bin_name ?? returnBinId}`);
 
     const maxResult = await tx<{ max_pos: number | null }>(
-      'SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1',
+      'SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL',
       [returnBinId],
     );
     const nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;

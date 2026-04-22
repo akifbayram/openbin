@@ -1,4 +1,5 @@
-import { ClipboardList, PackageOpen } from 'lucide-react';
+import { ArrowRightLeft, ClipboardList, Hash, PackageOpen, Sparkles, Trash2 } from 'lucide-react';
+import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
@@ -7,12 +8,31 @@ import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
+import { useToast } from '@/components/ui/toast';
+import { type BulkAction, BulkActionBar } from '@/lib/bulk/BulkActionBar';
+import { useBulkSelection } from '@/lib/bulk/useBulkSelection';
 import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
+import { useMountOnOpen } from '@/lib/useMountOnOpen';
+import { usePermissions } from '@/lib/usePermissions';
 import { useTableSearchParams } from '@/lib/useTableSearchParams';
 import { cn } from '@/lib/utils';
 import { type ItemSortColumn, ItemTableView } from './ItemTableView';
+import { useItemBulkActions } from './useItemBulkActions';
 import { usePaginatedItemList } from './useItems';
+
+const BulkDeleteItemsDialog = lazy(() =>
+  import('./BulkDeleteItemsDialog').then((m) => ({ default: m.BulkDeleteItemsDialog })),
+);
+const BulkCheckoutItemsDialog = lazy(() =>
+  import('./BulkCheckoutItemsDialog').then((m) => ({ default: m.BulkCheckoutItemsDialog })),
+);
+const BulkMoveItemsDialog = lazy(() =>
+  import('./BulkMoveItemsDialog').then((m) => ({ default: m.BulkMoveItemsDialog })),
+);
+const BulkQuantityDialog = lazy(() =>
+  import('./BulkQuantityDialog').then((m) => ({ default: m.BulkQuantityDialog })),
+);
 
 export function ItemsPage() {
   const t = useTerminology();
@@ -23,6 +43,29 @@ export function ItemsPage() {
     sortColumn,
     sortDirection,
   );
+
+  const { showToast } = useToast();
+  const { canWrite } = usePermissions();
+  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection({
+    items,
+    resetDeps: [debouncedSearch, sortColumn, sortDirection],
+  });
+  const { bulkDelete, bulkCheckout, bulkMove, bulkQuantity, isBusy } = useItemBulkActions(clearSelection, showToast);
+
+  const [openDialog, setOpenDialog] = useState<'delete' | 'checkout' | 'move' | 'quantity' | null>(null);
+  const deleteMounted = useMountOnOpen(openDialog === 'delete');
+  const checkoutMounted = useMountOnOpen(openDialog === 'checkout');
+  const moveMounted = useMountOnOpen(openDialog === 'move');
+  const quantityMounted = useMountOnOpen(openDialog === 'quantity');
+
+  const ids = [...selectedIds];
+
+  const actions: BulkAction[] = [
+    { id: 'delete', icon: Trash2, label: 'Delete', onClick: () => setOpenDialog('delete'), group: 'primary', danger: true },
+    { id: 'checkout', icon: Sparkles, label: 'Checkout', onClick: () => setOpenDialog('checkout'), group: 'primary' },
+    { id: 'move', icon: ArrowRightLeft, label: 'Move', onClick: () => setOpenDialog('move'), group: 'more' },
+    { id: 'quantity', icon: Hash, label: 'Set quantity', onClick: () => setOpenDialog('quantity'), group: 'more' },
+  ];
 
   return (
     <div className="page-content-wide">
@@ -78,18 +121,74 @@ export function ItemsPage() {
             )}
           </EmptyState>
         ) : (
-          <ItemTableView
-            items={items}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
-            onSortChange={setSort}
-            searchQuery={debouncedSearch}
-            hasMore={hasMore}
-            isLoadingMore={isLoadingMore}
-            loadMore={loadMore}
-          />
+          <div className={cn(selectable && 'pb-16')}>
+            <ItemTableView
+              items={items}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onSortChange={setSort}
+              searchQuery={debouncedSearch}
+              hasMore={hasMore}
+              isLoadingMore={isLoadingMore}
+              loadMore={loadMore}
+              selectable={selectable}
+              selectedIds={selectedIds}
+              onSelect={toggleSelect}
+            />
+          </div>
         )}
       </Crossfade>
+
+      {selectable && canWrite && (
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onClear={clearSelection}
+          isBusy={isBusy}
+          actions={actions}
+          selectionLabel={`${selectedIds.size} item${selectedIds.size === 1 ? '' : 's'} selected`}
+        />
+      )}
+
+      {deleteMounted && (
+        <Suspense fallback={null}>
+          <BulkDeleteItemsDialog
+            open={openDialog === 'delete'}
+            onOpenChange={(v) => (v ? setOpenDialog('delete') : setOpenDialog(null))}
+            count={selectedIds.size}
+            onConfirm={() => bulkDelete(ids)}
+          />
+        </Suspense>
+      )}
+      {checkoutMounted && (
+        <Suspense fallback={null}>
+          <BulkCheckoutItemsDialog
+            open={openDialog === 'checkout'}
+            onOpenChange={(v) => (v ? setOpenDialog('checkout') : setOpenDialog(null))}
+            count={selectedIds.size}
+            onConfirm={() => bulkCheckout(ids)}
+          />
+        </Suspense>
+      )}
+      {moveMounted && (
+        <Suspense fallback={null}>
+          <BulkMoveItemsDialog
+            open={openDialog === 'move'}
+            onOpenChange={(v) => (v ? setOpenDialog('move') : setOpenDialog(null))}
+            selectedIds={ids}
+            onApply={bulkMove}
+          />
+        </Suspense>
+      )}
+      {quantityMounted && (
+        <Suspense fallback={null}>
+          <BulkQuantityDialog
+            open={openDialog === 'quantity'}
+            onOpenChange={(v) => (v ? setOpenDialog('quantity') : setOpenDialog(null))}
+            selectedIds={ids}
+            onApply={bulkQuantity}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

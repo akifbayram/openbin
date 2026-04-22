@@ -94,10 +94,12 @@ CREATE TABLE IF NOT EXISTS bin_items (
   name       TEXT NOT NULL,
   quantity   INTEGER DEFAULT NULL,
   position   INTEGER NOT NULL DEFAULT 0,
+  deleted_at TEXT,
   created_at TEXT NOT NULL DEFAULT (NOW()),
   updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_bin_items_bin_id ON bin_items(bin_id, position);
+CREATE INDEX IF NOT EXISTS idx_bin_items_deleted_at ON bin_items(deleted_at);
 
 CREATE TABLE IF NOT EXISTS item_checkouts (
   id              TEXT PRIMARY KEY,

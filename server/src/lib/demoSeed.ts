@@ -643,7 +643,7 @@ async function seedCheckouts(
   async function findItemId(binName: string, itemName: string): Promise<string | null> {
     const binId = binIdMap.get(binName);
     if (!binId) return null;
-    const result = await tx<{ id: string }>('SELECT id FROM bin_items WHERE bin_id = $1 AND name = $2', [binId, itemName]);
+    const result = await tx<{ id: string }>('SELECT id FROM bin_items WHERE bin_id = $1 AND name = $2 AND deleted_at IS NULL', [binId, itemName]);
     return result.rows.length > 0 ? result.rows[0].id : null;
   }
 

@@ -405,11 +405,12 @@ router.get('/:id/stats', asyncHandler(async (req, res) => {
       (SELECT COALESCE(SUM(item_cnt), 0) FROM (
         SELECT COUNT(*) AS item_cnt FROM bin_items
         WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1 AND deleted_at IS NULL)
+          AND deleted_at IS NULL
       )) AS total_items,
       (SELECT COUNT(*) FROM areas WHERE location_id = $1) AS total_areas,
       (SELECT COUNT(*) FROM bins b WHERE b.location_id = $1 AND b.deleted_at IS NULL
         AND b.area_id IS NULL
-        AND NOT EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id)
+        AND NOT EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND bi.deleted_at IS NULL)
         AND (b.tags IS NULL OR b.tags = '[]')
       ) AS needs_organizing`,
     [locationId],

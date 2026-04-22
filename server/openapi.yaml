@@ -1437,6 +1437,17 @@ components:
           nullable: true
           description: Date until which the plan is active (null for inactive)
 
+    BulkErrorEntry:
+      type: object
+      required: [id, reason]
+      properties:
+        id:
+          type: string
+          description: Item ID that failed processing
+        reason:
+          type: string
+          description: Human-readable failure reason
+
   responses:
     Unauthorized:
       description: Missing or invalid authentication
@@ -4632,6 +4643,267 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
+
+  /items/bulk-delete:
+    post:
+      tags: [Items]
+      summary: Bulk soft-delete items
+      description: |
+        Soft-deletes up to 200 items in a single transaction. Items with `deleted_at IS NULL`
+        are filtered out of all read endpoints. Use `/items/bulk-restore` to undo.
+        Requires member role or above. All `ids` must belong to bins in the same location
+        as the caller's active membership; mixed locations return `VALIDATION_ERROR`.
+        The selection cap is configurable via the `BULK_MAX_SELECTION` env var (default 200).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 200
+                  description: Item IDs to soft-delete
+      responses:
+        '200':
+          description: Items soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted]
+                properties:
+                  deleted:
+                    type: integer
+                    minimum: 0
+                    description: Number of items soft-deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error (empty ids, mixed locations, or selection over cap)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /items/bulk-restore:
+    post:
+      tags: [Items]
+      summary: Bulk restore soft-deleted items
+      description: |
+        Restores up to 200 previously soft-deleted items by clearing `deleted_at`.
+        Requires member role or above. All `ids` must belong to bins in the same location.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 200
+      responses:
+        '200':
+          description: Items restored
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [restored]
+                properties:
+                  restored:
+                    type: integer
+                    minimum: 0
+                    description: Number of items restored
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error or selection over cap
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /items/bulk-checkout:
+    post:
+      tags: [Items]
+      summary: Bulk check out items
+      description: |
+        Checks out up to 200 items in a single transaction. Items already checked out are
+        skipped and reported in the `errors` array (per-item failure reasons). Requires member
+        role or above. All `ids` must belong to bins in the same location.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 200
+      responses:
+        '200':
+          description: Bulk checkout result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [checkedOut, errors]
+                properties:
+                  checkedOut:
+                    type: integer
+                    minimum: 0
+                    description: Number of items successfully checked out
+                  errors:
+                    type: array
+                    description: Per-item failure entries (e.g. already checked out)
+                    items:
+                      $ref: '#/components/schemas/BulkErrorEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error or selection over cap
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /items/bulk-move:
+    post:
+      tags: [Items]
+      summary: Bulk move items to a target bin
+      description: |
+        Moves up to 200 items into `targetBinId` in a single transaction. The target bin must
+        belong to the same location as all source bins. Requires member role or above.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids, targetBinId]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 200
+                targetBinId:
+                  type: string
+                  format: uuid
+                  description: Destination bin ID
+      responses:
+        '200':
+          description: Items moved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [moved]
+                properties:
+                  moved:
+                    type: integer
+                    minimum: 0
+                    description: Number of items moved
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error (missing targetBinId, mixed locations, or selection over cap)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /items/bulk-quantity:
+    post:
+      tags: [Items]
+      summary: Bulk update item quantities
+      description: |
+        Bulk-updates quantities for up to 200 items. The `op` field selects the operation:
+        - `set` — replace quantity with `value` (required, integer >= 0)
+        - `clear` — clear quantity (sets `quantity` to `NULL`); `value` ignored
+        - `inc` — add `value` (required, integer) to current quantity
+        - `dec` — subtract `value` (required, integer) from current quantity; items whose new
+          quantity would reach 0 are removed and counted in `removed`
+
+        Requires member role or above. All `ids` must belong to bins in the same location.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids, op]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 200
+                op:
+                  type: string
+                  enum: [set, clear, inc, dec]
+                  description: Quantity operation to apply
+                value:
+                  type: integer
+                  description: Operand for `set`, `inc`, `dec`. Ignored for `clear`.
+      responses:
+        '200':
+          description: Quantities updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [updated, removed]
+                properties:
+                  updated:
+                    type: integer
+                    minimum: 0
+                    description: Number of items whose quantity was updated
+                  removed:
+                    type: integer
+                    minimum: 0
+                    description: Number of items removed because their quantity hit 0 (only for `dec`)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error (invalid op, missing value, mixed locations, or selection over cap)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # ════════════════════════════════════════════════════════
   # Print Settings

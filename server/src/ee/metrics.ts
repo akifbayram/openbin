@@ -271,7 +271,7 @@ export async function getPlanBreakdown(): Promise<PlanBreakdownResponse> {
     }>(
       `SELECT u.id as user_id, u.plan, u.sub_status,
          (SELECT COUNT(*) FROM bins WHERE created_by = u.id AND deleted_at IS NULL) AS bin_count,
-         (SELECT COUNT(*) FROM bin_items bi JOIN bins b ON b.id = bi.bin_id WHERE b.created_by = u.id AND b.deleted_at IS NULL) AS item_count,
+         (SELECT COUNT(*) FROM bin_items bi JOIN bins b ON b.id = bi.bin_id WHERE b.created_by = u.id AND b.deleted_at IS NULL AND bi.deleted_at IS NULL) AS item_count,
          (SELECT COUNT(*) FROM photos WHERE created_by = u.id) AS photo_count,
          (SELECT COALESCE(SUM(size), 0) FROM photos WHERE created_by = u.id) AS storage_bytes,
          (SELECT COUNT(DISTINCT lm.location_id) FROM location_members lm WHERE lm.user_id = u.id) AS location_count,

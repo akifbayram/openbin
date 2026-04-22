@@ -37,7 +37,7 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
 
   // Get max position
   const maxResult = await query<{ max_pos: number | null }>(
-    'SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1',
+    'SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL',
     [id]
   );
   let nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
@@ -81,7 +81,7 @@ router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
 
   // Get item name before deleting
   const itemResult = await query<{ name: string }>(
-    'SELECT name FROM bin_items WHERE id = $1 AND bin_id = $2',
+    'SELECT name FROM bin_items WHERE id = $1 AND bin_id = $2 AND deleted_at IS NULL',
     [itemId, id]
   );
   if (itemResult.rows.length === 0) {
@@ -118,7 +118,7 @@ router.put('/:id/items/reorder', asyncHandler(async (req, res) => {
 
   // Verify all item IDs belong to this bin
   const existing = await query<{ id: string }>(
-    'SELECT id FROM bin_items WHERE bin_id = $1',
+    'SELECT id FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL',
     [id]
   );
   const binItemIds = new Set(existing.rows.map((r) => r.id));
@@ -152,7 +152,7 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
   await assertLocationWritable(access.locationId);
 
   const itemResult = await query<{ name: string; quantity: number | null }>(
-    'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2',
+    'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2 AND deleted_at IS NULL',
     [itemId, id]
   );
   if (itemResult.rows.length === 0) {
@@ -205,7 +205,7 @@ router.patch('/:id/items/:itemId/quantity', asyncHandler(async (req, res) => {
   await assertLocationWritable(access.locationId);
 
   const itemResult = await query<{ name: string; quantity: number | null }>(
-    'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2',
+    'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2 AND deleted_at IS NULL',
     [itemId, id]
   );
   if (itemResult.rows.length === 0) {
