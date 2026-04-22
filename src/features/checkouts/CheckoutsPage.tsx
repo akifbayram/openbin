@@ -155,11 +155,9 @@ export function CheckoutsPage() {
           />
         ) : (
           <div className={cn(selectable && 'pb-16')}>
-            <p className="text-[13px] text-[var(--text-tertiary)]">
-              {filtered.length} item{filtered.length !== 1 ? 's' : ''} checked out
-            </p>
             <Table>
               <TableHeader>
+                <span className="w-6 shrink-0" aria-hidden />
                 <SortHeader label="Item" column="alpha" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="flex-[2]" />
                 <span className="flex-1 ui-col-header">Bin</span>
                 <span className="hidden md:block flex-1 ui-col-header">By</span>
@@ -271,12 +269,14 @@ function CheckoutRow({
       onTouchMove={longPress.onTouchMove}
       onContextMenu={longPress.onContextMenu}
     >
-      {selectable && (
-        // biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to checkbox
-        <div className="shrink-0 mr-2" onClick={(e) => e.stopPropagation()} role="presentation">
-          <Checkbox checked={selected} onCheckedChange={() => onSelect(co.id, index, false)} />
-        </div>
-      )}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to checkbox */}
+      <div
+        className={cn('shrink-0 mr-2 transition-opacity', !selectable && !selected && 'opacity-40')}
+        onClick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <Checkbox checked={selected} onCheckedChange={() => onSelect(co.id, index, false)} />
+      </div>
       <div className="flex-[2] min-w-0">
         <span className="truncate font-medium text-[14px] text-[var(--text-primary)]">
           <Highlight text={co.item_name} query={search} />

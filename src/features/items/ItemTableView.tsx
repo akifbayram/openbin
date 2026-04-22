@@ -9,6 +9,7 @@ import { useEntitySelectionInteraction } from '@/lib/bulk/useEntitySelectionInte
 import { resolveColor } from '@/lib/colorPalette';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import type { ItemEntry } from './useItems';
 
 export type ItemSortColumn = 'alpha' | 'bin' | 'qty';
@@ -47,7 +48,7 @@ export function ItemTableView({
       <Table>
         {/* Header */}
         <TableHeader>
-          {selectable && <span className="w-6 shrink-0" aria-hidden />}
+          <span className="w-6 shrink-0" aria-hidden />
           <SortHeader label="Item" column="alpha" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-[2]" />
           <SortHeader label="Qty" column="qty" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} defaultDirection="desc" className="w-14 justify-end" />
           <SortHeader label={t.Bin} column="bin" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-1" />
@@ -110,15 +111,17 @@ function ItemRow({
       onTouchMove={longPress.onTouchMove}
       onContextMenu={longPress.onContextMenu}
     >
-      {selectable && (
-        // biome-ignore lint/a11y/noStaticElementInteractions: stops row click bubbling
-        <div className="shrink-0 mr-2" onClick={(e) => e.stopPropagation()} role="presentation">
-          <Checkbox
-            checked={selected ?? false}
-            onCheckedChange={() => onSelect?.(entry.id, index, false)}
-          />
-        </div>
-      )}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: stops row click bubbling */}
+      <div
+        className={cn('shrink-0 mr-2 transition-opacity', !selectable && !selected && 'opacity-40')}
+        onClick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <Checkbox
+          checked={selected ?? false}
+          onCheckedChange={() => onSelect?.(entry.id, index, false)}
+        />
+      </div>
       <div className="flex-[2] min-w-0">
         <span className="truncate font-medium text-[14px] text-[var(--text-primary)]">
           <Highlight text={entry.name} query={searchQuery} />

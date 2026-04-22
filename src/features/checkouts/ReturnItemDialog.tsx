@@ -1,17 +1,15 @@
-import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { BinPickerList } from '@/components/ui/bin-picker-list';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { RadioOption } from '@/components/ui/radio-option';
 import { useToast } from '@/components/ui/toast';
-import { cn, focusRing } from '@/lib/utils';
 import { returnItem } from './useCheckouts';
 
 interface ReturnItemDialogProps {
@@ -59,68 +57,40 @@ export function ReturnItemDialog({ open, onOpenChange, itemName, binId, itemId, 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Return Item</DialogTitle>
-          <DialogDescription>
-            Choose where to return &ldquo;{itemName}&rdquo;.
-          </DialogDescription>
+          <DialogTitle>Return &ldquo;{itemName}&rdquo;</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-1.5">
-          <button
-            type="button"
-            aria-pressed={mode === 'origin'}
+        <div className="flex flex-col gap-2">
+          <RadioOption
+            selected={mode === 'origin'}
             onClick={() => { setMode('origin'); setTargetId(null); }}
-            className={cn(
-              'w-full text-left px-3 py-2.5 rounded-[var(--radius-md)] transition-colors duration-150 border flex items-center',
-              focusRing,
-              mode === 'origin'
-                ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-                : 'text-[var(--text-primary)] border-[var(--border-flat)] hover:border-[var(--text-tertiary)]',
-            )}
-          >
-            <div className="flex-1 min-w-0">
-              <span className="text-[15px] truncate block">Original bin</span>
-              {originBinName && (
-                <span className={cn('text-[13px] truncate block', mode === 'origin' ? 'text-white/70' : 'text-[var(--text-tertiary)]')}>
-                  {originBinName}
-                </span>
-              )}
-            </div>
-            <Check className={cn('h-4 w-4 shrink-0 ml-2 transition-opacity duration-150', mode === 'origin' ? 'opacity-100' : 'opacity-0')} />
-          </button>
-
-          <button
-            type="button"
-            aria-pressed={mode === 'different'}
+            label="Original bin"
+            description={originBinName}
+          />
+          <RadioOption
+            selected={mode === 'different'}
             onClick={() => setMode('different')}
-            className={cn(
-              'w-full text-left px-3 py-2.5 rounded-[var(--radius-md)] transition-colors duration-150 border flex items-center',
-              focusRing,
-              mode === 'different'
-                ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-                : 'text-[var(--text-primary)] border-[var(--border-flat)] hover:border-[var(--text-tertiary)]',
-            )}
-          >
-            <span className="flex-1 text-[15px] truncate">Different bin</span>
-            <Check className={cn('h-4 w-4 shrink-0 ml-2 transition-opacity duration-150', mode === 'different' ? 'opacity-100' : 'opacity-0')} />
-          </button>
+            label="Different bin"
+          />
         </div>
 
         {mode === 'different' && (
-          <BinPickerList
-            excludeBinId={binId}
-            selectedBinId={targetId}
-            onSelect={setTargetId}
-            search={search}
-            onSearchChange={setSearch}
-            paused={!open}
-          />
+          <div className="mt-3 animate-fade-in">
+            <BinPickerList
+              excludeBinId={binId}
+              selectedBinId={targetId}
+              onSelect={setTargetId}
+              search={search}
+              onSearchChange={setSearch}
+              paused={!open}
+            />
+          </div>
         )}
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancel</Button>
           <Button onClick={handleReturn} disabled={loading || !canSubmit}>
-            {loading ? 'Returning...' : 'Return'}
+            {loading ? 'Returning…' : 'Return'}
           </Button>
         </DialogFooter>
       </DialogContent>

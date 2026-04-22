@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BinPickerList } from '@/components/ui/bin-picker-list';
 import { useBinList } from '@/features/bins/useBins';
 import { BulkUpdateDialog } from '@/lib/bulk/BulkUpdateDialog';
+import { pluralize } from '@/lib/utils';
 
 interface BulkMoveItemsDialogProps {
   open: boolean;
@@ -26,8 +27,8 @@ export function BulkMoveItemsDialog({ open, onOpenChange, selectedIds, onApply }
         }
         onOpenChange(v);
       }}
-      title={`Move ${selectedIds.length} item${selectedIds.length === 1 ? '' : 's'}`}
-      description="Pick a destination bin."
+      title={`Move ${pluralize(selectedIds.length, 'item')}`}
+      description="Select a bin to move the items into."
       selectedIds={selectedIds}
       onApply={async (ids) => {
         if (!targetId) return;

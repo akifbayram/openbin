@@ -1,15 +1,24 @@
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioOption } from '@/components/ui/radio-option';
 import { BulkUpdateDialog } from '@/lib/bulk/BulkUpdateDialog';
+import { pluralize } from '@/lib/utils';
 import type { QuantityOp } from './useItemBulkActions';
 
 const OPTIONS: Array<{ value: QuantityOp; label: string; needsValue: boolean }> = [
   { value: 'set', label: 'Set to', needsValue: true },
-  { value: 'clear', label: 'Clear quantity', needsValue: false },
   { value: 'inc', label: 'Increment by', needsValue: true },
   { value: 'dec', label: 'Decrement by', needsValue: true },
+  { value: 'clear', label: 'Clear quantity', needsValue: false },
 ];
+
+const DESCRIPTIONS: Record<QuantityOp, string> = {
+  set: 'Sets the quantity on every selected item.',
+  inc: 'Adds to the existing quantity on every selected item.',
+  dec: 'Subtracts from the existing quantity. Items reaching zero will have their quantity cleared.',
+  clear: 'Removes the quantity from every selected item.',
+};
 
 interface BulkQuantityDialogProps {
   open: boolean;
@@ -32,8 +41,8 @@ export function BulkQuantityDialog({ open, onOpenChange, selectedIds, onApply }:
         if (!v) { setOp('set'); setValue('1'); }
         onOpenChange(v);
       }}
-      title={`Update quantity for ${selectedIds.length} item${selectedIds.length === 1 ? '' : 's'}`}
-      description={op === 'dec' ? 'Items reaching zero will be removed.' : 'Apply a quantity change to every selected item.'}
+      title={`Update quantity for ${pluralize(selectedIds.length, 'item')}`}
+      description={DESCRIPTIONS[op]}
       selectedIds={selectedIds}
       onApply={async (ids) => onApply(ids, op, needsValue ? numValue : undefined)}
       applyDisabled={!valueValid}
@@ -42,31 +51,31 @@ export function BulkQuantityDialog({ open, onOpenChange, selectedIds, onApply }:
     >
       <div className="flex flex-col gap-2">
         {OPTIONS.map((o) => (
-          <label key={o.value} className="flex items-center gap-2 text-[14px] cursor-pointer">
-            <input
-              type="radio"
-              name="quantity-op"
-              value={o.value}
-              checked={op === o.value}
-              onChange={() => setOp(o.value)}
-            />
-            <span>{o.label}</span>
-          </label>
+          <RadioOption
+            key={o.value}
+            selected={op === o.value}
+            onClick={() => setOp(o.value)}
+            label={o.label}
+          />
         ))}
-        {needsValue && (
-          <div className="space-y-1">
-            <Label htmlFor="bulk-qty-input">Value</Label>
-            <Input
-              id="bulk-qty-input"
-              type="number"
-              min={0}
-              step={1}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-            />
-          </div>
-        )}
       </div>
+
+      {needsValue && (
+        <div className="flex flex-col gap-1.5 mt-3 animate-fade-in">
+          <Label htmlFor="bulk-qty-input">
+            {op === 'set' ? 'New quantity' : 'Amount'}
+          </Label>
+          <Input
+            id="bulk-qty-input"
+            type="number"
+            min={0}
+            step={1}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+        </div>
+      )}
     </BulkUpdateDialog>
   );
 }

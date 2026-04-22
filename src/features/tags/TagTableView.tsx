@@ -174,15 +174,17 @@ function TagRow({
       onContextMenu={longPress.onContextMenu}
       className={cn(isChild && 'bg-[var(--bg-hover)]/30')}
     >
-      {selectable && (
-        // biome-ignore lint/a11y/noStaticElementInteractions: stops row click bubbling
-        <div className="shrink-0 mr-2" onClick={(e) => e.stopPropagation()} role="presentation">
-          <Checkbox
-            checked={selected ?? false}
-            onCheckedChange={() => onSelect?.(tag, index, false)}
-          />
-        </div>
-      )}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: stops row click bubbling */}
+      <div
+        className={cn('shrink-0 mr-2 transition-opacity', !selectable && !selected && 'opacity-40')}
+        onClick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <Checkbox
+          checked={selected ?? false}
+          onCheckedChange={() => onSelect?.(tag, index, false)}
+        />
+      </div>
       <div className={cn('flex-[2] min-w-0', isChild && 'pl-7')}>
         <div className="flex items-center gap-1.5">
           {isParent && (
@@ -315,7 +317,7 @@ export function TagTableView({
       <Table>
         {/* Header */}
         <TableHeader>
-          {selectable && <span className="w-6 shrink-0" aria-hidden />}
+          <span className="w-6 shrink-0" aria-hidden />
           <SortHeader label="Tag" column="alpha" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-[2]" />
           <SortHeader label="Count" column="count" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} defaultDirection="desc" className="w-20 justify-end" />
           <span className="w-10 shrink-0" />
