@@ -18,7 +18,7 @@ export interface AuthStatusConfig {
 
 let cached: QrConfig = { qrPayloadMode: 'app' };
 let selfHostedCached = true; // default true (safe: hides cloud-only UI until confirmed)
-let attachmentsEnabledCached = false; // default false — feature is hidden until server confirms
+let attachmentsEnabledCached = true; // default true — feature is on unless server opts out
 let authStatusCached: AuthStatusConfig = {
   registrationMode: 'open',
   registrationEnabled: true,

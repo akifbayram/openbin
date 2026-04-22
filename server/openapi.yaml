@@ -35,7 +35,7 @@ tags:
   - name: Photos
     description: Photo retrieval and deletion
   - name: Attachments
-    description: Non-image file attachments on bins. Gated by the `ATTACHMENTS_ENABLED` server env var — returns 404 for every endpoint when disabled.
+    description: Non-image file attachments on bins. Enabled by default; set `ATTACHMENTS_ENABLED=false` to disable — every endpoint returns 404 when disabled.
   - name: TagColors
     description: Per-location tag color assignments
   - name: PrintSettings
@@ -1627,7 +1627,7 @@ paths:
                     description: Whether the server is running in self-hosted mode (all plan features unlocked)
                   attachmentsEnabled:
                     type: boolean
-                    description: Whether the non-image attachments feature is enabled (set via `ATTACHMENTS_ENABLED` env var)
+                    description: Whether the non-image attachments feature is enabled (controlled by the `ATTACHMENTS_ENABLED` env var; defaults to `true`)
 
   /auth/demo-login:
     post:
@@ -3941,13 +3941,13 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ════════════════════════════════════════════════════════
-  # Attachments (opt-in: ATTACHMENTS_ENABLED server env var)
+  # Attachments (on by default; disable with ATTACHMENTS_ENABLED=false)
   # ════════════════════════════════════════════════════════
   /bins/{id}/attachments:
     get:
       tags: [Attachments]
       summary: List attachments on a bin
-      description: Returns 404 when `ATTACHMENTS_ENABLED` is not set on the server.
+      description: Returns 404 when `ATTACHMENTS_ENABLED=false` is set on the server.
       parameters:
         - name: id
           in: path
@@ -3979,7 +3979,7 @@ paths:
       description: |
         Accepts common document and archive formats (PDF, plain text, CSV, Markdown, JSON, RTF,
         Microsoft Office, OpenDocument, ZIP, 7z, tar, gzip) up to 5 MB. Images are rejected —
-        use the photos endpoints instead. Returns 404 when `ATTACHMENTS_ENABLED` is not set.
+        use the photos endpoints instead. Returns 404 when `ATTACHMENTS_ENABLED=false` is set.
       parameters:
         - name: id
           in: path
@@ -4024,7 +4024,7 @@ paths:
       summary: Download an attachment
       description: |
         Streams the raw bytes with `Content-Disposition: attachment` (forces download).
-        Returns 404 when `ATTACHMENTS_ENABLED` is not set.
+        Returns 404 when `ATTACHMENTS_ENABLED=false` is set.
       parameters:
         - name: id
           in: path
@@ -4050,7 +4050,7 @@ paths:
       summary: Delete an attachment
       description: |
         Removes the attachment record and deletes the file from storage. Only the uploader
-        or a location admin may delete. Returns 404 when `ATTACHMENTS_ENABLED` is not set.
+        or a location admin may delete. Returns 404 when `ATTACHMENTS_ENABLED=false` is set.
       parameters:
         - name: id
           in: path

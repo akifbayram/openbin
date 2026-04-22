@@ -41,7 +41,7 @@ OpenAPI spec at `server/openapi.yaml`.
 
 ## Gotchas
 
-- **Attachments feature flag**: `ATTACHMENTS_ENABLED` (default `false`) gates the non-image attachments routes. When off, every `/api/bins/:id/attachments` and `/api/attachments/:id/*` endpoint 404s; the table is always created but unused. Client reads it from `/api/auth/status` via `isAttachmentsEnabled()` in `src/lib/qrConfig.ts`.
+- **Attachments feature flag**: `ATTACHMENTS_ENABLED` (default `true`) gates the non-image attachments routes. When set to `false`, every `/api/bins/:id/attachments` and `/api/attachments/:id/*` endpoint 404s; the table is always created. Client reads it from `/api/auth/status` via `isAttachmentsEnabled()` in `src/lib/qrConfig.ts`.
 - **Theme**: `localStorage('openbin-theme')`, applied via `<html class="dark|light">` before first paint. `useTheme()` in `lib/theme.ts` is runtime source of truth.
 - **`html5-qrcode`** is ~330KB gzipped — always dynamic-import the scanner page.
 - **Photos served via API**: `getPhotoUrl(id)` → `/api/photos/${id}/file`. Auth via httpOnly cookies (no query param).
