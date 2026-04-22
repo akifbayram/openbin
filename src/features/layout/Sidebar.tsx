@@ -1,4 +1,4 @@
-import { Boxes, ClipboardList, LayoutDashboard, LogOut, MapPin, Package, PackageSearch, PanelLeftClose, PanelLeftOpen, Printer, ScanLine, Settings, Tags } from
+import { Boxes, ClipboardList, LayoutDashboard, LogOut, MapPin, Package, PackageSearch, PanelLeftClose, PanelLeftOpen, Printer, ScanLine, Settings, ShoppingCart, Tags } from
   'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
@@ -32,6 +32,7 @@ const manageItems: NavItem[] = [
   { path: '/locations', label: 'Locations', icon: MapPin, termKey: 'Locations' },
   { path: '/items', label: 'Items', icon: ClipboardList },
   { path: '/checkouts', label: 'Checked Out', icon: PackageSearch },
+  { path: '/shopping-list', label: 'Shopping List', icon: ShoppingCart },
   { path: '/tags', label: 'Tags', icon: Tags },
 ];
 

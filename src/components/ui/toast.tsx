@@ -23,6 +23,7 @@ interface Toast {
   message: string;
   variant?: ToastVariant;
   action?: { label: string; onClick: () => void };
+  secondaryAction?: { label: string; onClick: () => void };
   duration?: number;
 }
 
@@ -101,6 +102,15 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
           className="text-[15px] font-semibold text-[var(--accent)] hover:opacity-80 shrink-0"
         >
           {toast.action.label}
+        </button>
+      )}
+      {toast.secondaryAction && (
+        <button
+          type="button"
+          onClick={toast.secondaryAction.onClick}
+          className="text-[15px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0"
+        >
+          {toast.secondaryAction.label}
         </button>
       )}
       <button

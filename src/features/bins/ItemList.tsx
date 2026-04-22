@@ -6,6 +6,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { checkoutItem, returnItem } from '@/features/checkouts/useCheckouts';
+import { addItemsToShoppingList, removeFromShoppingList } from '@/features/shopping-list/useShoppingList';
 import { Events, notify } from '@/lib/eventBus';
 import { parseBareQuantity } from '@/lib/itemQuantities';
 import { cn, relativeTime } from '@/lib/utils';
@@ -428,10 +429,35 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
     };
 
     const count = batch.ids.size;
+    const addToList = () => {
+      if (!binId) return;
+      const ids = Array.from(batch.ids);
+      const names = ids
+        .map((itemId) => itemsRef.current.find((i) => i.id === itemId)?.name)
+        .filter((n): n is string => !!n);
+      if (names.length === 0) return;
+      void addItemsToShoppingList(binId, names)
+        .then((entries) => {
+          showToast({
+            message: names.length === 1 ? 'Added to shopping list' : `Added ${names.length} to list`,
+            variant: 'success',
+            action: {
+              label: 'Undo',
+              onClick: () => {
+                void Promise.all(entries.map((e) => removeFromShoppingList(e.id)));
+              },
+            },
+          });
+        })
+        .catch(() => {
+          showToast({ message: 'Failed to add to list', variant: 'error' });
+        });
+    };
     const payload = {
       message: count === 1 ? 'Item removed' : `${count} items removed`,
       duration: 5500,
       action: { label: 'Undo', onClick: undo },
+      secondaryAction: { label: count === 1 ? 'Add to list' : 'Add all to list', onClick: addToList },
     };
     if (isNewBatch) {
       batch.toastId = showToast(payload);

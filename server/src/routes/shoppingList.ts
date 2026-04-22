@@ -197,9 +197,10 @@ shoppingListRouter.post('/:id/purchase', asyncHandler(async (req, res) => {
   await requireMemberOrAbove(row.location_id, userId, 'mark shopping list item as bought');
 
   let restored: { binId: string; itemId: string; name: string } | null = null;
+  let restoredBinName: string | null = null;
   if (row.origin_bin_id) {
-    const bin = await query<{ id: string; deleted_at: string | null; visibility: string; created_by: string | null }>(
-      'SELECT id, deleted_at, visibility, created_by FROM bins WHERE id = $1',
+    const bin = await query<{ id: string; name: string; deleted_at: string | null; visibility: string; created_by: string | null }>(
+      'SELECT id, name, deleted_at, visibility, created_by FROM bins WHERE id = $1',
       [row.origin_bin_id],
     );
     const b = bin.rows[0];
@@ -207,6 +208,7 @@ shoppingListRouter.post('/:id/purchase', asyncHandler(async (req, res) => {
       && b.deleted_at === null
       && (b.visibility === 'location' || b.created_by === userId);
     if (binVisible) {
+      restoredBinName = b.name;
       const posResult = await query<{ max_pos: number | null }>(
         'SELECT MAX(position) AS max_pos FROM bin_items WHERE bin_id = $1',
         [row.origin_bin_id],
@@ -243,7 +245,7 @@ shoppingListRouter.post('/:id/purchase', asyncHandler(async (req, res) => {
     changes: {
       purchased: {
         old: row.name,
-        new: restored ? `→ ${restored.binId}` : null,
+        new: restoredBinName ? `→ ${restoredBinName}` : null,
       },
     },
   });
