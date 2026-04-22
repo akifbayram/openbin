@@ -670,7 +670,7 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
 
   // Copy items from source
   const itemsResult = await query<{ name: string; position: number }>(
-    'SELECT name, position FROM bin_items WHERE bin_id = $1 ORDER BY position',
+    'SELECT name, position FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL ORDER BY position',
     [id]
   );
 

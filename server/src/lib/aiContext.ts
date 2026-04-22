@@ -105,7 +105,7 @@ function appendInClause(sql: string, column: string, startIndex: number, ids: st
 /** Fetch bins, areas, trash, and custom field data for a location. */
 async function fetchLocationData(locationId: string, userId: string, binIds?: string[]) {
   let binsSql = `SELECT b.id, b.short_code, b.name,
-        COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
+        COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id AND bi.deleted_at IS NULL ORDER BY bi.position) bi), '[]') AS items,
         b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color,
         b.visibility,
         (SELECT COUNT(*) FROM photos WHERE photos.bin_id = b.id) AS photo_count,

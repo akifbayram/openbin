@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
-import { BulkUpdateDialog, pluralizeBins } from './BulkUpdateDialog';
+import { BulkUpdateDialog } from '@/lib/bulk/BulkUpdateDialog';
+import { pluralizeBins } from './pluralizeBins';
 import { TagInput } from './TagInput';
 import { notifyBinsChanged } from './useBins';
 
@@ -44,7 +45,7 @@ export function BulkTagDialog({ open, onOpenChange, binIds, onDone, allTags }: B
       onOpenChange={onOpenChange}
       title="Add Tags"
       description={`Add tags to ${pluralizeBins(binIds.length)}.`}
-      binIds={binIds}
+      selectedIds={binIds}
       onApply={apply}
       onApplied={onDone}
       applyDisabled={tags.length === 0}

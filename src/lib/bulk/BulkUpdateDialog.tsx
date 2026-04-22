@@ -9,13 +9,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-interface BulkUpdateDialogProps {
+export interface BulkUpdateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description: ReactNode;
-  binIds: string[];
-  onApply: (binIds: string[]) => Promise<void>;
+  selectedIds: string[];
+  onApply: (ids: string[]) => Promise<void>;
   onApplied?: () => void;
   applyDisabled?: boolean;
   applyLabel?: string;
@@ -28,7 +28,7 @@ export function BulkUpdateDialog({
   onOpenChange,
   title,
   description,
-  binIds,
+  selectedIds,
   onApply,
   onApplied,
   applyDisabled = false,
@@ -41,7 +41,7 @@ export function BulkUpdateDialog({
   async function handleApply() {
     setLoading(true);
     try {
-      await onApply(binIds);
+      await onApply(selectedIds);
       onOpenChange(false);
       onApplied?.();
     } finally {
@@ -68,8 +68,4 @@ export function BulkUpdateDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-export function pluralizeBins(count: number): string {
-  return `${count} selected bin${count !== 1 ? 's' : ''}`;
 }

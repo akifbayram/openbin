@@ -62,7 +62,7 @@ export interface ItemChanges {
 
 export async function replaceBinItems(binId: string, newItems: unknown[]): Promise<ItemChanges | null> {
   const oldItemsResult = await query<{ name: string }>(
-    'SELECT name FROM bin_items WHERE bin_id = $1 ORDER BY position',
+    'SELECT name FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL ORDER BY position',
     [binId]
   );
   const oldItemNames = oldItemsResult.rows.map((r) => r.name);

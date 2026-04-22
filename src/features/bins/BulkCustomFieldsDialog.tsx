@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/lib/auth';
-import { BulkUpdateDialog, pluralizeBins } from './BulkUpdateDialog';
+import { BulkUpdateDialog } from '@/lib/bulk/BulkUpdateDialog';
+import { pluralizeBins } from './pluralizeBins';
 import { updateBin } from './useBins';
 import { useCustomFields } from './useCustomFields';
 
@@ -39,7 +40,7 @@ export function BulkCustomFieldsDialog({ open, onOpenChange, binIds, onDone }: B
       onOpenChange={onOpenChange}
       title="Set Custom Fields"
       description={`Set custom field values for ${pluralizeBins(binIds.length)}. Only filled fields will be updated.`}
-      binIds={binIds}
+      selectedIds={binIds}
       onApply={apply}
       onApplied={onDone}
       applyDisabled={!hasValues}

@@ -2,11 +2,13 @@ import { ArrowUpFromLine, ChevronDown, MoreHorizontal, Pencil, Trash2 } from 'lu
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Highlight } from '@/components/ui/highlight';
 import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { Table, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useEntitySelectionInteraction } from '@/lib/bulk/useEntitySelectionInteraction';
 import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
@@ -32,6 +34,9 @@ interface TagTableViewProps {
   hasMore: boolean;
   isLoadingMore: boolean;
   loadMore: () => void;
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  onSelect?: (id: string, index: number, shiftKey: boolean) => void;
 }
 
 const menuItemClass = 'w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer outline-none focus-visible:bg-[var(--bg-hover)]';
@@ -102,6 +107,132 @@ function TagRowMenu({
   );
 }
 
+interface TagRowProps {
+  tag: string;
+  count: number;
+  isChild: boolean;
+  isParent: boolean;
+  index: number;
+  searchQuery: string;
+  collapsed: boolean;
+  onToggleCollapse: (tag: string) => void;
+  tagColors: Map<string, string>;
+  hasChildren: boolean;
+  getTagBadgeStyle: (tag: string) => React.CSSProperties | undefined;
+  onColorChange: (tag: string, color: string) => void;
+  onRename?: (tag: string) => void;
+  onDelete?: (tag: string) => void;
+  onSetParent?: (tag: string) => void;
+  showActionsCol: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (id: string, index: number, shiftKey: boolean) => void;
+}
+
+function TagRow({
+  tag,
+  count,
+  isChild,
+  isParent,
+  index,
+  searchQuery,
+  collapsed,
+  onToggleCollapse,
+  tagColors,
+  hasChildren,
+  getTagBadgeStyle,
+  onColorChange,
+  onRename,
+  onDelete,
+  onSetParent,
+  showActionsCol,
+  selectable,
+  selected,
+  onSelect,
+}: TagRowProps) {
+  const navigate = useNavigate();
+  const t = useTerminology();
+  const { handleClick, handleKeyDown, longPress } = useEntitySelectionInteraction({
+    id: tag,
+    index,
+    selectable,
+    onSelect,
+    onActivate: () => navigate(`/bins?tags=${encodeURIComponent(tag)}`),
+  });
+
+  return (
+    <TableRow
+      tabIndex={0}
+      role={selectable ? 'option' : 'button'}
+      aria-selected={selectable ? selected : undefined}
+      aria-label={`Filter by tag: ${tag}`}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      onTouchStart={longPress.onTouchStart}
+      onTouchEnd={longPress.onTouchEnd}
+      onTouchMove={longPress.onTouchMove}
+      onContextMenu={longPress.onContextMenu}
+      className={cn(isChild && 'bg-[var(--bg-hover)]/30')}
+    >
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: stops row click bubbling */}
+      <div
+        className={cn('shrink-0 mr-2 transition-opacity', !selectable && !selected && 'opacity-40')}
+        onClick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <Checkbox
+          checked={selected ?? false}
+          onCheckedChange={() => onSelect?.(tag, index, false)}
+        />
+      </div>
+      <div className={cn('flex-[2] min-w-0', isChild && 'pl-7')}>
+        <div className="flex items-center gap-1.5">
+          {isParent && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onToggleCollapse(tag); }}
+              className="p-0.5 rounded-[var(--radius-xs)] text-[var(--text-quaternary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              aria-label={collapsed ? `Expand ${tag}` : `Collapse ${tag}`}
+            >
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', collapsed && '-rotate-90')} />
+            </button>
+          )}
+          <Badge
+            variant="secondary"
+            className="text-[13px] truncate max-w-full"
+            style={getTagBadgeStyle(tag)}
+          >
+            <Highlight text={tag} query={searchQuery} />
+          </Badge>
+        </div>
+      </div>
+      <span className="w-20 shrink-0 text-[13px] text-[var(--text-tertiary)] text-right tabular-nums">
+        {count} {count !== 1 ? t.bins : t.bin}
+      </span>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to color picker */}
+      <div role="presentation" className="w-10 shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
+        <TagColorPicker
+          currentColor={tagColors.get(tag) || ''}
+          onColorChange={(color) => onColorChange(tag, color)}
+          tagName={tag}
+        />
+      </div>
+      {showActionsCol && onRename && onDelete && (
+        /* biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to menu */
+        <div role="presentation" className="w-10 shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
+          <TagRowMenu
+            tag={tag}
+            hasChildren={hasChildren}
+            onRename={() => onRename(tag)}
+            onDelete={() => onDelete(tag)}
+            onSetParent={onSetParent}
+          />
+        </div>
+      )}
+    </TableRow>
+  );
+}
+
 export function TagTableView({
   tags,
   sortColumn,
@@ -118,10 +249,10 @@ export function TagTableView({
   hasMore,
   isLoadingMore,
   loadMore,
+  selectable,
+  selectedIds,
+  onSelect,
 }: TagTableViewProps) {
-  const navigate = useNavigate();
-  const t = useTerminology();
-
   const [collapsedParents, setCollapsedParents] = useState<Set<string>>(() => {
     const stored = localStorage.getItem('openbin-tag-tree-collapsed');
     return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
@@ -179,75 +310,44 @@ export function TagTableView({
     return finalResult;
   }, [tags, tagParents, parentSet, collapsedParents]);
 
+  const showActionsCol = Boolean(onRename && onDelete);
+
   return (
     <>
       <Table>
         {/* Header */}
         <TableHeader>
+          <span className="w-6 shrink-0" aria-hidden />
           <SortHeader label="Tag" column="alpha" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-[2]" />
           <SortHeader label="Count" column="count" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} defaultDirection="desc" className="w-20 justify-end" />
           <span className="w-10 shrink-0" />
-          {onRename && onDelete && <span className="w-10 shrink-0" />}
+          {showActionsCol && <span className="w-10 shrink-0" />}
         </TableHeader>
 
         {/* Rows */}
-        {orderedTags.map(({ tag, count, isChild, isParent }) => (
-          <TableRow
+        {orderedTags.map(({ tag, count, isChild, isParent }, index) => (
+          <TagRow
             key={tag}
-            tabIndex={0}
-            role="button"
-            aria-label={`Filter by tag: ${tag}`}
-            onClick={() => navigate(`/bins?tags=${encodeURIComponent(tag)}`)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') navigate(`/bins?tags=${encodeURIComponent(tag)}`);
-            }}
-            className={cn(isChild && 'bg-[var(--bg-hover)]/30')}
-          >
-            <div className={cn('flex-[2] min-w-0', isChild && 'pl-7')}>
-              <div className="flex items-center gap-1.5">
-                {isParent && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); toggleCollapse(tag); }}
-                    className="p-0.5 rounded-[var(--radius-xs)] text-[var(--text-quaternary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                    aria-label={collapsedParents.has(tag) ? `Expand ${tag}` : `Collapse ${tag}`}
-                  >
-                    <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', collapsedParents.has(tag) && '-rotate-90')} />
-                  </button>
-                )}
-                <Badge
-                  variant="secondary"
-                  className="text-[13px] truncate max-w-full"
-                  style={getTagBadgeStyle(tag)}
-                >
-                  <Highlight text={tag} query={searchQuery} />
-                </Badge>
-              </div>
-            </div>
-            <span className="w-20 shrink-0 text-[13px] text-[var(--text-tertiary)] text-right tabular-nums">
-              {count} {count !== 1 ? t.bins : t.bin}
-            </span>
-            {/* biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to color picker */}
-            <div role="presentation" className="w-10 shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
-              <TagColorPicker
-                currentColor={tagColors.get(tag) || ''}
-                onColorChange={(color) => onColorChange(tag, color)}
-                tagName={tag}
-              />
-            </div>
-            {onRename && onDelete && (
-              /* biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to menu */
-              <div role="presentation" className="w-10 shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
-                <TagRowMenu
-                  tag={tag}
-                  hasChildren={parentSet.has(tag)}
-                  onRename={() => onRename(tag)}
-                  onDelete={() => onDelete(tag)}
-                  onSetParent={onSetParent}
-                />
-              </div>
-            )}
-          </TableRow>
+            tag={tag}
+            count={count}
+            isChild={isChild}
+            isParent={isParent}
+            index={index}
+            searchQuery={searchQuery}
+            collapsed={collapsedParents.has(tag)}
+            onToggleCollapse={toggleCollapse}
+            tagColors={tagColors}
+            hasChildren={parentSet.has(tag)}
+            getTagBadgeStyle={getTagBadgeStyle}
+            onColorChange={onColorChange}
+            onRename={onRename}
+            onDelete={onDelete}
+            onSetParent={onSetParent}
+            showActionsCol={showActionsCol}
+            selectable={selectable}
+            selected={selectedIds?.has(tag) ?? false}
+            onSelect={onSelect}
+          />
         ))}
       </Table>
       <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />

@@ -1,21 +1,15 @@
-import { Check } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { BinIconBadge } from '@/components/ui/bin-icon-badge';
+import { useState } from 'react';
+import { BinPickerList } from '@/components/ui/bin-picker-list';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { SearchInput } from '@/components/ui/search-input';
+import { RadioOption } from '@/components/ui/radio-option';
 import { useToast } from '@/components/ui/toast';
-import { useBinList } from '@/features/bins/useBins';
-import { resolveColor } from '@/lib/colorPalette';
-import { resolveIcon } from '@/lib/iconMap';
-import { cn, focusRing } from '@/lib/utils';
 import { returnItem } from './useCheckouts';
 
 interface ReturnItemDialogProps {
@@ -33,18 +27,6 @@ export function ReturnItemDialog({ open, onOpenChange, itemName, binId, itemId, 
   const [targetId, setTargetId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const { showToast } = useToast();
-  const { bins } = useBinList(undefined, 'name', undefined, !open);
-
-  const otherBins = useMemo(() => {
-    let list = bins.filter((b) => b.id !== binId);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter((b) =>
-        b.name.toLowerCase().includes(q) || b.area_name?.toLowerCase().includes(q),
-      );
-    }
-    return list;
-  }, [bins, binId, search]);
 
   function handleOpenChange(next: boolean) {
     if (!next) {
@@ -75,105 +57,40 @@ export function ReturnItemDialog({ open, onOpenChange, itemName, binId, itemId, 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Return Item</DialogTitle>
-          <DialogDescription>
-            Choose where to return &ldquo;{itemName}&rdquo;.
-          </DialogDescription>
+          <DialogTitle>Return &ldquo;{itemName}&rdquo;</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-1.5">
-          <button
-            type="button"
-            aria-pressed={mode === 'origin'}
+        <div className="flex flex-col gap-2">
+          <RadioOption
+            selected={mode === 'origin'}
             onClick={() => { setMode('origin'); setTargetId(null); }}
-            className={cn(
-              'w-full text-left px-3 py-2.5 rounded-[var(--radius-md)] transition-colors duration-150 border flex items-center',
-              focusRing,
-              mode === 'origin'
-                ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-                : 'text-[var(--text-primary)] border-[var(--border-flat)] hover:border-[var(--text-tertiary)]',
-            )}
-          >
-            <div className="flex-1 min-w-0">
-              <span className="text-[15px] truncate block">Original bin</span>
-              {originBinName && (
-                <span className={cn('text-[13px] truncate block', mode === 'origin' ? 'text-white/70' : 'text-[var(--text-tertiary)]')}>
-                  {originBinName}
-                </span>
-              )}
-            </div>
-            <Check className={cn('h-4 w-4 shrink-0 ml-2 transition-opacity duration-150', mode === 'origin' ? 'opacity-100' : 'opacity-0')} />
-          </button>
-
-          <button
-            type="button"
-            aria-pressed={mode === 'different'}
+            label="Original bin"
+            description={originBinName}
+          />
+          <RadioOption
+            selected={mode === 'different'}
             onClick={() => setMode('different')}
-            className={cn(
-              'w-full text-left px-3 py-2.5 rounded-[var(--radius-md)] transition-colors duration-150 border flex items-center',
-              focusRing,
-              mode === 'different'
-                ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-                : 'text-[var(--text-primary)] border-[var(--border-flat)] hover:border-[var(--text-tertiary)]',
-            )}
-          >
-            <span className="flex-1 text-[15px] truncate">Different bin</span>
-            <Check className={cn('h-4 w-4 shrink-0 ml-2 transition-opacity duration-150', mode === 'different' ? 'opacity-100' : 'opacity-0')} />
-          </button>
+            label="Different bin"
+          />
         </div>
 
         {mode === 'different' && (
-          <div className="flex flex-col gap-2">
-            <SearchInput
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onClear={search ? () => setSearch('') : undefined}
-              placeholder="Search bins..."
+          <div className="mt-3 animate-fade-in">
+            <BinPickerList
+              excludeBinId={binId}
+              selectedBinId={targetId}
+              onSelect={setTargetId}
+              search={search}
+              onSearchChange={setSearch}
+              paused={!open}
             />
-            <div className="max-h-52 overflow-y-auto flex flex-col gap-1">
-              {otherBins.length === 0 ? (
-                <p className="text-[13px] text-[var(--text-tertiary)] text-center py-4">
-                  {search ? 'No matching bins' : 'No other bins available'}
-                </p>
-              ) : (
-                otherBins.map((b) => {
-                  const BinIcon = resolveIcon(b.icon);
-                  const colorPreset = resolveColor(b.color);
-                  const isSelected = targetId === b.id;
-                  return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() => setTargetId(b.id)}
-                      className={cn(
-                        'w-full text-left px-3 py-2.5 rounded-[var(--radius-sm)] transition-colors duration-150 flex items-center gap-2 border',
-                        focusRing,
-                        isSelected
-                          ? 'bg-[var(--accent)]/10 border-[var(--accent)]'
-                          : 'border-transparent hover:bg-[var(--bg-hover)]',
-                      )}
-                    >
-                      <BinIconBadge icon={BinIcon} colorPreset={colorPreset} />
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[14px] truncate block text-[var(--text-primary)]">{b.name}</span>
-                        {b.area_name && (
-                          <span className="text-[12px] text-[var(--text-tertiary)] truncate block">{b.area_name}</span>
-                        )}
-                      </div>
-                      {isSelected && <Check className="h-4 w-4 shrink-0 text-[var(--accent)]" />}
-                    </button>
-                  );
-                })
-              )}
-            </div>
           </div>
         )}
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancel</Button>
           <Button onClick={handleReturn} disabled={loading || !canSubmit}>
-            {loading ? 'Returning...' : 'Return'}
+            {loading ? 'Returning…' : 'Return'}
           </Button>
         </DialogFooter>
       </DialogContent>

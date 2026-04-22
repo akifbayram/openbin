@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { BulkUpdateDialog } from '@/lib/bulk/BulkUpdateDialog';
 import type { BinVisibility } from '@/types';
-import { BulkUpdateDialog, pluralizeBins } from './BulkUpdateDialog';
+import { pluralizeBins } from './pluralizeBins';
 import { updateBin } from './useBins';
 import { VisibilityPicker } from './VisibilityPicker';
 
@@ -25,7 +26,7 @@ export function BulkVisibilityDialog({ open, onOpenChange, binIds, onDone }: Bul
       onOpenChange={onOpenChange}
       title="Change Visibility"
       description={`Set visibility for ${pluralizeBins(binIds.length)}. Non-owned bins set to private will be skipped by the server.`}
-      binIds={binIds}
+      selectedIds={binIds}
       onApply={apply}
       onApplied={onDone}
     >

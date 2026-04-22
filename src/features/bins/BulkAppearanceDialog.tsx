@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
+import { BulkUpdateDialog } from '@/lib/bulk/BulkUpdateDialog';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
-import { BulkUpdateDialog, pluralizeBins } from './BulkUpdateDialog';
 import { ColorPicker } from './ColorPicker';
 import { IconPicker } from './IconPicker';
+import { pluralizeBins } from './pluralizeBins';
 import { StylePicker } from './StylePicker';
 import { updateBin } from './useBins';
 
@@ -51,7 +52,7 @@ export function BulkAppearanceDialog({ open, onOpenChange, binIds, onDone }: Bul
       onOpenChange={onOpenChange}
       title="Appearance"
       description={`Customize ${pluralizeBins(binIds.length)}. Only modified sections will be applied.`}
-      binIds={binIds}
+      selectedIds={binIds}
       onApply={apply}
       onApplied={onDone}
       applyDisabled={!anyDirty}

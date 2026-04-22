@@ -1,5 +1,5 @@
-import { PackageOpen, Plus, Sparkles, Tags as TagsIcon } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { Folder, GitMerge, PackageOpen, Palette, Plus, Sparkles, Tags as TagsIcon, Trash2 } from 'lucide-react';
+import { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
@@ -14,18 +14,37 @@ import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
 import { useBinList } from '@/features/bins/useBins';
 import { useAuth } from '@/lib/auth';
+import { type BulkAction, BulkActionBar } from '@/lib/bulk/BulkActionBar';
+import { useBulkSelection } from '@/lib/bulk/useBulkSelection';
 import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
+import { useMountOnOpen } from '@/lib/useMountOnOpen';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
 import { useTableSearchParams } from '@/lib/useTableSearchParams';
 import { cn, getErrorMessage, inputBase } from '@/lib/utils';
+import { sumBinCounts } from './BulkDeleteTagsDialog';
 import { CreateTagDialog } from './CreateTagDialog';
 import { useTagColorsContext } from './TagColorsContext';
 import { type TagSortColumn, TagTableView } from './TagTableView';
+import { getParentEligibleTags } from './tagHelpers';
+import { useTagBulkActions } from './useTagBulkActions';
 import { setTagColor, setTagParent } from './useTagColors';
 import { useTagStyle } from './useTagStyle';
-import { deleteTag, renameTag, usePaginatedTagList } from './useTags';
+import { deleteTag, renameTag, type TagEntry, usePaginatedTagList } from './useTags';
+
+const BulkDeleteTagsDialog = lazy(() =>
+  import('./BulkDeleteTagsDialog').then((m) => ({ default: m.BulkDeleteTagsDialog })),
+);
+const BulkSetParentDialog = lazy(() =>
+  import('./BulkSetParentDialog').then((m) => ({ default: m.BulkSetParentDialog })),
+);
+const BulkSetColorDialog = lazy(() =>
+  import('./BulkSetColorDialog').then((m) => ({ default: m.BulkSetColorDialog })),
+);
+const BulkMergeDialog = lazy(() =>
+  import('./BulkMergeDialog').then((m) => ({ default: m.BulkMergeDialog })),
+);
 
 export function TagsPage() {
   const navigate = useNavigate();
@@ -40,6 +59,33 @@ export function TagsPage() {
   const { tags, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedTagList(debouncedSearch, sortColumn, sortDirection);
   const { tagColors, tagParents } = useTagColorsContext();
   const getTagBadgeStyle = useTagStyle();
+
+  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection<TagEntry>({
+    items: tags,
+    getId: (t) => t.tag,
+    resetDeps: [debouncedSearch, sortColumn, sortDirection],
+  });
+  const { bulkDelete, bulkSetParent, bulkSetColor, bulkMerge, isBusy } = useTagBulkActions(
+    activeLocationId,
+    clearSelection,
+    showToast,
+  );
+
+  const [openBulk, setOpenBulk] = useState<'delete' | 'parent' | 'color' | 'merge' | null>(null);
+  const deleteMounted = useMountOnOpen(openBulk === 'delete');
+  const parentMounted = useMountOnOpen(openBulk === 'parent');
+  const colorMounted = useMountOnOpen(openBulk === 'color');
+  const mergeMounted = useMountOnOpen(openBulk === 'merge');
+
+  const selectedTagNames = [...selectedIds];
+  const binsAffected = sumBinCounts(tags, selectedTagNames);
+
+  const bulkActions: BulkAction[] = [
+    { id: 'delete', icon: Trash2, label: 'Delete', onClick: () => setOpenBulk('delete'), group: 'primary', danger: true },
+    { id: 'merge', icon: GitMerge, label: 'Merge', onClick: () => setOpenBulk('merge'), group: 'primary' },
+    { id: 'parent', icon: Folder, label: 'Set Parent', onClick: () => setOpenBulk('parent'), group: 'more' },
+    { id: 'color', icon: Palette, label: 'Set Color', onClick: () => setOpenBulk('color'), group: 'more' },
+  ];
 
   const tagSuggestionGated = !isSelfHosted && isGated('reorganize');
   const showSuggestButton = canWrite && !tagSuggestionGated && allBins.length > 0;
@@ -70,9 +116,10 @@ export function TagsPage() {
   const [parentLoading, setParentLoading] = useState(false);
 
   // Parent-eligible tags: not themselves children, excluding the target tag
-  const parentEligible = useMemo(() => {
-    return tags.map((t) => t.tag).filter((t) => !tagParents.has(t) && t !== parentTarget);
-  }, [tags, tagParents, parentTarget]);
+  const parentEligible = useMemo(
+    () => getParentEligibleTags(tags, tagParents, parentTarget ? [parentTarget] : []),
+    [tags, tagParents, parentTarget],
+  );
 
   function handleColorChange(tag: string, color: string) {
     if (!activeLocationId) return;
@@ -214,25 +261,86 @@ export function TagsPage() {
             )}
           </EmptyState>
         ) : (
-          <TagTableView
-            tags={tags}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
-            onSortChange={setSort}
-            searchQuery={debouncedSearch}
-            tagColors={tagColors}
-            tagParents={tagParents}
-            getTagBadgeStyle={getTagBadgeStyle}
-            onColorChange={handleColorChange}
-            onRename={canWrite ? handleRenameOpen : undefined}
-            onDelete={canWrite ? (tag) => setDeleteTarget(tag) : undefined}
-            onSetParent={canWrite ? handleSetParentOpen : undefined}
-            hasMore={hasMore}
-            isLoadingMore={isLoadingMore}
-            loadMore={loadMore}
-          />
+          <div className={cn(selectable && 'pb-16')}>
+            <TagTableView
+              tags={tags}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onSortChange={setSort}
+              searchQuery={debouncedSearch}
+              tagColors={tagColors}
+              tagParents={tagParents}
+              getTagBadgeStyle={getTagBadgeStyle}
+              onColorChange={handleColorChange}
+              onRename={canWrite ? handleRenameOpen : undefined}
+              onDelete={canWrite ? (tag) => setDeleteTarget(tag) : undefined}
+              onSetParent={canWrite ? handleSetParentOpen : undefined}
+              hasMore={hasMore}
+              isLoadingMore={isLoadingMore}
+              loadMore={loadMore}
+              selectable={selectable}
+              selectedIds={selectedIds}
+              onSelect={toggleSelect}
+            />
+          </div>
         )}
       </Crossfade>
+
+      {selectable && canWrite && (
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onClear={clearSelection}
+          isBusy={isBusy}
+          actions={bulkActions}
+          selectionLabel={`${selectedIds.size} tag${selectedIds.size === 1 ? '' : 's'} selected`}
+        />
+      )}
+
+      {deleteMounted && (
+        <Suspense fallback={null}>
+          <BulkDeleteTagsDialog
+            open={openBulk === 'delete'}
+            onOpenChange={(v) => (v ? setOpenBulk('delete') : setOpenBulk(null))}
+            tags={selectedTagNames}
+            binsAffected={binsAffected}
+            onConfirm={() => bulkDelete(selectedTagNames)}
+          />
+        </Suspense>
+      )}
+      {parentMounted && (
+        <Suspense fallback={null}>
+          <BulkSetParentDialog
+            open={openBulk === 'parent'}
+            onOpenChange={(v) => (v ? setOpenBulk('parent') : setOpenBulk(null))}
+            selectedTagNames={selectedTagNames}
+            allTags={tags}
+            tagParents={tagParents}
+            onApply={bulkSetParent}
+          />
+        </Suspense>
+      )}
+      {colorMounted && (
+        <Suspense fallback={null}>
+          <BulkSetColorDialog
+            open={openBulk === 'color'}
+            onOpenChange={(v) => (v ? setOpenBulk('color') : setOpenBulk(null))}
+            selectedTagNames={selectedTagNames}
+            onApply={bulkSetColor}
+          />
+        </Suspense>
+      )}
+      {mergeMounted && (
+        <Suspense fallback={null}>
+          <BulkMergeDialog
+            open={openBulk === 'merge'}
+            onOpenChange={(v) => (v ? setOpenBulk('merge') : setOpenBulk(null))}
+            selectedTagNames={selectedTagNames}
+            allTags={tags}
+            binsAffected={binsAffected}
+            onApply={bulkMerge}
+          />
+        </Suspense>
+      )}
 
       {/* Rename dialog */}
       <Dialog open={renameTarget !== null} onOpenChange={(open) => { if (!open) setRenameTarget(null); }}>

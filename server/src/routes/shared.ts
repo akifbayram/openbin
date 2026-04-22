@@ -52,7 +52,7 @@ router.get('/:token', asyncHandler(async (req, res) => {
   // Fetch bin data
   const binResult = await query(
     `SELECT b.id, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
-       COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
+       COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id AND bi.deleted_at IS NULL ORDER BY bi.position) bi), '[]') AS items,
        b.notes, b.tags, b.icon, b.color, b.card_style, b.created_at, b.updated_at,
        COALESCE((SELECT ${d.jsonGroupObject('bcfv.field_id', 'bcfv.value')} FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id

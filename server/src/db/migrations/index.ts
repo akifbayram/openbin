@@ -2,6 +2,7 @@ import { legacy } from './0001_legacy.js';
 import { shareExpires } from './0002_share_expires.js';
 import { binUsageDays } from './0003_bin_usage_days.js';
 import { tagSuggestionPrompt } from './0004_tag_suggestion_prompt.js';
+import { binItemSoftDelete } from './0005_bin_item_soft_delete.js';
 import type { Migration } from './types.js';
 
 /**
@@ -13,4 +14,5 @@ export const migrations: Migration[] = [
   shareExpires,
   binUsageDays,
   tagSuggestionPrompt,
+  binItemSoftDelete,
 ];

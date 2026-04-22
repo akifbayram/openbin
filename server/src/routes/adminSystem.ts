@@ -514,7 +514,7 @@ router.get('/bins/:id', asyncHandler(async (req, res) => {
   const itemsResult = await query<{
     id: string; name: string; quantity: number | null; position: number;
   }>(
-    'SELECT id, name, quantity, position FROM bin_items WHERE bin_id = $1 ORDER BY position',
+    'SELECT id, name, quantity, position FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL ORDER BY position',
     [id],
   );
 

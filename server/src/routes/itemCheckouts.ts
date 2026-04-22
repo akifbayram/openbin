@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { d, generateUuid, query } from '../db.js';
+import { d, generateUuid, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove, verifyBinAccess } from '../lib/binAccess.js';
-import { ConflictError, NotFoundError } from '../lib/httpErrors.js';
+import { validateBulkIds } from '../lib/bulkValidation.js';
+import { ConflictError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
@@ -23,7 +24,7 @@ router.post('/:id/items/:itemId/checkout', asyncHandler(async (req, res) => {
 
   // Verify item exists in this bin
   const itemResult = await query<{ name: string }>(
-    'SELECT name FROM bin_items WHERE id = $1 AND bin_id = $2',
+    'SELECT name FROM bin_items WHERE id = $1 AND bin_id = $2 AND deleted_at IS NULL',
     [itemId, binId]
   );
   if (itemResult.rows.length === 0) {
@@ -121,13 +122,13 @@ router.post('/:id/items/:itemId/return', asyncHandler(async (req, res) => {
   );
 
   // Get item name for activity logging (used in both branches)
-  const itemResult = await query<{ name: string }>('SELECT name FROM bin_items WHERE id = $1', [itemId]);
+  const itemResult = await query<{ name: string }>('SELECT name FROM bin_items WHERE id = $1 AND deleted_at IS NULL', [itemId]);
   const itemName = itemResult.rows[0]?.name ?? 'Unknown item';
 
   // If returning to a different bin, move the item
   if (returnBinId !== checkoutRow.origin_bin_id) {
     const maxResult = await query<{ max_pos: number | null }>(
-      'SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1',
+      'SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL',
       [returnBinId]
     );
     const nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
@@ -211,7 +212,7 @@ router.get('/:id/checkouts', asyncHandler(async (req, res) => {
      FROM item_checkouts ic
      JOIN bin_items bi ON bi.id = ic.item_id
      JOIN users u ON u.id = ic.checked_out_by
-     WHERE ic.origin_bin_id = $1 AND ic.returned_at IS NULL
+     WHERE ic.origin_bin_id = $1 AND ic.returned_at IS NULL AND bi.deleted_at IS NULL
      ORDER BY ic.checked_out_at DESC`,
     [binId]
   );
@@ -248,10 +249,108 @@ locationCheckoutsRouter.get('/:locationId/checkouts', requireLocationMember('loc
      JOIN bin_items bi ON bi.id = ic.item_id
      JOIN bins b ON b.id = ic.origin_bin_id
      JOIN users u ON u.id = ic.checked_out_by
-     WHERE ic.location_id = $1 AND ic.returned_at IS NULL
+     WHERE ic.location_id = $1 AND ic.returned_at IS NULL AND bi.deleted_at IS NULL
      ORDER BY ic.checked_out_at DESC`,
     [locationId]
   );
 
   res.json({ results: result.rows, count: result.rows.length });
 }));
+
+// POST /api/locations/:locationId/checkouts/bulk-return — return N items
+locationCheckoutsRouter.post(
+  '/:locationId/checkouts/bulk-return',
+  requireLocationMember('locationId'),
+  asyncHandler(async (req, res) => {
+    const { locationId } = req.params;
+    const { checkoutIds, targetBinId } = req.body ?? {};
+    const validIds = validateBulkIds(checkoutIds, 'checkoutIds');
+    if (targetBinId !== undefined && (typeof targetBinId !== 'string' || targetBinId.length === 0)) {
+      throw new ValidationError('targetBinId must be a non-empty string when provided');
+    }
+    await requireMemberOrAbove(locationId, req.user!.id, 'bulk-return checkouts');
+
+    const { returned, errors } = await withTransaction(async (txQuery) => {
+      let targetRow: { id: string; location_id: string; name: string } | null = null;
+      if (targetBinId) {
+        const tg = await txQuery<{ id: string; location_id: string; name: string }>(
+          `SELECT id, location_id, name FROM bins WHERE id = $1 AND deleted_at IS NULL`,
+          [targetBinId],
+        );
+        if (tg.rows.length === 0 || tg.rows[0].location_id !== locationId) {
+          throw new NotFoundError('Target bin not found in this location');
+        }
+        targetRow = tg.rows[0];
+      }
+
+      // Find active checkouts in this location matching the requested IDs
+      const placeholders = validIds.map((_, i) => `$${i + 2}`).join(', ');
+      const active = await txQuery<{ id: string; item_id: string; origin_bin_id: string; location_id: string }>(
+        `SELECT id, item_id, origin_bin_id, location_id
+           FROM item_checkouts
+          WHERE returned_at IS NULL
+            AND location_id = $1
+            AND id IN (${placeholders})`,
+        [locationId, ...validIds],
+      );
+      const activeSet = new Set(active.rows.map((r) => r.id));
+      const errs: Array<{ id: string; reason: string }> = [];
+      for (const id of validIds) if (!activeSet.has(id)) errs.push({ id, reason: 'NOT_FOUND' });
+
+      if (active.rows.length === 0) return { returned: 0, errors: errs };
+
+      const affectedBinIds = new Set<string>();
+      let nextPos = 0;
+      if (targetRow) {
+        const maxRes = await txQuery<{ max_pos: number | null }>(
+          `SELECT MAX(position) AS max_pos FROM bin_items WHERE bin_id = $1`,
+          [targetRow.id],
+        );
+        nextPos = (maxRes.rows[0]?.max_pos ?? -1) + 1;
+      }
+
+      let returnedCount = 0;
+      for (const co of active.rows) {
+        const returnBinId = targetRow?.id ?? co.origin_bin_id;
+        if (targetRow) {
+          await txQuery(
+            `UPDATE bin_items SET bin_id = $1, position = $2 WHERE id = $3`,
+            [targetRow.id, nextPos++, co.item_id],
+          );
+        }
+        const upd = await txQuery<{ id: string }>(
+          `UPDATE item_checkouts
+              SET returned_at = ${d.now()}, returned_by = $1, return_bin_id = $2
+            WHERE id = $3 AND returned_at IS NULL
+          RETURNING id`,
+          [req.user!.id, returnBinId, co.id],
+        );
+        if (upd.rows.length > 0) {
+          returnedCount += 1;
+          affectedBinIds.add(co.origin_bin_id);
+          affectedBinIds.add(returnBinId);
+        }
+      }
+
+      // Touch bins
+      const ids = [...affectedBinIds];
+      if (ids.length > 0) {
+        const ph = ids.map((_, i) => `$${i + 1}`).join(', ');
+        await txQuery(`UPDATE bins SET updated_at = ${d.now()} WHERE id IN (${ph})`, ids);
+      }
+
+      return { returned: returnedCount, errors: errs };
+    });
+
+    logRouteActivity(req, {
+      entityType: 'checkout',
+      locationId,
+      action: 'bulk_return',
+      entityId: undefined,
+      entityName: undefined,
+      changes: { counts: { old: null, new: { affected: returned, targetBinId: targetBinId ?? null } } },
+    });
+
+    res.json({ returned, errors });
+  }),
+);

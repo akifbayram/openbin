@@ -25,6 +25,8 @@ import { useTagStyle } from '@/features/tags/useTagStyle';
 import { getCommandInputRef, useTourContext } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
+import { BulkActionBar } from '@/lib/bulk/BulkActionBar';
+import { useBulkSelection } from '@/lib/bulk/useBulkSelection';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import { cn } from '@/lib/utils';
@@ -34,14 +36,13 @@ import { BinListDialogs } from './BinListDialogs';
 import { BinListSkeleton } from './BinListSkeleton';
 import { BinSearchBar } from './BinSearchBar';
 import { BinTableView } from './BinTableView';
-import { BulkActionBar } from './BulkActionBar';
+import { buildBinBulkActions } from './buildBinBulkActions';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { SearchBarOverflowMenu } from './SearchBarOverflowMenu';
 import { useBinSearchParams } from './useBinSearchParams';
 import { countActiveFilters, type SortOption, updateBin, useAllTags, usePaginatedBinList } from './useBins';
 import { useBulkActions } from './useBulkActions';
 import { useBulkDialogs } from './useBulkDialogs';
-import { useBulkSelection } from './useBulkSelection';
 import { useColumnVisibility } from './useColumnVisibility';
 import { useCustomFields } from './useCustomFields';
 import { usePageSize } from './usePageSize';
@@ -110,7 +111,10 @@ export function BinListPage() {
   const hasBadges = activeCount > 0 || !!filters.needsOrganizing;
 
   const bulk = useBulkDialogs();
-  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(bins, [debouncedSearch, sort, sortDir, filters]);
+  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection({
+    items: bins,
+    resetDeps: [debouncedSearch, sort, sortDir, filters],
+  });
   const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
 
   const selectedBinIds = useMemo(() => selectedIds.size > 0 ? [...selectedIds] : undefined, [selectedIds]);
@@ -380,32 +384,35 @@ export function BinListPage() {
         onConfirm={bulkDelete}
       />
 
-      {selectable && (
+      {selectable && canWrite && (
         <BulkActionBar
           selectedCount={selectedIds.size}
-          isAdmin={isAdmin}
-          canWrite={canWrite}
-          onTag={() => bulk.open('tag')}
-          onMove={() => bulk.open('area')}
-          onDelete={() => setBulkDeleteOpen(true)}
           onClear={clearSelection}
-          onAppearance={() => bulk.open('appearance')}
-          onVisibility={() => bulk.open('visibility')}
-          onMoveLocation={() => bulk.open('location')}
-          onPin={bulkPinToggle}
-          onDuplicate={bulkDuplicate}
-          pinLabel={pinLabel}
-          onCustomFields={() => bulk.open('customFields')}
-          onCopyStyle={handleCopyStyle}
-          onPasteStyle={handlePasteStyle}
-          canCopyStyle={selectedIds.size === 1}
-          canPasteStyle={copiedStyle !== null}
           isBusy={isBusy}
-          aiEnabled={aiEnabled}
-          aiGated={aiGated}
-          onAskAi={() => aiGated ? setUpgradeOpen(true) : getCommandInputRef().current?.open()}
-          onReorganize={() => navigate(`/reorganize?ids=${[...selectedIds].join(',')}`)}
-          onPrint={() => navigate(`/print?ids=${[...selectedIds].join(',')}`)}
+          actions={buildBinBulkActions({
+            isAdmin,
+            pinLabel,
+            aiEnabled,
+            aiGated,
+            canCopyStyle: selectedIds.size === 1,
+            canPasteStyle: copiedStyle !== null,
+            showPrint: true,
+            showReorganize: true,
+            onTag: () => bulk.open('tag'),
+            onMove: () => bulk.open('area'),
+            onDelete: () => setBulkDeleteOpen(true),
+            onAppearance: () => bulk.open('appearance'),
+            onVisibility: () => bulk.open('visibility'),
+            onMoveLocation: () => bulk.open('location'),
+            onPin: bulkPinToggle,
+            onDuplicate: bulkDuplicate,
+            onCustomFields: () => bulk.open('customFields'),
+            onCopyStyle: handleCopyStyle,
+            onPasteStyle: handlePasteStyle,
+            onAskAi: () => (aiGated ? setUpgradeOpen(true) : getCommandInputRef().current?.open()),
+            onReorganize: () => navigate(`/reorganize?ids=${[...selectedIds].join(',')}`),
+            onPrint: () => navigate(`/print?ids=${[...selectedIds].join(',')}`),
+          })}
         />
       )}
 
