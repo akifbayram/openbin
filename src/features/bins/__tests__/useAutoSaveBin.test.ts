@@ -79,7 +79,7 @@ describe('useAutoSaveBin', () => {
 
   it('shows error toast on save failure', async () => {
     const showToast = vi.fn();
-    vi.mocked(useToast).mockReturnValue({ showToast });
+    vi.mocked(useToast).mockReturnValue({ showToast, updateToast: vi.fn() });
     vi.mocked(updateBin).mockRejectedValue(new Error('network'));
     const { result } = renderHook(() => useAutoSaveBin(mockBin));
     await act(async () => { result.current.saveTags(['fail']); });
