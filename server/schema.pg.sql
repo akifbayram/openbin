@@ -115,6 +115,19 @@ CREATE INDEX IF NOT EXISTS idx_item_checkouts_active
 CREATE INDEX IF NOT EXISTS idx_item_checkouts_item
   ON item_checkouts(item_id, returned_at);
 
+CREATE TABLE IF NOT EXISTS shopping_list_items (
+  id              TEXT PRIMARY KEY,
+  location_id     TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
+  name            TEXT NOT NULL,
+  origin_bin_id   TEXT REFERENCES bins(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  created_by      TEXT NOT NULL REFERENCES users(id),
+  created_at      TEXT NOT NULL DEFAULT (NOW())
+);
+CREATE INDEX IF NOT EXISTS idx_shopping_list_items_location
+  ON shopping_list_items(location_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_list_items_bin
+  ON shopping_list_items(origin_bin_id);
+
 CREATE TABLE IF NOT EXISTS photos (
   id            TEXT PRIMARY KEY,
   bin_id        TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,

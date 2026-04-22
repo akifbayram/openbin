@@ -6,7 +6,9 @@ import { setItemPageSize } from '../useItemPageSize';
 
 vi.mock('@/lib/api', () => ({ apiFetch: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ useAuth: vi.fn(() => ({ activeLocationId: 'loc-1', token: 'test' })) }));
-vi.mock('@/components/ui/toast', () => ({ useToast: vi.fn(() => ({ showToast: vi.fn() })) }));
+vi.mock('@/components/ui/toast', () => ({
+  useToast: vi.fn(() => ({ showToast: vi.fn(), updateToast: vi.fn() })),
+}));
 vi.mock('@/lib/usePermissions', () => ({
   usePermissions: vi.fn(() => ({ canWrite: true })),
 }));
@@ -21,6 +23,7 @@ vi.mock('../useBins', () => ({
 }));
 
 const { removeItemFromBin } = await import('../useBins');
+const { useToast } = await import('@/components/ui/toast');
 
 const items: BinItem[] = [
   { id: '1', name: 'Hammer', quantity: 2 },
@@ -417,5 +420,51 @@ describe('ItemList pagination', () => {
     render(<ItemList items={makeItems(15)} readOnly />);
     expect(screen.queryByText(/show \d+ more/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/show less/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('ItemList batched delete undo', () => {
+  function deleteItemAt(index: number) {
+    const buttons = screen.getAllByLabelText('Item actions');
+    fireEvent.click(buttons[index]);
+    fireEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+  }
+
+  it('coalesces rapid deletes into one updating toast and a single Undo cancels them all', () => {
+    const showToast = vi.fn().mockReturnValue(99);
+    const updateToast = vi.fn();
+    // biome-ignore lint/suspicious/noExplicitAny: vi mock typing
+    (useToast as any).mockReturnValue({ showToast, updateToast });
+
+    const onItemsChange = vi.fn();
+    render(<ItemList items={items} onItemsChange={onItemsChange} />);
+
+    // Each delete removes the row from `displayItems` immediately; subsequent
+    // calls always target the new first item (Hammer → Nails → Screwdriver).
+    deleteItemAt(0);
+    deleteItemAt(0);
+    deleteItemAt(0);
+
+    // First delete fires showToast; subsequent deletes fire updateToast on the same id.
+    expect(showToast).toHaveBeenCalledTimes(1);
+    expect(updateToast).toHaveBeenCalledTimes(2);
+
+    const lastUpdate = updateToast.mock.calls[updateToast.mock.calls.length - 1];
+    expect(lastUpdate[0]).toBe(99);
+    expect(lastUpdate[1].message).toBe('3 items removed');
+    expect(typeof lastUpdate[1].action.onClick).toBe('function');
+
+    // Undo: invoke the latest batch action.
+    act(() => {
+      lastUpdate[1].action.onClick();
+    });
+
+    // Drain pending commit timers.
+    act(() => {
+      vi.advanceTimersByTime(6000);
+    });
+
+    // No deletes committed — all three were cancelled by the batch undo.
+    expect(onItemsChange).not.toHaveBeenCalled();
   });
 });

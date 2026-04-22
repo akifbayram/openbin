@@ -21,7 +21,7 @@ vi.mock('../../lib/config.js', () => ({
     aiMock: true,
     photoStoragePath: '/tmp/photos',
     storageBackend: 'local',
-    attachmentsEnabled: false,
+    attachmentsEnabled: true,
   },
   isDemoUser: () => false,
   AI_TASK_GROUPS: ['vision', 'quickText', 'deepText'],
@@ -90,6 +90,7 @@ describe('Tag suggestion end-to-end', () => {
     // Capture SSE events
     const streamChunks: Array<{ type: string; text?: string }> = [];
     const streamRes: any = {
+      locals: {},
       setHeader: vi.fn(),
       write: (data: string) => {
         const match = data.match(/^data:\s*(.*?)\n\n$/s);

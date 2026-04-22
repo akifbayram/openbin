@@ -5,7 +5,6 @@ process.env.DATABASE_PATH = ':memory:';
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret';
 process.env.PHOTO_STORAGE_PATH = '/tmp/openbin-test-photos';
-process.env.ATTACHMENTS_ENABLED = 'true';
 // Ensure SQLite mode in tests (no DATABASE_URL)
 delete process.env.DATABASE_URL;
 

@@ -252,7 +252,7 @@ describe('API key route plan gating', () => {
     expect(res.body.error).toBe('PLAN_RESTRICTED');
   });
 
-  it('GET /api/api-keys works for cloud FREE user (list is not gated)', async () => {
+  it('GET /api/api-keys is blocked for cloud FREE user', async () => {
     mockFreeUser();
     const { token } = await createTestUser(app);
 
@@ -260,8 +260,8 @@ describe('API key route plan gating', () => {
       .get('/api/api-keys')
       .set('Authorization', `Bearer ${token}`);
 
-    expect(res.status).toBe(200);
-    expect(res.body.results).toEqual([]);
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('PLAN_RESTRICTED');
   });
 
   it('POST /api/api-keys works for cloud PRO user', async () => {

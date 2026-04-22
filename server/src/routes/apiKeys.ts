@@ -23,7 +23,7 @@ function hashKey(key: string): string {
 }
 
 // GET /api/api-keys — list user's API keys
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', requirePro(), asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT id, key_prefix, name, created_at, last_used_at, revoked_at
      FROM api_keys

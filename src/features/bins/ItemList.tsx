@@ -6,6 +6,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { checkoutItem, returnItem } from '@/features/checkouts/useCheckouts';
+import { addItemsToShoppingList, removeFromShoppingList } from '@/features/shopping-list/useShoppingList';
 import { Events, notify } from '@/lib/eventBus';
 import { parseBareQuantity } from '@/lib/itemQuantities';
 import { cn, relativeTime } from '@/lib/utils';
@@ -245,9 +246,10 @@ function ReadOnlyCheckoutRow({ item, checkout }: { item: BinItem; checkout: Item
 export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, checkouts = [], onItemsChange, headerExtra, footerSlot }: ItemListProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const { showToast } = useToast();
+  const { showToast, updateToast } = useToast();
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
   const pendingDeletesRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const deleteBatchRef = useRef<{ toastId: number; ids: Set<string> } | null>(null);
 
   const checkoutMap = useMemo(() => {
     const map = new Map<string, ItemCheckout>();
@@ -376,6 +378,11 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
 
     const timerId = setTimeout(() => {
       pendingDeletesRef.current.delete(itemId);
+      const batch = deleteBatchRef.current;
+      if (batch) {
+        batch.ids.delete(itemId);
+        if (batch.ids.size === 0) deleteBatchRef.current = null;
+      }
       const next = itemsRef.current.filter((i) => i.id !== itemId);
       if (onItemsChangeRef.current) {
         onItemsChangeRef.current(next);
@@ -396,21 +403,67 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
     }, 5000);
     pendingDeletesRef.current.set(itemId, timerId);
 
-    showToast({
-      message: 'Item removed',
+    // Coalesce into the active batch (if any) so rapid deletes share one toast
+    // with a single Undo. The batch lives as long as any pending delete in it.
+    const isNewBatch = !deleteBatchRef.current;
+    const batch = deleteBatchRef.current ?? { toastId: 0, ids: new Set<string>() };
+    if (isNewBatch) deleteBatchRef.current = batch;
+    batch.ids.add(itemId);
+
+    const undo = () => {
+      const ids = Array.from(batch.ids);
+      for (const id of ids) {
+        const pending = pendingDeletesRef.current.get(id);
+        if (pending != null) {
+          clearTimeout(pending);
+          pendingDeletesRef.current.delete(id);
+        }
+      }
+      batch.ids.clear();
+      if (deleteBatchRef.current === batch) deleteBatchRef.current = null;
+      setPendingDeleteIds((prev) => {
+        const next = new Set(prev);
+        for (const id of ids) next.delete(id);
+        return next;
+      });
+    };
+
+    const count = batch.ids.size;
+    const addToList = () => {
+      if (!binId) return;
+      const ids = Array.from(batch.ids);
+      const names = ids
+        .map((itemId) => itemsRef.current.find((i) => i.id === itemId)?.name)
+        .filter((n): n is string => !!n);
+      if (names.length === 0) return;
+      void addItemsToShoppingList(binId, names)
+        .then((entries) => {
+          showToast({
+            message: names.length === 1 ? 'Added to shopping list' : `Added ${names.length} to list`,
+            variant: 'success',
+            action: {
+              label: 'Undo',
+              onClick: () => {
+                void Promise.all(entries.map((e) => removeFromShoppingList(e.id)));
+              },
+            },
+          });
+        })
+        .catch(() => {
+          showToast({ message: 'Failed to add to list', variant: 'error' });
+        });
+    };
+    const payload = {
+      message: count === 1 ? 'Item removed' : `${count} items removed`,
       duration: 5500,
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          const pending = pendingDeletesRef.current.get(itemId);
-          if (pending != null) {
-            clearTimeout(pending);
-            pendingDeletesRef.current.delete(itemId);
-            setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
-          }
-        },
-      },
-    });
+      action: { label: 'Undo', onClick: undo },
+      secondaryAction: { label: count === 1 ? 'Add to list' : 'Add all to list', onClick: addToList },
+    };
+    if (isNewBatch) {
+      batch.toastId = showToast(payload);
+    } else {
+      updateToast(batch.toastId, payload);
+    }
   }
 
   async function handleCheckout(itemId: string) {

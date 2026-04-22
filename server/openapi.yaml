@@ -35,7 +35,7 @@ tags:
   - name: Photos
     description: Photo retrieval and deletion
   - name: Attachments
-    description: Non-image file attachments on bins. Gated by the `ATTACHMENTS_ENABLED` server env var — returns 404 for every endpoint when disabled.
+    description: Non-image file attachments on bins. Enabled by default; set `ATTACHMENTS_ENABLED=false` to disable — every endpoint returns 404 when disabled.
   - name: TagColors
     description: Per-location tag color assignments
   - name: PrintSettings
@@ -772,6 +772,39 @@ components:
               type: string
             checked_out_by_name:
               type: string
+
+    # ── Shopping List ─────────────────────────────────────
+    ShoppingListEntry:
+      type: object
+      required: [id, location_id, name, origin_bin_id, origin_bin_trashed, created_by, created_by_name, created_at]
+      properties:
+        id:
+          type: string
+        location_id:
+          type: string
+        name:
+          type: string
+        origin_bin_id:
+          type: string
+          nullable: true
+        origin_bin_name:
+          type: string
+          nullable: true
+        origin_bin_icon:
+          type: string
+          nullable: true
+        origin_bin_color:
+          type: string
+          nullable: true
+        origin_bin_trashed:
+          type: boolean
+        created_by:
+          type: string
+        created_by_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
 
     # ── Activity ───────────────────────────────────────────
     ActivityLogEntry:
@@ -1627,7 +1660,7 @@ paths:
                     description: Whether the server is running in self-hosted mode (all plan features unlocked)
                   attachmentsEnabled:
                     type: boolean
-                    description: Whether the non-image attachments feature is enabled (set via `ATTACHMENTS_ENABLED` env var)
+                    description: Whether the non-image attachments feature is enabled (controlled by the `ATTACHMENTS_ENABLED` env var; defaults to `true`)
 
   /auth/demo-login:
     post:
@@ -3758,6 +3791,143 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  # Shopping List
+  /bins/{id}/shopping-list:
+    post:
+      summary: Bulk-add items to shopping list from a bin
+      tags: [Shopping List]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [names]
+              properties:
+                names:
+                  type: array
+                  items: { type: string }
+                  minItems: 1
+                  maxItems: 50
+      responses:
+        '201':
+          description: Entries created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShoppingListEntry'
+                  count: { type: integer }
+        '422': { description: Validation error }
+        '404': { description: Bin not found }
+
+  /locations/{locationId}/shopping-list:
+    get:
+      summary: List shopping list entries for a location
+      tags: [Shopping List]
+      parameters:
+        - in: path
+          name: locationId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShoppingListEntry'
+                  count: { type: integer }
+    post:
+      summary: Manually add an entry to the shopping list
+      tags: [Shopping List]
+      parameters:
+        - in: path
+          name: locationId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                originBinId: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Entry created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entry:
+                    $ref: '#/components/schemas/ShoppingListEntry'
+
+  /shopping-list/{id}/purchase:
+    post:
+      summary: Mark entry as bought — deletes entry and re-adds to origin bin if possible
+      tags: [Shopping List]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Bought
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+                  restored:
+                    type: object
+                    nullable: true
+                    properties:
+                      binId: { type: string }
+                      itemId: { type: string }
+                      name: { type: string }
+        '404': { description: Entry not found }
+
+  /shopping-list/{id}:
+    delete:
+      summary: Remove a shopping list entry without purchase
+      tags: [Shopping List]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        '404': { description: Entry not found }
+
   /bins/{id}/usage:
     get:
       summary: Get usage history for a bin
@@ -3941,13 +4111,13 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ════════════════════════════════════════════════════════
-  # Attachments (opt-in: ATTACHMENTS_ENABLED server env var)
+  # Attachments (on by default; disable with ATTACHMENTS_ENABLED=false)
   # ════════════════════════════════════════════════════════
   /bins/{id}/attachments:
     get:
       tags: [Attachments]
       summary: List attachments on a bin
-      description: Returns 404 when `ATTACHMENTS_ENABLED` is not set on the server.
+      description: Returns 404 when `ATTACHMENTS_ENABLED=false` is set on the server.
       parameters:
         - name: id
           in: path
@@ -3979,7 +4149,7 @@ paths:
       description: |
         Accepts common document and archive formats (PDF, plain text, CSV, Markdown, JSON, RTF,
         Microsoft Office, OpenDocument, ZIP, 7z, tar, gzip) up to 5 MB. Images are rejected —
-        use the photos endpoints instead. Returns 404 when `ATTACHMENTS_ENABLED` is not set.
+        use the photos endpoints instead. Returns 404 when `ATTACHMENTS_ENABLED=false` is set.
       parameters:
         - name: id
           in: path
@@ -4024,7 +4194,7 @@ paths:
       summary: Download an attachment
       description: |
         Streams the raw bytes with `Content-Disposition: attachment` (forces download).
-        Returns 404 when `ATTACHMENTS_ENABLED` is not set.
+        Returns 404 when `ATTACHMENTS_ENABLED=false` is set.
       parameters:
         - name: id
           in: path
@@ -4050,7 +4220,7 @@ paths:
       summary: Delete an attachment
       description: |
         Removes the attachment record and deletes the file from storage. Only the uploader
-        or a location admin may delete. Returns 404 when `ATTACHMENTS_ENABLED` is not set.
+        or a location admin may delete. Returns 404 when `ATTACHMENTS_ENABLED=false` is set.
       parameters:
         - name: id
           in: path

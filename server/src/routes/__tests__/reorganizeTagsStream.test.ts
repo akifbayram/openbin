@@ -11,7 +11,7 @@ vi.mock('../../lib/config.js', () => ({
     aiMock: true,
     photoStoragePath: '/tmp/photos',
     storageBackend: 'local',
-    attachmentsEnabled: false,
+    attachmentsEnabled: true,
   },
   isDemoUser: () => false,
   getEnvAiConfig: () => null,

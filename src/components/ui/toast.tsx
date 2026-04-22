@@ -23,14 +23,19 @@ interface Toast {
   message: string;
   variant?: ToastVariant;
   action?: { label: string; onClick: () => void };
+  secondaryAction?: { label: string; onClick: () => void };
   duration?: number;
 }
 
 interface ToastContextValue {
-  showToast: (toast: Omit<Toast, 'id'>) => void;
+  showToast: (toast: Omit<Toast, 'id'>) => number;
+  updateToast: (id: number, partial: Partial<Omit<Toast, 'id'>>) => void;
 }
 
-const ToastContext = createContext<ToastContextValue>({ showToast: () => {} });
+const ToastContext = createContext<ToastContextValue>({
+  showToast: () => -1,
+  updateToast: () => {},
+});
 
 export function useToast() {
   return useContext(ToastContext);
@@ -44,6 +49,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const showToast = useCallback((toast: Omit<Toast, 'id'>) => {
     const id = nextId++;
     setToasts((prev) => [...prev, { ...toast, id }]);
+    return id;
+  }, []);
+
+  const updateToast = useCallback((id: number, partial: Partial<Omit<Toast, 'id'>>) => {
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, ...partial } : t)));
   }, []);
 
   const dismiss = useCallback((id: number) => {
@@ -51,7 +61,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={{ showToast, updateToast }}>
       {children}
       <output aria-live="assertive" aria-atomic="true" className="fixed bottom-[calc(12px+var(--bottom-bar-height)+var(--safe-bottom))] lg:bottom-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none print-hide">
         {toasts.map((toast) => (
@@ -92,6 +102,15 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
           className="text-[15px] font-semibold text-[var(--accent)] hover:opacity-80 shrink-0"
         >
           {toast.action.label}
+        </button>
+      )}
+      {toast.secondaryAction && (
+        <button
+          type="button"
+          onClick={toast.secondaryAction.onClick}
+          className="text-[15px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0"
+        >
+          {toast.secondaryAction.label}
         </button>
       )}
       <button
