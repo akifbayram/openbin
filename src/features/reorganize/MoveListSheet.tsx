@@ -112,7 +112,9 @@ function MoveListSection({ card, areas, qrDataUrl }: MoveListSectionProps) {
           </div>
           <div className="item-sheet-header-meta-row">
             {areaPath && <span className="item-sheet-area-path">{areaPath}</span>}
-            <span className="item-sheet-item-count">will be emptied</span>
+            <span className="item-sheet-item-count">
+              {card.preserved ? 'will be kept' : 'will be emptied'}
+            </span>
           </div>
         </div>
         <div className="item-sheet-header-right">
@@ -160,7 +162,7 @@ function MoveListCluster({
       <div className="move-list-cluster-body">
         <div className="move-list-cluster-header">
           <span className="move-list-dest-pill">{cluster.destinationName}</span>
-          <span className="move-list-new-tag">new</span>
+          <span className="move-list-new-tag">{cluster.destinationKept ? 'kept' : 'new'}</span>
         </div>
         <div className="move-list-cluster-items">{renderItemList(cluster.items)}</div>
       </div>

@@ -344,7 +344,7 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
   // Retry up to 3 times if the AI drops or invents items (per-item identity, not just totals)
   const MAX_ATTEMPTS = 3;
   const writeEvent = initSseResponse(res);
-  const sOpts = streamOpts(settings, { temperature: 0.3, maxTokens: 16000 });
+  const sOpts = streamOpts(settings, { temperature: 0.2, maxTokens: 16000 });
   const allowDupes = ambiguousPolicy === 'multi-bin' || duplicates === 'allow';
   const inputItemNames = inputBins.flatMap((b: { items?: string[] }) => b.items ?? []);
   let finalText: string | null = null;
@@ -445,7 +445,7 @@ streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbo
 
   const MAX_ATTEMPTS = 3;
   const writeEvent = initSseResponse(res);
-  const sOpts = streamOpts(settings, { temperature: 0.3, maxTokens: 8000 });
+  const sOpts = streamOpts(settings, { temperature: 0.2, maxTokens: 8000 });
   let finalText: string | null = null;
   let hardFailure = false;
 
@@ -474,14 +474,12 @@ streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbo
         continue;
       }
 
-      // Preset enforcement — soft failure: strip and proceed
+      // Preset enforcement — soft failure: strip and proceed. Per-bin removes
+      // are allowed at every level; only taxonomy-wide edits are gated.
       if (changeLevel === 'additive') {
         schemaResult.data.taxonomy.renames = [];
         schemaResult.data.taxonomy.merges = [];
         schemaResult.data.taxonomy.parents = [];
-        schemaResult.data.assignments = schemaResult.data.assignments.map((a) => ({ ...a, remove: [] }));
-      } else if (changeLevel === 'moderate') {
-        schemaResult.data.assignments = schemaResult.data.assignments.map((a) => ({ ...a, remove: [] }));
       }
 
       finalText = JSON.stringify(schemaResult.data);

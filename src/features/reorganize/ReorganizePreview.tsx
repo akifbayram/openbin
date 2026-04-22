@@ -1,4 +1,4 @@
-import { Lightbulb, Loader2, Package, RefreshCw } from 'lucide-react';
+import { Loader2, Package, RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +51,15 @@ export function ReorganizePreview({
 
   const { sourceCards, totalDestinationBins, totalItems, totalMoves } = derivation;
   const originalCount = inputBins.length;
+  const binsKept = sourceCards.filter((s) => s.preserved).length;
+  const binsCreated = Math.max(0, totalDestinationBins - binsKept);
+  const itemsMoving = sourceCards.reduce(
+    (sum, s) => sum + s.outgoingClusters.reduce(
+      (n, c) => n + (c.destinationKept ? 0 : c.items.length),
+      0,
+    ),
+    0,
+  );
 
   return (
     <div className="space-y-4">
@@ -59,7 +68,7 @@ export function ReorganizePreview({
           Proposal
         </Label>
         <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">
-          {originalCount} → {totalDestinationBins} {totalDestinationBins === 1 ? t.bin : t.bins} · {totalItems} item{totalItems !== 1 ? 's' : ''} · {totalMoves} move{totalMoves !== 1 ? 's' : ''}
+          {originalCount} → {totalDestinationBins} {totalDestinationBins === 1 ? t.bin : t.bins} · {totalItems} item{totalItems !== 1 ? 's' : ''} · {totalMoves} move{totalMoves !== 1 ? 's' : ''}{binsKept > 0 ? ` · ${binsKept} kept` : ''}
         </span>
       </div>
 
@@ -82,10 +91,7 @@ export function ReorganizePreview({
                 Applying…
               </>
             ) : (
-              <>
-                Accept — Move {totalItems} item{totalItems !== 1 ? 's' : ''}, create {totalDestinationBins}{' '}
-                {totalDestinationBins === 1 ? t.bin : t.bins}
-              </>
+              buildAcceptLabel(itemsMoving, binsKept, binsCreated, t.bin, t.bins)
             )}
           </Button>
           <div className="flex gap-2 justify-center flex-wrap">
@@ -132,7 +138,7 @@ function SourceCardRow({ card, delay }: { card: SourceCard; delay: number }) {
 
   return (
     <li
-      aria-label={`${card.sourceBin.name}: ${itemTotal} item${itemTotal !== 1 ? 's' : ''} moving`}
+      aria-label={`${card.sourceBin.name}: ${itemTotal} item${itemTotal !== 1 ? 's' : ''}, ${card.preserved ? 'will be kept' : 'will be emptied'}`}
       className="ai-stagger-item rounded-[var(--radius-md)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-3.5 space-y-2"
       style={{ animationDelay: `${delay}ms` }}
     >
@@ -150,18 +156,11 @@ function SourceCardRow({ card, delay }: { card: SourceCard; delay: number }) {
           <span className="text-[11px] font-medium tabular-nums px-1.5 py-0.5 rounded-[var(--radius-xs)] bg-[var(--bg-hover)] text-[var(--text-tertiary)]">
             {itemTotal}
           </span>
-          <span className="text-[11px] text-[var(--text-tertiary)]">will be emptied</span>
+          <span className="text-[11px] text-[var(--text-tertiary)]">
+            {card.preserved ? 'will be kept' : 'will be emptied'}
+          </span>
         </span>
       </div>
-
-      {card.renameShaped && (
-        <div className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 px-3 py-2">
-          <Lightbulb className="h-3.5 w-3.5 text-[var(--accent)] shrink-0 mt-0.5" />
-          <p className="text-[12px] text-[var(--text-secondary)] leading-snug">
-            All items stay together — you can relabel this container instead of moving items.
-          </p>
-        </div>
-      )}
 
       <ul className="flex flex-col gap-1.5">
         {card.outgoingClusters.map((cluster) => (
@@ -189,7 +188,9 @@ function ClusterRow({ cluster }: { cluster: SourceCard['outgoingClusters'][numbe
             <Package className="h-3 w-3" aria-hidden="true" />
             {cluster.destinationName || '…'}
           </span>
-          <span className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">new</span>
+          <span className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
+            {cluster.destinationKept ? 'kept' : 'new'}
+          </span>
           {cluster.destinationTags.length > 0 && (
             <div className="flex items-center gap-1 ml-1">
               {cluster.destinationTags.map((tag) => (
@@ -242,4 +243,22 @@ function renderItemList(items: MoveListItem[]): string {
         : name;
     })
     .join(', ');
+}
+
+function buildAcceptLabel(
+  itemsMoving: number,
+  binsKept: number,
+  binsCreated: number,
+  binWord: string,
+  binsWord: string,
+): string {
+  const parts: string[] = [];
+  parts.push(`Move ${itemsMoving} item${itemsMoving !== 1 ? 's' : ''}`);
+  if (binsKept > 0) {
+    parts.push(`keep ${binsKept} ${binsKept === 1 ? binWord : binsWord}`);
+  }
+  if (binsCreated > 0) {
+    parts.push(`create ${binsCreated} ${binsCreated === 1 ? binWord : binsWord}`);
+  }
+  return `Accept — ${parts.join(', ')}`;
 }

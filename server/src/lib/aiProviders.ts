@@ -77,7 +77,7 @@ export function buildReanalysisUserContent(
 }
 
 /** Default maxOutputTokens for image analysis (single image). */
-export const IMAGE_TOKENS_SINGLE = 5000;
+export const IMAGE_TOKENS_SINGLE = 10000;
 /** Default maxOutputTokens for image analysis (multiple images). */
 export const IMAGE_TOKENS_MULTI = 10000;
 

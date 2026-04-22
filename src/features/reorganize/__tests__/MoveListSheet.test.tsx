@@ -48,13 +48,14 @@ function makeCard(overrides: Partial<SourceCard> = {}): SourceCard {
       {
         destinationName: 'Hand Tools',
         destinationTags: [],
+        destinationKept: false,
         items: [
           { name: 'Hammer', quantity: null },
           { name: 'Screw', quantity: 5 },
         ],
       },
     ],
-    renameShaped: true,
+    preserved: false,
     ...overrides,
   };
 }
@@ -122,5 +123,30 @@ describe('MoveListSheet', () => {
   it('renders "No source bins selected" when list is empty', () => {
     render(<MoveListSheet {...baseProps} sourceCards={[]} totalItems={0} totalMoves={0} totalDestinationBins={0} />);
     expect(screen.getByText(/No source bins/i)).toBeTruthy();
+  });
+
+  it('renders `will be kept` header when source is preserved', async () => {
+    const preservedCard = makeCard({
+      preserved: true,
+      outgoingClusters: [
+        {
+          destinationName: 'Garage Bench',
+          destinationTags: [],
+          destinationKept: true,
+          items: [{ name: 'Hammer', quantity: null }],
+        },
+      ],
+    });
+    render(<MoveListSheet {...baseProps} sourceCards={[preservedCard]} />);
+    await waitFor(() => expect(screen.getAllByText('Garage Bench').length).toBeGreaterThan(0));
+    expect(screen.getByText('will be kept')).toBeTruthy();
+    expect(screen.getByText('kept')).toBeTruthy();
+  });
+
+  it('renders `will be emptied` header and `new` tag by default', async () => {
+    render(<MoveListSheet {...baseProps} />);
+    await waitFor(() => expect(screen.getByText('Garage Bench')).toBeTruthy());
+    expect(screen.getByText('will be emptied')).toBeTruthy();
+    expect(screen.getByText('new')).toBeTruthy();
   });
 });

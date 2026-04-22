@@ -17,14 +17,15 @@ describe('buildTagSuggestionPrompt', () => {
 
   it('injects additive change-level instruction', () => {
     const { system } = buildTagSuggestionPrompt(baseArgs);
-    expect(system).toContain('Change level: ADDITIVE');
-    expect(system).toContain('You MUST leave renames, merges, parents, and remove arrays empty');
+    expect(system).toContain('Change level: BASIC');
+    expect(system).toContain('You MUST leave renames, merges, and parents arrays empty');
+    expect(system).toContain('remove tags from bins when they are clearly wrong');
   });
 
   it('injects moderate change-level instruction', () => {
     const { system } = buildTagSuggestionPrompt({ ...baseArgs, changeLevel: 'moderate' });
     expect(system).toContain('Change level: MODERATE');
-    expect(system).toContain('Leave remove arrays empty');
+    expect(system).toContain('add or remove tags on bins');
   });
 
   it('injects full change-level instruction', () => {
@@ -96,7 +97,7 @@ describe('buildTagSuggestionPrompt', () => {
   it('applies prompt override for non-demo users', () => {
     const { system } = buildTagSuggestionPrompt({ ...baseArgs, promptOverride: 'CUSTOM {change_level_instruction}' });
     expect(system).toContain('CUSTOM');
-    expect(system).toContain('Change level: ADDITIVE');
+    expect(system).toContain('Change level: BASIC');
   });
 
   it('ignores prompt override for demo users', () => {

@@ -21,9 +21,9 @@ interface Props {
 }
 
 const changeLevelHints: Record<string, string> = {
-  additive: "Only add tags — don't rename or remove",
+  additive: "Add or remove tags on bins — don't touch the vocabulary",
   moderate: 'Also rename and merge duplicates, propose parents',
-  full: "Also remove tags that don't fit",
+  full: 'Aggressive restructuring — merge broadly and trim mis-tags',
 };
 
 export function ReorganizeTagsOptions(props: Props) {

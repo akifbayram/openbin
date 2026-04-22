@@ -25,7 +25,12 @@ export interface SourceCard {
   outgoingClusters: SourceClusterRow[];
   /**
    * True when this source bin's name matches at least one destination in the AI output (normalized).
-   * Under identity preservation, such a source is updated in place instead of deleted on apply.
+   * Under identity preservation, such a source is typically updated in place instead of deleted on apply.
+   *
+   * Edge case: when multiple selected source bins share the same name and only one output destination
+   * has that name, all matching sources show `preserved: true` here, but `buildReorganizePlan` picks
+   * a single overlap winner at apply time — the losing duplicates are deleted. This divergence only
+   * affects the rare duplicate-source-name scenario; the typical 1-to-1 case is always consistent.
    */
   preserved: boolean;
 }

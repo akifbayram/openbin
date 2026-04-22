@@ -29,6 +29,7 @@ import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
+import { buildReorganizePlan } from './deriveMoveList';
 import { ReorganizePreview } from './ReorganizePreview';
 import { ReorganizeTagsOptions } from './ReorganizeTagsOptions';
 import { ReorganizeTagsPreview } from './ReorganizeTagsPreview';
@@ -202,15 +203,34 @@ export function ReorganizePage() {
     reorgRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [selection.selectedBins, maxBinsVal, startReorg, selectedAreaId, selectedAreaName, hasValidationError, userNotes, strictness, granularity, ambiguousPolicy, duplicates, outliers, minVal, maxVal]);
 
+  const hasProposal = result || partialResult.bins.length > 0;
+  const itemCount = useMemo(
+    () => selection.selectedBins.reduce((sum, b) => sum + b.items.length, 0),
+    [selection.selectedBins],
+  );
+  const plan = useMemo(
+    () => (result ? buildReorganizePlan(selection.selectedBins, result) : null),
+    [result, selection.selectedBins],
+  );
+  const planCounts = useMemo(() => ({
+    kept: plan?.preservations.length ?? 0,
+    deleted: plan?.deletions.length ?? 0,
+    created: plan?.creations.length ?? 0,
+  }), [plan]);
+  const canSubmit = selection.selectedIds.size >= 2 && !isStreaming && !hasValidationError;
+
   const handleAccept = useCallback(() => {
     apply(
       selection.selectedBins,
       selectedAreaId ?? undefined,
     ).then((outcome) => {
       if (!outcome.success) return;
-      const binCount = result?.bins.length ?? outcome.newBinIds.length;
+      const parts: string[] = [];
+      if (planCounts.kept > 0) parts.push(`${planCounts.kept} kept`);
+      if (planCounts.created > 0) parts.push(`${planCounts.created} created`);
+      const summary = parts.length > 0 ? ` — ${parts.join(', ')}` : '';
       showToast({
-        message: `Reorganization applied — ${binCount} ${t.bins} created`,
+        message: `Reorganization applied${summary}`,
         variant: 'success',
         action: outcome.newBinIds.length > 0
           ? {
@@ -221,7 +241,7 @@ export function ReorganizePage() {
       });
       navigate('/bins');
     });
-  }, [apply, selection.selectedBins, selectedAreaId, navigate, showToast, result, t.bins]);
+  }, [apply, selection.selectedBins, selectedAreaId, navigate, showToast, planCounts]);
 
   const handleCancel = useCallback(() => {
     if (isStreaming) cancel();
@@ -234,13 +254,6 @@ export function ReorganizePage() {
     window.addEventListener('afterprint', cleanup, { once: true });
     window.print();
   }, []);
-
-  const hasProposal = result || partialResult.bins.length > 0;
-  const itemCount = useMemo(
-    () => selection.selectedBins.reduce((sum, b) => sum + b.items.length, 0),
-    [selection.selectedBins],
-  );
-  const canSubmit = selection.selectedIds.size >= 2 && !isStreaming && !hasValidationError;
 
   const optionFields: OptionFieldConfig<string>[] = [
     {
@@ -732,8 +745,7 @@ export function ReorganizePage() {
           <DialogHeader>
             <DialogTitle>Apply reorganization?</DialogTitle>
             <DialogDescription>
-              This will delete {selection.selectedIds.size} existing {t.bins} and create{' '}
-              {result?.bins.length ?? 0} new {t.bins} in their place. This cannot be undone.
+              {formatApplyDescription(planCounts, t.bin, t.bins)} This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -748,7 +760,7 @@ export function ReorganizePage() {
               }}
               disabled={isApplying}
             >
-              Delete & recreate {t.bins}
+              Apply reorganization
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -792,4 +804,20 @@ export function ReorganizePage() {
       </Dialog>
     </div>
   );
+}
+
+function formatApplyDescription(
+  counts: { kept: number; deleted: number; created: number },
+  binWord: string,
+  binsWord: string,
+): string {
+  const word = (n: number) => (n === 1 ? binWord : binsWord);
+  const parts: string[] = [];
+  if (counts.kept > 0) parts.push(`update ${counts.kept} existing ${word(counts.kept)} in place`);
+  if (counts.deleted > 0) parts.push(`delete ${counts.deleted} ${word(counts.deleted)}`);
+  if (counts.created > 0) parts.push(`create ${counts.created} new ${word(counts.created)}`);
+  if (parts.length === 0) return 'This will apply the reorganization.';
+  if (parts.length === 1) return `This will ${parts[0]}.`;
+  if (parts.length === 2) return `This will ${parts[0]} and ${parts[1]}.`;
+  return `This will ${parts[0]}, ${parts[1]}, and ${parts[2]}.`;
 }

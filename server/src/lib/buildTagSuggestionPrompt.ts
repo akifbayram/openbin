@@ -33,11 +33,11 @@ export interface TagSuggestionPromptResult {
 function changeLevelInstruction(level: BuildTagSuggestionPromptArgs['changeLevel']): string {
   switch (level) {
     case 'additive':
-      return 'Change level: ADDITIVE. You may ONLY propose new tags and add tags to bins. You MUST leave renames, merges, parents, and remove arrays empty. Preserve every existing tag assignment exactly as-is.';
+      return 'Change level: BASIC. You may add tags to bins AND remove tags from bins when they are clearly wrong for the bin\'s contents (e.g., existing tag "tools" on a bin of kitchen utensils). You MUST leave renames, merges, and parents arrays empty — do not touch the tag vocabulary itself. Proposing removes is encouraged when they improve accuracy; skip a bin entirely if no change is warranted.';
     case 'moderate':
-      return 'Change level: MODERATE. You may propose new tags, add tags to bins, rename tags to fix capitalization/pluralization/typos, merge duplicate tags, and propose parent relationships. You must NOT remove tags from bins. Leave remove arrays empty.';
+      return 'Change level: MODERATE. You may add or remove tags on bins, rename tags to fix capitalization/pluralization/typos, merge duplicate tags, and propose parent relationships. Remove tags that are clearly wrong for a bin\'s contents. Balance restructuring with preserving user intent.';
     case 'full':
-      return 'Change level: FULL. All changes allowed including removing tags from bins that appear mis-tagged. Use remove sparingly and only when a tag is clearly wrong for the bin\'s contents.';
+      return 'Change level: FULL. All changes allowed. Restructure aggressively when the current taxonomy is disorganized — merge broadly, rename liberally, remove outdated or mis-tagged entries. Still require evidence from the bin\'s contents before removing any tag.';
   }
 }
 
