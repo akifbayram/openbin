@@ -1,13 +1,14 @@
-import { PackageMinus, Undo2, X } from 'lucide-react';
+import { PackageMinus, Trash2, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActionMenu, MenuDivider, MenuItem } from '@/components/ui/action-menu';
 import { Label } from '@/components/ui/label';
 import { SearchInput } from '@/components/ui/search-input';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
-import { Tooltip } from '@/components/ui/tooltip';
 import { checkoutItem, returnItem } from '@/features/checkouts/useCheckouts';
+import { Events, notify } from '@/lib/eventBus';
 import { parseBareQuantity } from '@/lib/itemQuantities';
-import { cn, relativeTime, rowAction } from '@/lib/utils';
+import { cn, relativeTime } from '@/lib/utils';
 import type { BinItem, ItemCheckout } from '@/types';
 import { ItemListPagination } from './ItemListPagination';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
@@ -17,6 +18,11 @@ import { useItemPagination } from './useItemPagination';
 // Filter-search input appears once the bin has more than this many items.
 // The page-size preference itself lives in Settings → Preferences → Display.
 const FILTER_THRESHOLD = 15;
+
+// Width of the trailing qty column — kept in sync between header, ItemRow, and ReadOnlyRow.
+const QTY_COL_WIDTH = 'shrink-0 w-[52px]';
+
+const ACTIONS_COL_WIDTH = 'shrink-0 w-16';
 
 interface ItemListProps {
   items: BinItem[];
@@ -58,16 +64,37 @@ function sortBinItems(items: BinItem[], column: SortColumn, direction: SortDirec
   return items;
 }
 
+interface ItemRowActionMenuProps {
+  onCheckout?: () => void;
+  onReturn?: () => void;
+  onDelete: () => void;
+}
+
+function ItemRowActionMenu({ onCheckout, onReturn, onDelete }: ItemRowActionMenuProps) {
+  return (
+    <ActionMenu
+      triggerAriaLabel="Item actions"
+      triggerClassName="shrink-0 flex items-center justify-center size-11 text-[var(--text-tertiary)] transition-opacity opacity-30 lg:opacity-0 lg:group-hover:opacity-100 aria-expanded:opacity-100"
+      menuClassName="min-w-[160px]"
+    >
+      {onCheckout && <MenuItem icon={PackageMinus} label="Check out" onClick={onCheckout} />}
+      {onReturn && <MenuItem icon={Undo2} label="Return" onClick={onReturn} />}
+      {(onCheckout || onReturn) && <MenuDivider />}
+      <MenuItem icon={Trash2} label="Delete" onClick={onDelete} destructive />
+    </ActionMenu>
+  );
+}
+
 interface ItemRowProps {
   text: string;
   quantity: number | null;
   saved?: boolean;
-  checkoutButton?: React.ReactNode;
+  onCheckout?: () => void;
   onSave: (value: string, quantity: number | null) => void;
   onDelete: () => void;
 }
 
-function ItemRow({ text, quantity, saved, checkoutButton, onSave, onDelete }: ItemRowProps) {
+function ItemRow({ text, quantity, saved, onCheckout, onSave, onDelete }: ItemRowProps) {
   const [editValue, setEditValue] = useState(text);
   const [qtyDraft, setQtyDraft] = useState(quantity != null ? String(quantity) : '');
   // "committed" tracks the last reconciled value — used as the Escape-revert target,
@@ -103,37 +130,10 @@ function ItemRow({ text, quantity, saved, checkoutButton, onSave, onDelete }: It
     <div
       ref={rowRef}
       className={cn(
-        'group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors',
+        'group row-tight px-3.5 py-1 min-h-[44px] hover:bg-[var(--bg-hover)] transition-colors',
         saved && 'animate-save-flash'
       )}
     >
-      <input
-        value={qtyDraft}
-        onChange={(e) => setQtyDraft(e.target.value.replace(/[^0-9]/g, ''))}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            (e.target as HTMLElement).blur();
-          } else if (e.key === 'Escape') {
-            e.preventDefault();
-            setQtyDraft(committedQtyRef.current != null ? String(committedQtyRef.current) : '');
-            (e.target as HTMLElement).blur();
-          }
-        }}
-        onBlur={() => {
-          requestAnimationFrame(() => {
-            if (!rowRef.current?.contains(document.activeElement)) handleSave();
-          });
-        }}
-        placeholder="—"
-        className={cn(
-          'shrink-0 w-8 text-center text-[13px] tabular-nums bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]',
-          qtyDraft.trim() ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'
-        )}
-        inputMode="numeric"
-        aria-label="Quantity"
-      />
-
       <textarea
         rows={1}
         value={editValue}
@@ -157,17 +157,35 @@ function ItemRow({ text, quantity, saved, checkoutButton, onSave, onDelete }: It
         aria-label="Item name"
       />
 
-      {checkoutButton}
-      <Tooltip content="Remove item">
-        <button
-          type="button"
-          onClick={onDelete}
-          className={rowAction}
-          aria-label="Remove item"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </Tooltip>
+      <input
+        value={qtyDraft}
+        onChange={(e) => setQtyDraft(e.target.value.replace(/[^0-9]/g, ''))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            (e.target as HTMLElement).blur();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setQtyDraft(committedQtyRef.current != null ? String(committedQtyRef.current) : '');
+            (e.target as HTMLElement).blur();
+          }
+        }}
+        onBlur={() => {
+          requestAnimationFrame(() => {
+            if (!rowRef.current?.contains(document.activeElement)) handleSave();
+          });
+        }}
+        className={cn(
+          QTY_COL_WIDTH,
+          'bg-transparent text-right text-[15px] text-[var(--text-primary)] leading-relaxed outline-none tabular-nums'
+        )}
+        inputMode="numeric"
+        aria-label="Quantity"
+      />
+
+      <div className={cn(ACTIONS_COL_WIDTH, 'inline-flex items-center justify-end')}>
+        <ItemRowActionMenu onCheckout={onCheckout} onDelete={onDelete} />
+      </div>
     </div>
   );
 }
@@ -175,47 +193,51 @@ function ItemRow({ text, quantity, saved, checkoutButton, onSave, onDelete }: It
 interface CheckoutRowProps {
   item: BinItem;
   checkout: ItemCheckout;
-  canReturn: boolean;
-  onReturn: () => void;
+  onReturn?: () => void;
+  onDelete: () => void;
 }
 
-function CheckoutRow({ item, checkout, canReturn, onReturn }: CheckoutRowProps) {
+function CheckoutSubline({ item, checkout }: { item: BinItem; checkout: ItemCheckout }) {
   return (
-    <div className="group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
-      <span className="shrink-0 w-8 opacity-50" />
-      <span className="flex-1 min-w-0 text-[15px] text-[var(--text-tertiary)] leading-relaxed line-through opacity-50">
-        {item.name}
-      </span>
-      <span className="shrink-0 text-[12px] text-[var(--text-tertiary)] opacity-50">
+    <span className="flex-1 min-w-0 text-[15px] leading-relaxed">
+      <span className="block text-[var(--text-tertiary)] line-through opacity-60">{item.name}</span>
+      <span className="block text-[12px] text-[var(--text-tertiary)] opacity-70 mt-0.5">
         Out &middot; {checkout.checked_out_by_name} &middot; {relativeTime(checkout.checked_out_at)}
       </span>
-      {canReturn && (
-        <Tooltip content="Return item">
-          <button
-            type="button"
-            onClick={onReturn}
-            className={rowAction}
-            aria-label="Return item"
-          >
-            <Undo2 className="h-3.5 w-3.5" />
-          </button>
-        </Tooltip>
-      )}
+    </span>
+  );
+}
+
+function CheckoutRow({ item, checkout, onReturn, onDelete }: CheckoutRowProps) {
+  return (
+    <div className="group row-tight px-3.5 py-1 min-h-[44px] hover:bg-[var(--bg-hover)] transition-colors">
+      <CheckoutSubline item={item} checkout={checkout} />
+      <div className={cn(ACTIONS_COL_WIDTH, 'inline-flex items-center justify-end')}>
+        <ItemRowActionMenu onReturn={onReturn} onDelete={onDelete} />
+      </div>
     </div>
   );
 }
 
 function ReadOnlyRow({ item }: { item: BinItem }) {
   return (
-    <div className="row-tight px-3.5 py-1">
-      {item.quantity != null && (
-        <span className="shrink-0 w-8 text-center text-[13px] text-[var(--text-primary)] tabular-nums">
-          {item.quantity}
-        </span>
-      )}
+    <div className="row-tight px-3.5 py-1 min-h-[44px]">
       <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
         {item.name}
       </span>
+      {item.quantity != null && (
+        <span className={cn(QTY_COL_WIDTH, 'text-right text-[15px] text-[var(--text-primary)] leading-relaxed tabular-nums')}>
+          {item.quantity}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ReadOnlyCheckoutRow({ item, checkout }: { item: BinItem; checkout: ItemCheckout }) {
+  return (
+    <div className="row-tight px-3.5 py-1 min-h-[44px]">
+      <CheckoutSubline item={item} checkout={checkout} />
     </div>
   );
 }
@@ -346,6 +368,10 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
 
   function handleDelete(itemId: string) {
     if (pendingDeleteIds.has(itemId)) return;
+    // Snapshot at click time: if the item has an active checkout, the server's
+    // FK CASCADE will remove the checkout row along with the item — we need to
+    // nudge CHECKOUTS subscribers so the "N out" count refreshes.
+    const hadCheckout = checkoutMap.has(itemId);
     setPendingDeleteIds((prev) => new Set(prev).add(itemId));
 
     const timerId = setTimeout(() => {
@@ -357,11 +383,15 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
       }
       setLocalItems(next);
       if (binId) {
-        removeItemFromBin(binId, itemId, { quiet: true }).catch(() => {
-          setLocalItems(itemsRef.current);
-          setPendingDeleteIds((prev) => { const n = new Set(prev); n.delete(itemId); return n; });
-          showToast({ message: 'Failed to delete item', variant: 'error' });
-        });
+        removeItemFromBin(binId, itemId, { quiet: true })
+          .then(() => {
+            if (hadCheckout) notify(Events.CHECKOUTS);
+          })
+          .catch(() => {
+            setLocalItems(itemsRef.current);
+            setPendingDeleteIds((prev) => { const n = new Set(prev); n.delete(itemId); return n; });
+            showToast({ message: 'Failed to delete item', variant: 'error' });
+          });
       }
     }, 5000);
     pendingDeletesRef.current.set(itemId, timerId);
@@ -434,7 +464,6 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
     ? `${filteredItems.length} of ${displayItems.length} ${itemWord}`
     : `${displayItems.length} ${itemWord}`;
   const showSortHeaders = !readOnly && effectiveItems.length >= 2;
-  const showColumnHeader = !readOnly || displayItems.some((item) => item.quantity != null);
 
   return (
     <div>
@@ -465,18 +494,21 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
         </p>
       ) : (
         <div className="rounded-[var(--radius-sm)] bg-[var(--bg-input)] border border-[var(--border-flat)] overflow-hidden">
-          {displayItems.length > 0 && showColumnHeader && (
+          {displayItems.length > 0 && (
             <div className="row-tight min-h-[44px] px-3.5 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-hover)]">
               {showSortHeaders ? (
                 <>
-                  <SortHeader label="Qty" column="qty" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleHeaderSort} defaultDirection="desc" className="shrink-0 w-8 justify-center" />
                   <SortHeader label="Name" column="name" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleHeaderSort} className="flex-1" />
+                  <SortHeader label="Qty" column="qty" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleHeaderSort} defaultDirection="desc" className={cn(QTY_COL_WIDTH, 'justify-end')} />
                 </>
               ) : (
                 <>
-                  <span className="shrink-0 w-8 text-center text-[12px] font-medium text-[var(--text-tertiary)]">Qty</span>
-                  <span className="flex-1 text-[12px] font-medium text-[var(--text-tertiary)]">Name</span>
+                  <span className="ui-col-header flex-1">Name</span>
+                  <span className={cn('ui-col-header', QTY_COL_WIDTH, 'text-right')}>Qty</span>
                 </>
+              )}
+              {!readOnly && (
+                <span className={cn('ui-col-header', ACTIONS_COL_WIDTH, 'text-right')}>Actions</span>
               )}
             </div>
           )}
@@ -489,39 +521,36 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, hideHeader, ch
               <div key={page} className="animate-page-enter">
                 {visibleItems.map((item, i) => {
                   const checkout = checkoutMap.get(item.id);
+                  let row: React.ReactNode;
+                  if (checkout && readOnly) {
+                    row = <ReadOnlyCheckoutRow item={item} checkout={checkout} />;
+                  } else if (checkout) {
+                    row = (
+                      <CheckoutRow
+                        item={item}
+                        checkout={checkout}
+                        onReturn={binId ? () => handleReturn(item.id) : undefined}
+                        onDelete={() => handleDelete(item.id)}
+                      />
+                    );
+                  } else if (readOnly) {
+                    row = <ReadOnlyRow item={item} />;
+                  } else {
+                    row = (
+                      <ItemRow
+                        text={item.name}
+                        quantity={item.quantity}
+                        saved={savedIds.has(item.id)}
+                        onCheckout={binId ? () => handleCheckout(item.id) : undefined}
+                        onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
+                        onDelete={() => handleDelete(item.id)}
+                      />
+                    );
+                  }
                   return (
                     <div key={item.id}>
                       {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-                      {checkout ? (
-                        <CheckoutRow
-                          item={item}
-                          checkout={checkout}
-                          canReturn={!readOnly && !!binId}
-                          onReturn={() => handleReturn(item.id)}
-                        />
-                      ) : readOnly ? (
-                        <ReadOnlyRow item={item} />
-                      ) : (
-                        <ItemRow
-                          text={item.name}
-                          quantity={item.quantity}
-                          saved={savedIds.has(item.id)}
-                          onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
-                          onDelete={() => handleDelete(item.id)}
-                          checkoutButton={binId ? (
-                            <Tooltip content="Check out">
-                              <button
-                                type="button"
-                                onClick={() => handleCheckout(item.id)}
-                                className={rowAction}
-                                aria-label="Check out item"
-                              >
-                                <PackageMinus className="h-3.5 w-3.5" />
-                              </button>
-                            </Tooltip>
-                          ) : undefined}
-                        />
-                      )}
+                      {row}
                     </div>
                   );
                 })}

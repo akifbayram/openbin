@@ -21,6 +21,9 @@ interface QuickAddWidgetProps {
    *  `inline` strips outer chrome so the widget can live inside another container
    *  (e.g. as ItemList's footerSlot) and align to item-row geometry. */
   variant?: 'card' | 'inline';
+  /** When true, the input shows a richer educational placeholder. Intended for the
+   *  empty-list state inside `inline` mode. */
+  isEmptyList?: boolean;
 }
 
 const QUICK_ADD_LABELS: LabelThreshold[] = [
@@ -30,7 +33,7 @@ const QUICK_ADD_LABELS: LabelThreshold[] = [
   [75, 'Almost done...'],
 ];
 
-export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictation, canTranscribe, variant = 'card' }: QuickAddWidgetProps) {
+export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictation, canTranscribe, variant = 'card', isEmptyList }: QuickAddWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isRecording = dictation?.state === 'recording';
   const isInline = variant === 'inline';
@@ -38,6 +41,9 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
   // Sub-panel padding for expanded/preview states. In `card` variant the outer
   // wrapper supplies padding; in `inline` we add it per-state to align with row inset.
   const panelClass = isInline ? 'space-y-2 px-3.5 py-2.5' : 'space-y-2';
+  const inputPlaceholder = isEmptyList && isInline
+    ? 'Add items — type, paste a list, or tap the mic'
+    : 'Add item...';
   return (
     <div
       data-tour="quick-add"
@@ -46,7 +52,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
       )}
     >
       {quickAdd.state === 'input' && (!dictation || dictation.state === 'idle' || isRecording) && (
-        <div className={cn('row-tight', isInline && 'px-3.5 py-1 hover:bg-[var(--bg-hover)] focus-within:bg-[var(--bg-hover)] transition-colors')}>
+        <div className={cn('row-tight min-h-[44px]', isInline && 'px-3.5 py-1 bg-[var(--bg-hover)] focus-within:bg-[var(--bg-input)] transition-colors')}>
           {isInline && (
             <button
               type="button"
@@ -58,8 +64,8 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
               }}
               disabled={quickAdd.saving}
               className={cn(
-                'shrink-0 w-8 flex items-center justify-center transition-colors disabled:opacity-50',
-                hasValue ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]',
+                'shrink-0 size-11 flex items-center justify-center rounded-[var(--radius-sm)] transition-colors disabled:opacity-50',
+                'text-[var(--accent)] hover:bg-[var(--bg-active)]',
               )}
               aria-label="Add item"
             >
@@ -77,7 +83,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
               }
             }}
             onPaste={quickAdd.handlePaste}
-            placeholder="Add item..."
+            placeholder={inputPlaceholder}
             disabled={isRecording}
             className={cn(
               'h-7 border-0 bg-transparent py-0 focus-visible:ring-0 focus-visible:shadow-none',

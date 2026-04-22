@@ -67,6 +67,7 @@ export function BinDetailContentsTab({
               dictation={dictation}
               canTranscribe={canTranscribe}
               variant="inline"
+              isEmptyList={bin.items.length === 0}
             />
           ) : undefined
         }

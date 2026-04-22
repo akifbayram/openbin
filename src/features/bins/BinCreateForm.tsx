@@ -481,6 +481,7 @@ export function BinCreateForm({
                   dictation={dictation}
                   canTranscribe={canTranscribe}
                   variant="inline"
+                  isEmptyList={items.length === 0}
                 />
               }
             />
@@ -592,6 +593,7 @@ export function BinCreateForm({
                   dictation={dictation}
                   canTranscribe={canTranscribe}
                   variant="inline"
+                  isEmptyList={items.length === 0}
                 />
               }
             />

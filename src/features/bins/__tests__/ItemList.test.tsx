@@ -52,12 +52,13 @@ describe('ItemList with onItemsChange (form mode)', () => {
     expect(screen.getByText('Screwdriver')).toBeInTheDocument();
   });
 
-  it('calls onItemsChange (not server API) when item is deleted', () => {
+  it('calls onItemsChange (not server API) when item is deleted from the row menu', () => {
     const onItemsChange = vi.fn();
     render(<ItemList items={items} onItemsChange={onItemsChange} />);
 
-    const removeButtons = screen.getAllByLabelText('Remove item');
-    fireEvent.click(removeButtons[0]); // delete Hammer
+    const actionButtons = screen.getAllByLabelText('Item actions');
+    fireEvent.click(actionButtons[0]); // open menu for Hammer
+    fireEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
 
     // After undo delay, onItemsChange should be called
     vi.advanceTimersByTime(6000);
@@ -184,6 +185,127 @@ describe('ItemList hideWhenEmpty', () => {
     );
     expect(screen.getByText('Hammer')).toBeInTheDocument();
     expect(screen.getByText('3 Items')).toBeInTheDocument();
+  });
+});
+
+describe('ItemList qty input', () => {
+  it('shows the quantity value in the input when set', () => {
+    const onItemsChange = vi.fn();
+    render(<ItemList items={[{ id: '1', name: 'Hammer', quantity: 3 }]} onItemsChange={onItemsChange} />);
+    const qtyInput = screen.getByLabelText('Quantity') as HTMLInputElement;
+    expect(qtyInput.value).toBe('3');
+  });
+
+  it('leaves the input empty when quantity is null', () => {
+    const onItemsChange = vi.fn();
+    render(<ItemList items={[{ id: '1', name: 'Nails', quantity: null }]} onItemsChange={onItemsChange} />);
+    const qtyInput = screen.getByLabelText('Quantity') as HTMLInputElement;
+    expect(qtyInput.value).toBe('');
+  });
+
+  it('keeps the qty input tab-reachable even when empty', () => {
+    const onItemsChange = vi.fn();
+    render(<ItemList items={[{ id: '1', name: 'Nails', quantity: null }]} onItemsChange={onItemsChange} />);
+    // Input is always in the DOM regardless of value
+    expect(screen.getByLabelText('Quantity')).toBeInTheDocument();
+  });
+
+  it('does not render a × prefix on any row', () => {
+    const onItemsChange = vi.fn();
+    render(<ItemList items={[{ id: '1', name: 'Hammer', quantity: 3 }]} onItemsChange={onItemsChange} />);
+    // The × (multiplication sign) chip was removed — qty now renders plain, like the name field.
+    expect(screen.queryByText('×')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^×/)).not.toBeInTheDocument();
+  });
+});
+
+describe('ItemList column header position', () => {
+  it('renders Name header before Qty header (trailing qty)', () => {
+    const onItemsChange = vi.fn();
+    render(<ItemList items={items} onItemsChange={onItemsChange} />);
+    const nameHeader = screen.getByLabelText('Sort by Name');
+    const qtyHeader = screen.getByLabelText('Sort by Qty');
+    // Name element should appear before Qty in DOM order
+    const order = nameHeader.compareDocumentPosition(qtyHeader);
+    // DOCUMENT_POSITION_FOLLOWING === 4 means qtyHeader follows nameHeader
+    expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('renders column header in readOnly when items exist', () => {
+    render(<ItemList items={items} readOnly />);
+    expect(screen.getByText('Name')).toBeInTheDocument();
+    expect(screen.getByText('Qty')).toBeInTheDocument();
+  });
+
+  it('does not render column header when list is empty', () => {
+    const onItemsChange = vi.fn();
+    render(<ItemList items={[]} onItemsChange={onItemsChange} />);
+    expect(screen.queryByText('Qty')).not.toBeInTheDocument();
+  });
+});
+
+describe('ItemList checkout row subline', () => {
+  const checkoutItem: BinItem = { id: '1', name: 'Hammer', quantity: 2 };
+  const checkout = {
+    id: 'c1',
+    item_id: '1',
+    origin_bin_id: 'bin1',
+    location_id: 'loc1',
+    checked_out_by: 'user1',
+    checked_out_by_name: 'Jane',
+    checked_out_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    returned_at: null,
+    returned_by: null,
+    return_bin_id: null,
+  };
+
+  it('renders the item name and a subline with who/when', () => {
+    render(<ItemList items={[checkoutItem]} binId="bin1" checkouts={[checkout]} />);
+    expect(screen.getByText('Hammer')).toBeInTheDocument();
+    // Subline contains "Out", user name, and relative time — use a regex for flexibility
+    expect(screen.getByText(/Out.*Jane/)).toBeInTheDocument();
+  });
+
+  it('exposes a Return menuitem in the row action menu when canReturn is true', () => {
+    render(<ItemList items={[checkoutItem]} binId="bin1" checkouts={[checkout]} />);
+    fireEvent.click(screen.getByLabelText('Item actions'));
+    expect(screen.getByRole('menuitem', { name: /return/i })).toBeInTheDocument();
+  });
+
+  it('does not render any row action menu in readOnly mode', () => {
+    render(<ItemList items={[checkoutItem]} readOnly checkouts={[checkout]} />);
+    expect(screen.queryByLabelText('Item actions')).not.toBeInTheDocument();
+    // But the subline should still be visible for readers
+    expect(screen.getByText(/Out.*Jane/)).toBeInTheDocument();
+  });
+
+  it('deletes a checked-out item when Delete is chosen from the menu', () => {
+    render(<ItemList items={[checkoutItem]} binId="bin1" checkouts={[checkout]} />);
+
+    fireEvent.click(screen.getByLabelText('Item actions'));
+    fireEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+
+    // Optimistic hide: checkout row is gone from the DOM
+    expect(screen.queryByText(/Out.*Jane/)).not.toBeInTheDocument();
+
+    // After the undo window closes, the server DELETE fires
+    act(() => { vi.advanceTimersByTime(6000); });
+    expect(removeItemFromBin).toHaveBeenCalledWith('bin1', '1', { quiet: true });
+  });
+});
+
+describe('ItemList readOnly qty display', () => {
+  it('renders the quantity as plain text when set (no × prefix)', () => {
+    render(<ItemList items={[{ id: '1', name: 'Hammer', quantity: 3 }]} readOnly />);
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.queryByText('×3')).not.toBeInTheDocument();
+  });
+
+  it('omits the qty cell on readOnly row when quantity is null', () => {
+    render(<ItemList items={[{ id: '1', name: 'Nails', quantity: null }]} readOnly />);
+    expect(screen.queryByText(/^×/)).not.toBeInTheDocument();
+    // The name still renders; the qty column is simply absent from the row
+    expect(screen.getByText('Nails')).toBeInTheDocument();
   });
 });
 

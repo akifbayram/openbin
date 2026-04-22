@@ -82,9 +82,10 @@ export const sectionHeaderRow = 'flex items-baseline justify-between mb-4';
 /** Inline icon-button: 36px tap target, flex-centered. */
 export const iconButton = 'shrink-0 flex items-center justify-center size-9';
 
-/** Fade-in-on-hover remove button for list rows (visible at 30% on mobile). */
+/** Fade-in-on-hover remove button for list rows (visible at 30% on mobile).
+ *  44×44 touch target meets WCAG / platform minimums. */
 export const rowAction =
-  'shrink-0 flex items-center justify-center size-9 text-[var(--text-tertiary)] opacity-30 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity';
+  'shrink-0 flex items-center justify-center size-11 text-[var(--text-tertiary)] opacity-30 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity';
 
 /** Human-readable relative time string from an ISO timestamp (e.g. "5m ago", "3d ago"). */
 export function relativeTime(iso: string | null): string {
