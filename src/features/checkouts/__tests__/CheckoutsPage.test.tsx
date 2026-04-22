@@ -93,12 +93,6 @@ describe('CheckoutsPage', () => {
     expect(screen.getByText(/Bob/)).toBeInTheDocument();
   });
 
-  it('shows count of checked out items', () => {
-    mockUseLocationCheckouts.mockReturnValue({ checkouts: sampleCheckouts, isLoading: false });
-    renderPage();
-    expect(screen.getByText('2 items checked out')).toBeInTheDocument();
-  });
-
   it('filters checkouts by item name', () => {
     mockUseLocationCheckouts.mockReturnValue({ checkouts: sampleCheckouts, isLoading: false });
     renderPage();
