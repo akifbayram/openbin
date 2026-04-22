@@ -3802,6 +3802,77 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /locations/{locationId}/checkouts/bulk-return:
+    post:
+      tags: [Locations]
+      summary: Bulk return checked-out items
+      description: |
+        Closes up to 200 active checkouts in a single transaction. By default each item
+        returns to its origin bin. When `targetBinId` is provided, all items move to
+        that bin (which must belong to the same location). Checkouts that are missing
+        or already returned are skipped and reported in the `errors` array. Requires
+        member role or above.
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [checkoutIds]
+              properties:
+                checkoutIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 200
+                targetBinId:
+                  type: string
+                  format: uuid
+                  description: Optional destination bin in the same location. Omit to return each item to its origin bin.
+      responses:
+        '200':
+          description: Bulk return result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [returned, errors]
+                properties:
+                  returned:
+                    type: integer
+                    minimum: 0
+                    description: Number of checkouts successfully closed
+                  errors:
+                    type: array
+                    description: Per-checkout failure entries (e.g. NOT_FOUND for missing or already-returned IDs)
+                    items:
+                      $ref: '#/components/schemas/BulkErrorEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Target bin not found in this location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error (empty checkoutIds, invalid targetBinId, or selection over cap)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   # Shopping List
   /bins/{id}/shopping-list:
     post:

@@ -1,7 +1,8 @@
-import { PackageSearch, Undo2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ArrowRightLeft, PackageSearch, Undo2 } from 'lucide-react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BinIconBadge } from '@/components/ui/bin-icon-badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Highlight } from '@/components/ui/highlight';
@@ -11,15 +12,28 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { Table, TableHeader, TableRow } from '@/components/ui/table';
+import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAuth } from '@/lib/auth';
+import { type BulkAction, BulkActionBar } from '@/lib/bulk/BulkActionBar';
+import { useBulkSelection } from '@/lib/bulk/useBulkSelection';
+import { useEntitySelectionInteraction } from '@/lib/bulk/useEntitySelectionInteraction';
 import { resolveColor } from '@/lib/colorPalette';
 import { resolveIcon } from '@/lib/iconMap';
+import { useMountOnOpen } from '@/lib/useMountOnOpen';
 import { usePermissions } from '@/lib/usePermissions';
 import { cn, relativeTime } from '@/lib/utils';
 import type { ItemCheckoutWithContext } from '@/types';
 import { ReturnItemDialog } from './ReturnItemDialog';
+import { useCheckoutBulkActions } from './useCheckoutBulkActions';
 import { useLocationCheckouts } from './useCheckouts';
+
+const BulkReturnOriginalDialog = lazy(() =>
+  import('./BulkReturnOriginalDialog').then((m) => ({ default: m.BulkReturnOriginalDialog })),
+);
+const BulkReturnToBinDialog = lazy(() =>
+  import('./BulkReturnToBinDialog').then((m) => ({ default: m.BulkReturnToBinDialog })),
+);
 
 type CheckoutSortColumn = 'alpha' | 'time';
 
@@ -27,7 +41,6 @@ export function CheckoutsPage() {
   const { activeLocationId } = useAuth();
   const { checkouts, isLoading } = useLocationCheckouts(activeLocationId ?? undefined);
   const { canWrite } = usePermissions();
-  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [sortColumn, setSortColumn] = useState<CheckoutSortColumn>('time');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -57,6 +70,40 @@ export function CheckoutsPage() {
       return sortDirection === 'asc' ? cmp : -cmp;
     });
   }, [checkouts, search, sortColumn, sortDirection]);
+
+  const { showToast } = useToast();
+  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection<ItemCheckoutWithContext>({
+    items: filtered,
+    resetDeps: [search, sortColumn, sortDirection],
+  });
+  const { bulkReturn, bulkReturnToBin, isBusy } = useCheckoutBulkActions(
+    activeLocationId ?? null,
+    clearSelection,
+    showToast,
+  );
+  const [openBulk, setOpenBulk] = useState<'original' | 'tobin' | null>(null);
+  const origMounted = useMountOnOpen(openBulk === 'original');
+  const tobinMounted = useMountOnOpen(openBulk === 'tobin');
+
+  const selectedCheckouts = filtered.filter((c) => selectedIds.has(c.id));
+  const checkoutIds = selectedCheckouts.map((c) => c.id);
+
+  const bulkActions: BulkAction[] = [
+    {
+      id: 'return-orig',
+      icon: Undo2,
+      label: 'Return to original',
+      onClick: () => setOpenBulk('original'),
+      group: 'primary',
+    },
+    {
+      id: 'return-tobin',
+      icon: ArrowRightLeft,
+      label: 'Return to bin',
+      onClick: () => setOpenBulk('tobin'),
+      group: 'primary',
+    },
+  ];
 
   return (
     <div className="page-content-wide">
@@ -107,7 +154,7 @@ export function CheckoutsPage() {
             subtitle={search ? 'Try a different search' : 'Items you check out from bins will appear here'}
           />
         ) : (
-          <>
+          <div className={cn(selectable && 'pb-16')}>
             <p className="text-[13px] text-[var(--text-tertiary)]">
               {filtered.length} item{filtered.length !== 1 ? 's' : ''} checked out
             </p>
@@ -120,60 +167,21 @@ export function CheckoutsPage() {
                 {canWrite && <span className="w-10 shrink-0" />}
               </TableHeader>
 
-              {filtered.map((co) => {
-                const BinIcon = resolveIcon(co.origin_bin_icon);
-                const colorPreset = resolveColor(co.origin_bin_color);
-
-                return (
-                <TableRow
+              {filtered.map((co, index) => (
+                <CheckoutRow
                   key={co.id}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`${co.item_name} checked out from ${co.origin_bin_name}`}
-                  onClick={() => navigate(`/bin/${co.origin_bin_id}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.target === e.currentTarget) navigate(`/bin/${co.origin_bin_id}`);
-                  }}
-                >
-                  <div className="flex-[2] min-w-0">
-                    <span className="truncate font-medium text-[14px] text-[var(--text-primary)]">
-                      <Highlight text={co.item_name} query={search} />
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0 row">
-                    <BinIconBadge icon={BinIcon} colorPreset={colorPreset} />
-                    <span className="truncate text-[13px] text-[var(--text-tertiary)]">
-                      <Highlight text={co.origin_bin_name} query={search} />
-                    </span>
-                  </div>
-                  <div className="hidden md:block flex-1 min-w-0">
-                    <span className="truncate text-[13px] text-[var(--text-tertiary)]">
-                      <Highlight text={co.checked_out_by_name} query={search} />
-                    </span>
-                  </div>
-                  <span className="w-20 shrink-0 text-[13px] text-[var(--text-tertiary)] text-right">
-                    {relativeTime(co.checked_out_at)}
-                  </span>
-                  {canWrite && (
-                    // biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to return button
-                    <div className="w-10 shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()} role="presentation">
-                      <Tooltip content="Return item">
-                        <button
-                          type="button"
-                          onClick={() => setReturningCheckout(co)}
-                          className="shrink-0 p-2 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
-                          aria-label={`Return ${co.item_name}`}
-                        >
-                          <Undo2 className="h-4 w-4" />
-                        </button>
-                      </Tooltip>
-                    </div>
-                  )}
-                </TableRow>
-                );
-              })}
+                  co={co}
+                  index={index}
+                  search={search}
+                  canWrite={canWrite}
+                  selectable={selectable}
+                  selected={selectedIds.has(co.id)}
+                  onSelect={toggleSelect}
+                  onReturnOne={(c) => setReturningCheckout(c)}
+                />
+              ))}
             </Table>
-          </>
+          </div>
         )}
       </Crossfade>
 
@@ -187,6 +195,122 @@ export function CheckoutsPage() {
           originBinName={returningCheckout.origin_bin_name}
         />
       )}
+
+      {selectable && canWrite && (
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onClear={clearSelection}
+          isBusy={isBusy}
+          actions={bulkActions}
+          selectionLabel={`${selectedIds.size} item${selectedIds.size === 1 ? '' : 's'} selected`}
+        />
+      )}
+      {origMounted && (
+        <Suspense fallback={null}>
+          <BulkReturnOriginalDialog
+            open={openBulk === 'original'}
+            onOpenChange={(v) => (v ? setOpenBulk('original') : setOpenBulk(null))}
+            count={selectedCheckouts.length}
+            onConfirm={() => bulkReturn(checkoutIds)}
+          />
+        </Suspense>
+      )}
+      {tobinMounted && (
+        <Suspense fallback={null}>
+          <BulkReturnToBinDialog
+            open={openBulk === 'tobin'}
+            onOpenChange={(v) => (v ? setOpenBulk('tobin') : setOpenBulk(null))}
+            checkouts={selectedCheckouts}
+            onApply={bulkReturnToBin}
+          />
+        </Suspense>
+      )}
     </div>
+  );
+}
+
+function CheckoutRow({
+  co,
+  index,
+  search,
+  canWrite,
+  selectable,
+  selected,
+  onSelect,
+  onReturnOne,
+}: {
+  co: ItemCheckoutWithContext;
+  index: number;
+  search: string;
+  canWrite: boolean;
+  selectable: boolean;
+  selected: boolean;
+  onSelect: (id: string, index: number, shiftKey: boolean) => void;
+  onReturnOne: (co: ItemCheckoutWithContext) => void;
+}) {
+  const navigate = useNavigate();
+  const { handleClick, handleKeyDown, longPress } = useEntitySelectionInteraction({
+    id: co.id,
+    index,
+    selectable,
+    onSelect,
+    onActivate: () => navigate(`/bin/${co.origin_bin_id}`),
+  });
+  const BinIcon = resolveIcon(co.origin_bin_icon);
+  const colorPreset = resolveColor(co.origin_bin_color);
+  return (
+    <TableRow
+      tabIndex={0}
+      role={selectable ? 'option' : 'button'}
+      aria-selected={selectable ? selected : undefined}
+      aria-label={`${co.item_name} checked out from ${co.origin_bin_name}`}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      onTouchStart={longPress.onTouchStart}
+      onTouchEnd={longPress.onTouchEnd}
+      onTouchMove={longPress.onTouchMove}
+      onContextMenu={longPress.onContextMenu}
+    >
+      {selectable && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to checkbox
+        <div className="shrink-0 mr-2" onClick={(e) => e.stopPropagation()} role="presentation">
+          <Checkbox checked={selected} onCheckedChange={() => onSelect(co.id, index, false)} />
+        </div>
+      )}
+      <div className="flex-[2] min-w-0">
+        <span className="truncate font-medium text-[14px] text-[var(--text-primary)]">
+          <Highlight text={co.item_name} query={search} />
+        </span>
+      </div>
+      <div className="flex-1 min-w-0 row">
+        <BinIconBadge icon={BinIcon} colorPreset={colorPreset} />
+        <span className="truncate text-[13px] text-[var(--text-tertiary)]">
+          <Highlight text={co.origin_bin_name} query={search} />
+        </span>
+      </div>
+      <div className="hidden md:block flex-1 min-w-0">
+        <span className="truncate text-[13px] text-[var(--text-tertiary)]">
+          <Highlight text={co.checked_out_by_name} query={search} />
+        </span>
+      </div>
+      <span className="w-20 shrink-0 text-[13px] text-[var(--text-tertiary)] text-right">
+        {relativeTime(co.checked_out_at)}
+      </span>
+      {canWrite && !selectable && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to return button
+        <div className="w-10 shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()} role="presentation">
+          <Tooltip content="Return item">
+            <button
+              type="button"
+              onClick={() => onReturnOne(co)}
+              className="shrink-0 p-2 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
+              aria-label={`Return ${co.item_name}`}
+            >
+              <Undo2 className="h-4 w-4" />
+            </button>
+          </Tooltip>
+        </div>
+      )}
+    </TableRow>
   );
 }
