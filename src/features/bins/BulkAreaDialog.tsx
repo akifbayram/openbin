@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';
-import { BulkUpdateDialog, pluralizeBins } from './BulkUpdateDialog';
+import { BulkUpdateDialog } from '@/lib/bulk/BulkUpdateDialog';
+import { pluralizeBins } from './pluralizeBins';
 import { updateBin } from './useBins';
 
 interface BulkAreaDialogProps {
@@ -26,7 +27,7 @@ export function BulkAreaDialog({ open, onOpenChange, binIds, onDone }: BulkAreaD
       onOpenChange={onOpenChange}
       title="Move to Area"
       description={`Assign ${pluralizeBins(binIds.length)} to an area.`}
-      binIds={binIds}
+      selectedIds={binIds}
       onApply={apply}
       onApplied={onDone}
       loadingLabel="Moving..."

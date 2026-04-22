@@ -1,9 +1,10 @@
 import { lazy, Suspense, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/toast';
-import { BulkActionBar } from '@/features/bins/BulkActionBar';
+import { buildBinBulkActions } from '@/features/bins/buildBinBulkActions';
 import { updateBin } from '@/features/bins/useBins';
 import type { BulkDialog } from '@/features/bins/useBulkDialogs';
+import { BulkActionBar } from '@/lib/bulk/BulkActionBar';
 import type { Terminology } from '@/lib/terminology';
 import { useMountOnOpen } from '@/lib/useMountOnOpen';
 import type { Bin } from '@/types';
@@ -102,28 +103,32 @@ export function DashboardDialogs({
 
       {selectable && (
         <>
-          <BulkActionBar
-            selectedCount={selectedIds.size}
-            isAdmin={isAdmin}
-            canWrite={canWrite}
-            onTag={() => bulk.open('tag')}
-            onMove={() => bulk.open('area')}
-            onDelete={() => setBulkDeleteOpen(true)}
-            onClear={clearSelection}
-            onAppearance={() => bulk.open('appearance')}
-            onVisibility={() => bulk.open('visibility')}
-            onMoveLocation={() => bulk.open('location')}
-            onPin={bulkPinToggle}
-            onDuplicate={bulkDuplicate}
-            pinLabel={pinLabel}
-            onCustomFields={() => bulk.open('customFields')}
-            onCopyStyle={handleCopyStyle}
-            onPasteStyle={handlePasteStyle}
-            canCopyStyle={selectedIds.size === 1}
-            canPasteStyle={copiedStyle !== null}
-            isBusy={isBusy}
-            onPrint={() => navigate(`/print?ids=${[...selectedIds].join(',')}`)}
-          />
+          {canWrite && (
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              onClear={clearSelection}
+              isBusy={isBusy}
+              actions={buildBinBulkActions({
+                isAdmin,
+                pinLabel,
+                canCopyStyle: selectedIds.size === 1,
+                canPasteStyle: copiedStyle !== null,
+                showPrint: true,
+                onTag: () => bulk.open('tag'),
+                onMove: () => bulk.open('area'),
+                onDelete: () => setBulkDeleteOpen(true),
+                onAppearance: () => bulk.open('appearance'),
+                onVisibility: () => bulk.open('visibility'),
+                onMoveLocation: () => bulk.open('location'),
+                onPin: bulkPinToggle,
+                onDuplicate: bulkDuplicate,
+                onCustomFields: () => bulk.open('customFields'),
+                onCopyStyle: handleCopyStyle,
+                onPasteStyle: handlePasteStyle,
+                onPrint: () => navigate(`/print?ids=${[...selectedIds].join(',')}`),
+              })}
+            />
+          )}
           {tagMounted && (
             <Suspense fallback={null}>
               <BulkTagDialog open={bulk.isOpen('tag')} onOpenChange={(v) => v ? bulk.open('tag') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} allTags={allTags} />

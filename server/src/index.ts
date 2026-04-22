@@ -8,7 +8,13 @@ import multer from 'multer';
 import { query } from './db.js';
 import { config } from './lib/config.js';
 import { csrfProtect } from './lib/csrf.js';
-import { HttpError, OverLimitError, PlanRestrictedError, ReorganizeBinLimitError } from './lib/httpErrors.js';
+import {
+  HttpError,
+  OverLimitError,
+  PlanRestrictedError,
+  ReorganizeBinLimitError,
+  SelectionTooLargeError,
+} from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
 import { createLogger } from './lib/logger.js';
 import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
@@ -209,6 +215,15 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
         message: err.message,
         limit: err.limit,
         selected: err.selected,
+      });
+      return;
+    }
+    if (err instanceof SelectionTooLargeError) {
+      res.status(err.statusCode).json({
+        error: err.code,
+        message: err.message,
+        max: err.max,
+        requested: err.requested,
       });
       return;
     }

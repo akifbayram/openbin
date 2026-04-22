@@ -16,12 +16,12 @@ import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
 import { useAllTags } from '@/features/bins/useBins';
 import { useBulkActions } from '@/features/bins/useBulkActions';
 import { useBulkDialogs } from '@/features/bins/useBulkDialogs';
-import { useBulkSelection } from '@/features/bins/useBulkSelection';
 import { useReopenCreateOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { getCommandInputRef } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
+import { useBulkSelection } from '@/lib/bulk/useBulkSelection';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { deleteView, useSavedViews } from '@/lib/savedViews';
 import { useTerminology } from '@/lib/terminology';
@@ -67,7 +67,10 @@ export function DashboardPage() {
   const { isAdmin, canWrite, canCreateBin } = usePermissions();
   const allTags = useAllTags();
   const bulk = useBulkDialogs();
-  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(pinnedBins, [activeLocationId]);
+  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection({
+    items: pinnedBins,
+    resetDeps: [activeLocationId],
+  });
   const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy } = useBulkActions(pinnedBins, selectedIds, clearSelection, showToast, t);
 
   const showChecklist = !preferences.checklist_dismissed && totalBins < 3 && totalBins > 0;

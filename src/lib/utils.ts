@@ -17,6 +17,11 @@ export function plural(count: number, singular: string, pluralForm = `${singular
   return count === 1 ? singular : pluralForm;
 }
 
+/** "1 item" / "5 items" / "2 children" — count + space + word, with optional explicit plural. */
+export function pluralize(count: number, singular: string, plural?: string): string {
+  return `${count} ${count === 1 ? singular : plural ?? `${singular}s`}`;
+}
+
 export const EMAIL_REGEX = /^[^\s@+]+@[^\s@]+\.[^\s@]+$/;
 
 export function haptic(pattern: number | number[] = 10) {

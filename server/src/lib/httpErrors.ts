@@ -97,3 +97,14 @@ export class ReorganizeBinLimitError extends HttpError {
     this.selected = selected;
   }
 }
+
+export class SelectionTooLargeError extends HttpError {
+  public readonly max: number;
+  public readonly requested: number;
+  constructor(max: number, requested: number) {
+    super(422, 'SELECTION_TOO_LARGE', `Selection of ${requested} exceeds maximum of ${max} per request`);
+    this.name = 'SelectionTooLargeError';
+    this.max = max;
+    this.requested = requested;
+  }
+}

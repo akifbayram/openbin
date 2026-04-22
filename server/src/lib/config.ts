@@ -212,6 +212,9 @@ export const config = Object.freeze({
   aiRateLimitPerHour: clamp(parseInt(process.env.AI_RATE_LIMIT_PER_HOUR || '100', 10), 1, 10000, 100),
   aiRateLimitPerDay: clamp(parseInt(process.env.AI_RATE_LIMIT_PER_DAY || '200', 10), 1, 100000, 200),
 
+  // Bulk selection cap (per-endpoint enforcement)
+  bulkMaxSelection: clamp(parseInt(process.env.BULK_MAX_SELECTION || '200', 10), 1, 1000, 200),
+
   // Demo AI limits
   demoAiRateLimit: 10,
   demoAiMaxPhotosPerRequest: 3,

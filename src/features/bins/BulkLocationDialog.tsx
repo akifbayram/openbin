@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { LocationSelectList } from '@/features/locations/LocationSelectList';
 import { useLocationList } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
-import { BulkUpdateDialog, pluralizeBins } from './BulkUpdateDialog';
+import { BulkUpdateDialog } from '@/lib/bulk/BulkUpdateDialog';
+import { pluralizeBins } from './pluralizeBins';
 import { moveBin } from './useBins';
 
 interface BulkLocationDialogProps {
@@ -30,7 +31,7 @@ export function BulkLocationDialog({ open, onOpenChange, binIds, onDone }: BulkL
       onOpenChange={onOpenChange}
       title="Move to Location"
       description={`Move ${pluralizeBins(binIds.length)} to another location.`}
-      binIds={binIds}
+      selectedIds={binIds}
       onApply={apply}
       onApplied={onDone}
       applyDisabled={!targetId}
