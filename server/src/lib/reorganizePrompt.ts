@@ -1,6 +1,6 @@
 import { buildTagBlock } from './aiProviders.js';
 import { resolvePrompt, sanitizeForPrompt } from './aiSanitize.js';
-import { DEFAULT_REORGANIZATION_PROMPT, REORGANIZE_FORMAT_SUFFIX } from './defaultPrompts.js';
+import { DEFAULT_REORGANIZATION_PROMPT } from './defaultPrompts.js';
 
 export interface ReorganizeInputBin {
   name: string;
@@ -116,25 +116,11 @@ export function buildReorganizePrompt(args: ReorganizeBuildArgs): ReorganizeProm
     .replace('{notes_instruction}', notesInstruction)
     .replace('{available_tags}', '');
 
-  const totalInputItems = inputBins.reduce((sum, b) => sum + b.items.length, 0);
-  let cursor = 0;
-  const numberedBins = inputBins
-    .map((b) => {
-      const safeName = sanitizeForPrompt(b.name);
-      if (b.items.length === 0) return `Bin "${safeName}": (empty)`;
-      const lines = b.items
-        .map((item) => {
-          cursor += 1;
-          return `  ${cursor}. ${sanitizeForPrompt(item)}`;
-        })
-        .join('\n');
-      return `Bin "${safeName}":\n${lines}`;
-    })
+  const binDescriptions = inputBins
+    .map((b) => `- ${sanitizeForPrompt(b.name)}: ${b.items.length > 0 ? b.items.map((i) => sanitizeForPrompt(i)).join(', ') : '(empty)'}`)
     .join('\n');
+  const totalInputItems = inputBins.reduce((sum, b) => sum + b.items.length, 0);
+  const userContent = `${reorgTagSection}Here are the bins to reorganize (${totalInputItems} items total):\n\n${binDescriptions}\n\nIMPORTANT: The input contains exactly ${totalInputItems} items. Your output MUST contain exactly ${totalInputItems} items total across all bins.`;
 
-  const userContent = `${reorgTagSection}Here are the bins to reorganize (${totalInputItems} items total). Items are numbered globally. When you list items in output bins, use the numbers — not the text.\n\n${numberedBins}`;
-
-  const finalSystem = `${system}\n\n${REORGANIZE_FORMAT_SUFFIX}`;
-
-  return { system: finalSystem, userContent, totalInputItems };
+  return { system, userContent, totalInputItems };
 }

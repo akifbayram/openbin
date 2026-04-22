@@ -11,7 +11,7 @@ import { useTerminology } from '@/lib/terminology';
 import type { Area, Bin } from '@/types';
 import { deriveMoveList, type MoveListItem, type SourceCard } from './deriveMoveList';
 import { MoveListSheet } from './MoveListSheet';
-import type { ResolvedReorgPartial } from './resolveReorgIndexes';
+import type { PartialReorgResult } from './parsePartialReorg';
 import type { ReorgResponse } from './useReorganize';
 
 const COLLAPSED_ITEM_LIMIT = 5;
@@ -19,7 +19,7 @@ const COLLAPSED_ITEM_LIMIT = 5;
 interface ReorganizePreviewProps {
   inputBins: Bin[];
   result: ReorgResponse | null;
-  partialResult: ResolvedReorgPartial;
+  partialResult: PartialReorgResult;
   isStreaming: boolean;
   isApplying: boolean;
   areas: Area[];
@@ -44,6 +44,7 @@ export function ReorganizePreview({
   const t = useTerminology();
   const source = result ?? partialResult;
   const derivation = useMemo(() => deriveMoveList(inputBins, source), [inputBins, source]);
+  const summary = result?.summary ?? partialResult.summary;
   const hasContent = derivation.sourceCards.some((s) => s.outgoingClusters.length > 0);
 
   if (!hasContent && !isStreaming) return null;
@@ -70,6 +71,10 @@ export function ReorganizePreview({
           {originalCount} → {totalDestinationBins} {totalDestinationBins === 1 ? t.bin : t.bins} · {totalItems} item{totalItems !== 1 ? 's' : ''} · {totalMoves} move{totalMoves !== 1 ? 's' : ''}{binsKept > 0 ? ` · ${binsKept} kept` : ''}
         </span>
       </div>
+
+      {summary && (
+        <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">{summary}</p>
+      )}
 
       <ul className="flex flex-col gap-3" aria-label="Source bins with outgoing moves">
         {sourceCards.map((card, idx) => (
@@ -116,6 +121,7 @@ export function ReorganizePreview({
               totalItems={totalItems}
               totalMoves={totalMoves}
               totalDestinationBins={totalDestinationBins}
+              summary={summary}
             />
           </div>,
           document.body,

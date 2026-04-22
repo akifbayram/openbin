@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Bin } from '@/types';
 import { buildReorganizePlan, deriveMoveList } from '../deriveMoveList';
-import { parsePartialReorg } from '../parsePartialReorg';
-import type { ResolvedReorgPartial } from '../resolveReorgIndexes';
-import { resolveReorgIndexes } from '../resolveReorgIndexes';
+import type { PartialReorgResult } from '../parsePartialReorg';
 import type { ReorgResponse } from '../useReorganize';
 
 function makeBin(overrides: Partial<Bin> = {}): Bin {
@@ -30,7 +28,7 @@ function makeBin(overrides: Partial<Bin> = {}): Bin {
   };
 }
 
-const emptyResult: ResolvedReorgPartial = { bins: [] };
+const emptyResult: PartialReorgResult = { bins: [], summary: '' };
 
 describe('deriveMoveList', () => {
   it('returns source cards with empty clusters when no result bins', () => {
@@ -50,8 +48,9 @@ describe('deriveMoveList', () => {
       name: 'Hand Tools',
       items: [{ id: 'i1', name: 'Hammer', quantity: null }, { id: 'i2', name: 'Screw', quantity: 5 }],
     })];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [{ name: 'Hand Tools', items: ['Hammer', 'Screw'], tags: [] }],
+      summary: '',
     };
     const r = deriveMoveList(input, result);
     expect(r.sourceCards[0].preserved).toBe(true);
@@ -64,8 +63,9 @@ describe('deriveMoveList', () => {
       name: 'Garage',
       items: [{ id: 'i1', name: 'Hammer', quantity: null }],
     })];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [{ name: 'Hand Tools', items: ['Hammer'], tags: [] }],
+      summary: '',
     };
     const r = deriveMoveList(input, result);
     expect(r.sourceCards[0].preserved).toBe(false);
@@ -81,11 +81,12 @@ describe('deriveMoveList', () => {
         { id: 'i2', name: 'Flashlight', quantity: null },
       ],
     })];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [
         { name: 'Tools', items: ['Hammer'], tags: [] },
         { name: 'Electronics', items: ['Flashlight'], tags: [] },
       ],
+      summary: '',
     };
     const r = deriveMoveList(input, result);
     expect(r.sourceCards[0].preserved).toBe(true);
@@ -98,8 +99,9 @@ describe('deriveMoveList', () => {
       makeBin({ id: 'b1', name: 'First', items: [{ id: 'i1', name: 'A', quantity: null }] }),
       makeBin({ id: 'b2', name: 'Second', items: [{ id: 'i2', name: 'B', quantity: null }] }),
     ];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [{ name: 'Combined', items: ['B', 'A'], tags: [] }],
+      summary: '',
     };
     const r = deriveMoveList(input, result);
     expect(r.sourceCards.map((s) => s.sourceBin.id)).toEqual(['b1', 'b2']);
@@ -115,12 +117,13 @@ describe('deriveMoveList', () => {
         { id: 'i3', name: 'Gamma', quantity: null },
       ],
     })];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [
         { name: 'Third', items: ['Gamma'], tags: [] },
         { name: 'First', items: ['Alpha'], tags: [] },
         { name: 'Second', items: ['Beta'], tags: [] },
       ],
+      summary: '',
     };
     const r = deriveMoveList(input, result);
     expect(r.sourceCards[0].outgoingClusters.map((c) => c.destinationName)).toEqual(['Third', 'First', 'Second']);
@@ -132,8 +135,9 @@ describe('deriveMoveList', () => {
       name: '  HAND  TOOLS ',
       items: [{ id: 'i1', name: 'Hammer', quantity: null }],
     })];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [{ name: 'hand tools', items: ['Hammer'], tags: [] }],
+      summary: '',
     };
     const r = deriveMoveList(input, result);
     expect(r.sourceCards[0].preserved).toBe(true);
@@ -146,11 +150,12 @@ describe('deriveMoveList', () => {
       name: 'Src',
       items: [{ id: 'i1', name: 'Batteries', quantity: null }],
     })];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [
         { name: 'Electronics', items: ['Batteries'], tags: [] },
         { name: 'Misc Tools', items: ['Batteries'], tags: [] },
       ],
+      summary: '',
     };
     const r = deriveMoveList(input, result);
     expect(r.sourceCards[0].outgoingClusters).toHaveLength(2);
@@ -163,8 +168,9 @@ describe('deriveMoveList', () => {
       makeBin({ id: 'b1', name: 'Garage', items: [{ id: 'i1', name: 'Screw', quantity: 10 }] }),
       makeBin({ id: 'b2', name: 'Misc', items: [{ id: 'i2', name: 'Screw', quantity: 3 }] }),
     ];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [{ name: 'Fasteners', items: ['Screw'], tags: [] }],
+      summary: '',
     };
     const r = deriveMoveList(input, result);
     expect(r.sourceCards).toHaveLength(2);
@@ -177,11 +183,12 @@ describe('deriveMoveList', () => {
       makeBin({ id: 'b1', name: 'A', items: [{ id: 'i1', name: 'x', quantity: null }] }),
       makeBin({ id: 'b2', name: 'B', items: [{ id: 'i2', name: 'y', quantity: null }, { id: 'i3', name: 'z', quantity: null }] }),
     ];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [
         { name: 'D1', items: ['x', 'y'], tags: [] },
         { name: 'D2', items: ['z'], tags: [] },
       ],
+      summary: '',
     };
     const r = deriveMoveList(input, result);
     expect(r.totalItems).toBe(3);
@@ -195,8 +202,9 @@ describe('deriveMoveList', () => {
       name: 'Src',
       items: [{ id: 'i1', name: 'Alpha', quantity: null }, { id: 'i2', name: 'Beta', quantity: null }],
     })];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [{ name: 'Dest', items: ['Alpha'], tags: [] }],
+      summary: '',
     };
     expect(() => deriveMoveList(input, result)).not.toThrow();
     const r = deriveMoveList(input, result);
@@ -209,8 +217,9 @@ describe('deriveMoveList', () => {
       name: 'Src',
       items: [{ id: 'i1', name: 'Hammer', quantity: null }],
     })];
-    const result: ResolvedReorgPartial = {
+    const result: PartialReorgResult = {
       bins: [{ name: 'Dest', items: ['Hammer', 'Wrench'], tags: [] }],
+      summary: '',
     };
     const r = deriveMoveList(input, result);
     expect(r.sourceCards[0].outgoingClusters[0].items.map((i) => i.name)).toEqual(['Hammer']);
@@ -218,17 +227,13 @@ describe('deriveMoveList', () => {
 });
 
 describe('buildReorganizePlan', () => {
-  function partialToResponse(partial: ReturnType<typeof parsePartialReorg>, inputBins: Bin[]): ReorgResponse {
-    const resolved = resolveReorgIndexes(partial, inputBins);
-    return { bins: resolved.bins };
+  function asComplete(partial: PartialReorgResult): ReorgResponse {
+    return { bins: partial.bins.map((b) => ({ name: b.name, items: b.items, tags: b.tags })), summary: partial.summary };
   }
 
   it('pure rename: one source name matches one dest — preserved, no deletions, no creations', () => {
     const input = [makeBin({ id: 'b1', name: 'Hand Tools', items: [{ id: 'i1', name: 'Hammer', quantity: null }] })];
-    const result = partialToResponse(
-      { bins: [{ name: 'Hand Tools', itemIndices: [1], tags: [] }] },
-      input,
-    );
+    const result = asComplete({ bins: [{ name: 'Hand Tools', items: ['Hammer'], tags: [] }], summary: '' });
     const plan = buildReorganizePlan(input, result);
     expect(plan.preservations).toHaveLength(1);
     expect(plan.preservations[0].sourceBinId).toBe('b1');
@@ -239,10 +244,7 @@ describe('buildReorganizePlan', () => {
 
   it('no name match: full replace — no preservations, all sources deleted, all dests created', () => {
     const input = [makeBin({ id: 'b1', name: 'Garage', items: [{ id: 'i1', name: 'A', quantity: null }] })];
-    const result = partialToResponse(
-      { bins: [{ name: 'Tools', itemIndices: [1], tags: [] }] },
-      input,
-    );
+    const result = asComplete({ bins: [{ name: 'Tools', items: ['A'], tags: [] }], summary: '' });
     const plan = buildReorganizePlan(input, result);
     expect(plan.preservations).toEqual([]);
     expect(plan.deletions).toEqual(['b1']);
@@ -259,15 +261,13 @@ describe('buildReorganizePlan', () => {
         { id: 'i2', name: 'Battery', quantity: null },
       ],
     })];
-    const result = partialToResponse(
-      {
-        bins: [
-          { name: 'Tools', itemIndices: [1], tags: [] },
-          { name: 'Misc', itemIndices: [2], tags: [] },
-        ],
-      },
-      input,
-    );
+    const result = asComplete({
+      bins: [
+        { name: 'Tools', items: ['Hammer'], tags: [] },
+        { name: 'Misc', items: ['Battery'], tags: [] },
+      ],
+      summary: '',
+    });
     const plan = buildReorganizePlan(input, result);
     expect(plan.preservations).toHaveLength(1);
     expect(plan.preservations[0].sourceBinId).toBe('b1');
@@ -282,10 +282,10 @@ describe('buildReorganizePlan', () => {
       makeBin({ id: 'b1', name: 'Hand Tools', items: [{ id: 'i1', name: 'Hammer', quantity: null }] }),
       makeBin({ id: 'b2', name: 'Garage Junk', items: [{ id: 'i2', name: 'Wrench', quantity: null }] }),
     ];
-    const result = partialToResponse(
-      { bins: [{ name: 'Hand Tools', itemIndices: [1, 2], tags: [] }] },
-      input,
-    );
+    const result = asComplete({
+      bins: [{ name: 'Hand Tools', items: ['Hammer', 'Wrench'], tags: [] }],
+      summary: '',
+    });
     const plan = buildReorganizePlan(input, result);
     expect(plan.preservations).toHaveLength(1);
     expect(plan.preservations[0].sourceBinId).toBe('b1');
@@ -301,10 +301,10 @@ describe('buildReorganizePlan', () => {
         { id: 'i3', name: 'Wrench', quantity: null },
       ] }),
     ];
-    const result = partialToResponse(
-      { bins: [{ name: 'Tools', itemIndices: [2, 3], tags: [] }] },
-      input,
-    );
+    const result = asComplete({
+      bins: [{ name: 'Tools', items: ['Hammer', 'Wrench'], tags: [] }],
+      summary: '',
+    });
     const plan = buildReorganizePlan(input, result);
     expect(plan.preservations).toHaveLength(1);
     expect(plan.preservations[0].sourceBinId).toBe('b2');
@@ -316,10 +316,10 @@ describe('buildReorganizePlan', () => {
       makeBin({ id: 'b1', name: 'Tools', items: [{ id: 'i1', name: 'Hammer', quantity: null }] }),
       makeBin({ id: 'b2', name: 'Tools', items: [{ id: 'i2', name: 'Hammer', quantity: null }] }),
     ];
-    const result = partialToResponse(
-      { bins: [{ name: 'Tools', itemIndices: [1], tags: [] }] },
-      input,
-    );
+    const result = asComplete({
+      bins: [{ name: 'Tools', items: ['Hammer'], tags: [] }],
+      summary: '',
+    });
     const plan = buildReorganizePlan(input, result);
     expect(plan.preservations).toHaveLength(1);
     expect(plan.preservations[0].sourceBinId).toBe('b1');
@@ -332,10 +332,7 @@ describe('buildReorganizePlan', () => {
       name: '  HAND  TOOLS ',
       items: [{ id: 'i1', name: 'Hammer', quantity: null }],
     })];
-    const result = partialToResponse(
-      { bins: [{ name: 'hand tools', itemIndices: [1], tags: [] }] },
-      input,
-    );
+    const result = asComplete({ bins: [{ name: 'hand tools', items: ['Hammer'], tags: [] }], summary: '' });
     const plan = buildReorganizePlan(input, result);
     expect(plan.preservations).toHaveLength(1);
     expect(plan.preservations[0].sourceBinId).toBe('b1');
@@ -348,7 +345,7 @@ describe('buildReorganizePlan', () => {
       makeBin({ id: 'b1', name: 'A', items: [{ id: 'i1', name: 'x', quantity: null }] }),
       makeBin({ id: 'b2', name: 'B', items: [{ id: 'i2', name: 'y', quantity: null }] }),
     ];
-    const result = partialToResponse({ bins: [] }, input);
+    const result = asComplete({ bins: [], summary: '' });
     const plan = buildReorganizePlan(input, result);
     expect(plan.preservations).toEqual([]);
     expect(plan.deletions).toEqual(['b1', 'b2']);
@@ -356,7 +353,7 @@ describe('buildReorganizePlan', () => {
   });
 
   it('empty input bins: plan is entirely creations', () => {
-    const result: ReorgResponse = { bins: [{ name: 'Anything', items: ['x'], tags: [] }] };
+    const result = asComplete({ bins: [{ name: 'Anything', items: ['x'], tags: [] }], summary: '' });
     const plan = buildReorganizePlan([], result);
     expect(plan.preservations).toEqual([]);
     expect(plan.deletions).toEqual([]);

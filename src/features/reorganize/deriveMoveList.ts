@@ -1,5 +1,5 @@
 import type { Bin, BinItem } from '@/types';
-import type { ResolvedReorgPartial } from './resolveReorgIndexes';
+import type { PartialReorgResult } from './parsePartialReorg';
 import type { ReorgResponse } from './useReorganize';
 
 export interface MoveListItem {
@@ -70,7 +70,7 @@ function normalize(name: string): string {
 type NormalizedOutputBin = Pick<ReorgResponse['bins'][number], 'name' | 'items' | 'tags'>;
 
 function coerceResult(
-  result: ReorgResponse | ResolvedReorgPartial,
+  result: ReorgResponse | PartialReorgResult,
 ): NormalizedOutputBin[] {
   return result.bins.map((b) => ({
     name: b.name,
@@ -91,7 +91,7 @@ function coerceResult(
  */
 export function deriveMoveList(
   inputBins: Bin[],
-  result: ReorgResponse | ResolvedReorgPartial,
+  result: ReorgResponse | PartialReorgResult,
 ): MoveListDerivation {
   const outputBins = coerceResult(result);
   const outputNameSet = new Set(outputBins.map((b) => normalize(b.name)));

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useAiStream } from '@/features/ai/useAiStream';
 import { addBin, deleteBin, updateBin } from '@/features/bins/useBins';
 import { useAuth } from '@/lib/auth';
@@ -6,15 +6,12 @@ import { Events, notify } from '@/lib/eventBus';
 import { getErrorMessage } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { buildReorganizePlan } from './deriveMoveList';
-import { parsePartialReorg } from './parsePartialReorg';
-import type { PartialReorgResultIndexed, ResolvedReorgPartial } from './resolveReorgIndexes';
-import { resolveReorgIndexes } from './resolveReorgIndexes';
+import { type PartialReorgResult, parsePartialReorg } from './parsePartialReorg';
 
-interface ReorgResponseBase<T> {
-  bins: Array<{ name: string; items: T[]; tags?: string[] }>;
+export interface ReorgResponse {
+  bins: Array<{ name: string; items: string[]; tags?: string[] }>;
+  summary: string;
 }
-export type ReorgResponse = ReorgResponseBase<string>;
-type ReorgResponseIndexed = ReorgResponseBase<number>;
 
 export interface ReorgOptions {
   userNotes?: string;
@@ -42,36 +39,18 @@ export function useReorganize() {
     stream,
     cancel,
     clear: clearStream,
-  } = useAiStream<ReorgResponseIndexed>('/api/ai/reorganize/stream', 'Failed to generate reorganization');
+  } = useAiStream<ReorgResponse>('/api/ai/reorganize/stream', 'Failed to generate reorganization');
   const [isApplying, setIsApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
-  const [inputBinsSnapshot, setInputBinsSnapshot] = useState<Bin[]>([]);
 
-  const partialResult = useMemo<ResolvedReorgPartial>(
-    () => partialText
-      ? resolveReorgIndexes(parsePartialReorg(partialText), inputBinsSnapshot)
-      : { bins: [] },
-    [partialText, inputBinsSnapshot],
-  );
-
-  const resolvedResult = useMemo<ReorgResponse | null>(() => {
-    if (!result) return null;
-    const indexed: PartialReorgResultIndexed = {
-      bins: result.bins.map((b) => ({
-        name: b.name,
-        itemIndices: b.items,
-        tags: b.tags ?? [],
-      })),
-    };
-    const resolved = resolveReorgIndexes(indexed, inputBinsSnapshot);
-    return { bins: resolved.bins };
-  }, [result, inputBinsSnapshot]);
+  const partialResult: PartialReorgResult = partialText
+    ? parsePartialReorg(partialText)
+    : { bins: [], summary: '' };
 
   const startReorg = useCallback(
     (bins: Bin[], maxBins?: number, areaId?: string, areaName?: string, options?: ReorgOptions) => {
       if (!activeLocationId) return;
       setApplyError(null);
-      setInputBinsSnapshot(bins);
       stream({
         locationId: activeLocationId,
         bins: bins.map((b) => ({
@@ -93,11 +72,11 @@ export function useReorganize() {
 
   const apply = useCallback(
     async (inputBins: Bin[], areaId?: string): Promise<ApplyOutcome> => {
-      if (!resolvedResult || !activeLocationId) return { success: false };
+      if (!result || !activeLocationId) return { success: false };
       setIsApplying(true);
       setApplyError(null);
       try {
-        const plan = buildReorganizePlan(inputBins, resolvedResult);
+        const plan = buildReorganizePlan(inputBins, result);
 
         // Phase 1 — update preserved bins in place (name unchanged, items + tags replaced)
         const preservedIds = await Promise.all(
@@ -135,7 +114,7 @@ export function useReorganize() {
         setIsApplying(false);
       }
     },
-    [resolvedResult, activeLocationId],
+    [result, activeLocationId],
   );
 
   const clear = useCallback(() => {
@@ -144,7 +123,7 @@ export function useReorganize() {
   }, [clearStream]);
 
   return {
-    result: resolvedResult,
+    result,
     partialResult,
     isStreaming,
     error,

@@ -137,8 +137,7 @@ Rules:
 1. Group related items together logically (e.g., all fasteners in one bin, all adhesives in another).
 2. Give each bin a clear, descriptive Title Case name. PREFER reusing existing input bin names when an output bin's items come primarily from a single input bin — this preserves the user's physical labels and bin metadata. Only invent a new name when (a) the output merges items from multiple sources with no single dominant contributor, or (b) the input bin's name is clearly inaccurate for the new contents. Good: input bin "Board Games" (10 items) → output bin "Board Games" (same 10 items, reused name). Good: inputs "Garage A" + "Garage B" → output "Hand Tools" (mixed contents, new name). Bad: input "Family Board Games" (11 items) → output "Games Collection" (same 11 items, should have reused "Family Board Games").
 3. Assign 2 to 5 tags to each bin. Each tag MUST be lowercase, a single word, and a plural noun. MUST reuse tags from the input bins whenever relevant. Prefer broad category tags over specific sub-tags. Only create a new tag when NO existing tag covers the category.
-4. Respond with valid JSON only: { "bins": [{ "name": "Bin Name", "items": [1, 3, 7], "tags": ["tag1", "tag2"] }] }. Items are INTEGER INDICES from the numbered input list — never strings, never verbatim item text. Do NOT include a "summary" field.
-5. Item-coverage invariant: every integer you emit must be one you were given in the numbered input list. By default, every input number must appear exactly once across all output bins — no additions, no omissions, no duplications — unless the duplicates instruction below explicitly allows the same index to appear in multiple bins.
+4. Respond with valid JSON only: { "bins": [{ "name": "Bin Name", "items": ["item1", "item2"], "tags": ["tag1", "tag2"] }], "summary": "Brief explanation of the reorganization." }
 
 {max_bins_instruction}
 {area_instruction}
@@ -149,24 +148,6 @@ Rules:
 {outliers_instruction}
 {items_per_bin_instruction}
 {notes_instruction}`;
-
-/**
- * Server-forced output-format block appended by `buildReorganizePrompt` to
- * every resolved reorganize prompt (default or per-user override). Placed last
- * so Gemini attention decay doesn't lose the schema. Users cannot override the
- * output shape — this is a wire format, not a style choice.
- */
-export const REORGANIZE_FORMAT_SUFFIX = `OUTPUT FORMAT (MANDATORY — overrides any format guidance above).
-
-The input lists items with global 1-based numbers. In your output, reference items ONLY by those numbers. Never echo item text; never emit strings where integers are expected.
-
-Respond with valid JSON only, matching this EXACT shape:
-{"bins":[{"name":"Bin Name","items":[1,3,7,12],"tags":["tag1","tag2"]}]}
-
-- "items" is an array of positive integers from the numbered input list. Never strings.
-- "name" and "tags" remain strings.
-- Do NOT include a "summary" field. Do NOT include any field not listed above.
-- Every integer you emit must be one you were given in the input numbering.`;
 
 export const AI_REANALYSIS_PROMPT = `${DEFAULT_AI_PROMPT}
 

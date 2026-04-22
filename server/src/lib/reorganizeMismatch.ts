@@ -3,58 +3,83 @@ export interface MismatchOptions {
   allowDupes: boolean;
 }
 
-export interface IndexMismatchResult {
+export interface MismatchResult {
   mismatch: boolean;
-  /** Input indices that were missing from the output (see function JSDoc for multiplicity rules). */
-  dropped: number[];
   /**
-   * Output indices that were out-of-range, non-integer, or (under force-single) duplicated.
-   * Ordering: out-of-range and non-integer values appear first in their original output order,
-   * followed by duplicate entries in ascending index order. Callers should not rely on a
-   * specific ordering across the two categories.
+   * Normalized input names that are under-represented in the output. A name
+   * may appear multiple times — once for each missing occurrence (e.g. if the
+   * input has "screw" twice and the output has it once, `dropped` is `['screw']`;
+   * if the output is empty, `dropped` is `['screw', 'screw']`).
    */
-  invented: number[];
+  dropped: string[];
+  /**
+   * Normalized output names that are over-represented vs the input. Under
+   * `force-single`, this includes names the output duplicated. Under
+   * `allow` (allowDupes=true), this only includes names that do not exist in
+   * the input at all. May contain the same name multiple times.
+   */
+  invented: string[];
+}
+
+export function normalizeItemName(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function buildCountMap(names: string[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const raw of names) {
+    const n = normalizeItemName(raw);
+    counts.set(n, (counts.get(n) ?? 0) + 1);
+  }
+  return counts;
 }
 
 /**
- * Validates that the AI-emitted integer indices cover the numbered input
- * item list correctly.
+ * Compare input vs output item names for the reorganize AI output.
+ * - Under `force-single` (allowDupes=false): require exact multiset equality.
+ * - Under `allow` (allowDupes=true): require output names to be a subset of input names,
+ *   with unlimited multiplicity on the output side.
  *
- * - `allowDupes=false` (force-single): every index in [1, totalInputItems] must
- *   appear exactly once. Missing → dropped. Duplicate or out-of-range → invented.
- * - `allowDupes=true`  (multi-bin / duplicates=allow): every output index must be
- *   in [1, totalInputItems]. Subsets and duplicates are OK. Unreferenced input
- *   indices populate `dropped` once each; out-of-range/non-integer indices
- *   populate `invented`.
+ * Names are normalized by trimming, lowercasing, and collapsing internal whitespace.
+ *
+ * Callers should derive `allowDupes` from the *effective* duplicates policy:
+ *   `ambiguousPolicy === 'multi-bin' || duplicates === 'allow'`
+ * This mirrors the `effectiveDuplicates` computation in `buildReorganizePrompt`
+ * (`server/src/lib/reorganizePrompt.ts`). Passing the raw `duplicates` field
+ * alone will miss the `multi-bin` case.
  */
-export function detectReorganizeMismatchByIndex(
-  totalInputItems: number,
-  outputIndices: number[],
+export function detectReorganizeMismatch(
+  inputNames: string[],
+  outputNames: string[],
   options: MismatchOptions,
-): IndexMismatchResult {
-  const dropped: number[] = [];
-  const invented: number[] = [];
-  const outCounts = new Map<number, number>();
+): MismatchResult {
+  const inputCounts = buildCountMap(inputNames);
+  const outputCounts = buildCountMap(outputNames);
 
-  for (const raw of outputIndices) {
-    if (!Number.isInteger(raw) || raw < 1 || raw > totalInputItems) {
-      invented.push(raw);
-      continue;
-    }
-    outCounts.set(raw, (outCounts.get(raw) ?? 0) + 1);
-  }
+  const dropped: string[] = [];
+  const invented: string[] = [];
 
-  for (let i = 1; i <= totalInputItems; i++) {
-    const count = outCounts.get(i) ?? 0;
+  for (const [name, inCount] of inputCounts) {
+    const outCount = outputCounts.get(name) ?? 0;
     if (options.allowDupes) {
-      if (count === 0) dropped.push(i);
-    } else {
-      if (count === 0) dropped.push(i);
-      else if (count > 1) {
-        for (let j = 0; j < count - 1; j++) invented.push(i);
-      }
+      if (outCount === 0) dropped.push(name);
+    } else if (outCount < inCount) {
+      for (let i = 0; i < inCount - outCount; i++) dropped.push(name);
     }
   }
 
-  return { mismatch: dropped.length > 0 || invented.length > 0, dropped, invented };
+  for (const [name, outCount] of outputCounts) {
+    const inCount = inputCounts.get(name) ?? 0;
+    if (inCount === 0) {
+      for (let i = 0; i < outCount; i++) invented.push(name);
+    } else if (!options.allowDupes && outCount > inCount) {
+      for (let i = 0; i < outCount - inCount; i++) invented.push(name);
+    }
+  }
+
+  return {
+    mismatch: dropped.length > 0 || invented.length > 0,
+    dropped,
+    invented,
+  };
 }
