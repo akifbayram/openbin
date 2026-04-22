@@ -40,6 +40,7 @@ const PRO_FEATURES = {
   maxMembersPerLocation: 10,
   activityRetentionDays: 90,
   aiCreditsPerMonth: 250,
+  reorganizeMaxBins: 40,
 };
 
 const PLUS_FEATURES = {
@@ -56,6 +57,7 @@ const PLUS_FEATURES = {
   maxMembersPerLocation: 1,
   activityRetentionDays: 30,
   aiCreditsPerMonth: 25,
+  reorganizeMaxBins: 10,
 };
 
 beforeEach(() => {

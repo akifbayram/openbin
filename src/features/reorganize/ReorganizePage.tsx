@@ -55,7 +55,7 @@ export function ReorganizePage() {
   const { showToast } = useToast();
   const { activeLocationId } = useAuth();
   const { canWrite, isLoading: permissionsLoading } = usePermissions();
-  const { isGated, isSelfHosted, planInfo } = usePlan();
+  const { isGated, isSelfHosted, isPlus, planInfo } = usePlan();
   const reorganizeGated = !isSelfHosted && isGated('reorganize');
   const { bins: allBins, isLoading } = useBinList(undefined, 'name');
   const { areas } = useAreaList(activeLocationId);
@@ -217,7 +217,11 @@ export function ReorganizePage() {
     deleted: plan?.deletions.length ?? 0,
     created: plan?.creations.length ?? 0,
   }), [plan]);
-  const canSubmit = selection.selectedIds.size >= 2 && !isStreaming && !hasValidationError;
+  const reorgBinCap = planInfo.features.reorganizeMaxBins;
+  const overCap = reorgBinCap != null && selection.selectedIds.size > reorgBinCap;
+  const canSubmit = selection.selectedIds.size >= 2 && !isStreaming && !hasValidationError && !overCap;
+  const canUpgradeFromCap = overCap && isPlus && !!planInfo.upgradeProUrl;
+  const capSuffix = canUpgradeFromCap ? ', or upgrade to Pro for a higher cap.' : '.';
 
   const handleAccept = useCallback(() => {
     apply(
@@ -557,7 +561,7 @@ export function ReorganizePage() {
                   userNotes: tagsNotes || undefined,
                 });
               }}
-              disabled={selection.selectedIds.size < 1 || tagsHook.isStreaming}
+              disabled={selection.selectedIds.size < 1 || tagsHook.isStreaming || overCap}
               className="h-12 text-[17px] rounded-[var(--radius-md)]"
               fullWidth
             >
@@ -565,10 +569,34 @@ export function ReorganizePage() {
               Suggest tags for {selection.selectedIds.size} {selection.selectedIds.size === 1 ? t.bin : t.bins}
             </Button>
           )}
-          {selection.selectedIds.size >= 2 && (
+          {selection.selectedIds.size >= 2 && !overCap && (
             <p className="text-[12px] text-[var(--text-tertiary)] text-center -mt-2">
               {itemCount} item{itemCount !== 1 ? 's' : ''} across {selection.selectedIds.size} {t.bins}
             </p>
+          )}
+          {overCap && reorgBinCap != null && (
+            <Card className="border-t-2 border-t-[var(--destructive)]">
+              <CardContent>
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <p className="text-sm text-[var(--destructive)]">
+                      {isPlus ? 'Plus' : 'Pro'} allows up to {reorgBinCap} {reorgBinCap === 1 ? t.bin : t.bins} per reorganize run. Deselect {selection.selectedIds.size - reorgBinCap} to continue{capSuffix}
+                    </p>
+                    {canUpgradeFromCap && planInfo.upgradeProUrl && (
+                      <a
+                        href={planInfo.upgradeProUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-[13px] font-medium text-[var(--text-primary)] underline underline-offset-2"
+                      >
+                        Upgrade to Pro
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {mode === 'bins' && (error || applyError) && (

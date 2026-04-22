@@ -22,7 +22,7 @@ export const StructureTextSchema = z.object({
 export const QueryResultSchema = z.object({
   answer: z.string(),
   matches: z.array(z.object({
-    bin_id: z.string(),
+    bin_code: z.string(),
     name: z.string(),
     area_name: z.string(),
     items: z.array(z.string()),

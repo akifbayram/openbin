@@ -2,7 +2,7 @@ import * as jose from 'jose';
 import type { TxQueryFn } from '../db/types.js';
 import { d, query } from '../db.js';
 import { config } from './config.js';
-import { PlanRestrictedError } from './httpErrors.js';
+import { PlanRestrictedError, ReorganizeBinLimitError } from './httpErrors.js';
 
 let _subSecretKey: Uint8Array | null = null;
 /** Lazily cached subscription JWT secret key for jose signing/verification. */
@@ -40,6 +40,7 @@ export interface PlanFeatures {
   maxMembersPerLocation: number | null;
   activityRetentionDays: number | null;
   aiCreditsPerMonth: number | null; // null = unlimited, 0 = no AI credits
+  reorganizeMaxBins: number | null; // max input bins per reorganize run; null = unlimited
 }
 
 export function isSelfHosted(): boolean {
@@ -116,6 +117,7 @@ const UNRESTRICTED: PlanFeatures = {
   maxMembersPerLocation: null,
   activityRetentionDays: null,
   aiCreditsPerMonth: null,
+  reorganizeMaxBins: null,
 };
 
 export function getFeatureMap(plan: PlanTier): PlanFeatures {
@@ -130,6 +132,7 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
       maxPhotoStorageMb: pl.proMaxStorageMb,
       activityRetentionDays: pl.proActivityRetentionDays,
       aiCreditsPerMonth: pl.proAiCreditsPerMonth,
+      reorganizeMaxBins: pl.proReorganizeMaxBins,
     };
   }
   if (plan === Plan.PLUS) {
@@ -147,6 +150,7 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
       maxMembersPerLocation: pl.plusMaxMembers,
       activityRetentionDays: pl.plusActivityRetentionDays,
       aiCreditsPerMonth: pl.plusAiCreditsPerMonth,
+      reorganizeMaxBins: pl.plusReorganizeMaxBins,
     };
   }
   // Free tier
@@ -164,6 +168,7 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
     maxMembersPerLocation: pl.freeMaxMembers,
     activityRetentionDays: pl.freeActivityRetentionDays,
     aiCreditsPerMonth: pl.freeAiCreditsPerMonth,
+    reorganizeMaxBins: null,
   };
 }
 
@@ -243,6 +248,25 @@ export async function assertBinCreationAllowed(userId: string): Promise<void> {
       `You've reached the ${features.maxBins}-bin limit on your current plan. Upgrade to create more bins.`,
       upgradeUrl,
     );
+  }
+}
+
+/**
+ * Enforce the per-plan cap on input bins for a reorganize request.
+ * Self-hosted is unlimited. Pass `planInfoHint` (e.g. `res.locals.planInfo`
+ * populated by `requirePlusOrAbove`) to skip the plan-info fetch.
+ */
+export async function assertReorganizeBinLimit(
+  userId: string,
+  inputBinCount: number,
+  planInfoHint?: UserPlanInfo,
+): Promise<void> {
+  if (config.selfHosted) return;
+  const planInfo = planInfoHint ?? await getUserPlanInfo(userId);
+  if (!planInfo) return;
+  const limit = getFeatureMap(planInfo.plan).reorganizeMaxBins;
+  if (limit != null && inputBinCount > limit) {
+    throw new ReorganizeBinLimitError(limit, inputBinCount);
   }
 }
 

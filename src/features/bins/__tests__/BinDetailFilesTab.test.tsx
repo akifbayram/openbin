@@ -31,7 +31,7 @@ const basePlanInfo = {
     ai: true, apiKeys: false, customFields: false, fullExport: false,
     reorganize: false, binSharing: false, attachments: false,
     maxBins: 10, maxLocations: 1, maxPhotoStorageMb: 0, maxMembersPerLocation: 1,
-    activityRetentionDays: 7, aiCreditsPerMonth: 10,
+    activityRetentionDays: 7, aiCreditsPerMonth: 10, reorganizeMaxBins: 10,
   },
 };
 

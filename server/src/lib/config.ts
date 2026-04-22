@@ -116,6 +116,7 @@ export const config = Object.freeze({
     plusMaxMembers: parseNullableInt(process.env.PLAN_PLUS_MAX_MEMBERS, 1),
     plusActivityRetentionDays: parseNullableInt(process.env.PLAN_PLUS_ACTIVITY_RETENTION_DAYS, 30),
     plusAiCreditsPerMonth: parseStrictInt(process.env.PLAN_PLUS_AI_CREDITS_PER_MONTH, 25),
+    plusReorganizeMaxBins: parseNullableInt(process.env.PLAN_PLUS_REORG_MAX_BINS, 10),
     // Pro tier
     proMaxBins: parseNullableInt(process.env.PLAN_PRO_MAX_BINS, 1000),
     proMaxLocations: parseNullableInt(process.env.PLAN_PRO_MAX_LOCATIONS, 10),
@@ -123,6 +124,7 @@ export const config = Object.freeze({
     proMaxStorageMb: parseNullableInt(process.env.PLAN_PRO_MAX_STORAGE_MB, 1024),
     proActivityRetentionDays: parseNullableInt(process.env.PLAN_PRO_ACTIVITY_RETENTION_DAYS, 90),
     proAiCreditsPerMonth: parseNullableInt(process.env.PLAN_PRO_AI_CREDITS_PER_MONTH, 250),
+    proReorganizeMaxBins: parseNullableInt(process.env.PLAN_PRO_REORG_MAX_BINS, 40),
     freeAiCreditsPerMonth: 10,
     trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '25', 10), 1, 1000, 25),
   }),

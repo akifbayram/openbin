@@ -313,6 +313,7 @@ export interface PlanFeatures {
   maxMembersPerLocation: number | null;
   activityRetentionDays: number | null;
   aiCreditsPerMonth: number | null;
+  reorganizeMaxBins: number | null;
 }
 
 export interface OverLimits {

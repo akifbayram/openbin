@@ -1,20 +1,14 @@
-import { useEffect, useState } from 'react';
 import '@/features/print/print.css';
 import { getAreaPath } from '@/features/areas/useAreas';
-import { generateItemSheetQrMap } from '@/features/print/itemSheetQr';
-import type { QrStyleOptions } from '@/features/print/usePrintSettings';
 import { resolveColor } from '@/lib/colorPalette';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
 import type { Area } from '@/types';
 import type { MoveListItem, SourceCard, SourceClusterRow } from './deriveMoveList';
 
-const QR_PIXEL_SIZE = 192;
-
 interface MoveListSheetProps {
   sourceCards: SourceCard[];
   areas: Area[];
-  qrStyle: QrStyleOptions;
   totalItems: number;
   totalMoves: number;
   totalDestinationBins: number;
@@ -24,35 +18,12 @@ interface MoveListSheetProps {
 export function MoveListSheet({
   sourceCards,
   areas,
-  qrStyle,
   totalItems,
   totalMoves,
   totalDestinationBins,
   summary,
 }: MoveListSheetProps) {
   const t = useTerminology();
-  const [qrMap, setQrMap] = useState<Map<string, string>>(new Map());
-  const binIdsKey = sourceCards.map((c) => c.sourceBin.id).join(',');
-  const qrStyleKey = JSON.stringify(qrStyle);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: stable string digests
-  useEffect(() => {
-    if (sourceCards.length === 0) {
-      setQrMap(new Map());
-      return;
-    }
-    let cancelled = false;
-    generateItemSheetQrMap(sourceCards.map((c) => c.sourceBin.id), QR_PIXEL_SIZE, qrStyle)
-      .then((map) => {
-        if (!cancelled) setQrMap(map);
-      })
-      .catch(() => {
-        if (!cancelled) setQrMap(new Map());
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [binIdsKey, qrStyleKey]);
 
   if (sourceCards.length === 0) {
     return (
@@ -74,12 +45,7 @@ export function MoveListSheet({
       </div>
 
       {sourceCards.map((card) => (
-        <MoveListSection
-          key={card.sourceBin.id}
-          card={card}
-          areas={areas}
-          qrDataUrl={qrMap.get(card.sourceBin.id) ?? ''}
-        />
+        <MoveListSection key={card.sourceBin.id} card={card} areas={areas} />
       ))}
     </div>
   );
@@ -88,45 +54,47 @@ export function MoveListSheet({
 interface MoveListSectionProps {
   card: SourceCard;
   areas: Area[];
-  qrDataUrl: string;
 }
 
-function MoveListSection({ card, areas, qrDataUrl }: MoveListSectionProps) {
+function MoveListSection({ card, areas }: MoveListSectionProps) {
   const bin = card.sourceBin;
   const Icon = bin.icon ? resolveIcon(bin.icon) : null;
   const colorPreset = bin.color ? resolveColor(bin.color) : undefined;
   const chipBg = colorPreset?.bg ?? '#e5e7eb';
   const areaPath = bin.area_id ? getAreaPath(bin.area_id, areas) : '';
+  const itemTotal = card.outgoingClusters.reduce((sum, c) => sum + c.items.length, 0);
 
   return (
     <div className="item-sheet-bin">
-      <div className="item-sheet-header-grid">
-        <div className="item-sheet-header-left">
-          <div className="item-sheet-header-title-row">
-            {Icon && (
-              <span className="item-sheet-icon-chip" style={{ backgroundColor: chipBg }}>
-                <Icon className="item-sheet-icon-glyph" />
-              </span>
-            )}
-            <span className="item-sheet-bin-name">{bin.name}</span>
-          </div>
-          <div className="item-sheet-header-meta-row">
-            {areaPath && <span className="item-sheet-area-path">{areaPath}</span>}
-            <span className="item-sheet-item-count">
-              {card.preserved ? 'will be kept' : 'will be emptied'}
+      <div className="move-list-bin-header">
+        <div className="move-list-bin-title-row">
+          {Icon && (
+            <span className="item-sheet-icon-chip" style={{ backgroundColor: chipBg }}>
+              <Icon className="item-sheet-icon-glyph" />
             </span>
-          </div>
-        </div>
-        <div className="item-sheet-header-right">
-          {qrDataUrl && (
-            <img
-              data-testid={`move-list-qr-${bin.id}`}
-              className="item-sheet-qr"
-              src={qrDataUrl}
-              alt=""
-            />
           )}
-          <span className="item-sheet-bin-code">{bin.short_code}</span>
+          <span className="item-sheet-bin-name">{bin.name}</span>
+          <span
+            className="move-list-bin-code"
+            data-testid={`move-list-code-${bin.id}`}
+          >
+            {bin.short_code}
+          </span>
+        </div>
+        <div className="item-sheet-header-meta-row">
+          {areaPath && (
+            <>
+              <span className="item-sheet-area-path">{areaPath}</span>
+              <span className="move-list-meta-sep" aria-hidden="true">·</span>
+            </>
+          )}
+          <span className="item-sheet-item-count">
+            {card.preserved ? 'will be kept' : 'will be emptied'}
+          </span>
+          <span className="move-list-meta-sep" aria-hidden="true">·</span>
+          <span className="move-list-meta-count">
+            {itemTotal} item{itemTotal !== 1 ? 's' : ''}
+          </span>
         </div>
       </div>
 
@@ -153,28 +121,46 @@ function MoveListCluster({
   binId: string;
   index: number;
 }) {
+  const itemCount = cluster.items.length;
   return (
-    <div className="item-sheet-move-group">
-      <div
-        data-testid={`move-list-cluster-check-${binId}-${index}`}
-        className="item-sheet-checkbox"
-      />
-      <div className="move-list-cluster-body">
-        <div className="move-list-cluster-header">
-          <span className="move-list-dest-pill">{cluster.destinationName}</span>
-          <span className="move-list-new-tag">{cluster.destinationKept ? 'kept' : 'new'}</span>
-        </div>
-        <div className="move-list-cluster-items">{renderItemList(cluster.items)}</div>
+    <div className="move-list-cluster" data-testid={`move-list-cluster-${binId}-${index}`}>
+      <div className="move-list-cluster-header">
+        <span className="move-list-arrow" aria-hidden="true">→</span>
+        <span className="move-list-dest-pill">{cluster.destinationName}</span>
+        <span className={cluster.destinationKept ? 'move-list-status-tag move-list-status-kept' : 'move-list-status-tag move-list-status-new'}>
+          {cluster.destinationKept ? 'kept' : 'new'}
+        </span>
+        <span className="move-list-cluster-count">
+          {itemCount} item{itemCount !== 1 ? 's' : ''}
+        </span>
+        {cluster.destinationTags.length > 0 && (
+          <span className="move-list-cluster-tags">
+            {cluster.destinationTags.map((tag, i) => (
+              <span key={tag}>
+                {i > 0 && <span aria-hidden="true">, </span>}
+                {tag}
+              </span>
+            ))}
+          </span>
+        )}
       </div>
+      <ul className="move-list-items">
+        {cluster.items.map((item, itemIdx) => (
+          <li className="move-list-item" key={`${item.name}-${itemIdx}`}>
+            <span
+              data-testid={`move-list-item-check-${binId}-${index}-${itemIdx}`}
+              className="move-list-item-check"
+              aria-hidden="true"
+            />
+            <span className="move-list-item-text">{formatItem(item)}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-function renderItemList(items: MoveListItem[]): string {
-  return items
-    .map((item) => {
-      const qty = item.quantity != null && item.quantity !== 1 ? `${item.quantity} ` : '';
-      return `${qty}${item.name}`;
-    })
-    .join(', ');
+function formatItem(item: MoveListItem): string {
+  const qty = item.quantity != null && item.quantity !== 1 ? `${item.quantity}× ` : '';
+  return `${qty}${item.name}`;
 }

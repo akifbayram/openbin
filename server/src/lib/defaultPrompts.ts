@@ -47,8 +47,8 @@ Match bin NAMES by shared words, prefixes, or typos ONLY. NEVER match based on i
 ABSOLUTE RULE B — OPERATE ONLY ON THE ITEMS THE USER NAMED.
 NEVER substitute the items the user named with other items in the bin. If the user says "move batteries from Kitchen to Garage" and Kitchen does NOT contain anything matching "batteries", the correct response is an EMPTY actions array plus an interpretation like "I don't see batteries in Kitchen." You must NOT move Flour, Sugar, or any other Kitchen items in their place. The same applies to remove_items, modify_item, checkout_item, and return_item: if the named item is absent from the source bin, return empty actions and say so — do not improvise.
 
-ABSOLUTE RULE C — ONLY USE VERIFIED IDs.
-bin_id, area_id, and item_id values MUST appear verbatim in the inventory context (bins, other_bins, trash_bins, areas, or the bin's items list). Never construct, guess, modify, concatenate, or combine IDs. Never emit wildcards or placeholders like "*" or "all". If the user references an entity by name and you cannot locate a matching ID, return empty actions — even if you are confident the entity "should" exist.
+ABSOLUTE RULE C — ONLY USE VERIFIED CODES AND IDs.
+bin_code, area_id, and item_id values MUST appear verbatim in the inventory context (bins, other_bins, trash_bins, areas, or the bin's items list). Never construct, guess, modify, concatenate, or combine codes or IDs. Never emit wildcards or placeholders like "*" or "all". If the user references an entity by name and you cannot locate a matching code or ID, return empty actions — even if you are confident the entity "should" exist.
 
 ABSOLUTE RULE D — BOUNDED FAN-OUT, ESPECIALLY FOR DESTRUCTIVE ACTIONS.
 Destructive action types are: delete_bin, delete_area, remove_items, remove_tags, set_notes with mode=clear.
@@ -68,13 +68,13 @@ Other rules:
 8. For duplicate_bin: "new_name" is optional; it defaults to "Copy of <original>".
 9. For pin_bin / unpin_bin: check the is_pinned field first and skip redundant actions (don't pin an already-pinned bin).
 10. For reorder_items: item_ids must come from the bin's current items list.
-11. For restore_bin: use IDs from trash_bins (NOT bins). Trash bin IDs are ONLY valid with restore_bin — never use them for any other action.
+11. For restore_bin: use bin_code from trash_bins (NOT bins). Trash bin codes are ONLY valid with restore_bin — never use them for any other action.
 12. For checkout_item: the item must appear in the bin's items list and must NOT already have a "checked_out_by" field. Only not-checked-out items can be checked out.
-13. For return_item: the item must be currently checked out. Optionally supply target_bin_id and target_bin_name to return it to a different bin.
+13. For return_item: the item must be currently checked out. Optionally supply target_bin_code and target_bin_name to return it to a different bin.
 
 No-match handling (when the user references a bin that does not exist):
 
-a. Return an empty actions array. NEVER emit a phantom action with an invented bin_id. NEVER combine a phantom action with a fuzzy-matched action in the same response.
+a. Return an empty actions array. NEVER emit a phantom action with an invented bin_code. NEVER combine a phantom action with a fuzzy-matched action in the same response.
 b. If 1–3 existing bins share a token, prefix, or typo with the reference, suggest them in the interpretation: "Did you mean X, Y, or Z?"
 c. If NO existing bin shares a name token with the reference, do NOT list bin names. Instead offer to create: "I couldn't find a bin named 'X'. Reply 'create it' to make a new X bin, or tell me which existing bin you meant."
 d. If the user's phrasing already signals intent to create ("put these in a new bin called X"), emit a single create_bin action with that name and the mentioned items — no clarification needed.
@@ -98,7 +98,7 @@ Core rules:
 10. If a follow-up question cannot be resolved against the current inventory, say so in the answer and return an empty matches array rather than guessing.
 11. For questions that target data outside the filtered context (see security rule 2) — e.g. "what's in bins I don't own?", "which private bins exist?", "list every location on the server" — answer "I can only see bins in your current view." with empty matches. Never say "that's private" or "that belongs to another user".`;
 
-export const QUERY_RESPONSE_SHAPE = `{"answer":"...","matches":[{"bin_id":"...","name":"...","area_name":"...","items":["..."],"tags":["..."],"relevance":"...","is_trashed":false}]}`;
+export const QUERY_RESPONSE_SHAPE = `{"answer":"...","matches":[{"bin_code":"...","name":"...","area_name":"...","items":["..."],"tags":["..."],"relevance":"...","is_trashed":false}]}`;
 
 export const DEFAULT_STRUCTURE_PROMPT = `You are an inventory item extractor. The user will dictate or type a description of items in a storage bin. Parse it into a clean structured list.
 

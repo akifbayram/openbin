@@ -82,3 +82,18 @@ export class OverLimitError extends HttpError {
     this.upgradeUrl = upgradeUrl;
   }
 }
+
+export class ReorganizeBinLimitError extends HttpError {
+  public readonly limit: number;
+  public readonly selected: number;
+  constructor(limit: number, selected: number) {
+    super(
+      403,
+      'REORGANIZE_BIN_LIMIT_EXCEEDED',
+      `Reorganize is limited to ${limit} bins per run on your plan. You selected ${selected}.`,
+    );
+    this.name = 'ReorganizeBinLimitError';
+    this.limit = limit;
+    this.selected = selected;
+  }
+}

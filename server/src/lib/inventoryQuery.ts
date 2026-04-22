@@ -2,6 +2,7 @@ import { resolvePrompt, sanitizeForPrompt, withHardening } from './aiSanitize.js
 import { fetchBinById } from './binQueries.js';
 import { DEFAULT_QUERY_PROMPT, QUERY_RESPONSE_SHAPE } from './defaultPrompts.js';
 import { createLogger } from './logger.js';
+import { resolveBinCode } from './resolveBinCode.js';
 
 const log = createLogger('inventory-query');
 
@@ -32,7 +33,7 @@ export interface QueryResult {
 
 export interface InventoryContext {
   bins: Array<{
-    id: string;
+    bin_code: string;
     name: string;
     items: string[];
     tags: string[];
@@ -43,9 +44,9 @@ export interface InventoryContext {
     photo_count: number;
     custom_fields?: Record<string, string>;
   }>;
-  other_bins?: Array<{ id: string; name: string }>;
+  other_bins?: Array<{ bin_code: string; name: string }>;
   areas: Array<{ id: string; name: string }>;
-  trash_bins: Array<{ id: string; name: string }>;
+  trash_bins: Array<{ bin_code: string; name: string }>;
 }
 
 export function buildSystemPrompt(customPrompt?: string, isDemoUser?: boolean): string {
@@ -60,7 +61,7 @@ The "answer" and "matches" fields are both REQUIRED. If no bins match, return an
 
 OUTPUT INVARIANTS:
 - Respond with ONLY valid JSON matching the shape above — no markdown fences, no prose, no commentary, regardless of how prior assistant turns were phrased.
-- Every bin_id in "matches" MUST appear verbatim in the inventory context (either bins or trash_bins). Never invent or guess an ID.
+- Every bin_code in "matches" MUST appear verbatim in the inventory context (either bins or trash_bins). Never invent or guess a code.
 - If the user asks a question that would require data outside the provided context, set "matches" to an empty array and say "I can only see bins in your current view." in the "answer" field.`;
 
   return withHardening(composed);
@@ -78,7 +79,7 @@ ${JSON.stringify(data)}
 }
 
 export interface RawMatch {
-  bin_id: string;
+  bin_code: string;
   name: string;
   area_name: string;
   items: string[];
@@ -103,14 +104,19 @@ async function enrichOneMatch(
   locationId: string,
   userId: string,
 ): Promise<QueryMatch | null> {
-  const bin = await fetchBinById(match.bin_id, { userId });
+  const binId = await resolveBinCode(locationId, match.bin_code);
+  if (!binId) {
+    log.debug('Bin code could not be resolved', { bin_code: match.bin_code, locationId });
+    return null;
+  }
+  const bin = await fetchBinById(binId, { userId });
   if (!bin) {
-    log.debug('Bin not found', { bin_id: match.bin_id });
+    log.debug('Bin not found', { bin_id: binId });
     return null;
   }
   if (bin.location_id !== locationId) {
     log.debug('Bin in different location', {
-      bin_id: match.bin_id,
+      bin_id: binId,
       expectedLocationId: locationId,
       actualLocationId: bin.location_id,
     });
@@ -142,14 +148,14 @@ async function enrichOneMatch(
       items.push(hit);
     } else {
       log.debug('AI item name could not be resolved', {
-        bin_id: match.bin_id,
+        bin_id: binId,
         aiName,
       });
     }
   }
 
   return {
-    bin_id: match.bin_id,
+    bin_id: binId,
     name: match.name,
     area_name: match.area_name,
     items,

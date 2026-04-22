@@ -1,17 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_QR_STYLE } from '@/features/print/usePrintSettings';
 import type { Bin } from '@/types';
 import type { SourceCard } from '../deriveMoveList';
 import { MoveListSheet } from '../MoveListSheet';
-
-vi.mock('@/features/print/itemSheetQr', () => ({
-  generateItemSheetQrMap: vi.fn(async (binIds: string[]) => {
-    const map = new Map<string, string>();
-    for (const id of binIds) map.set(id, `data:image/png;base64,${id}`);
-    return map;
-  }),
-}));
 
 vi.mock('@/lib/terminology', () => ({
   useTerminology: () => ({ bin: 'bin', bins: 'bins', Bin: 'Bin', Bins: 'Bins' }),
@@ -63,7 +54,6 @@ function makeCard(overrides: Partial<SourceCard> = {}): SourceCard {
 const baseProps = {
   sourceCards: [makeCard()],
   areas: [],
-  qrStyle: DEFAULT_QR_STYLE,
   totalItems: 2,
   totalMoves: 1,
   totalDestinationBins: 1,
@@ -78,25 +68,26 @@ describe('MoveListSheet', () => {
     expect(screen.getByText(/1 → 1 bin · 2 items · 1 move/)).toBeTruthy();
   });
 
-  it('renders a section per source bin with QR code', async () => {
+  it('renders a section per source bin with short code (no QR)', async () => {
     render(<MoveListSheet {...baseProps} />);
     await waitFor(() => expect(screen.getByText('Garage Bench')).toBeTruthy());
-    expect(screen.getByTestId('move-list-qr-src-1')).toBeTruthy();
+    expect(screen.queryByTestId('move-list-qr-src-1')).toBeNull();
+    expect(screen.getByTestId('move-list-code-src-1')).toBeTruthy();
     expect(screen.getByText('SRC111')).toBeTruthy();
   });
 
-  it('renders a checkbox per outgoing cluster', async () => {
+  it('renders a checkbox per item', async () => {
     render(<MoveListSheet {...baseProps} />);
     await waitFor(() => expect(screen.getByText('Garage Bench')).toBeTruthy());
-    const checkboxes = screen.getAllByTestId(/^move-list-cluster-check/);
-    expect(checkboxes).toHaveLength(1);
+    const checkboxes = screen.getAllByTestId(/^move-list-item-check/);
+    expect(checkboxes).toHaveLength(2);
   });
 
-  it('renders destination pill and inline items', async () => {
+  it('renders destination pill and bulleted items with quantity prefix', async () => {
     render(<MoveListSheet {...baseProps} />);
     await waitFor(() => expect(screen.getByText('Hand Tools')).toBeTruthy());
     expect(screen.getByText(/Hammer/)).toBeTruthy();
-    expect(screen.getByText(/5 Screw/)).toBeTruthy();
+    expect(screen.getByText(/5× Screw/)).toBeTruthy();
   });
 
   it('renders `(new)` tag next to destination names', async () => {
@@ -116,8 +107,10 @@ describe('MoveListSheet', () => {
     render(<MoveListSheet {...twoCards} />);
     await waitFor(() => expect(screen.getByText('Garage')).toBeTruthy());
     expect(screen.getByText('Kitchen')).toBeTruthy();
-    expect(screen.getByTestId('move-list-qr-src-1')).toBeTruthy();
-    expect(screen.getByTestId('move-list-qr-src-2')).toBeTruthy();
+    expect(screen.getByTestId('move-list-code-src-1')).toBeTruthy();
+    expect(screen.getByTestId('move-list-code-src-2')).toBeTruthy();
+    expect(screen.getByText('SRC111')).toBeTruthy();
+    expect(screen.getByText('SRC222')).toBeTruthy();
   });
 
   it('renders "No source bins selected" when list is empty', () => {

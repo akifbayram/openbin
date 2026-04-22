@@ -17,10 +17,11 @@ import { parseHistoryFromBody } from '../lib/conversationHistory.js';
 import { ValidationError } from '../lib/httpErrors.js';
 import { classifyIntent } from '../lib/intentClassifier.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg, enrichQueryMatches, type RawMatch } from '../lib/inventoryQuery.js';
-import { refundAiCredit } from '../lib/planGate.js';
+import { assertReorganizeBinLimit, refundAiCredit } from '../lib/planGate.js';
 import { aiRateLimiters } from '../lib/rateLimiters.js';
 import { detectReorganizeMismatch } from '../lib/reorganizeMismatch.js';
 import { buildReorganizePrompt } from '../lib/reorganizePrompt.js';
+import { resolveBinCodes } from '../lib/resolveBinCode.js';
 import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../lib/structureText.js';
 import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
@@ -57,6 +58,69 @@ function makeQueryEnrichResult(locationId: string, userId: string) {
     const matches = Array.isArray(r.matches) ? (r.matches as RawMatch[]) : [];
     const enriched = await enrichQueryMatches(matches, locationId, userId);
     return { answer: r.answer ?? '', matches: enriched };
+  };
+}
+
+/**
+ * Rewrite AI-emitted `bin_code` / `target_bin_code` to UUID `bin_id` /
+ * `target_bin_id`. Actions whose bin_code doesn't resolve are dropped so a
+ * phantom bin never reaches /api/batch. An unresolved `target_bin_code`
+ * drops only the target fields so return_item falls back to the origin bin.
+ * The unified /ask prompt can also emit query-shape responses, so matches
+ * are enriched here too.
+ */
+function makeCommandEnrichResult(locationId: string, userId: string) {
+  return async (parsed: unknown) => {
+    if (!parsed || typeof parsed !== 'object') return parsed;
+    const obj = parsed as Record<string, unknown>;
+    const out: Record<string, unknown> = { ...obj };
+
+    if (Array.isArray(obj.actions)) {
+      const rawActions = obj.actions;
+      const codes: string[] = [];
+      for (const a of rawActions) {
+        if (a && typeof a === 'object') {
+          const o = a as Record<string, unknown>;
+          if (typeof o.bin_code === 'string') codes.push(o.bin_code);
+          if (typeof o.target_bin_code === 'string') codes.push(o.target_bin_code);
+        }
+      }
+      const codeToUuid = await resolveBinCodes(locationId, codes);
+      const uuidFor = (code: string) => codeToUuid.get(code.toUpperCase());
+
+      const actions: unknown[] = [];
+      for (const a of rawActions) {
+        if (!a || typeof a !== 'object') continue;
+        const o: Record<string, unknown> = { ...(a as Record<string, unknown>) };
+
+        if (typeof o.bin_code === 'string') {
+          const uuid = uuidFor(o.bin_code);
+          if (!uuid) continue;
+          delete o.bin_code;
+          o.bin_id = uuid;
+        }
+
+        if (typeof o.target_bin_code === 'string') {
+          const uuid = uuidFor(o.target_bin_code);
+          delete o.target_bin_code;
+          if (uuid) {
+            o.target_bin_id = uuid;
+          } else {
+            delete o.target_bin_name;
+          }
+        }
+
+        actions.push(o);
+      }
+      out.actions = actions;
+    }
+
+    if (Array.isArray(obj.matches)) {
+      const matches = obj.matches as RawMatch[];
+      out.matches = await enrichQueryMatches(matches, locationId, userId);
+    }
+
+    return out;
   };
 }
 
@@ -108,6 +172,7 @@ streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), check
     userContent: buildCommandUserMsg(request),
     priorMessages,
     ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
+    enrichResult: makeCommandEnrichResult(locationId, req.user!.id),
   });
 }));
 
@@ -155,6 +220,7 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
       userContent: buildCommandUserMsg(request),
       priorMessages,
       ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
+      enrichResult: makeCommandEnrichResult(locationId, req.user!.id),
     });
   }
 }));
@@ -324,6 +390,7 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
   if (maxBins != null && (typeof maxBins !== 'number' || maxBins < 1)) {
     throw new ValidationError('maxBins must be a positive number');
   }
+  await assertReorganizeBinLimit(req.user!.id, inputBins.length, res.locals.planInfo);
 
   const { settings, model } = await resolveUserModel(req.user!.id, 'reorganization', isDemoUser(req));
   const { system, userContent } = buildReorganizePrompt({
@@ -400,6 +467,7 @@ streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbo
 
   if (!Array.isArray(inputBins) || inputBins.length === 0) throw new ValidationError('bins array is required');
   if (inputBins.length > MAX_TAG_BINS_PER_STREAM) throw new ValidationError(`At most ${MAX_TAG_BINS_PER_STREAM} bins per run`);
+  await assertReorganizeBinLimit(req.user!.id, inputBins.length, res.locals.planInfo);
   if (!['additive', 'moderate', 'full'].includes(changeLevel)) throw new ValidationError('changeLevel must be additive, moderate, or full');
   if (!['broad', 'medium', 'specific'].includes(granularity)) throw new ValidationError('granularity must be broad, medium, or specific');
   if (maxTagsPerBin != null && (typeof maxTagsPerBin !== 'number' || maxTagsPerBin < 1 || maxTagsPerBin > 10)) {

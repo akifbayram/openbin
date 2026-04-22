@@ -21,19 +21,19 @@ async function setupBin(items: { name: string; quantity: number | null }[]) {
       .set('Authorization', `Bearer ${token}`)
       .send({ items });
   }
-  return { token, userId: user.id, locationId: loc.id, binId: bin.id };
+  return { token, userId: user.id, locationId: loc.id, binId: bin.id, binCode: bin.short_code };
 }
 
 describe('enrichQueryMatches', () => {
   it('resolves items to ids and quantities via exact match', async () => {
-    const { userId, locationId, binId } = await setupBin([
+    const { userId, locationId, binId, binCode } = await setupBin([
       { name: 'Tent', quantity: null },
       { name: 'Sleeping bag', quantity: 4 },
     ]);
 
     const rawMatches = [
       {
-        bin_id: binId,
+        bin_code: binCode,
         name: 'Test Bin',
         area_name: '',
         items: ['Tent', 'Sleeping bag'],
@@ -47,6 +47,7 @@ describe('enrichQueryMatches', () => {
 
     expect(result).toHaveLength(1);
     const match = result[0];
+    expect(match.bin_id).toBe(binId);
     expect(match.items).toHaveLength(2);
     expect(match.items[0].name).toBe('Tent');
     expect(match.items[0].quantity).toBeNull();
@@ -58,13 +59,13 @@ describe('enrichQueryMatches', () => {
   });
 
   it('resolves items via case-insensitive match', async () => {
-    const { userId, locationId, binId } = await setupBin([
+    const { userId, locationId, binCode } = await setupBin([
       { name: 'Headlamp', quantity: 2 },
     ]);
 
     const rawMatches = [
       {
-        bin_id: binId,
+        bin_code: binCode,
         name: 'Test Bin',
         area_name: '',
         items: ['headlamp'],
@@ -82,13 +83,13 @@ describe('enrichQueryMatches', () => {
   });
 
   it('resolves items via punctuation-stripped match', async () => {
-    const { userId, locationId, binId } = await setupBin([
+    const { userId, locationId, binCode } = await setupBin([
       { name: 'Multi-tool', quantity: null },
     ]);
 
     const rawMatches = [
       {
-        bin_id: binId,
+        bin_code: binCode,
         name: 'Test Bin',
         area_name: '',
         items: ['multi tool'],
@@ -106,13 +107,13 @@ describe('enrichQueryMatches', () => {
   });
 
   it('silently drops unresolvable items', async () => {
-    const { userId, locationId, binId } = await setupBin([
+    const { userId, locationId, binCode } = await setupBin([
       { name: 'Tent', quantity: null },
     ]);
 
     const rawMatches = [
       {
-        bin_id: binId,
+        bin_code: binCode,
         name: 'Test Bin',
         area_name: '',
         items: ['Tent', 'Ghost item'],
@@ -129,12 +130,12 @@ describe('enrichQueryMatches', () => {
     expect(result[0].items[0].name).toBe('Tent');
   });
 
-  it('drops matches whose bin does not exist', async () => {
+  it('drops matches whose bin code does not resolve', async () => {
     const { userId, locationId } = await setupBin([]);
 
     const rawMatches = [
       {
-        bin_id: 'nonexistent',
+        bin_code: 'ZZZZZZ',
         name: 'Fake Bin',
         area_name: '',
         items: ['Something'],
@@ -150,7 +151,7 @@ describe('enrichQueryMatches', () => {
   });
 
   it('drops matches for bins in a different location', async () => {
-    const { token, userId, binId } = await setupBin([
+    const { token, userId, binCode } = await setupBin([
       { name: 'Tent', quantity: null },
     ]);
     // Create a second location for the same user
@@ -158,7 +159,7 @@ describe('enrichQueryMatches', () => {
 
     const rawMatches = [
       {
-        bin_id: binId,
+        bin_code: binCode,
         name: 'Test Bin',
         area_name: '',
         items: ['Tent'],

@@ -36,11 +36,11 @@ function compactBin<T extends Record<string, unknown>>(bin: T): T {
   return out as T;
 }
 
-export function filterRelevantBins<T extends { id: string; name: string; items: Array<{ name: string } | string>; tags: string[]; area_name?: string }>(
+export function filterRelevantBins<T extends { bin_code: string; name: string; items: Array<{ name: string } | string>; tags: string[]; area_name?: string }>(
   bins: T[],
   userText: string,
   limit = 30,
-): { relevant: T[]; rest: Array<{ id: string; name: string }> } {
+): { relevant: T[]; rest: Array<{ bin_code: string; name: string }> } {
   const keywords = userText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
 
   if (keywords.length === 0 || bins.length <= limit) {
@@ -60,7 +60,7 @@ export function filterRelevantBins<T extends { id: string; name: string; items: 
   const unscored = scored.filter(s => s.score === 0);
 
   const filler = unscored.slice(0, Math.max(0, limit - relevant.length)).map(s => s.bin);
-  const rest = unscored.slice(Math.max(0, limit - relevant.length)).map(s => ({ id: s.bin.id, name: s.bin.name }));
+  const rest = unscored.slice(Math.max(0, limit - relevant.length)).map(s => ({ bin_code: s.bin.bin_code, name: s.bin.name }));
 
   return { relevant: [...relevant, ...filler], rest };
 }
@@ -72,14 +72,14 @@ function estimateTokens(obj: unknown): number {
   return Math.ceil(JSON.stringify(obj).length / 4);
 }
 
-export function budgetContext<T extends { id: string; name: string }>(
+export function budgetContext<T extends { bin_code: string; name: string }>(
   bins: T[],
-  existingOtherBins: Array<{ id: string; name: string }>,
+  existingOtherBins: Array<{ bin_code: string; name: string }>,
   budget = CONTEXT_TOKEN_BUDGET,
-): { bins: T[]; other_bins: Array<{ id: string; name: string }> } {
+): { bins: T[]; other_bins: Array<{ bin_code: string; name: string }> } {
   let used = 0;
   const full: T[] = [];
-  const overflow: Array<{ id: string; name: string }> = [];
+  const overflow: Array<{ bin_code: string; name: string }> = [];
 
   for (const bin of bins) {
     const cost = estimateTokens(bin);
@@ -87,7 +87,7 @@ export function budgetContext<T extends { id: string; name: string }>(
       full.push(bin);
       used += cost;
     } else {
-      overflow.push({ id: bin.id, name: bin.name });
+      overflow.push({ bin_code: bin.bin_code, name: bin.name });
     }
   }
 
@@ -104,7 +104,7 @@ function appendInClause(sql: string, column: string, startIndex: number, ids: st
 
 /** Fetch bins, areas, trash, and custom field data for a location. */
 async function fetchLocationData(locationId: string, userId: string, binIds?: string[]) {
-  let binsSql = `SELECT b.id, b.name,
+  let binsSql = `SELECT b.id, b.short_code, b.name,
         COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
         b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color,
         b.visibility,
@@ -151,7 +151,7 @@ async function fetchLocationData(locationId: string, userId: string, binIds?: st
       [locationId]
     ),
     query(
-      'SELECT id, name FROM bins WHERE location_id = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 20',
+      'SELECT id, short_code, name FROM bins WHERE location_id = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 20',
       [locationId]
     ),
     query<{ bin_id: string; field_name: string; value: string }>(cfSql, cfParams),
@@ -179,12 +179,12 @@ function truncateNotes(notes: unknown): string {
 }
 
 /** Apply relevance filtering and token budget to a bins array. */
-function applyContextLimits<T extends { id: string; name: string; items: Array<{ name: string } | string>; tags: string[]; area_name?: string }>(
+function applyContextLimits<T extends { bin_code: string; name: string; items: Array<{ name: string } | string>; tags: string[]; area_name?: string }>(
   allBins: T[],
   userText?: string,
-): { bins: T[]; other_bins: Array<{ id: string; name: string }> } {
+): { bins: T[]; other_bins: Array<{ bin_code: string; name: string }> } {
   let bins = allBins;
-  let other_bins: Array<{ id: string; name: string }> = [];
+  let other_bins: Array<{ bin_code: string; name: string }> = [];
   if (userText) {
     const filtered = filterRelevantBins(allBins, userText);
     bins = filtered.relevant;
@@ -206,7 +206,7 @@ export async function buildCommandContext(locationId: string, userId: string, bi
     const cf = customFieldsByBin.get(binId);
     const rawItems = r.items as Array<{ id: string; name: string; quantity: number | null }>;
     const sanitized = sanitizeBinForContext({
-      id: binId,
+      bin_code: r.short_code as string,
       name: r.name as string,
       items: rawItems,
       tags: r.tags as string[],
@@ -238,7 +238,7 @@ export async function buildCommandContext(locationId: string, userId: string, bi
   }));
 
   const trash_bins = trashResult.rows.map((r) => ({
-    id: r.id as string,
+    bin_code: r.short_code as string,
     name: r.name as string,
   }));
 
@@ -254,7 +254,7 @@ export async function buildInventoryContext(locationId: string, userId: string, 
     const binId = r.id as string;
     const cf = customFieldsByBin.get(binId);
     const sanitized = sanitizeBinForContext({
-      id: binId,
+      bin_code: r.short_code as string,
       name: r.name as string,
       items: r.items as Array<{ id: string; name: string; quantity: number | null }>,
       tags: r.tags as string[],
@@ -277,7 +277,7 @@ export async function buildInventoryContext(locationId: string, userId: string, 
   }));
 
   const trash_bins = trashResult.rows.map((r) => ({
-    id: r.id as string,
+    bin_code: r.short_code as string,
     name: r.name as string,
   }));
 

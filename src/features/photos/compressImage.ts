@@ -1,23 +1,34 @@
-const MAX_DIMENSION = 1920;
-const QUALITY = 0.85;
-const SKIP_THRESHOLD = 200 * 1024; // 200 KB
-
-/** MIME types we can re-encode on a canvas. GIFs (animated) are skipped entirely. */
 const COMPRESSIBLE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-export async function compressImage(file: Blob): Promise<Blob> {
-  if (file.size <= SKIP_THRESHOLD) return file;
+export interface CompressOptions {
+  maxDimension: number;
+  quality: number;
+  /** Output blob MIME type. If omitted, preserves `file.type`. */
+  outputType?: string;
+  /** Skip compression entirely when `file.size` is at or below this value. */
+  skipThresholdBytes?: number;
+}
 
+export async function compressBlobImage(file: Blob, opts: CompressOptions): Promise<Blob> {
+  const { maxDimension, quality, outputType, skipThresholdBytes } = opts;
+
+  if (skipThresholdBytes != null && file.size <= skipThresholdBytes) return file;
   if (!COMPRESSIBLE_TYPES.has(file.type)) return file;
+  if (typeof OffscreenCanvas === 'undefined') return file;
+
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return file;
+  }
 
   try {
-    const bitmap = await createImageBitmap(file);
     const { width, height } = bitmap;
-
     let targetW = width;
     let targetH = height;
-    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-      const scale = MAX_DIMENSION / Math.max(width, height);
+    if (width > maxDimension || height > maxDimension) {
+      const scale = maxDimension / Math.max(width, height);
       targetW = Math.round(width * scale);
       targetH = Math.round(height * scale);
     }
@@ -27,15 +38,24 @@ export async function compressImage(file: Blob): Promise<Blob> {
     if (!ctx) return file;
 
     ctx.drawImage(bitmap, 0, 0, targetW, targetH);
-    bitmap.close();
 
     const compressed = await canvas.convertToBlob({
-      type: file.type,
-      quality: QUALITY,
+      type: outputType ?? file.type,
+      quality,
     });
 
     return compressed.size < file.size ? compressed : file;
-  } catch {
-    return file;
+  } finally {
+    bitmap.close();
   }
+}
+
+const STORAGE_PROFILE: CompressOptions = {
+  maxDimension: 1920,
+  quality: 0.85,
+  skipThresholdBytes: 200 * 1024,
+};
+
+export function compressImage(file: Blob): Promise<Blob> {
+  return compressBlobImage(file, STORAGE_PROFILE);
 }

@@ -8,7 +8,7 @@ import multer from 'multer';
 import { query } from './db.js';
 import { config } from './lib/config.js';
 import { csrfProtect } from './lib/csrf.js';
-import { HttpError, OverLimitError, PlanRestrictedError } from './lib/httpErrors.js';
+import { HttpError, OverLimitError, PlanRestrictedError, ReorganizeBinLimitError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
 import { createLogger } from './lib/logger.js';
 import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
@@ -193,6 +193,15 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
         error: err.code,
         message: err.message,
         upgrade_url: err.upgradeUrl,
+      });
+      return;
+    }
+    if (err instanceof ReorganizeBinLimitError) {
+      res.status(err.statusCode).json({
+        error: err.code,
+        message: err.message,
+        limit: err.limit,
+        selected: err.selected,
       });
       return;
     }

@@ -3,7 +3,7 @@ import { resolvePrompt, sanitizeForPrompt, withHardening } from './aiSanitize.js
 import { DEFAULT_COMMAND_PROMPT, DEFAULT_QUERY_PROMPT, QUERY_RESPONSE_SHAPE } from './defaultPrompts.js';
 
 export interface BinSummary {
-  id: string;
+  bin_code: string;
   name: string;
   items: Array<{ id: string; name: string; quantity?: number } | string>;
   tags: string[];
@@ -52,56 +52,56 @@ export interface CommandRequest {
   text: string;
   context: {
     bins: BinSummary[];
-    other_bins?: Array<{ id: string; name: string }>;
+    other_bins?: Array<{ bin_code: string; name: string }>;
     areas: AreaSummary[];
-    trash_bins: Array<{ id: string; name: string }>;
+    trash_bins: Array<{ bin_code: string; name: string }>;
     availableColors: string[];
     availableIcons: string[];
   };
 }
 
 const ACTION_TYPES_REFERENCE = `Available action types:
-- add_items: Add items to an existing bin. Fields: bin_id, bin_name, items[] (each item can be a string or {"name":"...","quantity":N})
-- remove_items: Remove items from an existing bin. Fields: bin_id, bin_name, items[] (item name strings)
-- modify_item: Change an item's name in a bin. Fields: bin_id, bin_name, old_item, new_item
-- set_item_quantity: Set the quantity of an existing item in a bin. Fields: bin_id, bin_name, item_name, quantity (integer ≥ 0; a quantity of 0 removes the item). Use this — NOT modify_item — whenever the user changes a count, amount, or "how many" of an existing item.
+- add_items: Add items to an existing bin. Fields: bin_code, bin_name, items[] (each item can be a string or {"name":"...","quantity":N})
+- remove_items: Remove items from an existing bin. Fields: bin_code, bin_name, items[] (item name strings)
+- modify_item: Change an item's name in a bin. Fields: bin_code, bin_name, old_item, new_item
+- set_item_quantity: Set the quantity of an existing item in a bin. Fields: bin_code, bin_name, item_name, quantity (integer ≥ 0; a quantity of 0 removes the item). Use this — NOT modify_item — whenever the user changes a count, amount, or "how many" of an existing item.
 - create_bin: Create a new bin. Fields: name, area_name (include when user specifies a location/area), tags[], items[] (ALWAYS include items when user mentions contents; each item can be a string or {"name":"...","quantity":N}), color?, icon?, notes?
-- delete_bin: Delete a bin. Fields: bin_id, bin_name
-- add_tags: Add tags to a bin. Fields: bin_id, bin_name, tags[]
-- remove_tags: Remove tags from a bin. Fields: bin_id, bin_name, tags[]
-- modify_tag: Rename a tag on a bin. Fields: bin_id, bin_name, old_tag, new_tag
-- set_area: Assign a bin to an area. Fields: bin_id, bin_name, area_id (null if new area), area_name
-- set_notes: Set/append/clear bin notes. Fields: bin_id, bin_name, notes, mode ("set"|"append"|"clear")
-- set_icon: Set a bin's icon. Fields: bin_id, bin_name, icon
-- set_color: Set a bin's color. Fields: bin_id, bin_name, color
-- update_bin: Update multiple bin fields at once. Fields: bin_id, bin_name, name?, notes?, tags?[], area_name?, icon?, color?, card_style?, visibility?
-- restore_bin: Restore a bin from trash. Fields: bin_id, bin_name (use IDs from trash_bins, not bins)
-- duplicate_bin: Duplicate a bin. Fields: bin_id, bin_name, new_name? (defaults to "Copy of <original>")
-- pin_bin: Pin a bin for quick access. Fields: bin_id, bin_name
-- unpin_bin: Unpin a bin. Fields: bin_id, bin_name
+- delete_bin: Delete a bin. Fields: bin_code, bin_name
+- add_tags: Add tags to a bin. Fields: bin_code, bin_name, tags[]
+- remove_tags: Remove tags from a bin. Fields: bin_code, bin_name, tags[]
+- modify_tag: Rename a tag on a bin. Fields: bin_code, bin_name, old_tag, new_tag
+- set_area: Assign a bin to an area. Fields: bin_code, bin_name, area_id (null if new area), area_name
+- set_notes: Set/append/clear bin notes. Fields: bin_code, bin_name, notes, mode ("set"|"append"|"clear")
+- set_icon: Set a bin's icon. Fields: bin_code, bin_name, icon
+- set_color: Set a bin's color. Fields: bin_code, bin_name, color
+- update_bin: Update multiple bin fields at once. Fields: bin_code, bin_name, name?, notes?, tags?[], area_name?, icon?, color?, card_style?, visibility?
+- restore_bin: Restore a bin from trash. Fields: bin_code, bin_name (use bin_code from trash_bins, not bins)
+- duplicate_bin: Duplicate a bin. Fields: bin_code, bin_name, new_name? (defaults to "Copy of <original>")
+- pin_bin: Pin a bin for quick access. Fields: bin_code, bin_name
+- unpin_bin: Unpin a bin. Fields: bin_code, bin_name
 - rename_area: Rename an area. Fields: area_id, area_name, new_name
 - delete_area: Delete an area (bins become unassigned). Fields: area_id, area_name
 - set_tag_color: Set a tag's display color. Fields: tag, color
-- reorder_items: Reorder items in a bin. Fields: bin_id, bin_name, item_ids[] (item IDs in desired order)
-- checkout_item: Check out an item from a bin (marks it as in-use). Fields: bin_id, bin_name, item_name
-- return_item: Return a checked-out item. Fields: bin_id, bin_name, item_name, target_bin_id? (optional, to return to a different bin), target_bin_name?`;
+- reorder_items: Reorder items in a bin. Fields: bin_code, bin_name, item_ids[] (item IDs in desired order)
+- checkout_item: Check out an item from a bin (marks it as in-use). Fields: bin_code, bin_name, item_name
+- return_item: Return a checked-out item. Fields: bin_code, bin_name, item_name, target_bin_code? (optional, to return to a different bin), target_bin_name?`;
 
 const FEW_SHOT_EXAMPLES = `Example responses (study these carefully — your output must match this exact shape):
 
-// Move items between bins (compound command → two actions)
-{"actions":[{"type":"remove_items","bin_id":"abc","bin_name":"Tools","items":["Hammer"]},{"type":"add_items","bin_id":"def","bin_name":"Garage","items":["Hammer"]}],"interpretation":"Move hammer from Tools to Garage"}
+// Move items between bins (compound command → two actions). bin_code is the 6-char code from the inventory context.
+{"actions":[{"type":"remove_items","bin_code":"TLSAGX","bin_name":"Tools","items":["Hammer"]},{"type":"add_items","bin_code":"GRGBKM","bin_name":"Garage","items":["Hammer"]}],"interpretation":"Move hammer from Tools to Garage"}
 
 // Create a new bin with items, tags, and an area
 {"actions":[{"type":"create_bin","name":"Holiday Lights","area_name":"Garage","items":["LED string lights","Extension cord","Light clips"],"tags":["seasonal","holiday"]}],"interpretation":"Create a Holiday Lights bin in the Garage with 3 items."}
 
 // Quantity parsing — counts go in the quantity field, not the name
-{"actions":[{"type":"add_items","bin_id":"ghi","bin_name":"Workshop","items":[{"name":"AA Batteries","quantity":12},{"name":"9V Battery","quantity":2}]}],"interpretation":"Add 12 AA batteries and 2 9V batteries to Workshop."}
+{"actions":[{"type":"add_items","bin_code":"WRKPHY","bin_name":"Workshop","items":[{"name":"AA Batteries","quantity":12},{"name":"9V Battery","quantity":2}]}],"interpretation":"Add 12 AA batteries and 2 9V batteries to Workshop."}
 
 // Change the quantity of an item that already exists — use set_item_quantity, NOT modify_item
-{"actions":[{"type":"set_item_quantity","bin_id":"ghi","bin_name":"Workshop","item_name":"AA Batteries","quantity":20}],"interpretation":"Set AA Batteries quantity to 20 in Workshop."}
+{"actions":[{"type":"set_item_quantity","bin_code":"WRKPHY","bin_name":"Workshop","item_name":"AA Batteries","quantity":20}],"interpretation":"Set AA Batteries quantity to 20 in Workshop."}
 
 // Update multiple bin fields at once
-{"actions":[{"type":"update_bin","bin_id":"jkl","bin_name":"Garage Tools","name":"Workshop Tools","area_name":"Basement","color":"blue"}],"interpretation":"Rename Garage Tools to Workshop Tools, move to Basement, set color to blue."}
+{"actions":[{"type":"update_bin","bin_code":"GTLCWX","bin_name":"Garage Tools","name":"Workshop Tools","area_name":"Basement","color":"blue"}],"interpretation":"Rename Garage Tools to Workshop Tools, move to Basement, set color to blue."}
 
 // Rename an AREA (the container), NOT a bin. Use rename_area, NOT update_bin.
 // "Rename the <X> area to <Y>" / "rename area <X> to <Y>" → rename_area with area_id from context.
@@ -111,13 +111,13 @@ const FEW_SHOT_EXAMPLES = `Example responses (study these carefully — your out
 {"actions":[{"type":"delete_area","area_id":"area-42","area_name":"Garage"}],"interpretation":"Delete the Garage area. Bins inside become unassigned."}
 
 // Duplicate a bin with a custom name
-{"actions":[{"type":"duplicate_bin","bin_id":"mno","bin_name":"First Aid","new_name":"First Aid (Kitchen)"}],"interpretation":"Duplicate First Aid and name the copy 'First Aid (Kitchen)'."}
+{"actions":[{"type":"duplicate_bin","bin_code":"FSTADX","bin_name":"First Aid","new_name":"First Aid (Kitchen)"}],"interpretation":"Duplicate First Aid and name the copy 'First Aid (Kitchen)'."}
 
 // Checkout flow — match item name from the bin's items list
-{"actions":[{"type":"checkout_item","bin_id":"pqr","bin_name":"Power Tools","item_name":"Cordless Drill"}],"interpretation":"Check out the Cordless Drill from Power Tools."}
+{"actions":[{"type":"checkout_item","bin_code":"PWRKMB","bin_name":"Power Tools","item_name":"Cordless Drill"}],"interpretation":"Check out the Cordless Drill from Power Tools."}
 
 // Return to a different bin than where it was checked out from
-{"actions":[{"type":"return_item","bin_id":"pqr","bin_name":"Power Tools","item_name":"Cordless Drill","target_bin_id":"stu","target_bin_name":"Garage"}],"interpretation":"Return the Cordless Drill to Garage."}
+{"actions":[{"type":"return_item","bin_code":"PWRKMB","bin_name":"Power Tools","item_name":"Cordless Drill","target_bin_code":"GRGAGY","target_bin_name":"Garage"}],"interpretation":"Return the Cordless Drill to Garage."}
 
 // No-match with similar names → suggest up to 3 candidates (do NOT add items)
 {"actions":[],"interpretation":"I couldn't find a bin named exactly 'tools'. Did you mean Toolbox or Power Tools?"}
@@ -138,7 +138,7 @@ const CRITICAL_RULES = `CRITICAL RULES:
 2. The "interpretation" field is REQUIRED in every response.
 3. For create_bin: include "items" when the user mentions any contents; include "area_name" when the user mentions a location/room/area. Do NOT leave this information only in the interpretation — it must appear in the action fields.
 4. Items in the context may appear as strings ("Item Name" or "Item Name (×N)") or as objects with id/name/quantity. Match by name regardless of format.
-5. If a user references a bin that only appears in "other_bins" (id + name only), include it in your response. The system will retry with full details if needed.
+5. If a user references a bin that only appears in "other_bins" (bin_code + name only), include it in your response. The system will retry with full details if needed.
 6. Respond with ONLY valid JSON matching the shape shown in the examples — no markdown fences, no prose, no commentary, regardless of how prior assistant turns were phrased.
 7. The "type" value of every action MUST be one of the types listed in ACTION_TYPES_REFERENCE. Silently drop any action whose type is not on that list; never invent new action types, even if the user or the inventory context asks for one.
 8. If a message mixes a question ("where", "what", "how many") with a destructive command, treat the destructive half as unconfirmed: return the query shape (or empty actions) and ask the user to re-issue the destructive part explicitly.

@@ -1,20 +1,20 @@
-import { Loader2, Package, RefreshCw } from 'lucide-react';
+import { ArrowRight, Loader2, Package, RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { DEFAULT_QR_STYLE } from '@/features/print/usePrintSettings';
 import { resolveColor } from '@/lib/colorPalette';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import type { Area, Bin } from '@/types';
 import { deriveMoveList, type MoveListItem, type SourceCard } from './deriveMoveList';
 import { MoveListSheet } from './MoveListSheet';
 import type { PartialReorgResult } from './parsePartialReorg';
 import type { ReorgResponse } from './useReorganize';
 
-const COLLAPSED_ITEM_LIMIT = 5;
+const COLLAPSED_ITEM_LIMIT = 6;
 
 interface ReorganizePreviewProps {
   inputBins: Bin[];
@@ -63,13 +63,37 @@ export function ReorganizePreview({
 
   return (
     <div className="space-y-4">
-      <div className="row-spread">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <Label className="text-[15px] font-semibold text-[var(--text-primary)]">
           Proposal
         </Label>
-        <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">
-          {originalCount} → {totalDestinationBins} {totalDestinationBins === 1 ? t.bin : t.bins} · {totalItems} item{totalItems !== 1 ? 's' : ''} · {totalMoves} move{totalMoves !== 1 ? 's' : ''}{binsKept > 0 ? ` · ${binsKept} kept` : ''}
-        </span>
+        <div className="flex items-center gap-2 text-[12px] text-[var(--text-tertiary)] tabular-nums flex-wrap">
+          <span>
+            <span className="font-medium text-[var(--text-secondary)]">{originalCount}</span>
+            <ArrowRight className="inline h-3 w-3 mx-1 -mt-0.5" aria-hidden="true" />
+            <span className="font-medium text-[var(--text-secondary)]">{totalDestinationBins}</span>
+            {' '}{totalDestinationBins === 1 ? t.bin : t.bins}
+          </span>
+          <span aria-hidden="true" className="text-[var(--text-quaternary)]">·</span>
+          <span>
+            <span className="font-medium text-[var(--text-secondary)]">{totalItems}</span>
+            {' '}item{totalItems !== 1 ? 's' : ''}
+          </span>
+          <span aria-hidden="true" className="text-[var(--text-quaternary)]">·</span>
+          <span>
+            <span className="font-medium text-[var(--text-secondary)]">{totalMoves}</span>
+            {' '}move{totalMoves !== 1 ? 's' : ''}
+          </span>
+          {binsKept > 0 && (
+            <>
+              <span aria-hidden="true" className="text-[var(--text-quaternary)]">·</span>
+              <span>
+                <span className="font-medium text-[var(--text-secondary)]">{binsKept}</span>
+                {' '}kept
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
       {summary && (
@@ -117,7 +141,6 @@ export function ReorganizePreview({
             <MoveListSheet
               sourceCards={sourceCards}
               areas={areas}
-              qrStyle={DEFAULT_QR_STYLE}
               totalItems={totalItems}
               totalMoves={totalMoves}
               totalDestinationBins={totalDestinationBins}
@@ -135,34 +158,45 @@ function SourceCardRow({ card, delay }: { card: SourceCard; delay: number }) {
   const colorPreset = card.sourceBin.color ? resolveColor(card.sourceBin.color) : undefined;
   const chipBg = colorPreset?.bg ?? 'var(--bg-hover)';
   const itemTotal = card.outgoingClusters.reduce((sum, c) => sum + c.items.length, 0);
+  const destinationCount = card.outgoingClusters.length;
+  const statusText = card.preserved ? 'will be kept' : 'will be emptied';
 
   return (
     <li
-      aria-label={`${card.sourceBin.name}: ${itemTotal} item${itemTotal !== 1 ? 's' : ''}, ${card.preserved ? 'will be kept' : 'will be emptied'}`}
-      className="ai-stagger-item rounded-[var(--radius-md)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-3.5 space-y-2"
+      aria-label={`${card.sourceBin.name}: ${itemTotal} item${itemTotal !== 1 ? 's' : ''}, ${statusText}`}
+      className="ai-stagger-item rounded-[var(--radius-md)] border border-[var(--border-flat)] bg-[var(--bg-flat)] overflow-hidden"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3 px-3.5 py-3 bg-[var(--bg-input)] border-b border-[var(--border-subtle)]">
         <span
-          className="flex items-center justify-center rounded-[var(--radius-sm)] h-6 w-6 shrink-0"
+          className="flex items-center justify-center rounded-[var(--radius-sm)] h-8 w-8 shrink-0"
           style={{ backgroundColor: chipBg }}
+          aria-hidden="true"
         >
-          <Icon className="h-3.5 w-3.5 text-[var(--text-primary)]" />
+          <Icon className="h-4 w-4 text-[var(--text-primary)]" />
         </span>
-        <span className="font-medium text-[14px] text-[var(--text-primary)] truncate">
-          {card.sourceBin.name || '…'}
-        </span>
-        <span className="ml-auto flex items-center gap-2 shrink-0">
-          <span className="text-[11px] font-medium tabular-nums px-1.5 py-0.5 rounded-[var(--radius-xs)] bg-[var(--bg-hover)] text-[var(--text-tertiary)]">
-            {itemTotal}
-          </span>
-          <span className="text-[11px] text-[var(--text-tertiary)]">
-            {card.preserved ? 'will be kept' : 'will be emptied'}
-          </span>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-tight">
+            {card.sourceBin.name || '…'}
+          </div>
+          <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5 tabular-nums">
+            {itemTotal} item{itemTotal !== 1 ? 's' : ''}
+            {destinationCount > 1 && ` → ${destinationCount} destinations`}
+          </div>
+        </div>
+        <span
+          className={cn(
+            'shrink-0 inline-flex items-center rounded-[var(--radius-xs)] px-2 py-0.5 text-[11px] font-medium',
+            card.preserved
+              ? 'bg-[var(--color-success-soft)] text-[var(--color-success)]'
+              : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]',
+          )}
+        >
+          {statusText}
         </span>
       </div>
 
-      <ul className="flex flex-col gap-1.5">
+      <ul className="flex flex-col divide-y divide-[var(--border-subtle)]">
         {card.outgoingClusters.map((cluster) => (
           <ClusterRow key={cluster.destinationName} cluster={cluster} />
         ))}
@@ -176,73 +210,80 @@ function ClusterRow({ cluster }: { cluster: SourceCard['outgoingClusters'][numbe
   const hasOverflow = cluster.items.length > COLLAPSED_ITEM_LIMIT;
   const visibleItems = expanded ? cluster.items : cluster.items.slice(0, COLLAPSED_ITEM_LIMIT);
   const hiddenCount = cluster.items.length - COLLAPSED_ITEM_LIMIT;
+  const itemCount = cluster.items.length;
 
   return (
-    <li className="flex items-start gap-2 text-[13px]">
-      <span aria-hidden="true" className="text-[var(--text-tertiary)] shrink-0 mt-0.5">
-        →
-      </span>
-      <div className="flex-1 min-w-0 space-y-1">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--bg-hover)] px-1.5 py-0.5 text-[12px] font-medium text-[var(--text-primary)]">
-            <Package className="h-3 w-3" aria-hidden="true" />
-            {cluster.destinationName || '…'}
-          </span>
-          <span className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
-            {cluster.destinationKept ? 'kept' : 'new'}
-          </span>
-          {cluster.destinationTags.length > 0 && (
-            <div className="flex items-center gap-1 ml-1">
-              {cluster.destinationTags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-[10px]">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
+    <li className="px-3.5 py-3 space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <ArrowRight className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" aria-hidden="true" />
+        <span className="font-medium text-[14px] text-[var(--text-primary)] min-w-0 truncate">
+          {cluster.destinationName || '…'}
+        </span>
+        <span
+          className={cn(
+            'inline-flex items-center rounded-[var(--radius-xs)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide shrink-0',
+            cluster.destinationKept
+              ? 'bg-[var(--color-success-soft)] text-[var(--color-success)]'
+              : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]',
           )}
-        </div>
-        <div className="text-[13px] text-[var(--text-secondary)] leading-snug">
-          {renderItemList(visibleItems)}
-          {hasOverflow && !expanded && (
-            <>
-              {' '}
-              <button
-                type="button"
-                onClick={() => setExpanded(true)}
-                className="text-[12px] font-medium text-[var(--accent)] hover:opacity-80 ml-1"
-              >
-                show {hiddenCount} more
-              </button>
-            </>
-          )}
-          {expanded && hasOverflow && (
-            <>
-              {' '}
-              <button
-                type="button"
-                onClick={() => setExpanded(false)}
-                className="text-[12px] font-medium text-[var(--accent)] hover:opacity-80 ml-1"
-              >
-                show less
-              </button>
-            </>
-          )}
-        </div>
+        >
+          {cluster.destinationKept ? 'kept' : 'new'}
+        </span>
+        <span className="ml-auto shrink-0 text-[11px] text-[var(--text-tertiary)] tabular-nums">
+          {itemCount} item{itemCount !== 1 ? 's' : ''}
+        </span>
       </div>
+
+      {cluster.destinationTags.length > 0 && (
+        <div className="flex items-center gap-1 flex-wrap pl-5">
+          {cluster.destinationTags.map((tag) => (
+            <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      <ul className="pl-5 space-y-1" aria-label={`Items moving to ${cluster.destinationName}`}>
+        {visibleItems.map((item, idx) => (
+          <ItemRow key={`${item.name}-${idx}`} item={item} />
+        ))}
+      </ul>
+
+      {hasOverflow && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="ml-5 text-[12px] font-medium text-[var(--accent)] hover:opacity-80"
+        >
+          {expanded ? 'Show less' : `Show ${hiddenCount} more`}
+        </button>
+      )}
     </li>
   );
 }
 
-function renderItemList(items: MoveListItem[]): string {
-  return items
-    .map((item) => {
-      const qty = item.quantity != null && item.quantity !== 1 ? `${item.quantity} ` : '';
-      const name = `${qty}${item.name}`;
-      return item.multiDestinationCount && item.multiDestinationCount > 1
-        ? `${name} (×${item.multiDestinationCount} destinations)`
-        : name;
-    })
-    .join(', ');
+function ItemRow({ item }: { item: MoveListItem }) {
+  const hasQty = item.quantity != null && item.quantity !== 1;
+  const multi = item.multiDestinationCount && item.multiDestinationCount > 1;
+  return (
+    <li className="flex items-baseline gap-2 text-[13px] text-[var(--text-secondary)] leading-snug">
+      <span aria-hidden="true" className="text-[var(--text-quaternary)] shrink-0 select-none leading-none">·</span>
+      {hasQty && (
+        <span className="tabular-nums text-[var(--text-tertiary)] font-medium text-[12px] shrink-0 select-none">
+          {item.quantity}×
+        </span>
+      )}
+      <span className="min-w-0 break-words">
+        {item.name}
+        {multi && (
+          <span className="text-[var(--text-tertiary)] ml-1 text-[12px]">
+            (×{item.multiDestinationCount} destinations)
+          </span>
+        )}
+      </span>
+    </li>
+  );
 }
 
 function buildAcceptLabel(

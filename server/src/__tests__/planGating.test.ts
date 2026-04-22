@@ -58,7 +58,7 @@ function mockProUser() {
     ai: true, apiKeys: true, customFields: true, fullExport: true,
     reorganize: true, binSharing: true, attachments: true, maxBins: null, maxLocations: null,
     maxPhotoStorageMb: null, maxMembersPerLocation: null, activityRetentionDays: null,
-    aiCreditsPerMonth: null,
+    aiCreditsPerMonth: null, reorganizeMaxBins: null,
   });
   vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
   vi.mocked(generateUpgradePlanUrl).mockResolvedValue(null);
@@ -82,7 +82,7 @@ function mockFreeUser() {
     ai: true, apiKeys: false, customFields: false, fullExport: false,
     reorganize: false, binSharing: false, attachments: false, maxBins: 10, maxLocations: 1,
     maxPhotoStorageMb: 0, maxMembersPerLocation: 1, activityRetentionDays: 7,
-    aiCreditsPerMonth: 10,
+    aiCreditsPerMonth: 10, reorganizeMaxBins: null,
   });
   vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
   vi.mocked(generateUpgradePlanUrl).mockResolvedValue(null);
