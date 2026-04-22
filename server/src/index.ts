@@ -46,6 +46,10 @@ import printSettingsRoutes from './routes/printSettings.js';
 import savedViewsRoutes from './routes/savedViews.js';
 import scanHistoryRoutes from './routes/scanHistory.js';
 import { sharedRoutes } from './routes/shared.js';
+import binShoppingListRoutes, {
+  locationShoppingListRouter as locationShoppingListRoutes,
+  shoppingListRouter as shoppingListRoutes,
+} from './routes/shoppingList.js';
 import tagColorsRoutes from './routes/tagColors.js';
 import tagsRoutes from './routes/tags.js';
 import userPreferencesRoutes from './routes/userPreferences.js';
@@ -148,12 +152,14 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/locations', activityRoutes);
   app.use('/api/locations', customFieldsRoutes);
   app.use('/api/locations', locationCheckoutsRoutes);
+  app.use('/api/locations', locationShoppingListRoutes);
   app.use('/api/bins', binPinsRoutes);
   app.use('/api/bins', binSharesRoutes);
   app.use('/api/bins', binsRoutes);
   app.use('/api/bins', binUsageRoutes);  // new — mounts GET/POST /:id/usage
   app.use('/api/bins', binItemsRoutes);
   app.use('/api/bins', itemCheckoutsRoutes);
+  app.use('/api/bins', binShoppingListRoutes);
   app.use('/api/photos', photosRoutes);
   if (config.attachmentsEnabled) {
     app.use('/api', attachmentsRoutes);
@@ -163,6 +169,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/user-preferences', userPreferencesRoutes);
   app.use('/api/saved-views', savedViewsRoutes);
   app.use('/api/scan-history', scanHistoryRoutes);
+  app.use('/api/shopping-list', shoppingListRoutes);
   app.use('/api/plan', planRoutes);
   app.use('/api/shared', sharedRoutes);
   opts?.mountEeRoutes?.(app);

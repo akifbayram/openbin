@@ -353,3 +353,17 @@ export interface UsageDay {
 }
 
 export type UsageGranularity = 'daily' | 'weekly' | 'monthly';
+
+export interface ShoppingListEntry {
+  id: string;
+  location_id: string;
+  name: string;
+  origin_bin_id: string | null;
+  origin_bin_name: string | null;
+  origin_bin_icon: string | null;
+  origin_bin_color: string | null;
+  origin_bin_trashed: boolean;
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+}

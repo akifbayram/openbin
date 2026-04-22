@@ -773,6 +773,39 @@ components:
             checked_out_by_name:
               type: string
 
+    # ── Shopping List ─────────────────────────────────────
+    ShoppingListEntry:
+      type: object
+      required: [id, location_id, name, origin_bin_id, origin_bin_trashed, created_by, created_by_name, created_at]
+      properties:
+        id:
+          type: string
+        location_id:
+          type: string
+        name:
+          type: string
+        origin_bin_id:
+          type: string
+          nullable: true
+        origin_bin_name:
+          type: string
+          nullable: true
+        origin_bin_icon:
+          type: string
+          nullable: true
+        origin_bin_color:
+          type: string
+          nullable: true
+        origin_bin_trashed:
+          type: boolean
+        created_by:
+          type: string
+        created_by_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
     # ── Activity ───────────────────────────────────────────
     ActivityLogEntry:
       type: object
@@ -3757,6 +3790,143 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  # Shopping List
+  /bins/{id}/shopping-list:
+    post:
+      summary: Bulk-add items to shopping list from a bin
+      tags: [Shopping List]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [names]
+              properties:
+                names:
+                  type: array
+                  items: { type: string }
+                  minItems: 1
+                  maxItems: 50
+      responses:
+        '201':
+          description: Entries created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShoppingListEntry'
+                  count: { type: integer }
+        '422': { description: Validation error }
+        '404': { description: Bin not found }
+
+  /locations/{locationId}/shopping-list:
+    get:
+      summary: List shopping list entries for a location
+      tags: [Shopping List]
+      parameters:
+        - in: path
+          name: locationId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShoppingListEntry'
+                  count: { type: integer }
+    post:
+      summary: Manually add an entry to the shopping list
+      tags: [Shopping List]
+      parameters:
+        - in: path
+          name: locationId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                originBinId: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Entry created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entry:
+                    $ref: '#/components/schemas/ShoppingListEntry'
+
+  /shopping-list/{id}/purchase:
+    post:
+      summary: Mark entry as bought — deletes entry and re-adds to origin bin if possible
+      tags: [Shopping List]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Bought
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+                  restored:
+                    type: object
+                    nullable: true
+                    properties:
+                      binId: { type: string }
+                      itemId: { type: string }
+                      name: { type: string }
+        '404': { description: Entry not found }
+
+  /shopping-list/{id}:
+    delete:
+      summary: Remove a shopping list entry without purchase
+      tags: [Shopping List]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        '404': { description: Entry not found }
 
   /bins/{id}/usage:
     get:
