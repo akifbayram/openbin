@@ -59,7 +59,22 @@ export function DashboardPage() {
   const debouncedSearch = useDebounce(search, 300);
   const { views: savedViews } = useSavedViews();
   const [createOpen, setCreateOpen] = useState(false);
-  useReopenCreateOnCapture(useCallback(() => setCreateOpen(true), []));
+  const [createInitialPhotos, setCreateInitialPhotos] = useState<File[] | null>(null);
+
+  const handleReopenCreate = useCallback((photos: File[]) => {
+    setCreateInitialPhotos(photos.length > 0 ? photos : null);
+    setCreateOpen(true);
+  }, []);
+  useReopenCreateOnCapture(handleReopenCreate);
+
+  const handleCreateOpenChange = useCallback((v: boolean) => {
+    if (!v) setCreateInitialPhotos(null);
+    setCreateOpen(v);
+  }, []);
+
+  const handleCreateInitialPhotosConsumed = useCallback(() => {
+    setCreateInitialPhotos(null);
+  }, []);
 
   const { isAdmin, canWrite, canCreateBin } = usePermissions();
   const allTags = useAllTags();
@@ -360,7 +375,9 @@ export function DashboardPage() {
       </Crossfade>
 
       <DashboardDialogs
-        createOpen={createOpen} setCreateOpen={setCreateOpen}
+        createOpen={createOpen} setCreateOpen={handleCreateOpenChange}
+        createInitialPhotos={createInitialPhotos}
+        onCreateInitialPhotosConsumed={handleCreateInitialPhotosConsumed}
         bulk={bulk} selectedIds={selectedIds} clearSelection={clearSelection}
         allTags={allTags} selectable={selectable} isAdmin={isAdmin} canWrite={canWrite}
         bulkDelete={bulkDelete} bulkPinToggle={bulkPinToggle} bulkDuplicate={bulkDuplicate}

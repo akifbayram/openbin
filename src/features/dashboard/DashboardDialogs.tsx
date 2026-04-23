@@ -37,6 +37,8 @@ const DeleteBinDialog = lazy(() =>
 interface DashboardDialogsProps {
   createOpen: boolean;
   setCreateOpen: (v: boolean) => void;
+  createInitialPhotos: File[] | null;
+  onCreateInitialPhotosConsumed: () => void;
   bulk: { isOpen: (d: BulkDialog) => boolean; open: (d: BulkDialog) => void; close: () => void };
   selectedIds: Set<string>;
   clearSelection: () => void;
@@ -55,6 +57,7 @@ interface DashboardDialogsProps {
 
 export function DashboardDialogs({
   createOpen, setCreateOpen,
+  createInitialPhotos, onCreateInitialPhotosConsumed,
   bulk, selectedIds, clearSelection,
   allTags, selectable, isAdmin, canWrite,
   bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy,
@@ -97,7 +100,13 @@ export function DashboardDialogs({
     <>
       {createMounted && (
         <Suspense fallback={null}>
-          <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} allTags={allTags} />
+          <BinCreateDialog
+            open={createOpen}
+            onOpenChange={setCreateOpen}
+            initialPhotos={createInitialPhotos}
+            onInitialPhotosConsumed={onCreateInitialPhotosConsumed}
+            allTags={allTags}
+          />
         </Suspense>
       )}
 
