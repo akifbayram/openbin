@@ -1,5 +1,5 @@
 import { BarChart3, Bookmark, ChevronRight, Inbox, MapPin, Package, Pin, Plus, Printer, QrCode, ScanLine, Sparkles } from 'lucide-react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { SavedViewChips } from '@/components/saved-view-chips';
@@ -59,7 +59,7 @@ export function DashboardPage() {
   const debouncedSearch = useDebounce(search, 300);
   const { views: savedViews } = useSavedViews();
   const [createOpen, setCreateOpen] = useState(false);
-  useReopenCreateOnCapture(setCreateOpen);
+  useReopenCreateOnCapture(useCallback(() => setCreateOpen(true), []));
 
   const { isAdmin, canWrite, canCreateBin } = usePermissions();
   const allTags = useAllTags();

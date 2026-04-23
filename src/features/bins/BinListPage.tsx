@@ -58,7 +58,7 @@ export function BinListPage() {
   const { search, setSearch, debouncedSearch, sort, setSort, sortDir, setSortDir, filters, setFilters, page, setPage, clearAll } = useBinSearchParams();
 
   const [createOpen, setCreateOpen] = useState(false);
-  useReopenCreateOnCapture(setCreateOpen);
+  useReopenCreateOnCapture(useCallback(() => setCreateOpen(true), []));
   const [filterOpen, setFilterOpen] = useState(false);
   const tourCtx = useTourContext();
 
