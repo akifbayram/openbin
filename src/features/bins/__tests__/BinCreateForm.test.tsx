@@ -153,11 +153,14 @@ describe('BinCreateForm initialPhotos seeding', () => {
     expect(onInitialPhotosConsumed).toHaveBeenCalledTimes(1);
   });
 
-  it('does not re-seed when re-rendered with the same prop reference', () => {
+  it('does not re-seed when re-rendered with a fresh onInitialPhotosConsumed reference', () => {
+    // A new inline callback reference each render changes the effect's dep array
+    // and would re-fire without the ref guard. This test exercises that guard.
     const files = [new File(['a'], 'a.jpg', { type: 'image/jpeg' })];
-    const onInitialPhotosConsumed = vi.fn();
-    const { rerender } = renderForm({ initialPhotos: files, onInitialPhotosConsumed });
+    const consumed1 = vi.fn();
+    const { rerender } = renderForm({ initialPhotos: files, onInitialPhotosConsumed: consumed1 });
 
+    const consumed2 = vi.fn();
     act(() => {
       rerender(
         <MemoryRouter>
@@ -166,14 +169,15 @@ describe('BinCreateForm initialPhotos seeding', () => {
             locationId="loc-1"
             onSubmit={vi.fn()}
             initialPhotos={files}
-            onInitialPhotosConsumed={onInitialPhotosConsumed}
+            onInitialPhotosConsumed={consumed2}
           />
         </MemoryRouter>,
       );
     });
 
     expect(mockAddPhotosFromFiles).toHaveBeenCalledTimes(1);
-    expect(onInitialPhotosConsumed).toHaveBeenCalledTimes(1);
+    expect(consumed1).toHaveBeenCalledTimes(1);
+    expect(consumed2).not.toHaveBeenCalled();
   });
 
   it('does nothing when initialPhotos is null', () => {
