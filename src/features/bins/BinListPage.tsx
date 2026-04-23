@@ -58,7 +58,22 @@ export function BinListPage() {
   const { search, setSearch, debouncedSearch, sort, setSort, sortDir, setSortDir, filters, setFilters, page, setPage, clearAll } = useBinSearchParams();
 
   const [createOpen, setCreateOpen] = useState(false);
-  useReopenCreateOnCapture(useCallback(() => setCreateOpen(true), []));
+  const [createInitialPhotos, setCreateInitialPhotos] = useState<File[] | null>(null);
+
+  const handleReopenCreate = useCallback((photos: File[]) => {
+    setCreateInitialPhotos(photos.length > 0 ? photos : null);
+    setCreateOpen(true);
+  }, []);
+  useReopenCreateOnCapture(handleReopenCreate);
+
+  const handleCreateOpenChange = useCallback((v: boolean) => {
+    if (!v) setCreateInitialPhotos(null);
+    setCreateOpen(v);
+  }, []);
+
+  const handleCreateInitialPhotosConsumed = useCallback(() => {
+    setCreateInitialPhotos(null);
+  }, []);
   const [filterOpen, setFilterOpen] = useState(false);
   const tourCtx = useTourContext();
 
@@ -363,7 +378,9 @@ export function BinListPage() {
       )}
 
       <BinListDialogs
-        createOpen={createOpen} setCreateOpen={setCreateOpen}
+        createOpen={createOpen} setCreateOpen={handleCreateOpenChange}
+        createInitialPhotos={createInitialPhotos}
+        onCreateInitialPhotosConsumed={handleCreateInitialPhotosConsumed}
         filterOpen={filterOpen} setFilterOpen={setFilterOpen}
         saveViewOpen={saveViewOpen} setSaveViewOpen={setSaveViewOpen}
         allTags={allTags}
