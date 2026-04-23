@@ -12,11 +12,11 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { BinCard } from '@/features/bins/BinCard';
+import { useBinCreateFromCapture } from '@/features/bins/useBinCreateFromCapture';
 import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
 import { useAllTags } from '@/features/bins/useBins';
 import { useBulkActions } from '@/features/bins/useBulkActions';
 import { useBulkDialogs } from '@/features/bins/useBulkDialogs';
-import { useReopenCreateOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { getCommandInputRef } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
@@ -58,8 +58,8 @@ export function DashboardPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const { views: savedViews } = useSavedViews();
-  const [createOpen, setCreateOpen] = useState(false);
-  useReopenCreateOnCapture(setCreateOpen);
+  const { createOpen, setCreateOpen, createInitialPhotos, onCreateInitialPhotosConsumed } =
+    useBinCreateFromCapture();
 
   const { isAdmin, canWrite, canCreateBin } = usePermissions();
   const allTags = useAllTags();
@@ -361,6 +361,8 @@ export function DashboardPage() {
 
       <DashboardDialogs
         createOpen={createOpen} setCreateOpen={setCreateOpen}
+        createInitialPhotos={createInitialPhotos}
+        onCreateInitialPhotosConsumed={onCreateInitialPhotosConsumed}
         bulk={bulk} selectedIds={selectedIds} clearSelection={clearSelection}
         allTags={allTags} selectable={selectable} isAdmin={isAdmin} canWrite={canWrite}
         bulkDelete={bulkDelete} bulkPinToggle={bulkPinToggle} bulkDuplicate={bulkDuplicate}

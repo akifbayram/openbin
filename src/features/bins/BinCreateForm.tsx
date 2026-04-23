@@ -13,7 +13,7 @@ import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
-import { getCapturedReturnTarget, hasCapturedPhotos, setCapturedReturnTarget, takeCapturedPhotos } from '@/features/capture/capturedPhotos';
+import { setCapturedReturnTarget } from '@/features/capture/capturedPhotos';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { isRecordingSupported } from '@/lib/audioRecorder';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
@@ -64,6 +64,8 @@ interface BinCreateFormProps {
   allTags?: string[];
   header?: React.ReactNode | ((state: { name: string; color: string; items: BinItem[]; tags: string[]; icon: string; cardStyle: string; areaName: string }) => React.ReactNode);
   className?: string;
+  initialPhotos?: File[] | null;
+  onInitialPhotosConsumed?: () => void;
 }
 
 export function BinCreateForm({
@@ -78,6 +80,8 @@ export function BinCreateForm({
   allTags,
   header,
   className,
+  initialPhotos,
+  onInitialPhotosConsumed,
 }: BinCreateFormProps) {
   const t = useTerminology();
   const { areas } = useAreaList(locationId);
@@ -210,17 +214,14 @@ export function BinCreateForm({
     }
   }, [photos.length]);
 
+  const initialPhotosConsumedRef = useRef(false);
   useEffect(() => {
-    function checkCapturedPhotos() {
-      if (hasCapturedPhotos() && getCapturedReturnTarget() === 'bin-create') {
-        const { files } = takeCapturedPhotos();
-        addPhotosFromFiles(files);
-      }
-    }
-    checkCapturedPhotos();
-    window.addEventListener('focus', checkCapturedPhotos);
-    return () => window.removeEventListener('focus', checkCapturedPhotos);
-  }, [addPhotosFromFiles]);
+    if (initialPhotosConsumedRef.current) return;
+    if (!initialPhotos || initialPhotos.length === 0) return;
+    initialPhotosConsumedRef.current = true;
+    addPhotosFromFiles(initialPhotos);
+    onInitialPhotosConsumed?.();
+  }, [initialPhotos, addPhotosFromFiles, onInitialPhotosConsumed]);
 
   function handleUndoAiField(field: 'name' | 'items') {
     if (!preAiValues.current) return;

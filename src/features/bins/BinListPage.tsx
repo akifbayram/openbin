@@ -19,7 +19,6 @@ import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { setCommandSelectedBinIds } from '@/features/ai/commandSelectedBins';
 import { useAreaList } from '@/features/areas/useAreas';
-import { useReopenCreateOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { getCommandInputRef, useTourContext } from '@/features/tour/TourProvider';
@@ -39,6 +38,7 @@ import { BinTableView } from './BinTableView';
 import { buildBinBulkActions } from './buildBinBulkActions';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { SearchBarOverflowMenu } from './SearchBarOverflowMenu';
+import { useBinCreateFromCapture } from './useBinCreateFromCapture';
 import { useBinSearchParams } from './useBinSearchParams';
 import { countActiveFilters, type SortOption, updateBin, useAllTags, usePaginatedBinList } from './useBins';
 import { useBulkActions } from './useBulkActions';
@@ -57,8 +57,8 @@ export function BinListPage() {
   const location = useLocation();
   const { search, setSearch, debouncedSearch, sort, setSort, sortDir, setSortDir, filters, setFilters, page, setPage, clearAll } = useBinSearchParams();
 
-  const [createOpen, setCreateOpen] = useState(false);
-  useReopenCreateOnCapture(setCreateOpen);
+  const { createOpen, setCreateOpen, createInitialPhotos, onCreateInitialPhotosConsumed } =
+    useBinCreateFromCapture();
   const [filterOpen, setFilterOpen] = useState(false);
   const tourCtx = useTourContext();
 
@@ -72,7 +72,7 @@ export function BinListPage() {
       tourCtx?.tour.start();
     }
     if (state) window.history.replaceState({}, '');
-  }, [location.state, tourCtx]);
+  }, [location.state, tourCtx, setCreateOpen]);
 
   const { activeLocationId } = useAuth();
   const prevLocationRef = useRef(activeLocationId);
@@ -364,6 +364,8 @@ export function BinListPage() {
 
       <BinListDialogs
         createOpen={createOpen} setCreateOpen={setCreateOpen}
+        createInitialPhotos={createInitialPhotos}
+        onCreateInitialPhotosConsumed={onCreateInitialPhotosConsumed}
         filterOpen={filterOpen} setFilterOpen={setFilterOpen}
         saveViewOpen={saveViewOpen} setSaveViewOpen={setSaveViewOpen}
         allTags={allTags}

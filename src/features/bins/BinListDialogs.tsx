@@ -15,6 +15,8 @@ import type { BulkDialog } from './useBulkDialogs';
 interface BinListDialogsProps {
   createOpen: boolean;
   setCreateOpen: (v: boolean) => void;
+  createInitialPhotos: File[] | null;
+  onCreateInitialPhotosConsumed: () => void;
   filterOpen: boolean;
   setFilterOpen: (v: boolean) => void;
   saveViewOpen: boolean;
@@ -35,6 +37,7 @@ interface BinListDialogsProps {
 
 export function BinListDialogs({
   createOpen, setCreateOpen,
+  createInitialPhotos, onCreateInitialPhotosConsumed,
   filterOpen, setFilterOpen,
   saveViewOpen, setSaveViewOpen,
   allTags, areas,
@@ -47,6 +50,8 @@ export function BinListDialogs({
       <BinCreateDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
+        initialPhotos={createInitialPhotos}
+        onInitialPhotosConsumed={onCreateInitialPhotosConsumed}
         allTags={allTags}
       />
       <BinFilterDialog
