@@ -155,8 +155,8 @@ describe('CommandInput (chat shell)', () => {
     expect(getComposer()).toBeDefined();
     expect(screen.getByLabelText('Send')).toBeDefined();
     // Empty-state example list — at least one known example from the default (non-scoped) list
-    expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
-    expect(screen.getByText(/Where is the glass cleaner/)).toBeDefined();
+    expect(screen.getByText(/Where is the cordless drill/)).toBeDefined();
+    expect(screen.getByText(/Duplicate the Power Tools/)).toBeDefined();
   });
 
   it('submits typed text via Cmd+Enter and calls the mocked streaming ask', async () => {
@@ -274,7 +274,7 @@ describe('CommandInput (chat shell)', () => {
     rerender(<CommandInput open={true} onOpenChange={onOpenChange} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+      expect(screen.getByText(/Where is the cordless drill/)).toBeDefined();
     });
     expect(screen.queryByText('Found it.')).toBeNull();
   });
@@ -345,7 +345,7 @@ describe('CommandInput (chat shell)', () => {
 
     // Previous answer is gone and the empty-state examples return.
     expect(screen.queryByText('Found it.')).toBeNull();
-    expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+    expect(screen.getByText(/Where is the cordless drill/)).toBeDefined();
     // And the button hides itself since there are no turns to reset.
     expect(screen.queryByLabelText('New chat')).toBeNull();
   });
@@ -370,7 +370,7 @@ describe('CommandInput (chat shell)', () => {
 
     expect(mockCancelAsk).toHaveBeenCalled();
     // Empty state is back — the in-flight request is abandoned.
-    expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+    expect(screen.getByText(/Where is the cordless drill/)).toBeDefined();
     expect(screen.queryByLabelText('New chat')).toBeNull();
 
     // Release the hanging promise so no dangling handlers.

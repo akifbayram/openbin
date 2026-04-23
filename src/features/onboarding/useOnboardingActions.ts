@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { getErrorMessage } from '@/lib/utils';
-import type { Bin, BinItem } from '@/types';
+import type { BinItem } from '@/types';
 import type { OnboardingActions } from './onboardingConstants';
 import { markDemoTourDone } from './onboardingConstants';
 
@@ -22,9 +22,10 @@ export interface OnboardingState {
   setBinName: (v: string) => void;
   binItems: BinItem[];
   setBinItems: (v: BinItem[]) => void;
-  // Loading & created bin
+  // Step 2 state (populated after bin creation)
+  newBinId: string | null;
+  // Loading
   loading: boolean;
-  createdBin: Bin | null;
   // Step transition
   displayedStep: number;
   transitioning: boolean;
@@ -46,10 +47,10 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
   // Step 1 state
   const [binName, setBinName] = useState('');
   const [binItems, setBinItems] = useState<BinItem[]>([]);
+  // Step 2 state — set once the bin is created so the completion step can deep-link to it
+  const [newBinId, setNewBinId] = useState<string | null>(null);
   // Loading
   const [loading, setLoading] = useState(false);
-  // Created bin for QR preview
-  const [createdBin, setCreatedBin] = useState<Bin | null>(null);
   // Step transition
   const [displayedStep, setDisplayedStep] = useState(step);
   const transitioning = step !== displayedStep;
@@ -65,13 +66,6 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
-
-  // If we reach QR step without a created bin (e.g. page refresh), auto-advance
-  useEffect(() => {
-    if (step === 2 && !createdBin && !demoMode) {
-      advanceStep();
-    }
-  }, [step, createdBin, advanceStep, demoMode]);
 
   async function handleCreateLocation() {
     if (!locationName.trim()) return;
@@ -96,7 +90,7 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
         locationId,
         items: binItems.length > 0 ? binItemsToPayload(binItems) : undefined,
       });
-      setCreatedBin(bin);
+      setNewBinId(bin.id);
       advanceStep();
     } catch (err) {
       showToast({ message: getErrorMessage(err, `Failed to create ${t.bin}`), variant: 'error' });
@@ -126,7 +120,8 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
     locationName, setLocationName,
     binName, setBinName,
     binItems, setBinItems,
-    loading, createdBin,
+    newBinId,
+    loading,
     displayedStep, transitioning,
     handleCreateLocation, handleCreateBin, handleSkipSetup,
   };

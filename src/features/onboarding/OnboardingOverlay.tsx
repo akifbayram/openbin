@@ -1,19 +1,16 @@
 import '@/components/ui/animations.css';
-import { PackagePlus, Printer, QrCode, Settings, Sparkles, X } from 'lucide-react';
+import { Camera, MessageCircle, PackagePlus, Printer, QrCode, Settings, Sparkles, X } from 'lucide-react';
 import { BrandIcon } from '@/components/BrandIcon';
 import { AnimatedHeight } from '@/components/ui/animated-height';
 import { cn, focusRing, iconButton } from '@/lib/utils';
 import type { OnboardingActions } from './onboardingConstants';
 import { markDemoTourDone } from './onboardingConstants';
-import { AiShowcaseStep } from './steps/AiShowcaseStep';
-import { CloudAiShowcaseStep } from './steps/CloudAiShowcaseStep';
 import type { CompletionAction } from './steps/CompletionStep';
 import { CompletionStep } from './steps/CompletionStep';
 import { CreateBinStep } from './steps/CreateBinStep';
 import { DemoAiShowcase } from './steps/DemoAiShowcase';
 import { DemoBrowseStep } from './steps/DemoBrowseStep';
 import { DemoWelcomeStep } from './steps/DemoWelcomeStep';
-import { QrPreviewStep } from './steps/QrPreviewStep';
 import { WelcomeStep } from './steps/WelcomeStep';
 import { useOnboardingActions } from './useOnboardingActions';
 
@@ -24,14 +21,18 @@ const DEMO_COMPLETION_ACTIONS: CompletionAction[] = [
   { icon: Settings, label: 'Explore settings', description: 'Customize terminology, AI, and more', path: '/settings' },
 ];
 
-const PROD_COMPLETION_ACTIONS: CompletionAction[] = [
-  { icon: PackagePlus, label: 'Create more bins', description: 'Add bins for your boxes, drawers, and shelves', path: '/bins' },
-  { icon: QrCode, label: 'Scan a QR code', description: 'Try scanning a label with your camera', path: '/scan' },
-  { icon: Settings, label: 'Explore settings', description: 'Customize terminology, AI, and more', path: '/settings' },
-];
+function buildProdCompletionActions(newBinId: string | null): CompletionAction[] {
+  const printPath = newBinId ? `/print?ids=${newBinId}` : '/print';
+  const binPath = newBinId ? `/bins/${newBinId}` : '/bins';
+  return [
+    { icon: Printer, label: 'Print a QR label', description: 'For the bin you just created', path: printPath },
+    { icon: Camera, label: 'Add a photo', description: "Let AI detect what's inside", path: binPath },
+    { icon: MessageCircle, label: 'Try Ask AI', description: 'Find your stuff by asking a question', path: '/ask' },
+  ];
+}
 
 export function OnboardingOverlay(props: OnboardingActions) {
-  const { step, totalSteps, locationId, advanceWithLocation, advanceStep, complete, demoMode, activeLocationId, isSelfHosted } = props;
+  const { step, totalSteps, locationId, advanceWithLocation, advanceStep, complete, demoMode, activeLocationId } = props;
   const state = useOnboardingActions(props);
   const { displayedStep, transitioning, loading, navigate } = state;
   const dots = Array.from({ length: totalSteps });
@@ -104,12 +105,12 @@ export function OnboardingOverlay(props: OnboardingActions) {
           {displayedStep === 2 && demoMode && (
             <DemoBrowseStep onNext={advanceStep} />
           )}
-          {displayedStep === 2 && !demoMode && state.createdBin && (
-            <QrPreviewStep
-              createdBin={state.createdBin}
-              onPrint={() => handleNavigate('/print')}
-              onNext={advanceStep}
-              t={state.t}
+          {displayedStep === 2 && !demoMode && (
+            <CompletionStep
+              icon={<div className="h-16 w-16 rounded-[var(--radius-xl)] flex items-center justify-center mb-5 bg-[var(--accent)]/10"><Sparkles className="h-8 w-8 text-[var(--accent)]" /></div>}
+              actions={buildProdCompletionActions(state.newBinId)}
+              onAction={handleNavigate}
+              onDashboard={() => handleNavigate('/')}
             />
           )}
           {displayedStep === 3 && demoMode && (
@@ -118,23 +119,6 @@ export function OnboardingOverlay(props: OnboardingActions) {
               title="Tour complete"
               subtitle="That's the essentials. Dive in and explore."
               actions={DEMO_COMPLETION_ACTIONS}
-              onAction={handleNavigate}
-              onDashboard={() => handleNavigate('/')}
-            />
-          )}
-          {displayedStep === 3 && !demoMode && isSelfHosted && (
-            <AiShowcaseStep
-              onSetUpNow={() => handleNavigate('/settings/ai')}
-              onSkip={advanceStep}
-            />
-          )}
-          {displayedStep === 3 && !demoMode && !isSelfHosted && (
-            <CloudAiShowcaseStep onNext={advanceStep} />
-          )}
-          {displayedStep === 4 && !demoMode && (
-            <CompletionStep
-              icon={<div className="h-16 w-16 rounded-[var(--radius-xl)] flex items-center justify-center mb-5 bg-[var(--accent)]/10"><Sparkles className="h-8 w-8 text-[var(--accent)]" /></div>}
-              actions={PROD_COMPLETION_ACTIONS}
               onAction={handleNavigate}
               onDashboard={() => handleNavigate('/')}
             />

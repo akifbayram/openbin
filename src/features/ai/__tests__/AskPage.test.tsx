@@ -163,7 +163,7 @@ describe('AskPage (mobile chat shell)', () => {
     fireEvent.click(screen.getByLabelText('New chat'));
 
     expect(screen.queryByText('Found it.')).toBeNull();
-    expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+    expect(screen.getByText(/Where is the cordless drill/)).toBeDefined();
     expect(screen.queryByLabelText('New chat')).toBeNull();
   });
 
@@ -185,7 +185,7 @@ describe('AskPage (mobile chat shell)', () => {
     fireEvent.click(screen.getByLabelText('New chat'));
 
     expect(mockCancelAsk).toHaveBeenCalled();
-    expect(screen.getByText(/Add screwdriver to the tools bin/)).toBeDefined();
+    expect(screen.getByText(/Where is the cordless drill/)).toBeDefined();
     expect(screen.queryByLabelText('New chat')).toBeNull();
 
     if (resolveAsk) (resolveAsk as (v: unknown) => void)({ answer: 'late', matches: [] });

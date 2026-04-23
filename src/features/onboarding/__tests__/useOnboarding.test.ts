@@ -80,20 +80,20 @@ describe('useOnboarding', () => {
   it('advanceStep increments step', async () => {
     mockApiFetch.mockResolvedValue({
       onboarding_completed: false,
-      onboarding_step: 2,
+      onboarding_step: 1,
     });
 
-    const { result } = renderHook(() => useOnboarding(), { wrapper });
+    const { result } = renderHook(() => useOnboarding(true), { wrapper });
 
     await waitFor(() => {
-      expect(result.current.step).toBe(2);
+      expect(result.current.step).toBe(1);
     });
 
     act(() => {
       result.current.advanceStep();
     });
 
-    expect(result.current.step).toBe(3);
+    expect(result.current.step).toBe(2);
     expect(result.current.isOnboarding).toBe(true);
   });
 
@@ -135,7 +135,7 @@ describe('useOnboarding', () => {
     expect(result.current.isOnboarding).toBe(false);
   });
 
-  it('full flow from step 0 through completion (5 steps)', async () => {
+  it('full flow from step 0 through completion (3 steps)', async () => {
     const { result } = renderHook(() => useOnboarding(), { wrapper });
 
     await waitFor(() => {
@@ -155,19 +155,7 @@ describe('useOnboarding', () => {
     });
     expect(result.current.step).toBe(2);
 
-    // Step 2 -> 3: QR preview -> AI showcase
-    act(() => {
-      result.current.advanceStep();
-    });
-    expect(result.current.step).toBe(3);
-
-    // Step 3 -> 4: AI showcase -> Completion
-    act(() => {
-      result.current.advanceStep();
-    });
-    expect(result.current.step).toBe(4);
-
-    // Step 4 -> completed
+    // Step 2 -> completed (completion screen confirms)
     act(() => {
       result.current.advanceStep();
     });

@@ -21,12 +21,12 @@ export function EmptyConversationState({ isScoped, onPickExample }: EmptyConvers
             'Which of these contain electronics?',
           ]
         : [
-            'Add screwdriver to the tools bin',
-            'Move batteries from kitchen to garage',
-            `Create a ${t.bin} called Holiday Decorations in the attic`,
-            `Duplicate the tools ${t.bin}`,
-            `Rename the garage ${t.area} to workshop`,
-            'Where is the glass cleaner?',
+            'Where is the cordless drill?',
+            `What's in the Camping Gear ${t.bin}?`,
+            `Which ${t.bins} have batteries?`,
+            `Add bungee cords to the Car Supplies ${t.bin}`,
+            `Create a ${t.bin} called Pool Floats in the Garage`,
+            `Duplicate the Power Tools ${t.bin}`,
             "What's in my trash?",
           ],
     [isScoped, t],

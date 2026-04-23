@@ -1,5 +1,3 @@
-import { Camera, ListChecks, MessageSquare, Search } from 'lucide-react';
-
 export interface OnboardingActions {
   step: number;
   totalSteps: number;
@@ -9,15 +7,7 @@ export interface OnboardingActions {
   complete: () => void;
   demoMode?: boolean;
   activeLocationId?: string;
-  isSelfHosted?: boolean;
 }
-
-export const AI_FEATURES = [
-  { icon: Camera, title: 'Photo Analysis', desc: 'Snap a photo, AI catalogs everything inside' },
-  { icon: MessageSquare, title: 'Natural Language', desc: "'Add screwdriver to the tools bin'" },
-  { icon: Search, title: 'Inventory Search', desc: "'Where is the glass cleaner?'" },
-  { icon: ListChecks, title: 'Smart Lists', desc: 'Dictate items, AI extracts a clean list' },
-] as const;
 
 const LS_KEY_TOUR_DONE = 'openbin-demo-tour-done';
 export const DEMO_TOUR_DONE_EVENT = 'demo-tour-done';
