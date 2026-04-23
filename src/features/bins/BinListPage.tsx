@@ -69,7 +69,7 @@ export function BinListPage() {
       setCreateOpen(true);
     }
     if (state?.startTour) {
-      tourCtx?.tour.start();
+      tourCtx?.tour.start('highlights');
     }
     if (state) window.history.replaceState({}, '');
   }, [location.state, tourCtx, setCreateOpen]);

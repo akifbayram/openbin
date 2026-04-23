@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UserPreferences } from '@/lib/userPreferences';
+import { getTour, TOURS_VERSION, type TourId } from './tourRegistry';
 import {
   filterSteps,
   resolveRoute,
   resolveSelector,
-  TOUR_STEPS,
-  TOUR_VERSION,
   type TourContext,
   type TourStep,
 } from './tourSteps';
@@ -29,7 +28,9 @@ function waitForElement(selector: string, timeoutMs = 3000): Promise<Element | n
 export interface UseTourDeps {
   context: TourContext;
   navigate: (path: string) => void;
-  updatePreferences: (patch: Partial<UserPreferences>) => void;
+  updatePreferences: (
+    patch: Partial<UserPreferences> | ((prev: UserPreferences) => Partial<UserPreferences>),
+  ) => void;
 }
 
 export interface UseTourReturn {
@@ -39,7 +40,8 @@ export interface UseTourReturn {
   step: TourStep | null;
   targetRect: DOMRect | null;
   transitioning: boolean;
-  start: () => void;
+  currentTourId: TourId | null;
+  start: (tourId: TourId) => void;
   next: () => void;
   prev: () => void;
   skip: () => void;
@@ -50,6 +52,7 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
   const [activeIndex, setActiveIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [transitioning, setTransitioning] = useState(false);
+  const [currentTourId, setCurrentTourId] = useState<TourId | null>(null);
 
   const filteredRef = useRef<TourStep[]>([]);
   const contextRef = useRef(context);
@@ -168,13 +171,24 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
     setIsActive(false);
     setActiveIndex(0);
     filteredRef.current = [];
-    updatePreferences({ tour_completed: true, tour_version: TOUR_VERSION });
-  }, [activeIndex, cleanupTracking, detachScrollListeners, updatePreferences]);
 
-  const start = useCallback(() => {
-    const filtered = filterSteps(TOUR_STEPS, contextRef.current);
+    const tourId = currentTourId;
+    setCurrentTourId(null);
+    if (tourId) {
+      updatePreferences((prev) => ({
+        tours_seen: Array.from(new Set([...(prev.tours_seen ?? []), tourId])),
+        tours_version: TOURS_VERSION,
+      }));
+    }
+  }, [activeIndex, cleanupTracking, detachScrollListeners, updatePreferences, currentTourId]);
+
+  const start = useCallback((tourId: TourId) => {
+    const def = getTour(tourId);
+    if (!def) return;
+    const filtered = filterSteps(def.steps, contextRef.current);
     if (filtered.length === 0) return;
     filteredRef.current = filtered;
+    setCurrentTourId(tourId);
     setActiveIndex(0);
     setIsActive(true);
     goToStep(0);
@@ -227,6 +241,7 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
     step: isActive ? filteredRef.current[activeIndex] ?? null : null,
     targetRect,
     transitioning,
+    currentTourId,
     start,
     next,
     prev,

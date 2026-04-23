@@ -15,8 +15,8 @@ export interface UserPreferences {
   onboarding_completed: boolean;
   onboarding_step: number;
   onboarding_location_id: string | null;
-  tour_completed: boolean;
-  tour_version: number;
+  tours_seen: string[];
+  tours_version: number;
   keyboard_shortcuts_enabled: boolean;
   usage_tracking_scan: boolean;
   usage_tracking_manual_lookup: boolean;
@@ -39,8 +39,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   onboarding_completed: false,
   onboarding_step: 0,
   onboarding_location_id: null,
-  tour_completed: false,
-  tour_version: 0,
+  tours_seen: [],
+  tours_version: 0,
   keyboard_shortcuts_enabled: true,
   usage_tracking_scan: true,
   usage_tracking_manual_lookup: true,
@@ -58,7 +58,9 @@ export function notifyPreferencesChanged() {
 interface UserPreferencesContextValue {
   preferences: UserPreferences;
   isLoading: boolean;
-  updatePreferences: (patch: Partial<UserPreferences>) => void;
+  updatePreferences: (
+    patch: Partial<UserPreferences> | ((prev: UserPreferences) => Partial<UserPreferences>),
+  ) => void;
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextValue | null>(null);
@@ -114,12 +116,16 @@ export function UserPreferencesProvider({ children }: { children: React.ReactNod
     };
   }, []);
 
-  const updatePreferences = useCallback((patch: Partial<UserPreferences>) => {
-    const next = { ...latestRef.current, ...patch };
-    latestRef.current = next;
-    setPreferences(next);
-    debouncedSave(next);
-  }, [debouncedSave]);
+  const updatePreferences = useCallback(
+    (patch: Partial<UserPreferences> | ((prev: UserPreferences) => Partial<UserPreferences>)) => {
+      const resolved = typeof patch === 'function' ? patch(latestRef.current) : patch;
+      const next = { ...latestRef.current, ...resolved };
+      latestRef.current = next;
+      setPreferences(next);
+      debouncedSave(next);
+    },
+    [debouncedSave],
+  );
 
   const value = useMemo(
     () => ({ preferences, isLoading, updatePreferences }),
