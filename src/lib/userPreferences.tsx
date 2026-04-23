@@ -18,7 +18,6 @@ export interface UserPreferences {
   tour_completed: boolean;
   tour_version: number;
   keyboard_shortcuts_enabled: boolean;
-  checklist_dismissed: boolean;
   usage_tracking_scan: boolean;
   usage_tracking_manual_lookup: boolean;
   usage_tracking_view: boolean;
@@ -28,7 +27,7 @@ export interface UserPreferences {
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   dashboard_recent_bins_count: 5,
-  dashboard_show_stats: false,
+  dashboard_show_stats: true,
   dashboard_show_needs_organizing: true,
   dashboard_show_saved_views: true,
   dashboard_show_pinned_bins: true,
@@ -43,7 +42,6 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   tour_completed: false,
   tour_version: 0,
   keyboard_shortcuts_enabled: true,
-  checklist_dismissed: false,
   usage_tracking_scan: true,
   usage_tracking_manual_lookup: true,
   usage_tracking_view: false,

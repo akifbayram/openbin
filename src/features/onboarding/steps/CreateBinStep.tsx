@@ -1,6 +1,5 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AreaPicker } from '@/features/areas/AreaPicker';
 import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
 import { QuickAddWidget } from '@/features/bins/QuickAddWidget';
 import { useQuickAdd } from '@/features/bins/useQuickAdd';
@@ -12,9 +11,6 @@ export interface CreateBinStepProps {
   setBinName: (v: string) => void;
   binItems: BinItem[];
   setBinItems: (v: BinItem[]) => void;
-  binAreaId: string | null;
-  setBinAreaId: (v: string | null) => void;
-  areaNames: string[];
   handleCreateBin: () => void;
   loading: boolean;
   t: { bin: string; Bin: string };
@@ -23,8 +19,7 @@ export interface CreateBinStepProps {
 export function CreateBinStep({
   locationId, binName, setBinName,
   binItems, setBinItems,
-  binAreaId, setBinAreaId,
-  areaNames, handleCreateBin, loading, t,
+  handleCreateBin, loading, t,
 }: CreateBinStepProps) {
   const quickAdd = useQuickAdd({
     binName,
@@ -58,13 +53,6 @@ export function CreateBinStep({
           autoFocus
           className="rounded-[var(--radius-md)]"
         />
-        {areaNames.length > 0 && (
-          <AreaPicker
-            locationId={locationId}
-            value={binAreaId}
-            onChange={setBinAreaId}
-          />
-        )}
         <QuickAddWidget quickAdd={quickAdd} aiEnabled={false} />
       </div>
       <Button

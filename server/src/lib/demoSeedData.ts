@@ -36,7 +36,7 @@ export const NESTED_AREAS: Record<string, string[]> = {
 
 export const STORAGE_AREAS = ['Unit A', 'Unit B', 'Climate Controlled'];
 
-export const PINNED_BIN_NAMES = ['Networking Gear', 'Brewing Equipment', 'Yarn Stash'];
+export const PINNED_BIN_NAMES = ['Networking', 'Brewing Equipment', 'Yarn Stash', 'SBCs & Dev Boards'];
 
 export const PINNED_BIN_NAMES_PAT = ['Board Games'];
 
@@ -599,6 +599,42 @@ export const DEMO_BINS: DemoBin[] = [
     createdBy: 'demo',
     visibility: 'private',
   },
+  {
+    name: 'Junk Drawer',
+    location: 'home',
+    area: 'Kitchen',
+    items: ['AA batteries', { name: 'Rubber bands', quantity: 20 }, 'Takeout menus', 'Mystery keys', 'Scotch tape', 'Expired coupons', 'Phone charger (unknown phone)', 'Sticky notes', 'Pens (mostly dead)', { name: 'Twist ties', quantity: 30 }, 'Spare button envelope', 'Birthday candles'],
+    tags: [],
+    icon: 'Box',
+    color: 'neutral:2',
+    cardStyle: '',
+    notes: '',
+    createdBy: 'demo',
+  },
+  {
+    name: 'Medicine Cabinet',
+    location: 'home',
+    area: 'Closet',
+    items: ['Ibuprofen', 'Acetaminophen', 'Children\'s Tylenol', { name: 'Bandages (assorted)', quantity: 40 }, 'Antiseptic spray', 'Thermometer', 'Antacids', 'Allergy medicine', 'Cold medicine', 'Cough syrup', 'Cotton balls', 'Medical tape'],
+    tags: [],
+    icon: 'Heart',
+    color: '0:1',
+    cardStyle: '',
+    notes: 'Check expiry dates annually.',
+    createdBy: 'sarah',
+  },
+  {
+    name: 'Battery Station',
+    location: 'home',
+    area: 'Office',
+    items: [{ name: 'AA batteries', quantity: 16 }, { name: 'AAA batteries', quantity: 12 }, { name: '9V batteries', quantity: 4 }, { name: 'C batteries', quantity: 6 }, { name: 'D batteries', quantity: 4 }, { name: 'CR2032 coin cells', quantity: 8 }, 'Battery tester', { name: 'Rechargeable AA (Eneloop)', quantity: 8 }, 'Battery charger'],
+    tags: ['supplies'],
+    icon: 'Zap',
+    color: '45:3',
+    cardStyle: '',
+    notes: '',
+    createdBy: 'demo',
+  },
 ];
 
 export const TRASHED_BINS: DemoBin[] = [
@@ -719,6 +755,11 @@ export const BIN_USAGE_PROFILES: Record<string, BinUsageProfile> = {
   // Untouched — the bin's own notes call it out
   'Dead Drives': 'silent',
   'Upgrade Box': 'silent',
+
+  // New bins
+  'Junk Drawer': 'weekly',
+  'Medicine Cabinet': 'occasional',
+  'Battery Station': 'biweekly',
 };
 
 export const CUSTOM_FIELD_DEFINITIONS = [
@@ -891,3 +932,24 @@ export const TAG_COLORS: Record<string, string> = {
   '3d-printing': '280:2',
   'self-hosted': '245:2',
 };
+
+export interface DemoShoppingListEntry {
+  name: string;
+  originBinName: string | null;
+  createdBy: DemoMember;
+  daysAgo: number;
+}
+
+export const DEMO_SHOPPING_LIST: DemoShoppingListEntry[] = [
+  // Household staples that ran out — linked to their source bins
+  { name: 'Dog kibble (large bag)', originBinName: 'Dog Supplies', createdBy: 'demo', daysAgo: 2 },
+  { name: 'All-purpose cleaner refill (2-pack)', originBinName: 'Cleaning Supplies', createdBy: 'sarah', daysAgo: 1 },
+  { name: 'Ibuprofen (100-count)', originBinName: 'Medicine Cabinet', createdBy: 'sarah', daysAgo: 3 },
+  { name: 'AA batteries (16-pack)', originBinName: 'Battery Station', createdBy: 'demo', daysAgo: 1 },
+  // Hobby restocks linked to bins
+  { name: 'AeroPress paper filters (350-pack)', originBinName: 'Coffee Accessories', createdBy: 'sarah', daysAgo: 1 },
+  { name: 'Glow-in-the-dark d20', originBinName: 'Dice & Accessories', createdBy: 'alex', daysAgo: 4 },
+  // Manual adds — items needed but not yet in any bin
+  { name: 'Chunky alpaca yarn — dusty rose (2 skeins)', originBinName: null, createdBy: 'sarah', daysAgo: 0 },
+  { name: 'WD-40 (large can)', originBinName: null, createdBy: 'demo', daysAgo: 0 },
+];

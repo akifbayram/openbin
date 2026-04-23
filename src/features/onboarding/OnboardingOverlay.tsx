@@ -88,9 +88,6 @@ export function OnboardingOverlay(props: OnboardingActions) {
           {displayedStep === 0 && !demoMode && (
             <WelcomeStep
               locationName={state.locationName} setLocationName={state.setLocationName}
-              areaNames={state.areaNames} areaInput={state.areaInput} setAreaInput={state.setAreaInput}
-              showAreaInput={state.showAreaInput} setShowAreaInput={state.setShowAreaInput}
-              handleAddArea={state.handleAddArea} handleRemoveArea={state.handleRemoveArea}
               handleCreateLocation={state.handleCreateLocation} loading={loading} t={state.t}
             />
           )}
@@ -101,8 +98,7 @@ export function OnboardingOverlay(props: OnboardingActions) {
             <CreateBinStep
               locationId={locationId} binName={state.binName} setBinName={state.setBinName}
               binItems={state.binItems} setBinItems={state.setBinItems}
-              binAreaId={state.binAreaId} setBinAreaId={state.setBinAreaId}
-              areaNames={state.areaNames} handleCreateBin={state.handleCreateBin} loading={loading} t={state.t}
+              handleCreateBin={state.handleCreateBin} loading={loading} t={state.t}
             />
           )}
           {displayedStep === 2 && demoMode && (

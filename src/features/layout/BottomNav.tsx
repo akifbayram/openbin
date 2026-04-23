@@ -63,7 +63,7 @@ export function BottomNav({ onNavigate, onScanClick, onMoreClick, onAskAi }: Bot
             aria-current={active ? 'page' : undefined}
             className={cn(
               'relative z-10 flex flex-col items-center justify-center gap-[1px] flex-1 h-full',
-              active ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]',
+              active ? 'text-[var(--accent)]' : id === 'ai' ? 'text-[var(--text-tertiary)] dark:text-[var(--ai-accent)]' : 'text-[var(--text-tertiary)]',
             )}
           >
             <Icon

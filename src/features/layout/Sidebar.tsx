@@ -2,8 +2,6 @@ import { Boxes, ClipboardList, LayoutDashboard, LogOut, MapPin, Package, Package
   'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
-import { UserAvatar } from '@/components/ui/user-avatar';
-import { getAvatarUrl } from '@/lib/api';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import type { TermKey } from '@/lib/navItems';
@@ -111,7 +109,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
   const navigate = (path: string) => guardedNavigate(() => rawNavigate(path));
   const { settings } = useAppSettings();
   const t = useTerminology();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const { canWrite } = usePermissions();
   const { isSelfHosted, isFree } = usePlan();
   const showProBadges = !isSelfHosted && isFree;
@@ -193,29 +191,6 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
 
       <div className="py-4 px-3">
         <div className="space-y-1">
-          {user && (
-            <button
-              type="button"
-              onClick={() => { navigate('/settings/account'); onItemClick?.(); }}
-              aria-label={user.displayName || user.email}
-              aria-current={location.pathname === '/settings/account' ? 'page' : undefined}
-              className={cn(
-                'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left border',
-                location.pathname === '/settings/account'
-                  ? 'flat-card text-[var(--text-primary)]'
-                  : 'border-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
-              )}
-            >
-              <UserAvatar
-                avatarUrl={user.avatarUrl ? getAvatarUrl(user.avatarUrl) : null}
-                displayName={user.displayName || user.email}
-                size="xs"
-              />
-              <span className={cn('flex-1 truncate', collapsed && 'w-0 opacity-0')} aria-hidden={collapsed || undefined}>
-                {user.displayName || user.email}
-              </span>
-            </button>
-          )}
           <NavButton path="/settings" label="Settings" icon={Settings} currentPath={location.pathname} navigate={navigate} onClick={onItemClick}
             collapsed={collapsed} />
           <button

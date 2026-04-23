@@ -23,18 +23,24 @@ export function SavedViewChips({ views, onApply, onDelete, className }: SavedVie
           aria-label={`Apply saved view: ${view.name}`}
           onClick={() => onApply(view)}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onApply(view); } }}
-          className="group/chip shrink-0 rounded-[var(--radius-md)] px-3 py-2 flex items-center gap-2 max-w-[200px] transition-colors duration-150 cursor-pointer bg-[var(--accent)]/18 [@media(hover:hover)]:hover:bg-[var(--accent)]/28"
+          className="group/chip shrink-0 rounded-[var(--radius-md)] pl-2 pr-3 py-2 flex items-center gap-1.5 max-w-[200px] transition-colors duration-150 cursor-pointer bg-[var(--accent)]/18 [@media(hover:hover)]:hover:bg-[var(--accent)]/28"
         >
-          <Bookmark className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]" />
-          <span className="text-[13px] font-medium text-[var(--text-primary)] truncate">{view.name}</span>
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onDelete(view.id); }}
-            className="ml-auto -mr-0.5 p-1.5 rounded-[var(--radius-lg)] hover:bg-[var(--bg-active)] [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chip:opacity-100 transition-opacity"
             aria-label={`Remove saved view ${view.name}`}
+            className="grid place-items-center h-5 w-5 shrink-0 rounded-[var(--radius-md)] [@media(hover:hover)]:hover:bg-[var(--bg-active)]"
           >
-            <X className="h-3 w-3 text-[var(--text-tertiary)]" />
+            <Bookmark
+              aria-hidden="true"
+              className="col-start-1 row-start-1 h-3.5 w-3.5 text-[var(--text-tertiary)] transition-opacity duration-150 [@media(hover:none)]:opacity-0 [@media(hover:hover)]:group-hover/chip:opacity-0"
+            />
+            <X
+              aria-hidden="true"
+              className="col-start-1 row-start-1 h-3.5 w-3.5 text-[var(--text-secondary)] transition-opacity duration-150 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chip:opacity-100"
+            />
           </button>
+          <span className="text-[13px] font-medium text-[var(--text-primary)] truncate">{view.name}</span>
         </div>
       ))}
     </div>

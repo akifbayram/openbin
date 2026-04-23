@@ -28,10 +28,8 @@ import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
-import { useUserPreferences } from '@/lib/userPreferences';
 import { cn, getErrorMessage } from '@/lib/utils';
 import { DashboardActivityFeed } from './DashboardActivityFeed';
-import { DashboardChecklist } from './DashboardChecklist';
 import { DashboardDialogs } from './DashboardDialogs';
 import { DashboardOpenCheckouts } from './DashboardOpenCheckouts';
 import { DashboardRecentScans } from './DashboardRecentScans';
@@ -57,7 +55,6 @@ export function DashboardPage() {
   const { totalBins, totalItems, totalAreas, needsOrganizing, checkouts, checkoutCount, recentlyScanned, scanTimeMap, pinnedBins, isLoading } =
     useDashboard();
   const { settings: dashSettings, updateSettings: updateDashSettings, resetSettings: resetDashSettings } = useDashboardSettings();
-  const { preferences, updatePreferences } = useUserPreferences();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const { views: savedViews } = useSavedViews();
@@ -72,8 +69,6 @@ export function DashboardPage() {
     resetDeps: [activeLocationId],
   });
   const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy } = useBulkActions(pinnedBins, selectedIds, clearSelection, showToast, t);
-
-  const showChecklist = !preferences.checklist_dismissed && totalBins < 3 && totalBins > 0;
 
   useEffect(() => {
     if (debouncedSearch.trim()) {
@@ -110,8 +105,7 @@ export function DashboardPage() {
     (dashSettings.showActivity && !!activeLocationId) ||
     dashSettings.showStats ||
     (dashSettings.showCheckouts && checkoutCount > 0) ||
-    (dashSettings.showRecentlyScanned && recentlyScanned.length > 0) ||
-    showChecklist;
+    (dashSettings.showRecentlyScanned && recentlyScanned.length > 0);
 
   return (
     <div className="page-content-wide">
@@ -284,13 +278,13 @@ export function DashboardPage() {
               </section>
             )}
 
-            {dashSettings.showCheckouts && (
+            {dashSettings.showCheckouts && checkouts.length > 0 && (
               <div className="order-2 lg:order-none min-w-0">
                 <DashboardOpenCheckouts checkouts={checkouts} showTimestamps={dashSettings.showTimestamps} />
               </div>
             )}
 
-            {dashSettings.showRecentlyScanned && (
+            {dashSettings.showRecentlyScanned && recentlyScanned.length > 0 && (
               <div className="order-4 lg:order-none min-w-0">
                 <DashboardRecentScans
                   bins={recentlyScanned}
@@ -301,15 +295,6 @@ export function DashboardPage() {
               </div>
             )}
 
-            {showChecklist && (
-              <div className="order-1 lg:order-none min-w-0">
-                <DashboardChecklist
-                  totalBins={totalBins}
-                  totalItems={totalItems}
-                  onDismiss={() => updatePreferences({ checklist_dismissed: true })}
-                />
-              </div>
-            )}
           </div>
         </div>
 

@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import type { TxQueryFn } from '../db.js';
 import { d, generateUuid, isUniqueViolation, withTransaction } from '../db.js';
 import { config } from './config.js';
-import type { BinUsageProfile, DemoActivityEntry, DemoBin, DemoMember } from './demoSeedData.js';
+import type { BinUsageProfile, DemoActivityEntry, DemoBin, DemoMember, DemoShoppingListEntry } from './demoSeedData.js';
 import {
   BIN_USAGE_PROFILES,
   CUSTOM_FIELD_DEFINITIONS,
@@ -13,6 +13,7 @@ import {
   DEMO_BINS,
   DEMO_CHECKOUTS,
   DEMO_RETURNED_CHECKOUTS,
+  DEMO_SHOPPING_LIST,
   DEMO_USERS,
   HOME_AREAS,
   NESTED_AREAS,
@@ -620,11 +621,12 @@ async function seedActivityLog(
     const entityId = entry.binName ? (binIdMap.get(entry.binName) ?? null) : null;
     const changes = entry.changes ? JSON.stringify(entry.changes) : null;
     const daysAgo = entry.daysAgo;
+    const userName = DEMO_USERS[entry.user].email;
 
     await tx(
       `INSERT INTO activity_log (id, location_id, user_id, user_name, action, entity_type, entity_id, entity_name, changes, auth_method, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${d.daysAgo(daysAgo)})`,
-      [generateUuid(), locationId, userId, entry.user, entry.action, entry.entityType, entityId, entry.entityName ?? null, changes, 'jwt'],
+      [generateUuid(), locationId, userId, userName, entry.action, entry.entityType, entityId, entry.entityName ?? null, changes, 'jwt'],
     );
   }
 }
@@ -643,7 +645,7 @@ async function seedCheckouts(
   async function findItemId(binName: string, itemName: string): Promise<string | null> {
     const binId = binIdMap.get(binName);
     if (!binId) return null;
-    const result = await tx<{ id: string }>('SELECT id FROM bin_items WHERE bin_id = $1 AND name = $2 AND deleted_at IS NULL', [binId, itemName]);
+    const result = await tx<{ id: string }>('SELECT id FROM bin_items WHERE bin_id = $1 AND name = $2', [binId, itemName]);
     return result.rows.length > 0 ? result.rows[0].id : null;
   }
 
@@ -694,6 +696,23 @@ async function seedBinShares(
   }
 }
 
+async function seedShoppingList(
+  tx: TxQueryFn,
+  homeLocationId: string,
+  userIdMap: Map<DemoMember, string>,
+  binIdMap: Map<string, string>,
+  entries: DemoShoppingListEntry[],
+): Promise<void> {
+  for (const entry of entries) {
+    const originBinId = entry.originBinName ? (binIdMap.get(entry.originBinName) ?? null) : null;
+    await tx(
+      `INSERT INTO shopping_list_items (id, location_id, name, origin_bin_id, created_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, ${d.daysAgo(entry.daysAgo)})`,
+      [generateUuid(), homeLocationId, entry.name, originBinId, userIdMap.get(entry.createdBy)!],
+    );
+  }
+}
+
 export async function seedDemoData(): Promise<void> {
   if (!config.demoMode) return;
 
@@ -721,6 +740,7 @@ export async function seedDemoData(): Promise<void> {
   const checkouts = DEMO_CHECKOUTS;
   const returnedCheckoutsList = DEMO_RETURNED_CHECKOUTS;
   const binShares = DEMO_BIN_SHARES;
+  const shoppingListEntries = DEMO_SHOPPING_LIST;
 
   const startTime = Date.now();
 
@@ -748,6 +768,7 @@ export async function seedDemoData(): Promise<void> {
       await seedCustomFields(tx, homeLocationId, binIdMap, cfDefs, cfValues);
       await seedCheckouts(tx, homeLocationId, storageLocationId, userIdMap, binIdMap, bins, checkouts, returnedCheckoutsList);
       await seedBinShares(tx, binIdMap, userIdMap, binShares);
+      await seedShoppingList(tx, homeLocationId, userIdMap, binIdMap, shoppingListEntries);
       await seedActivityLog(tx, homeLocationId, storageLocationId, userIdMap, binIdMap, activityEntries);
     });
 
@@ -755,7 +776,7 @@ export async function seedDemoData(): Promise<void> {
     const homeBins = bins.filter((b) => b.location === 'home').length;
     const storageBins = bins.filter((b) => b.location === 'storage').length;
     const totalAreas = homeAreaNames.length + Object.values(nestedAreaDefs).flat().length + storageAreaNames.length;
-    const message = `Demo data seeded in ${elapsed}ms (${members.length} users, ${homeBins} + ${storageBins} bins, ${trashedBinsList.length} trashed, ${totalAreas} areas, ${cfDefs.length} custom fields, ${checkouts.length + returnedCheckoutsList.length} checkouts, ${binShares.length} shares, ${activityEntries.length} activity log entries across 2 locations)`;
+    const message = `Demo data seeded in ${elapsed}ms (${members.length} users, ${homeBins} + ${storageBins} bins, ${trashedBinsList.length} trashed, ${totalAreas} areas, ${cfDefs.length} custom fields, ${checkouts.length + returnedCheckoutsList.length} checkouts, ${binShares.length} shares, ${shoppingListEntries.length} shopping list items, ${activityEntries.length} activity log entries across 2 locations)`;
     log.info(message);
     pushLog({ level: 'info', message });
   } catch (err) {

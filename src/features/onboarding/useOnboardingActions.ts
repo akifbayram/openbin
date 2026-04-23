@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/toast';
-import { createArea } from '@/features/areas/useAreas';
 import { addBin } from '@/features/bins/useBins';
 import { createLocation } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
@@ -18,18 +17,11 @@ export interface OnboardingState {
   // Step 0 state
   locationName: string;
   setLocationName: (v: string) => void;
-  areaNames: string[];
-  areaInput: string;
-  setAreaInput: (v: string) => void;
-  showAreaInput: boolean;
-  setShowAreaInput: (v: boolean) => void;
   // Step 1 state
   binName: string;
   setBinName: (v: string) => void;
   binItems: BinItem[];
   setBinItems: (v: BinItem[]) => void;
-  binAreaId: string | null;
-  setBinAreaId: (v: string | null) => void;
   // Loading & created bin
   loading: boolean;
   createdBin: Bin | null;
@@ -37,8 +29,6 @@ export interface OnboardingState {
   displayedStep: number;
   transitioning: boolean;
   // Handlers
-  handleAddArea: () => void;
-  handleRemoveArea: (name: string) => void;
   handleCreateLocation: () => void;
   handleCreateBin: () => void;
   handleSkipSetup: () => void;
@@ -53,13 +43,9 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
 
   // Step 0 state
   const [locationName, setLocationName] = useState('');
-  const [areaNames, setAreaNames] = useState<string[]>([]);
-  const [areaInput, setAreaInput] = useState('');
-  const [showAreaInput, setShowAreaInput] = useState(false);
   // Step 1 state
   const [binName, setBinName] = useState('');
   const [binItems, setBinItems] = useState<BinItem[]>([]);
-  const [binAreaId, setBinAreaId] = useState<string | null>(null);
   // Loading
   const [loading, setLoading] = useState(false);
   // Created bin for QR preview
@@ -87,17 +73,6 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
     }
   }, [step, createdBin, advanceStep, demoMode]);
 
-  function handleAddArea() {
-    const name = areaInput.trim();
-    if (!name || areaNames.includes(name)) return;
-    setAreaNames((prev) => [...prev, name]);
-    setAreaInput('');
-  }
-
-  function handleRemoveArea(name: string) {
-    setAreaNames((prev) => prev.filter((a) => a !== name));
-  }
-
   async function handleCreateLocation() {
     if (!locationName.trim()) return;
     setLoading(true);
@@ -105,13 +80,6 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
       const loc = await createLocation(locationName.trim());
       advanceWithLocation(loc.id);
       setActiveLocationId(loc.id);
-      for (const name of areaNames) {
-        try {
-          await createArea(loc.id, name);
-        } catch {
-          // Skip failures
-        }
-      }
     } catch (err) {
       showToast({ message: getErrorMessage(err, `Failed to create ${t.location}`), variant: 'error' });
     } finally {
@@ -127,7 +95,6 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
         name: binName.trim(),
         locationId,
         items: binItems.length > 0 ? binItemsToPayload(binItems) : undefined,
-        areaId: binAreaId,
       });
       setCreatedBin(bin);
       advanceStep();
@@ -157,14 +124,10 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
   return {
     t, navigate,
     locationName, setLocationName,
-    areaNames, areaInput, setAreaInput,
-    showAreaInput, setShowAreaInput,
     binName, setBinName,
     binItems, setBinItems,
-    binAreaId, setBinAreaId,
     loading, createdBin,
     displayedStep, transitioning,
-    handleAddArea, handleRemoveArea,
     handleCreateLocation, handleCreateBin, handleSkipSetup,
   };
 }

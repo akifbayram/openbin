@@ -187,7 +187,7 @@ export function BinListPage() {
                     onClick={() => aiGated ? setUpgradeOpen(true) : getCommandInputRef().current?.open()}
                     variant="ghost"
                     size="sm"
-                    className="hidden lg:inline-flex h-10 gap-1.5 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 text-[var(--ai-accent)] hover:bg-[var(--ai-accent)]/15 active:bg-[var(--ai-accent)]/20 ai-shimmer"
+                    className="hidden lg:inline-flex h-10 gap-1.5 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 dark:bg-[var(--ai-accent)]/20 text-[var(--ai-accent)] hover:bg-[var(--ai-accent)]/15 dark:hover:bg-[var(--ai-accent)]/28 active:bg-[var(--ai-accent)]/20 dark:active:bg-[var(--ai-accent)]/35 dark:border dark:border-[var(--ai-accent)]/25 ai-shimmer"
                     aria-label="Ask AI"
                   >
                     <Sparkles className="h-4 w-4" />
