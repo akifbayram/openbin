@@ -1,8 +1,10 @@
-import { Check, Images, X } from 'lucide-react';
+import { Camera, Check, Images, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { cn, focusRing } from '@/lib/utils';
 import { setCapturedPhotos, setCapturedReturnTarget } from './capturedPhotos';
+import { FirstRunCoachmark, HelpButton } from './guidance/CameraGuidance';
 import { useCaptureGrouping } from './useCaptureGrouping';
 
 const LONG_PRESS_MS = 500;
@@ -169,53 +171,33 @@ export function CapturePageBulkGroup() {
         <div className="absolute inset-0 z-20 flex flex-col bg-[var(--bg-base)] items-center justify-center gap-5 px-6">
           {!hasCamera ? (
             <>
+              <Camera className="h-16 w-16 text-[var(--text-tertiary)]" />
               <h2 className="text-[17px] font-semibold text-[var(--text-primary)] text-center">
                 Camera not available
               </h2>
               <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-sm">
                 Your browser does not support camera access. Make sure you are using HTTPS.
               </p>
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className={cn(
-                  focusRing,
-                  'px-4 py-2 text-[14px] border border-[var(--border-flat)] rounded-[var(--radius-md)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]',
-                )}
-              >
+              <Button variant="outline" onClick={() => navigate(-1)}>
                 Go Back
-              </button>
+              </Button>
             </>
           ) : error ? (
             <>
+              <Camera className="h-16 w-16 text-[var(--destructive)] opacity-60" />
               <p className="text-[15px] text-[var(--text-primary)] text-center max-w-sm font-medium">
                 {error}
               </p>
               <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  className={cn(
-                    focusRing,
-                    'px-4 py-2 text-[14px] border border-[var(--border-flat)] rounded-[var(--radius-md)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]',
-                  )}
-                >
+                <Button variant="outline" onClick={() => navigate(-1)}>
                   Go Back
-                </button>
-                <button
-                  type="button"
-                  onClick={() => startCamera()}
-                  className={cn(
-                    focusRing,
-                    'px-4 py-2 text-[14px] bg-[var(--accent)] text-white rounded-[var(--radius-md)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]',
-                  )}
-                >
-                  Try Again
-                </button>
+                </Button>
+                <Button onClick={() => startCamera()}>Try Again</Button>
               </div>
             </>
           ) : (
             <>
+              <Camera className="h-16 w-16 text-[var(--accent)] opacity-80" />
               <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
                 Ready to capture
               </h2>
@@ -223,31 +205,17 @@ export function CapturePageBulkGroup() {
                 Tap the button below to start the camera and take photos.
               </p>
               <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  className={cn(
-                    focusRing,
-                    'px-4 py-2 text-[14px] border border-[var(--border-flat)] rounded-[var(--radius-md)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]',
-                  )}
-                >
+                <Button variant="outline" onClick={() => navigate(-1)}>
                   Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => startCamera()}
-                  className={cn(
-                    focusRing,
-                    'px-4 py-2 text-[14px] bg-[var(--accent)] text-white rounded-[var(--radius-md)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]',
-                  )}
-                >
-                  Start Camera
-                </button>
+                </Button>
+                <Button onClick={() => startCamera()}>Start Camera</Button>
               </div>
             </>
           )}
         </div>
       )}
+
+      <FirstRunCoachmark isStreaming={isStreaming} />
 
       {isStreaming && (
         <>
@@ -275,17 +243,20 @@ export function CapturePageBulkGroup() {
               Bin #{currentGroup + 1} · {photosInCurrentGroup} {photoLabel}
             </div>
 
-            <button
-              type="button"
-              onClick={handleLibrary}
-              className={cn(
-                focusRing,
-                'h-8 w-8 flex items-center justify-center text-white/90 hover:text-white focus-visible:ring-offset-2 focus-visible:ring-offset-black',
-              )}
-              aria-label="Open photo library"
-            >
-              <Images className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <HelpButton className="bg-transparent hover:bg-white/10" />
+              <button
+                type="button"
+                onClick={handleLibrary}
+                className={cn(
+                  focusRing,
+                  'h-8 w-8 flex items-center justify-center text-white/90 hover:text-white focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+                )}
+                aria-label="Open photo library"
+              >
+                <Images className="h-5 w-5" />
+              </button>
+            </div>
 
             <input
               ref={fileInputRef}
