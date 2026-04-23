@@ -158,7 +158,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
         </div>
 
         {/* Manage & Tools sections — scrollable when viewport is short */}
-        <div className="flex-1 min-h-0 overflow-y-auto border-b border-[var(--border-subtle)]">
+        <div data-tour="nav-sidebar" className="flex-1 min-h-0 overflow-y-auto border-b border-[var(--border-subtle)]">
           <SectionLabel collapsed={collapsed}>Manage</SectionLabel>
           <div className="space-y-1">
             {manageItems.map((item) => (

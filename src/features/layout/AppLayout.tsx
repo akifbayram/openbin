@@ -16,7 +16,8 @@ import { TagColorsProvider } from '@/features/tags/TagColorsContext';
 import { TourBanner } from '@/features/tour/TourBanner';
 import { TourOverlay } from '@/features/tour/TourOverlay';
 import { getCommandInputRef, TourProvider } from '@/features/tour/TourProvider';
-import { TOUR_VERSION, type TourContext } from '@/features/tour/tourSteps';
+import { TOURS_VERSION } from '@/features/tour/tourRegistry';
+import type { TourContext } from '@/features/tour/tourSteps';
 import { useTour } from '@/features/tour/useTour';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
@@ -178,12 +179,15 @@ export function AppLayout() {
   const showTourBanner =
     preferences.onboarding_completed &&
     !onboarding.isOnboarding &&
-    (!preferences.tour_completed || preferences.tour_version < TOUR_VERSION) &&
+    !(preferences.tours_seen ?? []).includes('highlights') &&
     !tour.isActive &&
     !locationsLoading;
 
   const dismissTour = useCallback(() => {
-    updatePreferences({ tour_completed: true, tour_version: TOUR_VERSION });
+    updatePreferences((prev) => ({
+      tours_seen: Array.from(new Set([...(prev.tours_seen ?? []), 'highlights'])),
+      tours_version: TOURS_VERSION,
+    }));
   }, [updatePreferences]);
 
   async function handleInstall() {
@@ -331,7 +335,7 @@ export function AppLayout() {
       {demoMode && <DemoCtaOverlay />}
       <TourOverlay tour={tour} context={tourContext} />
       {showTourBanner && (
-        <TourBanner appName={settings.appName} onStart={tour.start} onDismiss={dismissTour} />
+        <TourBanner appName={settings.appName} onStart={() => tour.start('highlights')} onDismiss={dismissTour} />
       )}
     </div>
     </TourProvider>

@@ -18,6 +18,7 @@ import { useAllTags } from '@/features/bins/useBins';
 import { useBulkActions } from '@/features/bins/useBulkActions';
 import { useBulkDialogs } from '@/features/bins/useBulkDialogs';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { getCommandInputRef } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
@@ -140,6 +141,7 @@ export function DashboardPage() {
                   </Button>
                 </Tooltip>
               )}
+              <TourLauncher tourId="highlights" />
             </div>
             {canCreateBin && (
               <Tooltip content={`New ${t.bin}`} side="bottom">
