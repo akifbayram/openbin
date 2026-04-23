@@ -102,7 +102,7 @@ export function BinDetailToolbar({
   }
 
   return (
-    <div className="flex items-center gap-0.5 lg:gap-2">
+    <div className="flex items-center gap-0.5 lg:gap-2" data-tour="bin-toolbar">
       {/* Desktop: nav arrows */}
       {hasBinListContext && (
         <div className="hidden lg:flex gap-1.5 shrink-0">

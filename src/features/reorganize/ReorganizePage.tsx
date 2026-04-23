@@ -24,6 +24,7 @@ import { useAreaList } from '@/features/areas/useAreas';
 import { useBinList } from '@/features/bins/useBins';
 import { BinSelectorCard } from '@/features/print/BinSelectorCard';
 import { useBinSelection } from '@/features/print/useBinSelection';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
@@ -373,30 +374,34 @@ export function ReorganizePage() {
 
   return (
     <div className="page-content max-w-6xl">
-      <PageHeader title="Reorganize" back />
+      <PageHeader title="Reorganize" back actions={<TourLauncher tourId="reorganize" />} />
 
       <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
         <div className="flex flex-col gap-4">
-          <OptionGroup
-            options={[
-              { key: 'bins', label: t.bins[0].toUpperCase() + t.bins.slice(1) },
-              { key: 'tags', label: 'Tags' },
-            ]}
-            value={mode}
-            onChange={(v) => setMode(v as 'bins' | 'tags')}
-          />
+          <div data-tour="reorganize-mode">
+            <OptionGroup
+              options={[
+                { key: 'bins', label: t.bins[0].toUpperCase() + t.bins.slice(1) },
+                { key: 'tags', label: 'Tags' },
+              ]}
+              value={mode}
+              onChange={(v) => setMode(v as 'bins' | 'tags')}
+            />
+          </div>
 
-          <BinSelectorCard
-            allBins={allBins}
-            areas={areas}
-            selectedIds={selection.selectedIds}
-            toggleBin={selection.toggleBin}
-            selectAll={selection.selectAll}
-            selectNone={selection.selectNone}
-            toggleArea={selection.toggleArea}
-            expanded={binsExpanded}
-            onExpandedChange={setBinsExpanded}
-          />
+          <div data-tour="reorganize-selector">
+            <BinSelectorCard
+              allBins={allBins}
+              areas={areas}
+              selectedIds={selection.selectedIds}
+              toggleBin={selection.toggleBin}
+              selectAll={selection.selectAll}
+              selectNone={selection.selectNone}
+              toggleArea={selection.toggleArea}
+              expanded={binsExpanded}
+              onExpandedChange={setBinsExpanded}
+            />
+          </div>
 
           <Card>
             <CardContent>

@@ -1,5 +1,12 @@
 import type { LucideIcon } from 'lucide-react';
 import type { TourStep } from './tourSteps';
+import { askAi } from './tours/ask-ai';
+import { binAnatomy } from './tours/bin-anatomy';
+import { bulkEdit } from './tours/bulk-edit';
+import { createAi } from './tours/create-ai';
+import { highlights } from './tours/highlights';
+import { printScan } from './tours/print-scan';
+import { reorganize } from './tours/reorganize';
 
 export type TourId =
   | 'highlights'
@@ -21,7 +28,15 @@ export interface TourDefinition {
 
 export const TOURS_VERSION = 1;
 
-export const TOURS: Record<TourId, TourDefinition> = {} as Record<TourId, TourDefinition>;
+export const TOURS: Record<TourId, TourDefinition> = {
+  highlights,
+  'create-ai': createAi,
+  'ask-ai': askAi,
+  'bin-anatomy': binAnatomy,
+  'print-scan': printScan,
+  reorganize,
+  'bulk-edit': bulkEdit,
+};
 
 export function getTour(id: TourId): TourDefinition | null {
   return TOURS[id] ?? null;

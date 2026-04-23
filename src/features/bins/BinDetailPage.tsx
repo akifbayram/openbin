@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { useCheckouts } from '@/features/checkouts/useCheckouts';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
 import { usePlan } from '@/lib/usePlan';
@@ -114,38 +115,43 @@ export function BinDetailPage() {
 
   return (
     <div className="page-content max-w-5xl">
-      <BinDetailToolbar
-        bin={bin}
-        canEdit={actions.canEdit}
-        canPin={actions.canPin}
-        canDelete={actions.canDelete}
-        binIcon={HeaderIcon}
-        showAiButton={actions.showAiButton}
-        isAnalyzing={actions.isAnalyzing}
-        isReanalysis={actions.isReanalysis}
-        otherLocations={actions.otherLocations}
-        onClose={handleClose}
-        onPrev={prevBinId ? () => navigate(`/bin/${prevBinId}`, { state: { ...backState } }) : null}
-        onNext={nextBinId ? () => navigate(`/bin/${nextBinId}`, { state: { ...backState } }) : null}
-        hasBinListContext={hasBinListContext}
-        onAnalyze={actions.aiGated ? () => setUpgradeOpen(true) : actions.handleAnalyzeClick}
-        onTogglePin={actions.handleTogglePin}
-        onCustomize={() => setAppearanceOpen(true)}
-        onPrint={() => navigate(`/print?ids=${id}`)}
-        onDuplicate={actions.handleDuplicate}
-        onMove={() => {
-          if (actions.otherLocations.length === 1) {
-            actions.handleMove(actions.otherLocations[0].id);
-          } else {
-            actions.setMoveOpen(true);
-          }
-        }}
-        onDelete={actions.handleDelete}
-        onShare={() => setShareOpen(true)}
-        showShareButton={showShareButton}
-        onSaveName={autoSave.saveName}
-        nameSaved={autoSave.savedFields.has('name')}
-      />
+      <div className="flex items-center gap-1">
+        <div className="flex-1 min-w-0">
+          <BinDetailToolbar
+            bin={bin}
+            canEdit={actions.canEdit}
+            canPin={actions.canPin}
+            canDelete={actions.canDelete}
+            binIcon={HeaderIcon}
+            showAiButton={actions.showAiButton}
+            isAnalyzing={actions.isAnalyzing}
+            isReanalysis={actions.isReanalysis}
+            otherLocations={actions.otherLocations}
+            onClose={handleClose}
+            onPrev={prevBinId ? () => navigate(`/bin/${prevBinId}`, { state: { ...backState } }) : null}
+            onNext={nextBinId ? () => navigate(`/bin/${nextBinId}`, { state: { ...backState } }) : null}
+            hasBinListContext={hasBinListContext}
+            onAnalyze={actions.aiGated ? () => setUpgradeOpen(true) : actions.handleAnalyzeClick}
+            onTogglePin={actions.handleTogglePin}
+            onCustomize={() => setAppearanceOpen(true)}
+            onPrint={() => navigate(`/print?ids=${id}`)}
+            onDuplicate={actions.handleDuplicate}
+            onMove={() => {
+              if (actions.otherLocations.length === 1) {
+                actions.handleMove(actions.otherLocations[0].id);
+              } else {
+                actions.setMoveOpen(true);
+              }
+            }}
+            onDelete={actions.handleDelete}
+            onShare={() => setShareOpen(true)}
+            showShareButton={showShareButton}
+            onSaveName={autoSave.saveName}
+            nameSaved={autoSave.savedFields.has('name')}
+          />
+        </div>
+        <TourLauncher tourId="bin-anatomy" />
+      </div>
 
       {actions.isAnalyzing && (
         <AiProgressBar

@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
 import { useBinList } from '@/features/bins/useBins';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { useAuth } from '@/lib/auth';
 import { type BulkAction, BulkActionBar } from '@/lib/bulk/BulkActionBar';
 import { useBulkSelection } from '@/lib/bulk/useBulkSelection';
@@ -192,15 +193,18 @@ export function TagsPage() {
     <div className="page-content-wide">
       <PageHeader
         title="Tags"
-        actions={canWrite ? (
+        actions={(
           <div className="flex items-center gap-2">
-            {showSuggestButton && suggestButton}
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Create Tag
-            </Button>
+            <TourLauncher tourId="bulk-edit" />
+            {canWrite && showSuggestButton && suggestButton}
+            {canWrite && (
+              <Button size="sm" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                Create Tag
+              </Button>
+            )}
           </div>
-        ) : undefined}
+        )}
       />
 
       {(totalCount > 0 || search) && (
@@ -261,7 +265,7 @@ export function TagsPage() {
             )}
           </EmptyState>
         ) : (
-          <div className={cn(selectable && 'pb-16')}>
+          <div data-tour="select-toggle" className={cn(selectable && 'pb-16')}>
             <TagTableView
               tags={tags}
               sortColumn={sortColumn}

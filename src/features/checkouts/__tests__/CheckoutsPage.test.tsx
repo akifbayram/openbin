@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ItemCheckoutWithContext } from '@/types';
 
 vi.mock('@/lib/api', () => ({ apiFetch: vi.fn() }));
+vi.mock('@/features/tour/TourLauncher', () => ({ TourLauncher: () => null }));
 vi.mock('@/lib/auth', () => ({
   useAuth: vi.fn(() => ({ activeLocationId: 'loc-1', token: 'test' })),
 }));

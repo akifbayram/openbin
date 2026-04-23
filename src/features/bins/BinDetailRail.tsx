@@ -103,7 +103,7 @@ export function BinDetailRail({
         )}
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4" data-tour="bin-appearance">
         <div className={META_FIELD}>
           <span className={sectionHeader}>Code</span>
           <div className="flex items-center h-11 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] pl-3.5 pr-1 transition-colors focus-within:ring-2 focus-within:ring-[var(--accent)]">

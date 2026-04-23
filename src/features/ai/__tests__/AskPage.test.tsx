@@ -99,6 +99,10 @@ vi.mock('../PhotoBulkAdd', () => ({
   PhotoBulkAdd: () => <div data-testid="photo-bulk-add" />,
 }));
 
+vi.mock('@/features/tour/TourLauncher', () => ({
+  TourLauncher: () => null,
+}));
+
 vi.mock('../useStreamingAsk', async () => {
   const actual = await vi.importActual<typeof import('../useStreamingAsk')>('../useStreamingAsk');
   return {

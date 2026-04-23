@@ -27,6 +27,10 @@ vi.mock('../useCaptureGrouping', () => ({
   useCaptureGrouping: () => mockHook,
 }));
 
+vi.mock('@/features/tour/TourLauncher', () => ({
+  TourLauncher: () => null,
+}));
+
 beforeEach(() => {
   // Keep the first-run photo-tips coachmark dismissed so its <li> entries
   // don't contaminate strip-scoped listitem assertions below.

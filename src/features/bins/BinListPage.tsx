@@ -21,6 +21,7 @@ import { setCommandSelectedBinIds } from '@/features/ai/commandSelectedBins';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { getCommandInputRef, useTourContext } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
@@ -162,6 +163,7 @@ export function BinListPage() {
         actions={activeLocationId ? (
           <div className="row">
             <div className="flex items-center gap-1">
+              <TourLauncher tourId="bulk-edit" />
               <SearchBarOverflowMenu
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
@@ -296,7 +298,7 @@ export function BinListPage() {
               </EmptyState>
             )
           ) : viewMode === 'compact' ? (
-            <div className={cn(selectable && "pb-16")}>
+            <div data-tour="select-toggle" className={cn(selectable && "pb-16")}>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {bins.map((bin, index) => (
                   <div key={bin.id} className="animate-card-stagger" style={{ '--stagger-index': Math.min(index, 11) } as React.CSSProperties}>
@@ -318,7 +320,7 @@ export function BinListPage() {
               <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
             </div>
           ) : viewMode === 'table' ? (
-            <div className={cn(selectable && "pb-16")}>
+            <div data-tour="select-toggle" className={cn(selectable && "pb-16")}>
               <BinTableView
                 bins={bins}
                 sortColumn={sort}
@@ -336,7 +338,7 @@ export function BinListPage() {
               <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
             </div>
           ) : (
-            <div className={cn(selectable && "pb-16")}>
+            <div data-tour="select-toggle" className={cn(selectable && "pb-16")}>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {bins.map((bin, index) => (
                   <div key={bin.id} className="animate-card-stagger" style={{ '--stagger-index': Math.min(index, 11) } as React.CSSProperties}>

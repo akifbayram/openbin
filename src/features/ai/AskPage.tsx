@@ -1,6 +1,7 @@
 import { ChevronLeft, SquarePen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { ConversationScopePill } from './ConversationScopePill';
 import { ConversationUI, useBinNavigate } from './ConversationUI';
 
@@ -48,18 +49,21 @@ export function AskPage() {
                 />
               </div>
             )}
-            {!photoMode && conversation.turns.length > 0 && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={conversation.clearConversation}
-                aria-label="New chat"
-                title="New chat"
-                className="ai-newchat-enter ml-auto shrink-0"
-              >
-                <SquarePen className="h-5 w-5" />
-              </Button>
-            )}
+            <div className="ml-auto flex items-center gap-1 shrink-0">
+              {!photoMode && <TourLauncher tourId="ask-ai" />}
+              {!photoMode && conversation.turns.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={conversation.clearConversation}
+                  aria-label="New chat"
+                  title="New chat"
+                  className="ai-newchat-enter"
+                >
+                  <SquarePen className="h-5 w-5" />
+                </Button>
+              )}
+            </div>
           </div>
         )}
       />

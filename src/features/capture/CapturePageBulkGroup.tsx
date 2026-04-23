@@ -2,6 +2,7 @@ import { Camera, Check, Images, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { cn, focusRing } from '@/lib/utils';
 import { setCapturedPhotos, setCapturedReturnTarget } from './capturedPhotos';
 import { FirstRunCoachmark, HelpButton } from './guidance/CameraGuidance';
@@ -244,6 +245,7 @@ export function CapturePageBulkGroup() {
             </div>
 
             <div className="flex items-center gap-2">
+              <TourLauncher tourId="create-ai" />
               <HelpButton className="bg-transparent hover:bg-white/10" />
               <button
                 type="button"
@@ -361,6 +363,7 @@ export function CapturePageBulkGroup() {
               type="button"
               disabled={photosInCurrentGroup === 0}
               onClick={nextGroup}
+              data-tour="capture-grouping"
               aria-label="Next bin"
               className={cn(
                 focusRing,

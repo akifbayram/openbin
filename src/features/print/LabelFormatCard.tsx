@@ -278,6 +278,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                   </div>
                 ) : (
                   <Button
+                    data-tour="print-preset"
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowSaveInput(true)}

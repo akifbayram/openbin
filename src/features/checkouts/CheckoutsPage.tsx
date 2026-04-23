@@ -14,6 +14,7 @@ import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { Table, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { useAuth } from '@/lib/auth';
 import { type BulkAction, BulkActionBar } from '@/lib/bulk/BulkActionBar';
 import { useBulkSelection } from '@/lib/bulk/useBulkSelection';
@@ -107,7 +108,7 @@ export function CheckoutsPage() {
 
   return (
     <div className="page-content-wide">
-      <PageHeader title="Checked Out" />
+      <PageHeader title="Checked Out" actions={<TourLauncher tourId="bulk-edit" />} />
 
       {(checkouts.length > 0 || search) && (
         <SearchInput
@@ -154,7 +155,7 @@ export function CheckoutsPage() {
             subtitle={search ? 'Try a different search' : 'Items you check out from bins will appear here'}
           />
         ) : (
-          <div className={cn(selectable && 'pb-16')}>
+          <div data-tour="select-toggle" className={cn(selectable && 'pb-16')}>
             <Table>
               <TableHeader>
                 <span className="w-6 shrink-0" aria-hidden />
