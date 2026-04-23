@@ -52,11 +52,14 @@ function DialogContent({
   children,
   className,
   fullScreenMobile,
+  centered,
   flush,
 }: {
   children: React.ReactNode;
   className?: string;
   fullScreenMobile?: boolean;
+  /** Float centered on mobile instead of anchoring as a bottom sheet. Ignored with fullScreenMobile. */
+  centered?: boolean;
   /** Skip the default padded scroll wrapper so the caller can own the flex layout (e.g. chat shell). */
   flush?: boolean;
 }) {
@@ -77,7 +80,12 @@ function DialogContent({
   return (
     <DialogContext.Provider value={{ open, onOpenChange, titleId }}>
       <DialogPortalContext.Provider value={portalNode}>
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+        <div
+          className={cn(
+            'fixed inset-0 z-[60] flex justify-center',
+            centered && !fullScreenMobile ? 'items-center' : 'items-end sm:items-center',
+          )}
+        >
           {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismisses dialog on click */}
           <div
             role="presentation"
@@ -94,7 +102,9 @@ function DialogContent({
               'relative z-[60] w-full sm:max-w-md flat-heavy',
               fullScreenMobile
                 ? 'rounded-none sm:rounded-[var(--radius-xl)] h-[100dvh] sm:h-auto sm:max-h-[85vh]'
-                : 'rounded-t-[var(--radius-xl)] sm:rounded-[var(--radius-xl)] mx-0 sm:mx-4 max-h-[70vh] sm:max-h-[85vh]',
+                : centered
+                  ? 'rounded-[var(--radius-xl)] mx-4 max-h-[85vh]'
+                  : 'rounded-t-[var(--radius-xl)] sm:rounded-[var(--radius-xl)] mx-0 sm:mx-4 max-h-[70vh] sm:max-h-[85vh]',
               'overflow-hidden flex flex-col',
               'transition-all duration-200',
               className

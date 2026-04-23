@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CapturePageBulkGroup } from '../CapturePageBulkGroup';
 import { takeCapturedPhotos } from '../capturedPhotos';
+import { PHOTO_TIPS_SEEN_KEY } from '../guidance/tips';
 
 // Mock the grouping hook to drive the UI deterministically
 const mockHook = {
@@ -27,6 +28,9 @@ vi.mock('../useCaptureGrouping', () => ({
 }));
 
 beforeEach(() => {
+  // Keep the first-run photo-tips coachmark dismissed so its <li> entries
+  // don't contaminate strip-scoped listitem assertions below.
+  localStorage.setItem(PHOTO_TIPS_SEEN_KEY, 'true');
   mockHook.photos = [];
   mockHook.currentGroup = 0;
   mockHook.photosInCurrentGroup = 0;

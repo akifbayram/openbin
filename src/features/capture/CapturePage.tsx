@@ -1,9 +1,11 @@
-import { Camera, Check, RotateCcw, SwitchCamera } from 'lucide-react';
+import { Camera, Check, RotateCcw, SwitchCamera, X } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { cn, focusRing } from '@/lib/utils';
 import { CapturePageBulkGroup } from './CapturePageBulkGroup';
 import { getCapturedReturnTarget, setCapturedPhotos } from './capturedPhotos';
+import { FirstRunCoachmark, HelpButton } from './guidance/CameraGuidance';
 import type { CapturedPhoto } from './useCapture';
 import { useCapture } from './useCapture';
 
@@ -82,34 +84,38 @@ function CapturePageLegacy({ binId }: { binId?: string }) {
     navigate(-1);
   }, [binId, photos, navigate]);
 
+  const handleClose = useCallback(() => {
+    if (photos.length > 0 && !binId) {
+      const ok = window.confirm(
+        `Discard ${photos.length} photo${photos.length === 1 ? '' : 's'}?`,
+      );
+      if (!ok) return;
+    }
+    navigate(-1);
+  }, [photos.length, binId, navigate]);
+
   const hasCamera = !!navigator.mediaDevices?.getUserMedia;
+  const photoCountLabel = `${photos.length} photo${photos.length === 1 ? '' : 's'}`;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      {/* Video element — always rendered so ref is available when startCamera fires */}
-      <div className="flex-1 relative overflow-hidden">
-        <video
-          ref={videoRef}
-          playsInline
-          muted
-          className="h-full w-full object-cover"
-        />
-        {isStreaming && photos.length > 0 && (
-          <div className="absolute top-4 right-4 bg-black/60 px-2.5 py-1 rounded-[var(--radius-md)] text-white text-[13px] font-medium">
-            {photos.length} photo{photos.length !== 1 ? 's' : ''}
-          </div>
-        )}
-      </div>
+      {/* Video fills viewport; all UI layers on top */}
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        className="absolute inset-0 h-full w-full object-cover"
+      />
 
       {/* Overlay: start screen or error (covers video when not streaming) */}
       {!isStreaming && (
-        <div className="absolute inset-0 z-10 bg-[var(--bg-base)] flex flex-col items-center justify-center gap-5 px-6">
+        <div className="absolute inset-0 z-20 bg-[var(--bg-base)] flex flex-col items-center justify-center gap-5 px-6">
           {!hasCamera ? (
             <>
               <Camera className="h-16 w-16 text-[var(--text-tertiary)]" />
-              <p className="text-[17px] font-semibold text-[var(--text-primary)] text-center">
+              <h2 className="text-[17px] font-semibold text-[var(--text-primary)] text-center">
                 Camera not available
-              </p>
+              </h2>
               <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-sm">
                 Your browser does not support camera access. Make sure you are using HTTPS.
               </p>
@@ -133,9 +139,9 @@ function CapturePageLegacy({ binId }: { binId?: string }) {
           ) : (
             <>
               <Camera className="h-16 w-16 text-[var(--accent)] opacity-80" />
-              <p className="text-[17px] font-semibold text-[var(--text-primary)]">
+              <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
                 Ready to capture
-              </p>
+              </h2>
               <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-sm">
                 Tap the button below to start the camera and take photos.
               </p>
@@ -150,35 +156,90 @@ function CapturePageLegacy({ binId }: { binId?: string }) {
         </div>
       )}
 
-      {/* Bottom controls — only when streaming */}
+      <FirstRunCoachmark isStreaming={isStreaming} />
+
       {isStreaming && (
         <>
-          {/* Thumbnail strip */}
-          {photos.length > 0 && (
-            <div className="flex gap-1.5 px-3 py-2 overflow-x-auto">
-              {photos.map((photo) => (
-                <div key={photo.id} className="relative h-12 w-12 flex-shrink-0">
-                  <img
-                    src={photo.thumbnailUrl}
-                    alt=""
-                    className="h-full w-full rounded-[var(--radius-sm)] object-cover"
-                  />
-                  <StatusBadge photo={photo} onRetry={() => retryUpload(photo.id)} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Control bar */}
+          {/* Top bar */}
           <div
-            className="flex items-center justify-between px-8 py-4"
+            className="relative z-10 flex items-center justify-between px-3 py-2 bg-black/50"
+            style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0.5rem))' }}
+          >
+            <button
+              type="button"
+              onClick={handleClose}
+              className={cn(
+                focusRing,
+                'h-8 w-8 flex items-center justify-center text-white/90 hover:text-white focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+              )}
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div
+              aria-live="polite"
+              className="text-[11px] font-medium text-white/90 tracking-wide"
+            >
+              {photoCountLabel}
+            </div>
+
+            <HelpButton className="bg-transparent hover:bg-white/10" />
+          </div>
+
+          {/* Viewfinder */}
+          <div className="flex-1 relative flex items-center justify-center">
+            <div className="absolute inset-4 border border-dashed border-white/40 pointer-events-none">
+              <div className="absolute -top-px -left-px h-4 w-4 border-t-2 border-l-2 border-[var(--accent)]" />
+              <div className="absolute -top-px -right-px h-4 w-4 border-t-2 border-r-2 border-[var(--accent)]" />
+              <div className="absolute -bottom-px -left-px h-4 w-4 border-b-2 border-l-2 border-[var(--accent)]" />
+              <div className="absolute -bottom-px -right-px h-4 w-4 border-b-2 border-r-2 border-[var(--accent)]" />
+            </div>
+            {photos.length === 0 && (
+              <p className="relative text-[13px] text-white/55 font-medium text-center px-6">
+                tap shutter to capture
+              </p>
+            )}
+          </div>
+
+          {/* Thumbnail strip */}
+          <div
+            className="relative z-10 bg-black/50 overflow-x-auto overflow-y-hidden"
+            style={{ minHeight: 56 }}
+          >
+            {photos.length === 0 ? (
+              <div className="px-3 py-3 text-[12px] text-white/40 italic">
+                No photos yet
+              </div>
+            ) : (
+              <ul className="flex items-center gap-[2px] px-3 py-2">
+                {photos.map((photo) => (
+                  <li key={photo.id} className="relative h-11 w-11 flex-shrink-0">
+                    <img
+                      src={photo.thumbnailUrl}
+                      alt=""
+                      className="h-full w-full rounded-[var(--radius-sm)] object-cover"
+                    />
+                    <StatusBadge photo={photo} onRetry={() => retryUpload(photo.id)} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Bottom controls */}
+          <div
+            className="relative z-10 flex items-center justify-between px-4 pt-2 pb-4 bg-black/50"
             style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}
           >
             <button
               type="button"
               onClick={flipCamera}
-              className="h-11 w-11 flex items-center justify-center text-white/80 hover:text-white transition-colors"
               aria-label="Flip camera"
+              className={cn(
+                focusRing,
+                'w-[54px] h-11 flex items-center justify-center text-white/80 hover:text-white transition-colors focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+              )}
             >
               <SwitchCamera className="h-6 w-6" />
             </button>
@@ -186,16 +247,28 @@ function CapturePageLegacy({ binId }: { binId?: string }) {
             <button
               type="button"
               onClick={() => capture()}
-              className="h-[68px] w-[68px] rounded-[50%] border-[3px] border-white flex items-center justify-center active:scale-95 transition-transform"
               aria-label="Take photo"
+              className={cn(
+                focusRing,
+                'h-[54px] w-[54px] rounded-[50%] border-[3px] border-white flex items-center justify-center active:scale-95 transition-transform relative focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+              )}
             >
-              <div className="h-[56px] w-[56px] rounded-[50%] bg-white" />
+              <div className="h-[42px] w-[42px] rounded-[50%] bg-white" />
+              {photos.length === 0 && (
+                <div
+                  aria-hidden="true"
+                  className="absolute -inset-1 rounded-[50%] ring-[3px] ring-[var(--accent)]"
+                />
+              )}
             </button>
 
             <button
               type="button"
               onClick={handleDone}
-              className="text-[15px] font-semibold text-white/80 hover:text-white transition-colors"
+              className={cn(
+                focusRing,
+                'w-[54px] text-[13px] font-semibold text-white hover:text-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+              )}
             >
               Done
             </button>
