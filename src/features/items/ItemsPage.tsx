@@ -9,7 +9,6 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
-import { TourLauncher } from '@/features/tour/TourLauncher';
 import { type BulkAction, BulkActionBar } from '@/lib/bulk/BulkActionBar';
 import { useBulkSelection } from '@/lib/bulk/useBulkSelection';
 import { useTerminology } from '@/lib/terminology';
@@ -70,7 +69,7 @@ export function ItemsPage() {
 
   return (
     <div className="page-content-wide">
-      <PageHeader title="Items" actions={<TourLauncher tourId="bulk-edit" />} />
+      <PageHeader title="Items" />
 
       {(totalCount > 0 || search) && (
         <SearchInput
@@ -122,7 +121,7 @@ export function ItemsPage() {
             )}
           </EmptyState>
         ) : (
-          <div data-tour="select-toggle" className={cn(selectable && 'pb-16')}>
+          <div className={cn(selectable && 'pb-16')}>
             <ItemTableView
               items={items}
               sortColumn={sortColumn}

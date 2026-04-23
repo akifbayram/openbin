@@ -65,6 +65,8 @@ export async function applyTagMutations(
   ];
 
   for (const r of allRenames) {
+    if (r.from === r.to) continue;
+
     const result = await txQuery<{ updated: number }>(
       `UPDATE bins
          SET tags = (
@@ -82,6 +84,14 @@ export async function applyTagMutations(
     );
     counts.binsUpdated += result.rows.length;
 
+    // If the target already has a parent link pointing at the source, clear it
+    // before reassigning to avoid a self-loop (to.parent_tag = to).
+    await txQuery(
+      `UPDATE tag_colors SET parent_tag = NULL, updated_at = ${d.now()}
+         WHERE location_id = $1 AND tag = $2 AND parent_tag = $3`,
+      [locationId, r.to, r.from],
+    );
+
     const reass = await txQuery<{ tag: string }>(
       `UPDATE tag_colors SET parent_tag = $1, updated_at = ${d.now()}
          WHERE location_id = $2 AND parent_tag = $3
@@ -89,6 +99,15 @@ export async function applyTagMutations(
       [r.to, locationId, r.from],
     );
     counts.childrenReassigned += reass.rows.length;
+
+    // If a tag_colors row for `to` already exists, renaming `from` → `to`
+    // would violate UNIQUE(location_id, tag); drop the source row instead.
+    await txQuery(
+      `DELETE FROM tag_colors
+         WHERE location_id = $1 AND tag = $2
+           AND EXISTS (SELECT 1 FROM tag_colors WHERE location_id = $1 AND tag = $3)`,
+      [locationId, r.from, r.to],
+    );
 
     await txQuery(
       `UPDATE tag_colors SET tag = $1, updated_at = ${d.now()}

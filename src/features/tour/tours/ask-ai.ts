@@ -1,11 +1,7 @@
 import { MessageCircle } from 'lucide-react';
 import { formatKeys } from '@/lib/shortcuts';
 import type { TourDefinition } from '../tourRegistry';
-import type { TourContext, TourStep } from '../tourSteps';
-
-function delay(ms: number) {
-  return new Promise<void>((r) => setTimeout(r, ms));
-}
+import { delay, type TourContext, type TourStep } from '../tourSteps';
 
 const askRoute = (ctx: TourContext) => (ctx.isMobile ? '/ask' : '/');
 
@@ -21,15 +17,14 @@ const steps: TourStep[] = [
       return `Open Ask AI with ${shortcut} from anywhere.`;
     },
     route: askRoute,
+    mobilePlacement: 'bottom',
+    // Open the palette once on entry; subsequent steps rely on it staying open.
+    // Tour-level `onEnd` handles the close so we don't flash open/closed between steps.
     beforeShow: async (ctx) => {
       if (ctx.isMobile) return;
       ctx.openCommandInput();
       await delay(400);
     },
-    onLeave: (ctx) => {
-      if (!ctx.isMobile) ctx.closeCommandInput();
-    },
-    mobilePlacement: 'bottom',
   },
   {
     id: 'voice-input',
@@ -38,14 +33,6 @@ const steps: TourStep[] = [
     title: 'Talk instead of type',
     body: 'Tap the mic to dictate — great for hands-busy capture.',
     route: askRoute,
-    beforeShow: async (ctx) => {
-      if (ctx.isMobile) return;
-      ctx.openCommandInput();
-      await delay(400);
-    },
-    onLeave: (ctx) => {
-      if (!ctx.isMobile) ctx.closeCommandInput();
-    },
     mobilePlacement: 'top',
   },
   {
@@ -57,14 +44,6 @@ const steps: TourStep[] = [
       `Attach a photo and AI creates a ${ctx.terminology.bin} from it — items, tags, notes included.`,
     route: askRoute,
     condition: (ctx) => ctx.canWrite,
-    beforeShow: async (ctx) => {
-      if (ctx.isMobile) return;
-      ctx.openCommandInput();
-      await delay(400);
-    },
-    onLeave: (ctx) => {
-      if (!ctx.isMobile) ctx.closeCommandInput();
-    },
     mobilePlacement: 'top',
   },
   {
@@ -75,14 +54,6 @@ const steps: TourStep[] = [
     body: (ctx) =>
       `Ask "where are the batteries?" or "create a kitchen utensils ${ctx.terminology.bin}".`,
     route: askRoute,
-    beforeShow: async (ctx) => {
-      if (ctx.isMobile) return;
-      ctx.openCommandInput();
-      await delay(400);
-    },
-    onLeave: (ctx) => {
-      if (!ctx.isMobile) ctx.closeCommandInput();
-    },
     mobilePlacement: 'top',
     buttonLabel: 'Got it',
   },
@@ -94,4 +65,7 @@ export const askAi: TourDefinition = {
   summary: 'Palette, voice dictation, photo-to-bin',
   icon: MessageCircle,
   steps,
+  onEnd: (ctx) => {
+    if (!ctx.isMobile) ctx.closeCommandInput();
+  },
 };

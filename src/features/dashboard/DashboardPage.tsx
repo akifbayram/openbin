@@ -123,6 +123,7 @@ export function DashboardPage() {
                   variant="ghost"
                   className="hidden lg:inline-flex h-10 w-10 rounded-[var(--radius-sm)]"
                   aria-label="Scan QR code"
+                  data-tour="scan-button"
                 >
                   <ScanLine className="h-5 w-5" />
                 </Button>
@@ -135,6 +136,7 @@ export function DashboardPage() {
                     size="sm"
                     className="hidden lg:inline-flex h-10 gap-1.5 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 text-[var(--ai-accent)] hover:bg-[var(--ai-accent)]/15 active:bg-[var(--ai-accent)]/20 ai-shimmer"
                     aria-label="Ask AI"
+                    data-tour="ask-ai-button"
                   >
                     <Sparkles className="h-4 w-4" />
                     Ask AI
@@ -150,6 +152,7 @@ export function DashboardPage() {
                   size="icon"
                   className="h-10 w-10 rounded-[var(--radius-sm)]"
                   aria-label={`New ${t.bin}`}
+                  data-tour="new-bin-button"
                 >
                   <Plus className="h-5 w-5" />
                 </Button>
@@ -162,7 +165,6 @@ export function DashboardPage() {
       {/* Search */}
       <SearchInput
         data-shortcut-search
-        data-tour="dashboard-overview"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder={`Search ${t.bins}...`}
@@ -201,7 +203,7 @@ export function DashboardPage() {
           Wrappers use `display: contents` on mobile so sections participate directly in the outer grid;
           on `lg:` they become real 2:1 columns with natural DOM order restored.
         */}
-        <div className={cn('grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start', selectable && 'pb-16')}>
+        <div className={cn('grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start', selectable && 'pb-16')} data-tour="dashboard-overview">
           <div className="contents lg:col-span-2 lg:flex lg:flex-col lg:gap-4 lg:min-w-0">
             {dashSettings.showSavedViews && savedViews.length > 0 && (
               <section aria-labelledby="dash-saved-views" className="flex flex-col gap-2 order-5 lg:order-none min-w-0">

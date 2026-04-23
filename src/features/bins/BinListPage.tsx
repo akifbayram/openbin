@@ -22,7 +22,7 @@ import { useAreaList } from '@/features/areas/useAreas';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { TourLauncher } from '@/features/tour/TourLauncher';
-import { getCommandInputRef, useTourContext } from '@/features/tour/TourProvider';
+import { getCommandInputRef } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { BulkActionBar } from '@/lib/bulk/BulkActionBar';
@@ -61,19 +61,15 @@ export function BinListPage() {
   const { createOpen, setCreateOpen, createInitialPhotos, onCreateInitialPhotosConsumed } =
     useBinCreateFromCapture();
   const [filterOpen, setFilterOpen] = useState(false);
-  const tourCtx = useTourContext();
 
   // Handle navigation state (ephemeral UI, not shareable)
   useEffect(() => {
-    const state = location.state as { create?: boolean; startTour?: boolean } | null;
+    const state = location.state as { create?: boolean } | null;
     if (state?.create) {
       setCreateOpen(true);
     }
-    if (state?.startTour) {
-      tourCtx?.tour.start('highlights');
-    }
     if (state) window.history.replaceState({}, '');
-  }, [location.state, tourCtx, setCreateOpen]);
+  }, [location.state, setCreateOpen]);
 
   const { activeLocationId } = useAuth();
   const prevLocationRef = useRef(activeLocationId);

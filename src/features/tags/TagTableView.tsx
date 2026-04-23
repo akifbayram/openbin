@@ -1,5 +1,5 @@
-import { ArrowUpFromLine, ChevronDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { ArrowUpFromLine, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -111,11 +111,9 @@ interface TagRowProps {
   tag: string;
   count: number;
   isChild: boolean;
-  isParent: boolean;
+  isLastChild: boolean;
   index: number;
   searchQuery: string;
-  collapsed: boolean;
-  onToggleCollapse: (tag: string) => void;
   tagColors: Map<string, string>;
   hasChildren: boolean;
   getTagBadgeStyle: (tag: string) => React.CSSProperties | undefined;
@@ -133,11 +131,9 @@ function TagRow({
   tag,
   count,
   isChild,
-  isParent,
+  isLastChild,
   index,
   searchQuery,
-  collapsed,
-  onToggleCollapse,
   tagColors,
   hasChildren,
   getTagBadgeStyle,
@@ -172,7 +168,6 @@ function TagRow({
       onTouchEnd={longPress.onTouchEnd}
       onTouchMove={longPress.onTouchMove}
       onContextMenu={longPress.onContextMenu}
-      className={cn(isChild && 'bg-[var(--bg-hover)]/30')}
     >
       {/* biome-ignore lint/a11y/noStaticElementInteractions: stops row click bubbling */}
       <div
@@ -185,21 +180,26 @@ function TagRow({
           onCheckedChange={() => onSelect?.(tag, index, false)}
         />
       </div>
-      <div className={cn('flex-[2] min-w-0', isChild && 'pl-7')}>
+      <div className={cn('flex-[2] min-w-0 relative', isChild && 'pl-9')}>
+        {isChild && (
+          <>
+            <span
+              aria-hidden
+              className={cn(
+                'pointer-events-none absolute left-2 w-px bg-[var(--border-flat)]',
+                isLastChild ? 'top-[-0.625rem] bottom-1/2' : 'top-[-0.625rem] bottom-[-0.625rem]',
+              )}
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-2 top-1/2 h-px w-5 bg-[var(--border-flat)]"
+            />
+          </>
+        )}
         <div className="flex items-center gap-1.5">
-          {isParent && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onToggleCollapse(tag); }}
-              className="p-0.5 rounded-[var(--radius-xs)] text-[var(--text-quaternary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-              aria-label={collapsed ? `Expand ${tag}` : `Collapse ${tag}`}
-            >
-              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', collapsed && '-rotate-90')} />
-            </button>
-          )}
           <Badge
             variant="secondary"
-            className="text-[13px] truncate max-w-full"
+            className={cn('text-[13px] truncate max-w-full', hasChildren && 'font-medium')}
             style={getTagBadgeStyle(tag)}
           >
             <Highlight text={tag} query={searchQuery} />
@@ -253,21 +253,6 @@ export function TagTableView({
   selectedIds,
   onSelect,
 }: TagTableViewProps) {
-  const [collapsedParents, setCollapsedParents] = useState<Set<string>>(() => {
-    const stored = localStorage.getItem('openbin-tag-tree-collapsed');
-    return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
-  });
-
-  function toggleCollapse(parent: string) {
-    setCollapsedParents((prev) => {
-      const next = new Set(prev);
-      if (next.has(parent)) next.delete(parent); else next.add(parent);
-      localStorage.setItem('openbin-tag-tree-collapsed', JSON.stringify([...next]));
-      return next;
-    });
-  }
-
-  // Identify parent tags (tags that have children)
   const parentSet = useMemo(() => {
     const set = new Set<string>();
     for (const [, parent] of tagParents) set.add(parent);
@@ -287,7 +272,7 @@ export function TagTableView({
       }
     }
 
-    const finalResult: Array<TagEntry & { isChild: boolean; isParent: boolean }> = [];
+    const finalResult: Array<TagEntry & { isChild: boolean; isLastChild: boolean }> = [];
     const processedParents = new Set<string>();
 
     for (const tag of tags) {
@@ -295,20 +280,22 @@ export function TagTableView({
       if (parentSet.has(tag.tag)) {
         if (processedParents.has(tag.tag)) continue;
         processedParents.add(tag.tag);
-        finalResult.push({ ...tag, isChild: false, isParent: true });
-        if (!collapsedParents.has(tag.tag)) {
-          const children = childrenByParent.get(tag.tag) || [];
-          for (const child of children) {
-            finalResult.push({ ...child, isChild: true, isParent: false });
-          }
-        }
+        finalResult.push({ ...tag, isChild: false, isLastChild: false });
+        const children = childrenByParent.get(tag.tag) || [];
+        children.forEach((child, idx) => {
+          finalResult.push({
+            ...child,
+            isChild: true,
+            isLastChild: idx === children.length - 1,
+          });
+        });
       } else {
-        finalResult.push({ ...tag, isChild: false, isParent: false });
+        finalResult.push({ ...tag, isChild: false, isLastChild: false });
       }
     }
 
     return finalResult;
-  }, [tags, tagParents, parentSet, collapsedParents]);
+  }, [tags, tagParents, parentSet]);
 
   const showActionsCol = Boolean(onRename && onDelete);
 
@@ -325,17 +312,15 @@ export function TagTableView({
         </TableHeader>
 
         {/* Rows */}
-        {orderedTags.map(({ tag, count, isChild, isParent }, index) => (
+        {orderedTags.map(({ tag, count, isChild, isLastChild }, index) => (
           <TagRow
             key={tag}
             tag={tag}
             count={count}
             isChild={isChild}
-            isParent={isParent}
+            isLastChild={isLastChild}
             index={index}
             searchQuery={searchQuery}
-            collapsed={collapsedParents.has(tag)}
-            onToggleCollapse={toggleCollapse}
             tagColors={tagColors}
             hasChildren={parentSet.has(tag)}
             getTagBadgeStyle={getTagBadgeStyle}

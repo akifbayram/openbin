@@ -1,7 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import { formatKeys } from '@/lib/shortcuts';
 import type { TourDefinition } from '../tourRegistry';
-import type { TourStep } from '../tourSteps';
+import { scanButtonSelector, type TourStep } from '../tourSteps';
 
 const steps: TourStep[] = [
   {
@@ -19,7 +19,7 @@ const steps: TourStep[] = [
     selector: (ctx) =>
       ctx.isMobile
         ? 'nav[aria-label="Main navigation"] button[aria-label="Ask AI"]'
-        : 'button[aria-label="Ask AI"]',
+        : '[data-tour="ask-ai-button"]',
     placement: 'bottom',
     title: (ctx) => (ctx.aiEnabled ? 'Ask AI anything' : `Find your ${ctx.terminology.bins}`),
     body: (ctx) => {
@@ -35,7 +35,7 @@ const steps: TourStep[] = [
   },
   {
     id: 'scan-qr',
-    selector: 'button[aria-label="Scan QR code"]',
+    selector: scanButtonSelector,
     placement: 'bottom',
     title: 'Scan or search',
     body: (ctx) =>
@@ -57,8 +57,8 @@ const steps: TourStep[] = [
   {
     id: 'cta',
     selector: (ctx) => {
-      if (ctx.canWrite && ctx.aiEnabled) return 'button[aria-label="Ask AI"]';
-      if (ctx.canWrite) return 'button[aria-label^="New"]';
+      if (ctx.canWrite && ctx.aiEnabled) return '[data-tour="ask-ai-button"]';
+      if (ctx.canWrite) return '[data-tour="new-bin-button"]';
       return '[data-shortcut-search]';
     },
     placement: 'bottom',

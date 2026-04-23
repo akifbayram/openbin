@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-function isEditableTarget(el: EventTarget | null): boolean {
+export function isEditableTarget(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
   const tag = el.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UserPreferences } from '@/lib/userPreferences';
-import { getTour, TOURS_VERSION, type TourId } from './tourRegistry';
+import { getTour, markTourSeen, TOURS_VERSION, type TourDefinition, type TourId } from './tourRegistry';
 import {
   filterSteps,
   resolveRoute,
@@ -9,14 +9,25 @@ import {
   type TourStep,
 } from './tourSteps';
 
+/** Pick the first element that is actually rendered (non-zero layout box).
+ *  Skips hidden duplicates like mobile-nav counterparts when tour runs on desktop. */
+function pickVisible(selector: string): Element | null {
+  const candidates = document.querySelectorAll(selector);
+  for (const el of candidates) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) return el;
+  }
+  return null;
+}
+
 /** Poll for a DOM element by selector. Resolves with the element or null on timeout. */
 function waitForElement(selector: string, timeoutMs = 3000): Promise<Element | null> {
   return new Promise((resolve) => {
-    const el = document.querySelector(selector);
+    const el = pickVisible(selector);
     if (el) { resolve(el); return; }
     const start = performance.now();
     function poll() {
-      const found = document.querySelector(selector);
+      const found = pickVisible(selector);
       if (found) { resolve(found); return; }
       if (performance.now() - start > timeoutMs) { resolve(null); return; }
       requestAnimationFrame(poll);
@@ -31,6 +42,8 @@ export interface UseTourDeps {
   updatePreferences: (
     patch: Partial<UserPreferences> | ((prev: UserPreferences) => Partial<UserPreferences>),
   ) => void;
+  /** Called when the tour can't find any anchors (e.g. empty page). */
+  onUnavailable?: (tourId: TourId) => void;
 }
 
 export interface UseTourReturn {
@@ -47,7 +60,7 @@ export interface UseTourReturn {
   skip: () => void;
 }
 
-export function useTour({ context, navigate, updatePreferences }: UseTourDeps): UseTourReturn {
+export function useTour({ context, navigate, updatePreferences, onUnavailable }: UseTourDeps): UseTourReturn {
   const [isActive, setIsActive] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
@@ -55,6 +68,11 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
   const [currentTourId, setCurrentTourId] = useState<TourId | null>(null);
 
   const filteredRef = useRef<TourStep[]>([]);
+  const tourDefRef = useRef<TourDefinition | null>(null);
+  // Tracks whether any step ever found its anchor. If every step auto-skips we
+  // notify via `onUnavailable` so callers can show a toast instead of ending
+  // the tour silently.
+  const shownAnyStepRef = useRef(false);
   const contextRef = useRef(context);
   contextRef.current = context;
 
@@ -62,6 +80,9 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
   const elementRef = useRef<Element | null>(null);
   const scrollRafRef = useRef<number | null>(null);
   const navigatingRef = useRef(false);
+  // goToStep recursively calls markComplete, but markComplete is declared after.
+  // A ref keeps goToStep's dep list stable without a stale closure.
+  const markCompleteRef = useRef<() => void>(() => {});
 
   // Cleanup rect tracking
   const cleanupTracking = useCallback(() => {
@@ -146,7 +167,7 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
           goToStep(nextIndex);
           return;
         }
-        markComplete();
+        markCompleteRef.current();
         return;
       }
 
@@ -154,6 +175,7 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
       await new Promise<void>((r) => setTimeout(r, 300));
 
       trackElement(el);
+      shownAnyStepRef.current = true;
       setTransitioning(false);
     } finally {
       navigatingRef.current = false;
@@ -165,6 +187,12 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
     if (currentStep?.onLeave) {
       currentStep.onLeave(contextRef.current);
     }
+    const endedTourId = currentTourId;
+    const shownAny = shownAnyStepRef.current;
+    tourDefRef.current?.onEnd?.(contextRef.current);
+    tourDefRef.current = null;
+    shownAnyStepRef.current = false;
+    if (!shownAny && endedTourId) onUnavailable?.(endedTourId);
     cleanupTracking();
     detachScrollListeners();
     setTargetRect(null);
@@ -176,23 +204,31 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
     setCurrentTourId(null);
     if (tourId) {
       updatePreferences((prev) => ({
-        tours_seen: Array.from(new Set([...(prev.tours_seen ?? []), tourId])),
+        tours_seen: markTourSeen(prev.tours_seen, tourId),
         tours_version: TOURS_VERSION,
       }));
     }
-  }, [activeIndex, cleanupTracking, detachScrollListeners, updatePreferences, currentTourId]);
+  }, [activeIndex, cleanupTracking, detachScrollListeners, updatePreferences, currentTourId, onUnavailable]);
+
+  markCompleteRef.current = markComplete;
 
   const start = useCallback((tourId: TourId) => {
     const def = getTour(tourId);
     if (!def) return;
     const filtered = filterSteps(def.steps, contextRef.current);
-    if (filtered.length === 0) return;
+    if (filtered.length === 0) {
+      console.warn(`[tour:${tourId}] no steps available in the current context`);
+      onUnavailable?.(tourId);
+      return;
+    }
+    tourDefRef.current = def;
     filteredRef.current = filtered;
+    shownAnyStepRef.current = false;
     setCurrentTourId(tourId);
     setActiveIndex(0);
     setIsActive(true);
     goToStep(0);
-  }, [goToStep]);
+  }, [goToStep, onUnavailable]);
 
   const next = useCallback(() => {
     const steps = filteredRef.current;

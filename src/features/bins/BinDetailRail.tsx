@@ -75,7 +75,7 @@ export function BinDetailRail({
   }
 
   return (
-    <section className="flex flex-col gap-4" data-tour="bin-qr">
+    <section className="flex flex-col gap-4">
       <h2 className="sr-only">Bin details</h2>
 
       <div className={cn(META_FIELD, autoSave.savedFields.has('notes') && 'animate-save-flash')}>
@@ -104,7 +104,7 @@ export function BinDetailRail({
       </div>
 
       <div className="flex flex-col gap-4" data-tour="bin-appearance">
-        <div className={META_FIELD}>
+        <div className={META_FIELD} data-tour="bin-qr">
           <span className={sectionHeader}>Code</span>
           <div className="flex items-center h-11 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] pl-3.5 pr-1 transition-colors focus-within:ring-2 focus-within:ring-[var(--accent)]">
             <span className="flex-1 font-mono text-[15px] tracking-[0.14em] text-[var(--text-primary)] select-all truncate">

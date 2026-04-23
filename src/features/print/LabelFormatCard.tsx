@@ -203,7 +203,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
             </div>
 
             {/* Customize toggle */}
-            <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
+            <div data-tour="print-preset" className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
               <label htmlFor="customize-dimensions" className="flex items-center gap-3 px-3 py-1 cursor-pointer">
                 <Checkbox
                   id="customize-dimensions"
@@ -278,7 +278,6 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                   </div>
                 ) : (
                   <Button
-                    data-tour="print-preset"
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowSaveInput(true)}

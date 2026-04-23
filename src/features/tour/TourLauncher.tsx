@@ -1,5 +1,6 @@
 import { HelpCircle } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
+import { SettingsRow } from '@/features/settings/SettingsRow';
 import { useUserPreferences } from '@/lib/userPreferences';
 import { cn, focusRing, iconButton } from '@/lib/utils';
 import { useTourContext } from './TourProvider';
@@ -23,6 +24,9 @@ export function TourLauncher({ tourId, variant = 'icon', className }: TourLaunch
   }
 
   if (variant === 'icon') {
+    // Hide the launcher once the user has taken the tour. It remains replayable
+    // from Settings → About (the `menu` variant below) for intentional revisits.
+    if (seen) return null;
     return (
       <Tooltip content={`Tour: ${tour.title}`} side="bottom">
         <button
@@ -32,8 +36,7 @@ export function TourLauncher({ tourId, variant = 'icon', className }: TourLaunch
           className={cn(
             iconButton,
             focusRing,
-            'h-9 w-9 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]',
-            seen && 'opacity-60',
+            'rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]',
             className,
           )}
         >
@@ -43,27 +46,19 @@ export function TourLauncher({ tourId, variant = 'icon', className }: TourLaunch
     );
   }
 
-  const Icon = tour.icon;
+  const stepCount = `${tour.steps.length} step${tour.steps.length === 1 ? '' : 's'}`;
   return (
-    <button
-      type="button"
+    <SettingsRow
+      icon={tour.icon}
+      label={tour.title}
+      description={tour.summary}
       onClick={start}
-      className={cn(
-        'w-full flex items-center gap-3 py-3 px-2 rounded-[var(--radius-sm)] text-left hover:bg-[var(--bg-hover)] transition-colors',
-        className,
-      )}
-    >
-      <Icon className="h-5 w-5 shrink-0 text-[var(--text-secondary)]" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-[14px] font-medium text-[var(--text-primary)]">{tour.title}</span>
-          {seen && <span className="text-[11px] text-[var(--text-tertiary)]">· seen</span>}
-        </div>
-        <p className="text-[12px] text-[var(--text-tertiary)] truncate">{tour.summary}</p>
-      </div>
-      <span className="text-[12px] text-[var(--text-tertiary)]">
-        {tour.steps.length} step{tour.steps.length === 1 ? '' : 's'}
-      </span>
-    </button>
+      control={
+        <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">
+          {seen ? `✓ ${stepCount}` : stepCount}
+        </span>
+      }
+      border={false}
+    />
   );
 }

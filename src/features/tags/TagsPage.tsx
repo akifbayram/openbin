@@ -13,7 +13,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
 import { useBinList } from '@/features/bins/useBins';
-import { TourLauncher } from '@/features/tour/TourLauncher';
 import { useAuth } from '@/lib/auth';
 import { type BulkAction, BulkActionBar } from '@/lib/bulk/BulkActionBar';
 import { useBulkSelection } from '@/lib/bulk/useBulkSelection';
@@ -195,7 +194,6 @@ export function TagsPage() {
         title="Tags"
         actions={(
           <div className="flex items-center gap-2">
-            <TourLauncher tourId="bulk-edit" />
             {canWrite && showSuggestButton && suggestButton}
             {canWrite && (
               <Button size="sm" onClick={() => setCreateOpen(true)}>
@@ -265,7 +263,7 @@ export function TagsPage() {
             )}
           </EmptyState>
         ) : (
-          <div data-tour="select-toggle" className={cn(selectable && 'pb-16')}>
+          <div className={cn(selectable && 'pb-16')}>
             <TagTableView
               tags={tags}
               sortColumn={sortColumn}

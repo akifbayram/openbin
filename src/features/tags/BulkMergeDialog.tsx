@@ -26,13 +26,16 @@ export function BulkMergeDialog({
   const [existingTarget, setExistingTarget] = useState('');
   const [newTarget, setNewTarget] = useState('');
 
-  const candidates = useMemo(() => {
-    const sel = new Set(selectedTagNames);
-    return allTags.map((t) => t.tag).filter((t) => !sel.has(t));
-  }, [allTags, selectedTagNames]);
+  const candidates = useMemo(
+    () => allTags.map((t) => t.tag),
+    [allTags],
+  );
 
   const target = mode === 'existing' ? existingTarget : newTarget.trim().toLowerCase();
-  const targetValid = target.length > 0 && /^[a-z0-9][a-z0-9-]{0,99}$/.test(target);
+  const targetValid =
+    target.length > 0 &&
+    /^[a-z0-9][a-z0-9-]{0,99}$/.test(target) &&
+    selectedTagNames.some((t) => t !== target);
 
   return (
     <BulkUpdateDialog

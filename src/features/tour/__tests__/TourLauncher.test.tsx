@@ -52,7 +52,7 @@ describe('TourLauncher', () => {
     expect(tour.start).toHaveBeenCalledWith('highlights');
   });
 
-  it('applies seen-state class when tour is in tours_seen', () => {
+  it('hides icon launcher once the tour has been seen', () => {
     (useUserPreferences as ReturnType<typeof vi.fn>).mockReturnValueOnce({
       preferences: { tours_seen: ['highlights'] },
       isLoading: false,
@@ -64,6 +64,21 @@ describe('TourLauncher', () => {
         <TourLauncher tourId="highlights" />
       </TourProvider>,
     );
-    expect(screen.getByRole('button', { name: /Tour: Highlights/i })).toHaveClass('opacity-60');
+    expect(screen.queryByRole('button', { name: /Tour: Highlights/i })).not.toBeInTheDocument();
+  });
+
+  it('still renders the menu variant for replay after being seen', () => {
+    (useUserPreferences as ReturnType<typeof vi.fn>).mockReturnValueOnce({
+      preferences: { tours_seen: ['highlights'] },
+      isLoading: false,
+      updatePreferences: vi.fn(),
+    });
+    const tour = makeTour();
+    render(
+      <TourProvider tour={tour}>
+        <TourLauncher tourId="highlights" variant="menu" />
+      </TourProvider>,
+    );
+    expect(screen.getByText('Highlights')).toBeInTheDocument();
   });
 });
