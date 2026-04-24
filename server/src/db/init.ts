@@ -25,28 +25,84 @@ const ADMIN_ACTIVE_UNTIL_MS = 1000 * 365 * 24 * 60 * 60 * 1000;
 
 async function seedAdminUser(eng: DatabaseEngine): Promise<void> {
   const adminEmail = config.adminEmail || 'admin@openbin.local';
-  const { rows } = await eng.query('SELECT 1 FROM users WHERE email = $1', [adminEmail]);
-  if (rows.length === 0) {
-    const providedPassword = config.adminPassword;
-    const plaintext = providedPassword || crypto.randomBytes(12).toString('base64url');
-    const hash = await bcrypt.hash(plaintext, config.bcryptRounds);
 
-    await eng.query(
-      `INSERT INTO users (id, email, password_hash, display_name, is_admin, plan, sub_status, active_until)
-       VALUES ($1, $2, $3, 'Admin', TRUE, 1, 1, $4)`,
-      [crypto.randomUUID(), adminEmail, hash, new Date(Date.now() + ADMIN_ACTIVE_UNTIL_MS).toISOString()],
-    );
+  const { rows: existingAdmins } = await eng.query<{ id: string; email: string }>(
+    'SELECT id, email FROM users WHERE is_admin = TRUE LIMIT 1',
+  );
+  const existingAdmin = existingAdmins[0] ?? null;
 
-    if (providedPassword) {
-      log.info(`Initial admin account created for ${adminEmail}`);
-    } else {
-      console.log('========================================');
-      console.log('  Initial admin credentials:');
-      console.log(`    Email: ${adminEmail}`);
-      console.log(`    Password: ${plaintext}`);
-      console.log('  Save this password — it will not be shown again.');
-      console.log('========================================');
+  // Recovery path: rotate the existing admin's password from ADMIN_PASSWORD.
+  if (config.adminPasswordReset && existingAdmin) {
+    if (!config.adminPassword) {
+      log.warn('ADMIN_PASSWORD_RESET=true but ADMIN_PASSWORD is not set — ignoring.');
+      return;
     }
+    const hash = await bcrypt.hash(config.adminPassword, config.bcryptRounds);
+    await eng.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, existingAdmin.id]);
+    log.warn(
+      `Admin password reset for ${existingAdmin.email}. ` +
+        'Remove ADMIN_PASSWORD_RESET=true from the environment to prevent a reset on every boot.',
+    );
+    return;
+  }
+  if (config.adminPasswordReset && !existingAdmin) {
+    log.warn('ADMIN_PASSWORD_RESET=true but no admin user exists yet — proceeding with normal seed.');
+  }
+
+  if (existingAdmin && !config.adminReseed) {
+    if (config.adminPassword) {
+      log.warn(
+        'Admin user already exists; ADMIN_PASSWORD is ignored on subsequent boots. ' +
+          'To rotate the admin password, set ADMIN_PASSWORD_RESET=true (with ADMIN_PASSWORD) for one boot.',
+      );
+    }
+    if (config.adminEmail && config.adminEmail !== existingAdmin.email) {
+      log.warn(
+        `ADMIN_EMAIL (${config.adminEmail}) differs from the existing admin (${existingAdmin.email}); ` +
+          'change the admin email through the admin UI instead.',
+      );
+    }
+    return;
+  }
+
+  if (existingAdmin && config.adminReseed) {
+    log.warn('ADMIN_RESEED=true — seeding an additional admin alongside the existing one.');
+  }
+
+  if (!config.adminEmail) {
+    log.warn(
+      `ADMIN_EMAIL is not set; seeding default '${adminEmail}'. ` +
+        'Password-reset emails sent to this address will bounce. Set ADMIN_EMAIL to a deliverable address.',
+    );
+  }
+
+  const providedPassword = config.adminPassword;
+  const plaintext = providedPassword || crypto.randomBytes(12).toString('base64url');
+  const hash = await bcrypt.hash(plaintext, config.bcryptRounds);
+
+  // ON CONFLICT (email) DO NOTHING guards against a rare startup race (e.g. rolling restart).
+  const { rows: inserted } = await eng.query<{ id: string }>(
+    `INSERT INTO users (id, email, password_hash, display_name, is_admin, plan, sub_status, active_until)
+     VALUES ($1, $2, $3, 'Admin', TRUE, 1, 1, $4)
+     ON CONFLICT (email) DO NOTHING
+     RETURNING id`,
+    [crypto.randomUUID(), adminEmail, hash, new Date(Date.now() + ADMIN_ACTIVE_UNTIL_MS).toISOString()],
+  );
+
+  if (inserted.length === 0) {
+    log.info(`Admin user at ${adminEmail} already exists — skipping seed.`);
+    return;
+  }
+
+  if (providedPassword) {
+    log.info(`Initial admin account created for ${adminEmail}`);
+  } else {
+    console.log('========================================');
+    console.log('  Initial admin credentials:');
+    console.log(`    Email: ${adminEmail}`);
+    console.log(`    Password: ${plaintext}`);
+    console.log('  Save this password — it will not be shown again.');
+    console.log('========================================');
   }
 }
 
@@ -125,10 +181,7 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   runSqliteMigrations(db, migrations);
 
   const sqliteEngine = createSqliteEngine();
-
-  // Seed default admin account — idempotent
   await seedAdminUser(sqliteEngine);
-
   return sqliteEngine;
 }
 
@@ -180,10 +233,7 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
   await runPostgresMigrations(pool, migrations);
 
   const pgEngine = createPostgresEngine();
-
-  // Seed default admin account — idempotent
   await seedAdminUser(pgEngine);
-
   return pgEngine;
 }
 

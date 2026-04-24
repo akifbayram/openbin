@@ -66,6 +66,9 @@ vi.mock('../../lib/config.js', () => ({
     databasePath: ':memory:',
     databaseUrl: null as string | null,
     adminPassword: null as string | null,
+    adminEmail: null as string | null,
+    adminPasswordReset: false,
+    adminReseed: false,
     bcryptRounds: 12,
   },
 }));
@@ -99,9 +102,18 @@ vi.mock('../migrations/runner.js', () => ({
 vi.resetModules();
 
 const { initialize, getEngine } = await import('../init.js');
-const { config } = await import('../../lib/config.js');
+const { config: frozenConfig } = await import('../../lib/config.js');
 const { setDialect } = await import('../dialect.js');
 const { initPostgres, createPostgresEngine } = await import('../postgres.js');
+
+const config = frozenConfig as unknown as {
+  dbEngine: 'sqlite' | 'postgres';
+  databaseUrl: string | null;
+  adminPassword: string | null;
+  adminEmail: string | null;
+  adminPasswordReset: boolean;
+  adminReseed: boolean;
+};
 
 // ---------------------------------------------------------------------------
 // Reset between tests — clear module-level `engine` by re-importing
@@ -119,8 +131,12 @@ beforeEach(async () => {
   regetEngine = mod.getEngine;
 
   // Default: sqlite mode with successful engine lock
-  (config as { dbEngine: string }).dbEngine = 'sqlite';
-  (config as { databaseUrl: string | null }).databaseUrl = null;
+  config.dbEngine = 'sqlite';
+  config.databaseUrl = null;
+  config.adminPassword = null;
+  config.adminEmail = null;
+  config.adminPasswordReset = false;
+  config.adminReseed = false;
   h.mockSqliteEngine.query.mockResolvedValue({ rows: [], rowCount: 0 });
   h.mockPgEngine.query.mockResolvedValue({ rows: [], rowCount: 0 });
   h.mockPgPool.query.mockResolvedValue({ rows: [] });
@@ -149,7 +165,7 @@ describe('getEngine', () => {
 
 describe('initialize', () => {
   it('selects sqlite when config.dbEngine is sqlite', async () => {
-    (config as { dbEngine: string }).dbEngine = 'sqlite';
+    config.dbEngine = 'sqlite';
 
     const engine = await reinitialize();
 
@@ -158,8 +174,8 @@ describe('initialize', () => {
   });
 
   it('selects postgres when config.dbEngine is postgres', async () => {
-    (config as { dbEngine: string }).dbEngine = 'postgres';
-    (config as { databaseUrl: string | null }).databaseUrl = 'postgres://localhost/test';
+    config.dbEngine = 'postgres';
+    config.databaseUrl = 'postgres://localhost/test';
 
     const engine = await reinitialize();
 
@@ -168,7 +184,7 @@ describe('initialize', () => {
   });
 
   it('is idempotent on second call', async () => {
-    (config as { dbEngine: string }).dbEngine = 'sqlite';
+    config.dbEngine = 'sqlite';
 
     const first = await reinitialize();
     const second = await reinitialize();
@@ -221,15 +237,15 @@ describe('enforceEngineLock', () => {
 
 describe('runPostgresInit', () => {
   it('throws without DATABASE_URL', async () => {
-    (config as { dbEngine: string }).dbEngine = 'postgres';
-    (config as { databaseUrl: string | null }).databaseUrl = null;
+    config.dbEngine = 'postgres';
+    config.databaseUrl = null;
 
     await expect(reinitialize()).rejects.toThrow('DATABASE_URL is required for PostgreSQL mode');
   });
 
   it('calls initPostgres with connection string', async () => {
-    (config as { dbEngine: string }).dbEngine = 'postgres';
-    (config as { databaseUrl: string | null }).databaseUrl = 'postgres://localhost/test';
+    config.dbEngine = 'postgres';
+    config.databaseUrl = 'postgres://localhost/test';
 
     await reinitialize();
 
@@ -237,8 +253,8 @@ describe('runPostgresInit', () => {
   });
 
   it('attempts pg_trgm extension creation', async () => {
-    (config as { dbEngine: string }).dbEngine = 'postgres';
-    (config as { databaseUrl: string | null }).databaseUrl = 'postgres://localhost/test';
+    config.dbEngine = 'postgres';
+    config.databaseUrl = 'postgres://localhost/test';
 
     await reinitialize();
 
@@ -246,8 +262,8 @@ describe('runPostgresInit', () => {
   });
 
   it('warns on pg_trgm failure but continues', async () => {
-    (config as { dbEngine: string }).dbEngine = 'postgres';
-    (config as { databaseUrl: string | null }).databaseUrl = 'postgres://localhost/test';
+    config.dbEngine = 'postgres';
+    config.databaseUrl = 'postgres://localhost/test';
     h.mockPgPool.query
       .mockResolvedValueOnce({ rows: [{ '?column?': 1 }] }) // SELECT 1
       .mockRejectedValueOnce(new Error('pg_trgm not available')) // CREATE EXTENSION
@@ -260,8 +276,8 @@ describe('runPostgresInit', () => {
   });
 
   it('loads schema in a transaction (BEGIN/COMMIT)', async () => {
-    (config as { dbEngine: string }).dbEngine = 'postgres';
-    (config as { databaseUrl: string | null }).databaseUrl = 'postgres://localhost/test';
+    config.dbEngine = 'postgres';
+    config.databaseUrl = 'postgres://localhost/test';
 
     await reinitialize();
 
@@ -271,8 +287,8 @@ describe('runPostgresInit', () => {
   });
 
   it('rolls back on schema failure', async () => {
-    (config as { dbEngine: string }).dbEngine = 'postgres';
-    (config as { databaseUrl: string | null }).databaseUrl = 'postgres://localhost/test';
+    config.dbEngine = 'postgres';
+    config.databaseUrl = 'postgres://localhost/test';
 
     let callCount = 0;
     h.mockPgPool.query.mockImplementation(async (sql: string) => {
@@ -287,5 +303,103 @@ describe('runPostgresInit', () => {
 
     const calls = h.mockPgPool.query.mock.calls.map((c: unknown[]) => c[0]);
     expect(calls).toContain('ROLLBACK');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// seedAdminUser — admin hardening
+// ---------------------------------------------------------------------------
+
+describe('seedAdminUser', () => {
+  function getSeedCalls(): string[] {
+    return h.mockSqliteEngine.query.mock.calls
+      .map((c: unknown[]) => c[0])
+      .filter((sql: unknown): sql is string => typeof sql === 'string');
+  }
+
+  it('checks for any admin (not a specific email)', async () => {
+    h.mockSqliteEngine.query
+      .mockResolvedValueOnce({ rows: [{ id: '1', email: 'other@example.com' }], rowCount: 1 }) // existing admin
+      .mockResolvedValueOnce({ rows: [{ value: 'sqlite' }], rowCount: 1 }); // engine lock
+
+    await reinitialize();
+
+    const selectCall = getSeedCalls().find((sql) => sql.includes('is_admin = TRUE'));
+    expect(selectCall).toBeDefined();
+    // No INSERT should happen because an admin already exists
+    const insertCall = getSeedCalls().find((sql) => sql.includes('INSERT INTO users'));
+    expect(insertCall).toBeUndefined();
+  });
+
+  it('inserts with ON CONFLICT (email) DO NOTHING', async () => {
+    h.mockSqliteEngine.query
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // seed SELECT — no admin
+      .mockResolvedValueOnce({ rows: [{ id: 'new-admin' }], rowCount: 1 }) // seed INSERT RETURNING
+      .mockResolvedValueOnce({ rows: [{ value: 'sqlite' }], rowCount: 1 }); // engine lock
+
+    await reinitialize();
+
+    const insertCall = getSeedCalls().find((sql) => sql.includes('INSERT INTO users'));
+    expect(insertCall).toMatch(/ON CONFLICT\s*\(email\)\s*DO NOTHING/);
+    expect(insertCall).toMatch(/RETURNING id/);
+  });
+
+  it('rotates the admin password when ADMIN_PASSWORD_RESET=true and ADMIN_PASSWORD set', async () => {
+    config.adminPassword = 'new-secret';
+    config.adminPasswordReset = true;
+    h.mockSqliteEngine.query.mockResolvedValueOnce({
+      rows: [{ id: 'existing-id', email: 'admin@example.com' }],
+      rowCount: 1,
+    });
+
+    await reinitialize();
+
+    const updateCall = h.mockSqliteEngine.query.mock.calls.find(
+      (c: unknown[]) => typeof c[0] === 'string' && c[0].includes('UPDATE users SET password_hash'),
+    );
+    expect(updateCall).toBeDefined();
+    // UPDATE should target the existing admin id
+    expect(updateCall?.[1]).toEqual(['$2b$12$mockhash', 'existing-id']);
+  });
+
+  it('ignores ADMIN_PASSWORD_RESET when ADMIN_PASSWORD is unset', async () => {
+    config.adminPasswordReset = true;
+    h.mockSqliteEngine.query.mockResolvedValueOnce({
+      rows: [{ id: 'existing-id', email: 'admin@example.com' }],
+      rowCount: 1,
+    });
+
+    await reinitialize();
+
+    const updateCall = h.mockSqliteEngine.query.mock.calls.find(
+      (c: unknown[]) => typeof c[0] === 'string' && c[0].includes('UPDATE users SET password_hash'),
+    );
+    expect(updateCall).toBeUndefined();
+  });
+
+  it('still creates an additional admin when ADMIN_RESEED=true', async () => {
+    config.adminReseed = true;
+    h.mockSqliteEngine.query
+      .mockResolvedValueOnce({ rows: [{ id: 'one', email: 'a@b.co' }], rowCount: 1 }) // existing admin
+      .mockResolvedValueOnce({ rows: [{ id: 'two' }], rowCount: 1 }) // INSERT RETURNING
+      .mockResolvedValueOnce({ rows: [{ value: 'sqlite' }], rowCount: 1 }); // engine lock
+
+    await reinitialize();
+
+    const insertCall = getSeedCalls().find((sql) => sql.includes('INSERT INTO users'));
+    expect(insertCall).toBeDefined();
+  });
+
+  it('does not INSERT when admin exists and ADMIN_RESEED is false', async () => {
+    config.adminReseed = false;
+    h.mockSqliteEngine.query.mockResolvedValueOnce({
+      rows: [{ id: 'one', email: 'admin@example.com' }],
+      rowCount: 1,
+    });
+
+    await reinitialize();
+
+    const insertCall = getSeedCalls().find((sql) => sql.includes('INSERT INTO users'));
+    expect(insertCall).toBeUndefined();
   });
 });
