@@ -82,7 +82,7 @@ export function AccountSection() {
   // API keys
   const { isGated, isSelfHosted, planInfo } = usePlan();
   const apiKeysGated = !isSelfHosted && isGated('apiKeys');
-  const { keys, isLoading: keysLoading } = useApiKeys();
+  const { keys, isLoading: keysLoading } = useApiKeys(!apiKeysGated);
   const [createOpen, setCreateOpen] = useState(false);
   const [keyName, setKeyName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -500,13 +500,15 @@ export function AccountSection() {
 
       {apiKeysGated ? (
         __EE__ && (
-          <Suspense fallback={null}>
-            <UpgradePrompt
-              feature="API Keys"
-              description="Create API keys to integrate with external tools."
-              upgradeUrl={planInfo.upgradeUrl}
-            />
-          </Suspense>
+          <SettingsSection label="API Keys" dividerAbove>
+            <Suspense fallback={null}>
+              <UpgradePrompt
+                feature="API Keys"
+                description="Create API keys to integrate with external tools."
+                upgradeUrl={planInfo.upgradeUrl}
+              />
+            </Suspense>
+          </SettingsSection>
         )
       ) : (
         <SettingsSection

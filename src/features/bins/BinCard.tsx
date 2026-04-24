@@ -281,7 +281,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             loading="lazy"
           />
           {/* Dark scrim overlay for text legibility */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/10" />
+          <div className="absolute inset-0 photo-scrim" />
           {/* Content on top */}
           <div className="relative z-10 h-full">
             {cardContent}

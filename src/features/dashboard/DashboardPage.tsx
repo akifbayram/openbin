@@ -198,15 +198,15 @@ export function DashboardPage() {
         )}
 
         {/*
-          Mobile order is driven by action gradient (act → shortcut → recall → orient → analyze):
-          1 onboarding · 2 checkouts · 3 pinned · 4 recent scans · 5 saved · 6 stats · 7 activity.
+          Mobile order: 1 overview · 2 saved · 3 pinned · 4 checkouts · 5 activity · 6 recent scans.
+          (Needs-organizing banner sits above the grid and always renders first when present.)
           Wrappers use `display: contents` on mobile so sections participate directly in the outer grid;
           on `lg:` they become real 2:1 columns with natural DOM order restored.
         */}
         <div className={cn('grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start', selectable && 'pb-16')} data-tour="dashboard-overview">
           <div className="contents lg:col-span-2 lg:flex lg:flex-col lg:gap-4 lg:min-w-0">
             {dashSettings.showSavedViews && savedViews.length > 0 && (
-              <section aria-labelledby="dash-saved-views" className="flex flex-col gap-2 order-5 lg:order-none min-w-0">
+              <section aria-labelledby="dash-saved-views" className="flex flex-col gap-2 order-2 lg:order-none min-w-0">
                 <SectionHeader id="dash-saved-views" icon={Bookmark} title="Saved searches" />
                 <SavedViewChips
                   views={savedViews}
@@ -246,7 +246,7 @@ export function DashboardPage() {
             )}
 
             {dashSettings.showActivity && isAdmin && (
-              <div className="order-7 lg:order-none min-w-0">
+              <div className="order-5 lg:order-none min-w-0">
                 <DashboardActivityFeed showTimestamps={dashSettings.showTimestamps} />
               </div>
             )}
@@ -254,7 +254,7 @@ export function DashboardPage() {
 
           <div className="contents lg:flex lg:flex-col lg:gap-4 lg:min-w-0">
             {dashSettings.showStats && (
-              <section aria-labelledby="dash-stats" className="flex flex-col gap-2 order-6 lg:order-none min-w-0">
+              <section aria-labelledby="dash-stats" className="flex flex-col gap-2 order-1 lg:order-none min-w-0">
                 <SectionHeader id="dash-stats" icon={BarChart3} title="Overview" />
                 <div className="grid grid-cols-2 gap-3">
                   <StatCard
@@ -283,13 +283,13 @@ export function DashboardPage() {
             )}
 
             {dashSettings.showCheckouts && checkouts.length > 0 && (
-              <div className="order-2 lg:order-none min-w-0">
+              <div className="order-4 lg:order-none min-w-0">
                 <DashboardOpenCheckouts checkouts={checkouts} showTimestamps={dashSettings.showTimestamps} />
               </div>
             )}
 
             {dashSettings.showRecentlyScanned && recentlyScanned.length > 0 && (
-              <div className="order-4 lg:order-none min-w-0">
+              <div className="order-6 lg:order-none min-w-0">
                 <DashboardRecentScans
                   bins={recentlyScanned}
                   scanTimeMap={scanTimeMap}

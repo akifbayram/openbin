@@ -105,7 +105,7 @@ describe('ReorganizePreview — source-oriented', () => {
       summary: '',
     };
     render(<ReorganizePreview {...baseProps} inputBins={inputBins} result={result} />);
-    expect(screen.getAllByText('kept')[0]).toBeTruthy();
+    expect(screen.getAllByText('Existing bin')[0]).toBeTruthy();
   });
 
   it('shows ×N destinations annotation when same item goes to multiple destinations', () => {

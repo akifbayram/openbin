@@ -221,13 +221,20 @@ function ClusterRow({ cluster }: { cluster: SourceCard['outgoingClusters'][numbe
         </span>
         <span
           className={cn(
-            'inline-flex items-center rounded-[var(--radius-xs)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide shrink-0',
+            'inline-flex items-center gap-1 rounded-[var(--radius-xs)] px-1.5 py-0.5 text-[11px] font-medium shrink-0',
             cluster.destinationKept
-              ? 'bg-[var(--color-success-soft)] text-[var(--color-success)]'
-              : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]',
+              ? 'text-[var(--color-success)]'
+              : 'text-[var(--text-tertiary)]',
           )}
         >
-          {cluster.destinationKept ? 'kept' : 'new'}
+          <span
+            aria-hidden="true"
+            className={cn(
+              'h-1.5 w-1.5 rounded-full',
+              cluster.destinationKept ? 'bg-[var(--color-success)]' : 'bg-[var(--text-tertiary)]',
+            )}
+          />
+          {cluster.destinationKept ? 'Existing bin' : 'New bin'}
         </span>
         <span className="ml-auto shrink-0 text-[11px] text-[var(--text-tertiary)] tabular-nums">
           {itemCount} item{itemCount !== 1 ? 's' : ''}

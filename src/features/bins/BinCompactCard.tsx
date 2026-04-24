@@ -149,7 +149,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/10" />
+          <div className="absolute inset-0 photo-scrim" />
           <div className="relative z-10">{cardContent}</div>
         </>
       ) : (

@@ -3,7 +3,7 @@ import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { ApiKey, ListResponse } from '@/types';
 
-export function useApiKeys() {
+export function useApiKeys(enabled = true) {
   const { token } = useAuth();
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,7 +18,7 @@ export function useApiKeys() {
   }, []);
 
   useEffect(() => {
-    if (!token) {
+    if (!token || !enabled) {
       setKeys([]);
       setIsLoading(false);
       return;
@@ -39,7 +39,7 @@ export function useApiKeys() {
       });
 
     return () => { cancelled = true; };
-  }, [token, refreshKey]);
+  }, [token, refreshKey, enabled]);
 
   return { keys, isLoading };
 }

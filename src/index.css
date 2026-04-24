@@ -321,6 +321,10 @@ body {
   border-bottom: 1px solid var(--border-flat);
 }
 
+.photo-scrim {
+  background: linear-gradient(to right, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0.3) 50%, rgb(0 0 0 / 0.1));
+}
+
 /* ─── Bin Card: no shadow ─── */
 .bin-card-shadow {
   box-shadow: none;

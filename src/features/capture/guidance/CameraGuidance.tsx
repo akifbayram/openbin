@@ -48,7 +48,7 @@ export function HelpButton({ className }: { className?: string }) {
 				onClick={() => setIsOpen(true)}
 				className={cn(
 					focusRing,
-					'h-8 w-8 flex items-center justify-center text-white/90 hover:text-white rounded-[50%]',
+					'h-8 w-8 flex items-center justify-center text-white/90 hover:text-white rounded-full',
 					className,
 				)}
 			>

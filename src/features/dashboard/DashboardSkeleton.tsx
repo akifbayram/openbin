@@ -29,7 +29,7 @@ export function DashboardSkeleton({ settings }: { settings: DashboardSettings })
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
       <div className="contents lg:col-span-2 lg:flex lg:flex-col lg:gap-4 lg:min-w-0">
         {settings.showSavedViews && (
-          <div className="flex flex-col gap-2 order-5 lg:order-none min-w-0">
+          <div className="flex flex-col gap-2 order-2 lg:order-none min-w-0">
             <Skeleton className="h-5 w-32" />
             <div className="flex gap-2">
               <Skeleton className="h-9 w-24 rounded-[var(--radius-md)]" />
@@ -53,7 +53,7 @@ export function DashboardSkeleton({ settings }: { settings: DashboardSettings })
         )}
 
         {settings.showActivity && (
-          <div className="flex flex-col gap-2 order-7 lg:order-none min-w-0">
+          <div className="flex flex-col gap-2 order-5 lg:order-none min-w-0">
             <Skeleton className="h-5 w-32" />
             <div className="flat-card rounded-[var(--radius-lg)] p-2 space-y-1">
               {[0, 1, 2, 3].map((i) => (
@@ -70,7 +70,7 @@ export function DashboardSkeleton({ settings }: { settings: DashboardSettings })
 
       <div className="contents lg:flex lg:flex-col lg:gap-4 lg:min-w-0">
         {settings.showStats && (
-          <div className="flex flex-col gap-2 order-6 lg:order-none min-w-0">
+          <div className="flex flex-col gap-2 order-1 lg:order-none min-w-0">
             <Skeleton className="h-5 w-20" />
             <div className="grid grid-cols-2 gap-3">
               {[0, 1, 2, 3].map((i) => (
@@ -81,7 +81,7 @@ export function DashboardSkeleton({ settings }: { settings: DashboardSettings })
         )}
 
         {settings.showRecentlyScanned && (
-          <div className="flex flex-col gap-2 order-4 lg:order-none min-w-0">
+          <div className="flex flex-col gap-2 order-6 lg:order-none min-w-0">
             <Skeleton className="h-5 w-28" />
             <div className="flat-card rounded-[var(--radius-lg)] p-2">
               {[0, 1, 2].map((i) => (

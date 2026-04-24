@@ -90,8 +90,8 @@ export function BinDetailRail({
               autoSave.saveNotes(value);
             }}
             maxLength={10000}
-            rows={4}
-            className="[field-sizing:content] min-h-[8rem] text-[15px] leading-relaxed"
+            rows={1}
+            className="[field-sizing:content] text-[15px] leading-relaxed"
             placeholder="Add notes..."
           />
         ) : bin.notes ? (
