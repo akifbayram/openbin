@@ -31,6 +31,25 @@ function clamp(value: number, min: number, max: number, fallback: number): numbe
 
 const photoStoragePath = process.env.PHOTO_STORAGE_PATH || './uploads';
 
+function readSecretFile(envPath: string | undefined): string | null {
+  if (!envPath) return null;
+  try {
+    return fs.readFileSync(envPath, 'utf-8').trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveAdminPassword(): string | null {
+  return process.env.ADMIN_PASSWORD || readSecretFile(process.env.ADMIN_PASSWORD_FILE);
+}
+
+function resolveAdminEmail(): string | null {
+  const raw = process.env.ADMIN_EMAIL;
+  if (!raw) return null;
+  return raw.trim().toLowerCase() || null;
+}
+
 function resolveJwtSecret(): string {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
 
@@ -59,8 +78,10 @@ export const config = Object.freeze({
   corsOriginExplicit: !!process.env.CORS_ORIGIN,
 
   // Auth
-  adminPassword: process.env.ADMIN_PASSWORD || null,
-  adminEmail: process.env.ADMIN_EMAIL || null,
+  adminPassword: resolveAdminPassword(),
+  adminEmail: resolveAdminEmail(),
+  adminPasswordReset: parseBool(process.env.ADMIN_PASSWORD_RESET, false),
+  adminReseed: parseBool(process.env.ADMIN_RESEED, false),
   jwtSecret: resolveJwtSecret(),
   accessTokenExpiresIn: '15m',
   refreshTokenMaxDays: 7,
