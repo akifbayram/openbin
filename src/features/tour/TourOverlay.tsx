@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
+import { isEditableTarget } from '@/lib/useKeyboardShortcuts';
 import { cn } from '@/lib/utils';
 import './tour.css';
 import type { Placement, TourContext } from './tourSteps';
@@ -106,9 +107,11 @@ export function TourOverlay({ tour, context }: TourOverlayProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isActive, skip, next, prev, currentStep]);
 
-  // Auto-focus the Next button when tooltip positions
+  // Auto-focus the Next button when tooltip positions — but not if the user is
+  // already typing in an input, which would break "try typing" steps.
   useEffect(() => {
     if (!positioned) return;
+    if (isEditableTarget(document.activeElement)) return;
     const btn = tooltipRef.current?.querySelector<HTMLButtonElement>('[data-tour-next]');
     btn?.focus();
   }, [positioned, currentStep]);
@@ -123,9 +126,21 @@ export function TourOverlay({ tour, context }: TourOverlayProps) {
   const customButton = step ? resolveButtonLabel(step, context) : null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[90]" role="dialog" aria-modal="true" aria-label="Guided tour">
-      {/* SVG mask always mounted; only the hole moves — prevents flashing between steps */}
-      <svg className="fixed inset-0 w-full h-full" onClick={skip} aria-hidden="true">
+    <div
+      className="fixed inset-0 z-[90]"
+      style={{ pointerEvents: 'none' }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Guided tour"
+    >
+      {/* SVG mask always mounted; only the hole moves — prevents flashing between steps.
+          `pointer-events: none` on the wrapper lets clicks pass through the dim so users
+          can interact with the spotlighted element; the tooltip re-enables pointer events
+          for itself. Dismissal is explicit (Skip button / Escape). */}
+      <svg
+        className="fixed inset-0 w-full h-full"
+        aria-hidden="true"
+      >
         <defs>
           <mask id="tour-mask">
             {/* White = visible (dimmed), Black = transparent (hole) */}
@@ -148,7 +163,7 @@ export function TourOverlay({ tour, context }: TourOverlayProps) {
         <rect
           width="100%"
           height="100%"
-          fill="rgba(0,0,0,0.55)"
+          fill="rgba(0,0,0,0.65)"
           mask="url(#tour-mask)"
         />
       </svg>
@@ -188,12 +203,17 @@ export function TourOverlay({ tour, context }: TourOverlayProps) {
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          {/* Progress bar */}
-          <div className="flex gap-1 mb-3" aria-hidden="true">
-            <div className="flex-1 h-1 rounded-full bg-[var(--accent)]" style={{ flex: currentStep + 1 }} />
-            {currentStep < totalSteps - 1 && (
-              <div className="flex-1 h-1 rounded-full bg-[var(--border-flat)]" style={{ flex: totalSteps - currentStep - 1 }} />
-            )}
+          {/* Progress bar + counter */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex-1 h-1 rounded-full bg-[var(--border-flat)] overflow-hidden" aria-hidden="true">
+              <div
+                className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-200 ease-out motion-reduce:transition-none"
+                style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
+              />
+            </div>
+            <span className="text-[11px] tabular-nums text-[var(--text-tertiary)] shrink-0">
+              {currentStep + 1} / {totalSteps}
+            </span>
           </div>
 
           {/* Title */}

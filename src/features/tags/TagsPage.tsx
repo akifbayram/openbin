@@ -192,15 +192,17 @@ export function TagsPage() {
     <div className="page-content-wide">
       <PageHeader
         title="Tags"
-        actions={canWrite ? (
+        actions={(
           <div className="flex items-center gap-2">
-            {showSuggestButton && suggestButton}
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Create Tag
-            </Button>
+            {canWrite && showSuggestButton && suggestButton}
+            {canWrite && (
+              <Button size="sm" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                Create Tag
+              </Button>
+            )}
           </div>
-        ) : undefined}
+        )}
       />
 
       {(totalCount > 0 || search) && (

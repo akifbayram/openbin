@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { d, generateUuid, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
+import { COLOR_KEY_REGEX } from '../lib/binValidation.js';
 import { config } from '../lib/config.js';
 import { ForbiddenError, HttpError, SelectionTooLargeError, ValidationError } from '../lib/httpErrors.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { applyTagMutations, detectParentCycle } from '../lib/tagMutations.js';
+import { HEX_COLOR_REGEX } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 
 const TAG_REGEX = /^[a-z0-9][a-z0-9-]{0,99}$/;
@@ -293,7 +295,10 @@ router.post('/bulk-apply', asyncHandler(async (req, res) => {
   res.json(counts);
 }));
 
-const COLOR_REGEX = /^(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|)$/;
+function isValidTagColor(color: string): boolean {
+  if (color === '') return true;
+  return HEX_COLOR_REGEX.test(color) || COLOR_KEY_REGEX.test(color);
+}
 
 function validateTagNames(tags: unknown, fieldName = 'tags'): string[] {
   if (!Array.isArray(tags) || tags.length === 0) {
@@ -376,8 +381,8 @@ router.post('/bulk-set-color', asyncHandler(async (req, res) => {
   const { locationId, tags, color } = req.body ?? {};
   if (!locationId || typeof locationId !== 'string') throw new ValidationError('locationId is required');
   const validTags = validateTagNames(tags);
-  if (typeof color !== 'string' || !COLOR_REGEX.test(color)) {
-    throw new ValidationError('color must be a hex string like #ff0000 or empty');
+  if (typeof color !== 'string' || !isValidTagColor(color)) {
+    throw new ValidationError('color must be a valid hex color, color key, or empty');
   }
 
   await requireMemberOrAbove(locationId, req.user!.id, 'bulk-set-color tags');
@@ -417,14 +422,16 @@ router.post('/bulk-merge', asyncHandler(async (req, res) => {
   if (typeof toTag !== 'string' || !TAG_REGEX.test(toTag)) {
     throw new ValidationError('toTag must be a valid tag name');
   }
-  if (validFrom.includes(toTag)) {
-    throw new ValidationError('toTag cannot be in fromTags');
+
+  const sourcesToMerge = validFrom.filter((t) => t !== toTag);
+  if (sourcesToMerge.length === 0) {
+    throw new ValidationError('fromTags must contain at least one tag other than toTag');
   }
 
   await requireMemberOrAbove(locationId, req.user!.id, 'bulk-merge tags');
 
   const counts = await withTransaction(async (txQuery) =>
-    applyTagMutations(txQuery, locationId, { merges: [{ from: validFrom, to: toTag }] }),
+    applyTagMutations(txQuery, locationId, { merges: [{ from: sourcesToMerge, to: toTag }] }),
   );
 
   logRouteActivity(req, {
@@ -433,7 +440,7 @@ router.post('/bulk-merge', asyncHandler(async (req, res) => {
     action: 'bulk_merge',
     entityId: undefined,
     entityName: toTag,
-    changes: { counts: { old: null, new: { affected: counts.tagsMerged, fromCount: validFrom.length, target: toTag } } },
+    changes: { counts: { old: null, new: { affected: counts.tagsMerged, fromCount: sourcesToMerge.length, target: toTag } } },
   });
 
   res.json({

@@ -4,6 +4,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
+import { useToast } from '@/components/ui/toast';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useFirstBinIds } from '@/features/bins/useBins';
 import { useAutoOpenOnCapture } from '@/features/capture/useAutoOpenOnCapture';
@@ -16,7 +17,8 @@ import { TagColorsProvider } from '@/features/tags/TagColorsContext';
 import { TourBanner } from '@/features/tour/TourBanner';
 import { TourOverlay } from '@/features/tour/TourOverlay';
 import { getCommandInputRef, TourProvider } from '@/features/tour/TourProvider';
-import { TOUR_VERSION, type TourContext } from '@/features/tour/tourSteps';
+import { getTour, markTourSeen, TOURS_VERSION, type TourId } from '@/features/tour/tourRegistry';
+import type { TourContext } from '@/features/tour/tourSteps';
 import { useTour } from '@/features/tour/useTour';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
@@ -40,6 +42,8 @@ const ScanDialog = React.lazy(() =>
 );
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
+
+const HIGHLIGHTS_TOUR: TourId = 'highlights';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -112,7 +116,14 @@ export function AppLayout() {
     closeCommandInput: () => getCommandInputRef().current?.close(),
   }), [canWrite, aiSettings, firstBinId, binIds, terminology, isMobile]);
 
-  const tour = useTour({ context: tourContext, navigate, updatePreferences });
+  const { showToast } = useToast();
+  const onTourUnavailable = useCallback((tourId: TourId) => {
+    const title = getTour(tourId)?.title ?? 'This tour';
+    showToast({
+      message: `${title} needs some content on this page first.`,
+    });
+  }, [showToast]);
+  const tour = useTour({ context: tourContext, navigate, updatePreferences, onUnavailable: onTourUnavailable });
 
   // Close drawer on route change
   // biome-ignore lint/correctness/useExhaustiveDependencies: location.pathname triggers drawer close on navigation
@@ -178,12 +189,15 @@ export function AppLayout() {
   const showTourBanner =
     preferences.onboarding_completed &&
     !onboarding.isOnboarding &&
-    (!preferences.tour_completed || preferences.tour_version < TOUR_VERSION) &&
+    !(preferences.tours_seen ?? []).includes(HIGHLIGHTS_TOUR) &&
     !tour.isActive &&
     !locationsLoading;
 
   const dismissTour = useCallback(() => {
-    updatePreferences({ tour_completed: true, tour_version: TOUR_VERSION });
+    updatePreferences((prev) => ({
+      tours_seen: markTourSeen(prev.tours_seen, HIGHLIGHTS_TOUR),
+      tours_version: TOURS_VERSION,
+    }));
   }, [updatePreferences]);
 
   async function handleInstall() {
@@ -331,7 +345,7 @@ export function AppLayout() {
       {demoMode && <DemoCtaOverlay />}
       <TourOverlay tour={tour} context={tourContext} />
       {showTourBanner && (
-        <TourBanner appName={settings.appName} onStart={tour.start} onDismiss={dismissTour} />
+        <TourBanner appName={settings.appName} onStart={() => tour.start(HIGHLIGHTS_TOUR)} onDismiss={dismissTour} />
       )}
     </div>
     </TourProvider>

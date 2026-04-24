@@ -106,6 +106,10 @@ vi.mock('../PhotoBulkAdd', () => ({
   ),
 }));
 
+vi.mock('@/features/tour/TourLauncher', () => ({
+  TourLauncher: () => null,
+}));
+
 // Mock useStreamingAsk so we can control what the unified /ask endpoint returns.
 vi.mock('../useStreamingAsk', async () => {
   const actual = await vi.importActual<typeof import('../useStreamingAsk')>('../useStreamingAsk');

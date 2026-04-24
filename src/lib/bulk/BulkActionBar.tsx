@@ -49,6 +49,7 @@ export function BulkActionBar({ selectedCount, actions, onClear, isBusy, selecti
 
   return (
     <div
+      data-tour="bulk-action-bar"
       className={cn(
         'fixed z-50 left-1/2 -translate-x-1/2 lg:left-[calc(50%+130px)] max-w-[calc(100vw-2.5rem)]',
         'bottom-[calc(12px+var(--bottom-bar-height)+var(--safe-bottom))] lg:bottom-8',

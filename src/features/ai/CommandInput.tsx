@@ -1,6 +1,7 @@
 import { SquarePen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { ConversationScopePill } from './ConversationScopePill';
 import { ConversationUI, useBinNavigate } from './ConversationUI';
 import { getCommandSelectedBinIds } from './commandSelectedBins';
@@ -49,16 +50,21 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
                 )}
               </DialogHeader>
 
-              {!photoMode && conversation.turns.length > 0 && (
-                <button
-                  type="button"
-                  aria-label="New chat"
-                  title="New chat"
-                  className="ai-newchat-enter absolute right-14 top-2.5 z-10 rounded-[var(--radius-sm)] h-11 w-11 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center"
-                  onClick={conversation.clearConversation}
-                >
-                  <SquarePen className="h-4 w-4" />
-                </button>
+              {!photoMode && (
+                <div className="absolute right-14 top-2.5 z-10 flex items-center gap-1">
+                  <TourLauncher tourId="ask-ai" />
+                  {conversation.turns.length > 0 && (
+                    <button
+                      type="button"
+                      aria-label="New chat"
+                      title="New chat"
+                      className="ai-newchat-enter rounded-[var(--radius-sm)] h-9 w-9 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center"
+                      onClick={conversation.clearConversation}
+                    >
+                      <SquarePen className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               )}
             </>
           )}

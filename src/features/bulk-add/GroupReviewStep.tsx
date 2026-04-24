@@ -379,7 +379,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       : [[0, `Analyzing ${photoCount} photo${photoCount !== 1 ? 's' : ''}...`], [15, 'Identifying items...'], [45, 'Streaming results...'], [75, 'Finishing up...']];
 
   return (
-    <div className="space-y-5">
+    <div data-tour="group-review" className="space-y-5">
       {/* Step title + progress */}
       <header className="space-y-1">
         <div className="row-spread">

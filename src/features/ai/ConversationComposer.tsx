@@ -109,7 +109,10 @@ export function ConversationComposer({
   const canSend = text.trim().length > 0 && !disabled;
 
   return (
-    <div className="border-t border-[var(--border-flat)] bg-[var(--bg-elevated)] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+    <div
+      data-tour="ask-composer"
+      className="border-t border-[var(--border-flat)] bg-[var(--bg-elevated)] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+    >
       <div
         className={cn(
           'flex items-end gap-1 rounded-[var(--radius-lg)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-1.5',

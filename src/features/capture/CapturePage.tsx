@@ -2,6 +2,7 @@ import { Camera, Check, RotateCcw, SwitchCamera, X } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { cn, focusRing } from '@/lib/utils';
 import { CapturePageBulkGroup } from './CapturePageBulkGroup';
 import { getCapturedReturnTarget, setCapturedPhotos } from './capturedPhotos';
@@ -151,6 +152,7 @@ function CapturePageLegacy({ binId }: { binId?: string }) {
                 </Button>
                 <Button onClick={() => startCamera()}>Start Camera</Button>
               </div>
+              <TourLauncher tourId="create-ai" />
             </>
           )}
         </div>
@@ -247,6 +249,7 @@ function CapturePageLegacy({ binId }: { binId?: string }) {
             <button
               type="button"
               onClick={() => capture()}
+              data-tour="capture-camera"
               aria-label="Take photo"
               className={cn(
                 focusRing,

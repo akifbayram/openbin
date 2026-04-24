@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TourLauncher } from '@/features/tour/TourLauncher';
 import { BinSelectorCard } from './BinSelectorCard';
 import { ItemListOptionsCard } from './ItemListOptionsCard';
 import { ItemSheet } from './ItemSheet';
@@ -95,7 +96,7 @@ export function PrintPage() {
   return (
     <>
       <div className="page-content print-hide max-w-6xl">
-        <PageHeader title="Print" back />
+        <PageHeader title="Print" back actions={<TourLauncher tourId="print-scan" />} />
 
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
         {/* Left column — settings */}
@@ -112,17 +113,19 @@ export function PrintPage() {
             />
           </div>
 
-          <BinSelectorCard
-            allBins={allBins}
-            areas={areas}
-            selectedIds={selection.selectedIds}
-            toggleBin={selection.toggleBin}
-            selectAll={selection.selectAll}
-            selectNone={selection.selectNone}
-            toggleArea={selection.toggleArea}
-            expanded={ui.binsExpanded}
-            onExpandedChange={ui.setBinsExpanded}
-          />
+          <div data-tour="print-bin-selector">
+            <BinSelectorCard
+              allBins={allBins}
+              areas={areas}
+              selectedIds={selection.selectedIds}
+              toggleBin={selection.toggleBin}
+              selectAll={selection.selectAll}
+              selectNone={selection.selectNone}
+              toggleArea={selection.toggleArea}
+              expanded={ui.binsExpanded}
+              onExpandedChange={ui.setBinsExpanded}
+            />
+          </div>
 
           {(printMode === 'labels' || printMode === 'names') && (
             <LabelFormatCard

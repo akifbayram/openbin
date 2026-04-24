@@ -151,6 +151,24 @@ describe('POST /api/tags/bulk-set-color', () => {
     await handler(req, res, next);
     expect(next.mock.calls[0][0].statusCode).toBe(422);
   });
+
+  it.each([
+    ['hue:shade color key', '120:3'],
+    ['neutral color key', 'neutral:2'],
+    ['black keyword', 'black'],
+    ['white keyword', 'white'],
+    ['empty string (clear)', ''],
+  ])('accepts %s', async (_label, color) => {
+    const handler = findHandler('post', '/bulk-set-color');
+    const req = makeReq({ locationId: 'loc-1', tags: ['a'], color });
+    const res = makeRes();
+    const next = vi.fn();
+    await handler(req, res, next);
+    await vi.waitFor(() =>
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ tagsUpdated: expect.any(Number) })),
+    );
+    expect(next).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /api/tags/bulk-merge', () => {
@@ -161,9 +179,23 @@ describe('POST /api/tags/bulk-merge', () => {
     mockApplyTagMutations.mockResolvedValue({ tagsMerged: 1, binsUpdated: 4, childrenReassigned: 0 });
   });
 
-  it('rejects when toTag is in fromTags', async () => {
+  it('filters toTag out of fromTags and merges the rest into it', async () => {
     const handler = findHandler('post', '/bulk-merge');
     const req = makeReq({ locationId: 'loc-1', fromTags: ['a', 'b'], toTag: 'a' });
+    const res = makeRes();
+    await handler(req, res, vi.fn());
+    await vi.waitFor(() =>
+      expect(mockApplyTagMutations).toHaveBeenCalledWith(
+        expect.anything(),
+        'loc-1',
+        { merges: [{ from: ['b'], to: 'a' }] },
+      ),
+    );
+  });
+
+  it('rejects when fromTags contains only toTag', async () => {
+    const handler = findHandler('post', '/bulk-merge');
+    const req = makeReq({ locationId: 'loc-1', fromTags: ['a'], toTag: 'a' });
     const res = makeRes();
     const next = vi.fn();
     await handler(req, res, next);

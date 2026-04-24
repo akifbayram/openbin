@@ -21,7 +21,8 @@ import { setCommandSelectedBinIds } from '@/features/ai/commandSelectedBins';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
-import { getCommandInputRef, useTourContext } from '@/features/tour/TourProvider';
+import { TourLauncher } from '@/features/tour/TourLauncher';
+import { getCommandInputRef } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { BulkActionBar } from '@/lib/bulk/BulkActionBar';
@@ -60,19 +61,15 @@ export function BinListPage() {
   const { createOpen, setCreateOpen, createInitialPhotos, onCreateInitialPhotosConsumed } =
     useBinCreateFromCapture();
   const [filterOpen, setFilterOpen] = useState(false);
-  const tourCtx = useTourContext();
 
   // Handle navigation state (ephemeral UI, not shareable)
   useEffect(() => {
-    const state = location.state as { create?: boolean; startTour?: boolean } | null;
+    const state = location.state as { create?: boolean } | null;
     if (state?.create) {
       setCreateOpen(true);
     }
-    if (state?.startTour) {
-      tourCtx?.tour.start();
-    }
     if (state) window.history.replaceState({}, '');
-  }, [location.state, tourCtx, setCreateOpen]);
+  }, [location.state, setCreateOpen]);
 
   const { activeLocationId } = useAuth();
   const prevLocationRef = useRef(activeLocationId);
@@ -162,6 +159,7 @@ export function BinListPage() {
         actions={activeLocationId ? (
           <div className="row">
             <div className="flex items-center gap-1">
+              <TourLauncher tourId="bulk-edit" />
               <SearchBarOverflowMenu
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
@@ -296,7 +294,7 @@ export function BinListPage() {
               </EmptyState>
             )
           ) : viewMode === 'compact' ? (
-            <div className={cn(selectable && "pb-16")}>
+            <div data-tour="select-toggle" className={cn(selectable && "pb-16")}>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {bins.map((bin, index) => (
                   <div key={bin.id} className="animate-card-stagger" style={{ '--stagger-index': Math.min(index, 11) } as React.CSSProperties}>
@@ -318,7 +316,7 @@ export function BinListPage() {
               <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
             </div>
           ) : viewMode === 'table' ? (
-            <div className={cn(selectable && "pb-16")}>
+            <div data-tour="select-toggle" className={cn(selectable && "pb-16")}>
               <BinTableView
                 bins={bins}
                 sortColumn={sort}
@@ -336,7 +334,7 @@ export function BinListPage() {
               <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
             </div>
           ) : (
-            <div className={cn(selectable && "pb-16")}>
+            <div data-tour="select-toggle" className={cn(selectable && "pb-16")}>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {bins.map((bin, index) => (
                   <div key={bin.id} className="animate-card-stagger" style={{ '--stagger-index': Math.min(index, 11) } as React.CSSProperties}>

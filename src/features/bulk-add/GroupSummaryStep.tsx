@@ -169,6 +169,7 @@ export function GroupSummaryStep({
       {!isCreating && createReady.length > 0 && (
         <Button
           onClick={onCreateAll}
+          data-tour="bulk-add-confirm"
           aria-label={`Create ${createReady.length} ${createReady.length !== 1 ? t.Bins : t.Bin}`}
           className="w-full"
         >
