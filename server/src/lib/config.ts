@@ -56,6 +56,7 @@ export const config = Object.freeze({
   photoStoragePath,
   port: parseInt(process.env.PORT || '1453', 10),
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  corsOriginExplicit: !!process.env.CORS_ORIGIN,
 
   // Auth
   adminPassword: process.env.ADMIN_PASSWORD || null,

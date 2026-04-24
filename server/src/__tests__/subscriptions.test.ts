@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import type { Express } from 'express';
 import * as jose from 'jose';
 import request from 'supertest';
@@ -70,16 +71,30 @@ beforeEach(() => {
   });
 });
 
-async function makeSubToken(payload: Record<string, unknown>, secret = SUB_SECRET, opts: { expiresIn?: number | string } = {}) {
-  const signer = new jose.SignJWT(payload as jose.JWTPayload)
-    .setProtectedHeader({ alg: 'HS256' });
-  if (opts.expiresIn !== undefined) {
-    if (typeof opts.expiresIn === 'number' && opts.expiresIn < 0) {
-      // Expired token: set expiration in the past
-      signer.setExpirationTime(Math.floor(Date.now() / 1000) - 60);
-    } else {
-      signer.setExpirationTime(opts.expiresIn as string);
-    }
+interface SignOpts {
+  expiresIn?: number | string;
+  issuer?: string | null;
+  audience?: string | null;
+  jti?: string | null;
+  omitIat?: boolean;
+}
+
+async function makeSubToken(
+  payload: Record<string, unknown>,
+  secret = SUB_SECRET,
+  opts: SignOpts = {},
+) {
+  const signer = new jose.SignJWT(payload as jose.JWTPayload).setProtectedHeader({ alg: 'HS256' });
+  if (!opts.omitIat) signer.setIssuedAt();
+  if (opts.issuer !== null) signer.setIssuer(opts.issuer ?? 'openbin-manager');
+  if (opts.audience !== null) signer.setAudience(opts.audience ?? 'openbin-backend');
+  if (opts.jti !== null) signer.setJti(opts.jti ?? crypto.randomUUID());
+  if (opts.expiresIn === undefined) {
+    signer.setExpirationTime('5m');
+  } else if (typeof opts.expiresIn === 'number' && opts.expiresIn < 0) {
+    signer.setExpirationTime(Math.floor(Date.now() / 1000) - 60);
+  } else {
+    signer.setExpirationTime(opts.expiresIn);
   }
   return signer.sign(new TextEncoder().encode(secret));
 }
@@ -301,5 +316,113 @@ describe('POST /api/subscriptions/callback', () => {
       [user.id],
     );
     expect(dbResult.rows[0].active_until).toBeNull();
+  });
+
+  describe('replay & claim validation', () => {
+    it('rejects reused token (jti replay)', async () => {
+      const { user } = await createTestUser(app);
+      const token = await makeSubToken({ userId: user.id, plan: 1, status: 1, activeUntil: null });
+
+      const first = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+      expect(first.status).toBe(200);
+
+      const replay = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+      expect(replay.status).toBe(401);
+      expect(replay.body.error).toBe('UNAUTHORIZED');
+      expect(replay.body.message).toBe('Token already used');
+    });
+
+    it('rejects token missing jti claim', async () => {
+      const { user } = await createTestUser(app);
+      const token = await makeSubToken(
+        { userId: user.id, plan: 1, status: 1, activeUntil: null },
+        SUB_SECRET,
+        { jti: null },
+      );
+
+      const res = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects token missing issuer', async () => {
+      const { user } = await createTestUser(app);
+      const token = await makeSubToken(
+        { userId: user.id, plan: 1, status: 1, activeUntil: null },
+        SUB_SECRET,
+        { issuer: null },
+      );
+
+      const res = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects token with wrong audience', async () => {
+      const { user } = await createTestUser(app);
+      const token = await makeSubToken(
+        { userId: user.id, plan: 1, status: 1, activeUntil: null },
+        SUB_SECRET,
+        { audience: 'some-other-service' },
+      );
+
+      const res = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects token missing iat claim', async () => {
+      const { user } = await createTestUser(app);
+      const token = await makeSubToken(
+        { userId: user.id, plan: 1, status: 1, activeUntil: null },
+        SUB_SECRET,
+        { omitIat: true },
+      );
+
+      const res = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+      expect(res.status).toBe(401);
+    });
+
+    it('does not consume jti when payload validation fails', async () => {
+      const { user } = await createTestUser(app);
+      const jti = crypto.randomUUID();
+      const badToken = await makeSubToken(
+        { userId: user.id, plan: 99, status: 1, activeUntil: null },
+        SUB_SECRET,
+        { jti },
+      );
+      const bad = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${badToken}`)
+        .send({});
+      expect(bad.status).toBe(422);
+
+      // Reusing the same jti in a well-formed payload must still be accepted.
+      const goodToken = await makeSubToken(
+        { userId: user.id, plan: 1, status: 1, activeUntil: null },
+        SUB_SECRET,
+        { jti },
+      );
+      const good = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${goodToken}`)
+        .send({});
+      expect(good.status).toBe(200);
+    });
   });
 });

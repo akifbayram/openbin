@@ -68,6 +68,10 @@ async function processOutbox(): Promise<void> {
       const payload = (typeof row.payload_json === 'string' ? JSON.parse(row.payload_json) : row.payload_json) as Record<string, unknown>;
       const token = await new jose.SignJWT(payload as jose.JWTPayload)
         .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setIssuer('openbin-backend')
+        .setAudience('openbin-manager')
+        .setJti(generateUuid())
         .setExpirationTime('5m')
         .sign(getSubscriptionSecretKey());
 

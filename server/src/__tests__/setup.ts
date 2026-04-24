@@ -44,6 +44,7 @@ const TABLES = [
   'ai_usage',
   'settings',
   'webhook_outbox',
+  'webhook_jti_seen',
   'job_locks',
   'admin_audit_log',
   'user_limit_overrides',

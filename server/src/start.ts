@@ -34,6 +34,10 @@ const app = createApp({
   mountEeRoutes: eeModule ? (a) => eeModule.initEeRoutes(a) : undefined,
 });
 
+if (!config.selfHosted && !config.corsOriginExplicit) {
+  log.error('CORS_ORIGIN must be set explicitly in cloud mode (refusing to start with the localhost default).');
+  process.exit(1);
+}
 if (config.disableRateLimit && process.env.NODE_ENV !== 'test') {
   log.warn('Rate limiting is disabled (DISABLE_RATE_LIMIT=true)');
 }

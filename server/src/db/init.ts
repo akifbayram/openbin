@@ -27,7 +27,8 @@ async function seedAdminUser(eng: DatabaseEngine): Promise<void> {
   const adminEmail = config.adminEmail || 'admin@openbin.local';
   const { rows } = await eng.query('SELECT 1 FROM users WHERE email = $1', [adminEmail]);
   if (rows.length === 0) {
-    const plaintext = config.adminPassword || crypto.randomBytes(12).toString('base64url');
+    const providedPassword = config.adminPassword;
+    const plaintext = providedPassword || crypto.randomBytes(12).toString('base64url');
     const hash = await bcrypt.hash(plaintext, config.bcryptRounds);
 
     await eng.query(
@@ -36,11 +37,16 @@ async function seedAdminUser(eng: DatabaseEngine): Promise<void> {
       [crypto.randomUUID(), adminEmail, hash, new Date(Date.now() + ADMIN_ACTIVE_UNTIL_MS).toISOString()],
     );
 
-    console.log('========================================');
-    console.log('  Initial admin credentials:');
-    console.log(`    Email: ${adminEmail}`);
-    console.log(`    Password: ${plaintext}`);
-    console.log('========================================');
+    if (providedPassword) {
+      log.info(`Initial admin account created for ${adminEmail}`);
+    } else {
+      console.log('========================================');
+      console.log('  Initial admin credentials:');
+      console.log(`    Email: ${adminEmail}`);
+      console.log(`    Password: ${plaintext}`);
+      console.log('  Save this password — it will not be shown again.');
+      console.log('========================================');
+    }
   }
 }
 

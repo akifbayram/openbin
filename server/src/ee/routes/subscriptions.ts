@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as jose from 'jose';
-import { d, query } from '../../db.js';
+import { d, isUniqueViolation, query } from '../../db.js';
 import { asyncHandler } from '../../lib/asyncHandler.js';
 import { config } from '../../lib/config.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../../lib/httpErrors.js';
@@ -11,6 +11,9 @@ const router = Router();
 
 const validPlans = new Set(Object.values(Plan));
 const validStatuses = new Set(Object.values(SubStatus));
+
+const SUBSCRIPTION_ISSUER = 'openbin-manager';
+const SUBSCRIPTION_AUDIENCE = 'openbin-backend';
 
 router.post('/callback', asyncHandler(async (req, res) => {
   if (config.selfHosted) {
@@ -30,11 +33,20 @@ router.post('/callback', asyncHandler(async (req, res) => {
 
   const token = authHeader.slice(7);
 
-  let payload: { userId: string; plan: number; status: number; activeUntil: string; updatedAt?: string };
+  let payload: jose.JWTPayload & { userId: string; plan: number; status: number; activeUntil: string; updatedAt?: string };
   try {
-    const result = await jose.jwtVerify(token, new TextEncoder().encode(secret));
+    const result = await jose.jwtVerify(token, new TextEncoder().encode(secret), {
+      issuer: SUBSCRIPTION_ISSUER,
+      audience: SUBSCRIPTION_AUDIENCE,
+      requiredClaims: ['exp', 'iat', 'jti'],
+    });
     payload = result.payload as unknown as typeof payload;
   } catch {
+    throw new UnauthorizedError('Invalid subscription token');
+  }
+
+  const jti = payload.jti;
+  if (!jti || typeof jti !== 'string') {
     throw new UnauthorizedError('Invalid subscription token');
   }
 
@@ -50,6 +62,17 @@ router.post('/callback', asyncHandler(async (req, res) => {
   }
   if (!validatePlanTransition(plan as PlanTier, status as SubStatusType)) {
     throw new ValidationError('Invalid plan/status combination: TRIAL is only valid for PLUS');
+  }
+
+  // Replay protection: persist jti on first use. Uniqueness collision => replay.
+  try {
+    await query('INSERT INTO webhook_jti_seen (jti) VALUES ($1)', [jti]);
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      createLogger('subscriptions').warn(`Replayed webhook jti=${jti}`);
+      throw new UnauthorizedError('Token already used');
+    }
+    throw err;
   }
 
   // Reject stale webhooks if updatedAt is provided

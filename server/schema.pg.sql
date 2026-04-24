@@ -419,6 +419,13 @@ CREATE TABLE IF NOT EXISTS webhook_outbox (
 );
 CREATE INDEX IF NOT EXISTS idx_webhook_outbox_pending ON webhook_outbox(next_retry_at) WHERE sent_at IS NULL;
 
+-- Inbound webhook replay protection: unique jti of each accepted subscription callback.
+CREATE TABLE IF NOT EXISTS webhook_jti_seen (
+  jti     TEXT PRIMARY KEY,
+  seen_at TEXT NOT NULL DEFAULT (NOW())
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_jti_seen_at ON webhook_jti_seen(seen_at);
+
 CREATE TABLE IF NOT EXISTS job_locks (
   job_name   TEXT PRIMARY KEY,
   locked_by  TEXT NOT NULL,

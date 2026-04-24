@@ -7,7 +7,10 @@ export const JSON_COLUMNS = new Set(['items', 'tags', 'changes', 'settings', 'fi
  */
 export function isUniqueViolation(err: unknown, constraint?: string): boolean {
   const e = err as { code?: string; message?: string; constraint?: string };
-  const isUnique = e.code === 'SQLITE_CONSTRAINT_UNIQUE' || e.code === '23505';
+  const isUnique =
+    e.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+    e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' ||
+    e.code === '23505';
   if (!isUnique || !constraint) return isUnique;
   return (e.message?.includes(constraint) ?? false) || e.constraint === constraint;
 }
