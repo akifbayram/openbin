@@ -53,15 +53,44 @@ vi.mock('@/features/ai/AiBadge', () => ({
 }));
 
 const mockStream = vi.fn();
+const mockCancel = vi.fn();
 let mockStreamError: string | null = null;
+/**
+ * Per-stream state, keyed by endpoint. Only set the mode you want active
+ * (e.g. mockStreamState.analyze) — the others stay idle.
+ */
+let mockStreamState: {
+  analyze: { isStreaming: boolean; partialText: string };
+  reanalyze: { isStreaming: boolean; partialText: string };
+  correction: { isStreaming: boolean; partialText: string };
+};
+const idleStream = { isStreaming: false, partialText: '' };
+
 vi.mock('@/features/ai/useAiStream', () => ({
-  useAiStream: () => ({
-    isStreaming: false,
-    error: mockStreamError,
-    stream: mockStream,
-    cancel: vi.fn(),
-  }),
+  useAiStream: (endpoint: string) => {
+    const key = endpoint.includes('correct')
+      ? 'correction'
+      : endpoint.includes('reanalyze')
+        ? 'reanalyze'
+        : 'analyze';
+    const state = mockStreamState[key];
+    return {
+      isStreaming: state.isStreaming,
+      partialText: state.partialText,
+      error: mockStreamError,
+      stream: mockStream,
+      cancel: mockCancel,
+      retryCount: 0,
+      result: null,
+      clear: vi.fn(),
+    };
+  },
 }));
+
+/** Convenience: set the analyze stream as active with optional partial text. */
+function setAnalyzeStreaming(partialText = '') {
+  mockStreamState.analyze = { isStreaming: true, partialText };
+}
 
 vi.mock('@/lib/auth', () => ({
   useAuth: () => ({ activeLocationId: 'loc-1' }),
@@ -100,7 +129,13 @@ describe('GroupReviewStep skeleton', () => {
   beforeEach(() => {
     mockStream.mockReset();
     mockStream.mockResolvedValue(null);
+    mockCancel.mockReset();
     mockStreamError = null;
+    mockStreamState = {
+      analyze: { ...idleStream },
+      reanalyze: { ...idleStream },
+      correction: { ...idleStream },
+    };
   });
 
   it('renders the group name input bound to group.name', () => {
@@ -131,7 +166,13 @@ describe('GroupReviewStep AI flow', () => {
   beforeEach(() => {
     mockStream.mockReset();
     mockStream.mockResolvedValue(null);
+    mockCancel.mockReset();
     mockStreamError = null;
+    mockStreamState = {
+      analyze: { ...idleStream },
+      reanalyze: { ...idleStream },
+      correction: { ...idleStream },
+    };
   });
 
   it('auto-triggers analyze on entry to a pending group with aiSettings', async () => {
@@ -178,5 +219,171 @@ describe('GroupReviewStep AI flow', () => {
         }),
       );
     });
+  });
+});
+
+describe('GroupReviewStep streaming UI', () => {
+  beforeEach(() => {
+    mockStream.mockReset();
+    mockStream.mockResolvedValue(null);
+    mockCancel.mockReset();
+    mockStreamError = null;
+    mockStreamState = {
+      analyze: { ...idleStream },
+      reanalyze: { ...idleStream },
+      correction: { ...idleStream },
+    };
+  });
+
+  it('shows the streaming label "Scanning" while analyzing with no items yet', () => {
+    setAnalyzeStreaming();
+    renderStep(makeState({ status: 'analyzing' }));
+    expect(screen.getByText(/^Scanning/)).toBeTruthy();
+  });
+
+  it('shows "Found 1 item" once one item has streamed', () => {
+    setAnalyzeStreaming('{"name": "Box", "items": ["Hammer"');
+    renderStep(makeState({ status: 'analyzing' }));
+    expect(screen.getByText(/Found 1 item$/)).toBeTruthy();
+  });
+
+  it('shows "Found 4 items" once four items have streamed', () => {
+    setAnalyzeStreaming('{"name": "Box", "items": ["A", "B", "C", "D"');
+    renderStep(makeState({ status: 'analyzing' }));
+    expect(screen.getByText(/Found 4 items$/)).toBeTruthy();
+  });
+
+  it('shows the Cancel button while streaming', () => {
+    setAnalyzeStreaming();
+    renderStep(makeState({ status: 'analyzing' }));
+    expect(screen.getByRole('button', { name: /cancel scan/i })).toBeTruthy();
+  });
+
+  it('hides the Cancel button when not streaming', () => {
+    renderStep(makeState({ status: 'reviewed', name: 'Box' }));
+    expect(screen.queryByRole('button', { name: /cancel scan/i })).toBeNull();
+  });
+
+  it('clicking Cancel reverts group status to pending', () => {
+    setAnalyzeStreaming();
+    const dispatch = vi.fn();
+    renderStep(makeState({ status: 'analyzing' }), { dispatch });
+    fireEvent.click(screen.getByRole('button', { name: /cancel scan/i }));
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'UPDATE_GROUP',
+        changes: expect.objectContaining({ status: 'pending' }),
+      }),
+    );
+  });
+
+  it('clicking Cancel calls the stream cancel hook', () => {
+    setAnalyzeStreaming();
+    renderStep(makeState({ status: 'analyzing' }));
+    fireEvent.click(screen.getByRole('button', { name: /cancel scan/i }));
+    expect(mockCancel).toHaveBeenCalled();
+  });
+
+  it('mounts the HUD scan overlay while streaming', () => {
+    setAnalyzeStreaming();
+    const { container } = renderStep(makeState({ status: 'analyzing' }));
+    expect(container.querySelector('[data-photo-scan-frame]')).toBeTruthy();
+  });
+
+  it('does not mount the HUD scan overlay when not streaming', () => {
+    const { container } = renderStep(makeState({ status: 'reviewed', name: 'Box' }));
+    expect(container.querySelector('[data-photo-scan-frame]')).toBeNull();
+  });
+
+  it('shows "Try AI again" when status is pending and AI is configured', () => {
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+    expect(screen.getByRole('button', { name: /try ai again/i })).toBeTruthy();
+  });
+
+  it('does not show "Try AI again" while streaming', () => {
+    setAnalyzeStreaming();
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    renderStep(makeState({ status: 'analyzing' }), { aiSettings });
+    expect(screen.queryByRole('button', { name: /try ai again/i })).toBeNull();
+  });
+
+  it('does not show "Try AI again" when AI settings are missing', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings: null });
+    expect(screen.queryByRole('button', { name: /try ai again/i })).toBeNull();
+  });
+});
+
+describe('GroupReviewStep header', () => {
+  beforeEach(() => {
+    mockStream.mockReset();
+    mockStream.mockResolvedValue(null);
+    mockCancel.mockReset();
+    mockStreamError = null;
+    mockStreamState = {
+      analyze: { ...idleStream },
+      reanalyze: { ...idleStream },
+      correction: { ...idleStream },
+    };
+  });
+
+  it('shows "Analyzing your photo" for a single-photo single-bin group during analysis', () => {
+    setAnalyzeStreaming();
+    renderStep(makeState({ status: 'analyzing' }));
+    expect(screen.getByRole('heading', { name: 'Analyzing your photo' })).toBeTruthy();
+  });
+
+  it('shows "Analyzing your photos" (plural) for a multi-photo single-bin group', () => {
+    setAnalyzeStreaming();
+    const p1 = createPhoto(new File([''], 'a.jpg', { type: 'image/jpeg' }));
+    const p2 = createPhoto(new File([''], 'b.jpg', { type: 'image/jpeg' }));
+    const grp = { ...createGroupFromPhoto(p1, null), photos: [p1, p2], status: 'analyzing' as const };
+    const state: BulkAddState = { ...initialState, step: 'review', groups: [grp], currentIndex: 0 };
+    renderStep(state);
+    expect(screen.getByRole('heading', { name: 'Analyzing your photos' })).toBeTruthy();
+  });
+
+  it('shows "Analyzing bin 3" for the 3rd group of 5 during analysis', () => {
+    setAnalyzeStreaming();
+    const groups: Group[] = Array.from({ length: 5 }).map(() => {
+      const p = createPhoto(new File([''], 'p.jpg', { type: 'image/jpeg' }));
+      return createGroupFromPhoto(p, null);
+    });
+    groups[2] = { ...groups[2], status: 'analyzing' };
+    const state: BulkAddState = { ...initialState, step: 'review', groups, currentIndex: 2 };
+    renderStep(state);
+    expect(screen.getByRole('heading', { name: 'Analyzing bin 3' })).toBeTruthy();
+  });
+
+  it('shows "Review bin" once analysis is done', () => {
+    renderStep(makeState({ status: 'reviewed', name: 'Box' }));
+    expect(screen.getByRole('heading', { name: 'Review bin' })).toBeTruthy();
+  });
+
+  it('shows "Tap any field to edit" subtitle once analysis is done', () => {
+    renderStep(makeState({ status: 'reviewed', name: 'Box' }));
+    expect(screen.getByText('Tap any field to edit')).toBeTruthy();
+  });
+
+  it('does not show the "Tap any field to edit" subtitle during analysis', () => {
+    setAnalyzeStreaming();
+    renderStep(makeState({ status: 'analyzing' }));
+    expect(screen.queryByText('Tap any field to edit')).toBeNull();
+  });
+
+  it('renders QueueDots when there are 2+ groups', () => {
+    const groups: Group[] = Array.from({ length: 3 }).map(() => {
+      const p = createPhoto(new File([''], 'p.jpg', { type: 'image/jpeg' }));
+      return createGroupFromPhoto(p, null);
+    });
+    const state: BulkAddState = { ...initialState, step: 'review', groups, currentIndex: 0 };
+    const { container } = renderStep(state);
+    const dots = container.querySelectorAll('[data-queue-dot]');
+    expect(dots.length).toBe(3);
+  });
+
+  it('does not render QueueDots when there is only 1 group', () => {
+    const { container } = renderStep(makeState());
+    expect(container.querySelectorAll('[data-queue-dot]').length).toBe(0);
   });
 });

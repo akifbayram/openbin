@@ -24,6 +24,11 @@ interface AiProgressBarProps {
   labels?: LabelThreshold[];
   /** Compact height variant for inline use */
   compact?: boolean;
+  /**
+   * When false, suppresses the Sparkles icon during streaming. The check icon on
+   * complete still renders. Defaults to true to preserve existing call sites.
+   */
+  showSparkles?: boolean;
   className?: string;
 }
 
@@ -70,6 +75,7 @@ export function AiProgressBar({
   label,
   labels,
   compact = false,
+  showSparkles = true,
   className,
 }: AiProgressBarProps) {
   const progress = useAsymptoticProgress(active, complete);
@@ -100,9 +106,9 @@ export function AiProgressBar({
         <div className="flex items-center gap-1.5 min-w-0">
           {complete ? (
             <Check className="h-3 w-3 text-[var(--color-success)] shrink-0" />
-          ) : (
+          ) : showSparkles ? (
             <Sparkles className="h-3 w-3 text-[var(--ai-accent)] shrink-0 ai-thinking-pulse" />
-          )}
+          ) : null}
           <span
             className={cn(
               'text-[12px] font-medium truncate',

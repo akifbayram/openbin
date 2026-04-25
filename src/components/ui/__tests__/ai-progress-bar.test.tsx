@@ -53,3 +53,28 @@ describe('AiProgressBar labels prop', () => {
     expect(screen.getByText('Extracting items...')).toBeTruthy();
   });
 });
+
+describe('AiProgressBar showSparkles prop', () => {
+  it('renders Sparkles icon by default while streaming', () => {
+    const { container } = render(<AiProgressBar active label="Working" />);
+    const sparkles = container.querySelector('.ai-thinking-pulse');
+    expect(sparkles).toBeTruthy();
+  });
+
+  it('omits Sparkles icon when showSparkles is false', () => {
+    const { container } = render(
+      <AiProgressBar active showSparkles={false} label="Working" />,
+    );
+    const sparkles = container.querySelector('.ai-thinking-pulse');
+    expect(sparkles).toBeNull();
+  });
+
+  it('still renders the check icon on complete when showSparkles is false', () => {
+    const { container } = render(
+      <AiProgressBar active complete showSparkles={false} label="Done" />,
+    );
+    // Check icon uses the success color class
+    const check = container.querySelector('.text-\\[var\\(--color-success\\)\\]');
+    expect(check).toBeTruthy();
+  });
+});
