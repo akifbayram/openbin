@@ -2,6 +2,14 @@ import type { AiProvider, AiTaskGroup } from '@/types';
 
 export const MAX_AI_PHOTOS = 5;
 
+/**
+ * Lock-confirmation hold during the AI analyze → review handoff. CSS animations
+ * finish at ~240ms, leaving the brackets converged and "LOCKED" readout visible;
+ * the remainder is held stillness so the brain registers the lock as a discrete
+ * event before the photo collapse and form fade-in start.
+ */
+export const LOCK_BEAT_MS = 600;
+
 export const AI_PROVIDERS: { key: AiProvider; label: string }[] = [
   { key: 'openai', label: 'OpenAI' },
   { key: 'anthropic', label: 'Anthropic' },

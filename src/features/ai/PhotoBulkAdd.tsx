@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
 import { addBin, notifyBinsChanged } from '@/features/bins/useBins';
@@ -6,10 +7,9 @@ import { GroupReviewStep } from '@/features/bulk-add/GroupReviewStep';
 import { GroupSummaryStep } from '@/features/bulk-add/GroupSummaryStep';
 import { PhotoGroupingGrid } from '@/features/bulk-add/PhotoGroupingGrid';
 import {
-  BULK_ADD_STEPS,
   type BulkAddState,
   bulkAddReducer,
-  bulkAddStepIndex,
+  computeFlowProgress,
   createGroupFromPhoto,
   createPhoto,
   type Group,
@@ -27,40 +27,30 @@ import type { AiSettings } from '@/types';
 const DEMO_MAX_PHOTOS = 3;
 
 function FlowProgress({ state }: { state: BulkAddState }) {
-  const currentIndex = bulkAddStepIndex(state);
-  const currentLabel = BULK_ADD_STEPS[currentIndex]?.label ?? '';
+  const { dots, label, currentIndex, total } = computeFlowProgress(state);
   return (
-    <div data-flow-progress className="flex items-center justify-end gap-2">
+    <div className="flex items-center justify-end gap-2">
       <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--text-tertiary)]">
-        {currentLabel}
-        <span className="ml-2 text-[var(--text-quaternary)]">
-          {currentIndex + 1} / {BULK_ADD_STEPS.length}
-        </span>
+        {label}
       </span>
-      {/* biome-ignore lint/a11y/useSemanticElements: same rationale as QueueDots — role=group is the right ARIA match for an inline labeled grouping */}
+      {/* biome-ignore lint/a11y/useSemanticElements: role=group is the right ARIA match for an inline labeled grouping of related visuals */}
       <span
         role="group"
-        aria-label={`Step ${currentIndex + 1} of ${BULK_ADD_STEPS.length}: ${currentLabel}`}
+        aria-label={`Step ${currentIndex + 1} of ${total}: ${label}`}
         className="inline-flex items-center gap-1"
       >
-        {BULK_ADD_STEPS.map((s, i) => {
-          const isCurrent = i === currentIndex;
-          const isDone = i < currentIndex;
-          return (
-            <span
-              key={s.id}
-              data-flow-dot
-              data-state={isCurrent ? 'current' : isDone ? 'done' : 'pending'}
-              aria-hidden="true"
-              className={cn(
-                'h-1.5 rounded-full transition-[width,background-color] duration-200 ease-out',
-                isCurrent ? 'w-[18px] bg-[var(--accent)]' : 'w-1.5',
-                isDone && 'bg-[var(--accent)]',
-                !isCurrent && !isDone && 'bg-[var(--text-quaternary)]',
-              )}
-            />
-          );
-        })}
+        {dots.map((d) => (
+          <span
+            key={d.key}
+            aria-hidden="true"
+            className={cn(
+              'h-1.5 rounded-full transition-[width,background-color] duration-200 ease-out',
+              d.state === 'current' ? 'w-[18px] bg-[var(--accent)]' : 'w-1.5',
+              d.state === 'done' && 'bg-[var(--accent)]',
+              d.state === 'pending' && 'bg-[var(--text-quaternary)]',
+            )}
+          />
+        ))}
       </span>
     </div>
   );
@@ -72,6 +62,8 @@ interface PhotoBulkAddProps {
   aiSettings: AiSettings | null;
   onClose: () => void;
   onBack: () => void;
+  /** Portal target for the flow progress indicator (e.g. dialog title bar). Falls back to inline when null. */
+  headerToolbarTarget?: HTMLElement | null;
 }
 
 export function initBulkAddStateFromFiles(
@@ -113,6 +105,7 @@ export function PhotoBulkAdd({
   aiSettings,
   onClose,
   onBack,
+  headerToolbarTarget,
 }: PhotoBulkAddProps) {
   const t = useTerminology();
   const { activeLocationId, demoMode: isDemo } = useAuth();
@@ -243,9 +236,11 @@ export function PhotoBulkAdd({
     );
   }
 
+  const flowProgress = <FlowProgress state={state} />;
+
   return (
     <div className="space-y-5">
-      <FlowProgress state={state} />
+      {headerToolbarTarget ? createPortal(flowProgress, headerToolbarTarget) : flowProgress}
 
       {state.step === 'group' && (
         <PhotoGroupingGrid

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { prefersReducedMotion } from './reducedMotion';
 
 interface UseOverlayAnimationOptions {
   open: boolean;
@@ -16,9 +17,9 @@ export function useOverlayAnimation({
   const [visible, setVisible] = useState(false);
   const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null);
 
-  const prefersReducedMotion = useRef(false);
+  const reducedMotion = useRef(false);
   useEffect(() => {
-    prefersReducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    reducedMotion.current = prefersReducedMotion();
   }, []);
 
   // Mount/unmount with enter/exit animation
@@ -30,7 +31,7 @@ export function useOverlayAnimation({
       });
     } else if (visible) {
       setAnimating('exit');
-      const d = prefersReducedMotion.current ? 0 : duration;
+      const d = reducedMotion.current ? 0 : duration;
       const timer = setTimeout(() => {
         setVisible(false);
         setAnimating(null);

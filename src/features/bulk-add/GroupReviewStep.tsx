@@ -1,49 +1,39 @@
-import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, RotateCw, Sparkles, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { AiProgressBar } from '@/components/ui/ai-progress-bar';
-import { AnimatedEllipsis } from '@/components/ui/animated-ellipsis';
+import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, RotateCw, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { AiAnalyzeProgress } from '@/features/ai/AiAnalyzeProgress';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { AiAnalyzeError } from '@/features/ai/AiStreamingPreview';
-import { MAX_AI_PHOTOS } from '@/features/ai/aiConstants';
+import { LOCK_BEAT_MS, MAX_AI_PHOTOS } from '@/features/ai/aiConstants';
 import { mapAiError } from '@/features/ai/aiErrors';
+import type { AnalyzeStreamMode } from '@/features/ai/analyzeLabel';
 import { useAiStream } from '@/features/ai/useAiStream';
 import { AreaPicker } from '@/features/areas/AreaPicker';
+import { AiBadge } from '@/features/bins/AiBadge';
 import { ColorPicker } from '@/features/bins/ColorPicker';
 import { IconPicker } from '@/features/bins/IconPicker';
 import { ItemList } from '@/features/bins/ItemList';
 import { QuickAddWidget } from '@/features/bins/QuickAddWidget';
 import { TagInput } from '@/features/bins/TagInput';
+import { type AiFillField, useAiFillState } from '@/features/bins/useAiFillState';
 import { useAllTags } from '@/features/bins/useBins';
-import { useQuickAdd } from '@/features/bins/useQuickAdd';
+import { useItemEntry } from '@/features/bins/useItemEntry';
 import { compressImageForAi } from '@/features/photos/compressImageForAi';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { aiItemsToBinItems } from '@/lib/itemQuantities';
+import { prefersReducedMotion } from '@/lib/reducedMotion';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
-import type { AiSettings, AiSuggestions } from '@/types';
-import { type AnalyzeStreamMode, computeAnalyzeLabel } from './analyzeLabel';
+import type { AiSettings, AiSuggestions, BinItem } from '@/types';
 import { PhotoScanFrame } from './PhotoScanFrame';
-import { QueueDots } from './QueueDots';
-import { computeReviewHeader } from './reviewHeader';
 import type { BulkAddAction, Group, Photo } from './useBulkGroupAdd';
 
-function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
 const MAX_CORRECTIONS = 3;
-
-// Lock confirmation hold: CSS animations finish at ~240ms, leaving the
-// brackets converged and "LOCKED" readout visible. The remainder is held
-// stillness — long enough for the brain to register the lock as a discrete
-// event before the photo collapse and form fade-in start.
-export const LOCK_BEAT_MS = 600;
 
 async function buildPhotosFormData(photos: Photo[]): Promise<FormData> {
   const compressed = await Promise.all(
@@ -89,6 +79,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const [confirmPhase, setConfirmPhase] = useState<'idle' | 'locking'>('idle');
   const lockTimerRef = useRef<number | null>(null);
 
+  const aiFill = useAiFillState();
+
   const pendingResult = useRef<PendingResult | null>(null);
 
   const autoAnalyzedRef = useRef(new Set<string>());
@@ -120,14 +112,26 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
 
   const group = groups[currentIndex];
 
-  const reviewQuickAdd = useQuickAdd({
+  const aiReady = aiEnabled && !!aiSettings;
+
+  // Stabilized so useDictation's existingItems.join('\0') memo key doesn't churn per render.
+  const existingItemNames = useMemo(
+    () => group?.items.map((i) => i.name) ?? [],
+    [group?.items],
+  );
+  const handleAddItems = (newItems: BinItem[]) => {
+    if (!group) return;
+    dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { items: [...group.items, ...newItems] } });
+  };
+
+  const { quickAdd: reviewQuickAdd, dictation: reviewDictation, canTranscribe } = useItemEntry({
     binName: group?.name ?? '',
-    existingItems: group?.items.map((i) => i.name) ?? [],
-    activeLocationId: activeLocationId ?? undefined,
-    onAdd: (newItems) => {
-      if (!group) return;
-      dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { items: [...group.items, ...newItems] } });
-    },
+    existingItems: existingItemNames,
+    locationId: activeLocationId ?? undefined,
+    aiReady,
+    aiSettings,
+    onAdd: handleAddItems,
+    onNavigateAiSetup: () => setAiSetupExpanded(true),
   });
 
   if (!group) return null;
@@ -139,6 +143,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const isAnyActive = isAnalyzing || isAnalyzingStream || isReanalyzing || isCorrecting;
   const showProgressBar = isAnyActive || confirmPhase === 'locking';
   const anyError = group.analyzeError || analyzeStreamError || correctionError || reanalyzeError;
+  const nameFilled = aiFill.filled.has('name');
+  const itemsFilled = aiFill.filled.has('items');
 
   // Surface stream errors that arrive via the hook's `error` state but never get
   // dispatched onto the group. Without this, a mid-stream error event makes the
@@ -167,11 +173,23 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       items: result.items,
     });
 
+    const filled = new Set<AiFillField>();
+    if (result.name) filled.add('name');
+    if (result.items.length > 0) filled.add('items');
+    aiFill.markFilled(filled);
+
     if (result.isCorrection) {
       dispatch({ type: 'INCREMENT_CORRECTION', id: result.id });
       setCorrectionText('');
       setCorrectionOpen(false);
     }
+  }
+
+  function handleUndoAiField(field: AiFillField) {
+    const snap = aiFill.undo(field);
+    if (!snap) return;
+    const changes: Partial<Group> = field === 'name' ? { name: snap.name } : { items: snap.items };
+    dispatch({ type: 'UPDATE_GROUP', id: group.id, changes });
   }
 
   // Abort streams on unmount or navigate away
@@ -197,6 +215,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     setCorrectionOpen(false);
     setCorrectionText('');
     pendingResult.current = null;
+    aiFill.reset();
   }, [currentIndex]);
 
   async function triggerAnalyze(target: Group) {
@@ -205,6 +224,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       return;
     }
 
+    aiFill.snapshot({ name: target.name, items: target.items });
     dispatch({ type: 'SET_ANALYZING', id: target.id });
 
     try {
@@ -242,6 +262,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     }
 
     abortRef.current.get(target.id)?.abort();
+    aiFill.snapshot({ name: target.name, items: target.items });
     dispatch({ type: 'SET_ANALYZING', id: target.id });
 
     try {
@@ -270,6 +291,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
 
   async function triggerCorrection(target: Group, text: string) {
     abortRef.current.get(target.id)?.abort();
+    aiFill.snapshot({ name: target.name, items: target.items });
     dispatch({ type: 'SET_ANALYZING', id: target.id });
 
     const previousResult = {
@@ -382,21 +404,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       ? reanalyzePartialText
       : analyzePartialText;
 
-  const labelState = computeAnalyzeLabel({
-    mode: streamMode,
-    partialText: streamPartialText,
-    complete: false,
-  });
-
-  const headerState = computeReviewHeader({
-    groupCount: groups.length,
-    currentIndex,
-    photoCount: group.photos.length,
-    editingFromSummary,
-    isAnalyzing: isAnyActive,
-    term: { bin: t.bin, Bin: t.Bin },
-  });
-
   function handleCancel() {
     if (isCorrecting) cancelCorrection();
     else if (isReanalyzing) cancelReanalyze();
@@ -404,114 +411,81 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { status: 'pending' } });
   }
 
-  const reviewedCount = groups.filter((g) => g.status === 'reviewed').length;
   const showTryAiAgain =
     aiEnabled && !!aiSettings && group.status === 'pending' && !isAnyActive;
 
+  const sparklesButton = aiEnabled && group.status === 'reviewed' && !showProgressBar && (
+    <button
+      type="button"
+      onClick={() => setCorrectionOpen(!correctionOpen)}
+      title="Adjust AI suggestions"
+      className={cn(
+        'absolute top-2 right-2 p-1.5 rounded-full transition-colors animate-fade-in',
+        correctionOpen
+          ? 'bg-[var(--ai-accent)] text-white'
+          : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
+      )}
+    >
+      <Sparkles className="h-4 w-4" />
+    </button>
+  );
+
   return (
     <div data-tour="group-review" className="space-y-5">
-      {/* Step title + progress */}
-      <header className="space-y-1">
-        <div className="row-spread">
-          <h2 className="text-[17px] font-semibold leading-tight text-[var(--text-primary)]">
-            {headerState.title}
-          </h2>
-          <QueueDots
-            total={groups.length}
-            currentIndex={currentIndex}
-            doneCount={reviewedCount}
-            termBin={t.Bin}
-          />
-        </div>
-        {headerState.subtitle && (
-          <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
-            {headerState.subtitle}
-          </p>
-        )}
-      </header>
-
-      {/* Photo preview — always visible. HUD overlay mounts during streaming. */}
-      <div className="relative mx-auto max-w-sm">
-        {(() => {
-          const collapsed = !!group.name;
-          const photoClasses = (extra?: string) =>
-            cn(
-              'rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
-              collapsed ? 'block h-20 w-20 opacity-80' : 'w-full aspect-square',
-              extra,
-            );
-          const photos =
-            group.photos.length === 1 ? (
-              <img
-                src={group.photos[0].previewUrl}
-                alt="Preview 1"
-                className={photoClasses(collapsed ? 'mx-auto' : '')}
-              />
-            ) : (
-              <div className={cn('flex gap-2', collapsed ? 'justify-center' : 'overflow-x-auto')}>
-                {group.photos.map((photo, i) => (
-                  <img
-                    key={photo.id}
-                    src={photo.previewUrl}
-                    alt={`Preview ${i + 1}`}
-                    className={photoClasses(collapsed ? 'shrink-0' : 'shrink-0 flex-1 min-w-0')}
-                  />
-                ))}
-              </div>
-            );
-          const hudMounted = isAnyActive || confirmPhase === 'locking';
-          const hudPhase: 'scanning' | 'locking' = confirmPhase === 'locking' ? 'locking' : 'scanning';
-          return hudMounted ? (
-            <PhotoScanFrame itemCount={labelState.itemCount} phase={hudPhase}>{photos}</PhotoScanFrame>
-          ) : (
-            photos
-          );
-        })()}
-        {aiEnabled && group.status === 'reviewed' && !showProgressBar && (
-          <button
-            type="button"
-            onClick={() => setCorrectionOpen(!correctionOpen)}
-            title="Adjust AI suggestions"
-            className={cn(
-              'absolute top-2 right-2 p-1.5 rounded-full transition-colors animate-fade-in',
-              correctionOpen
-                ? 'bg-[var(--ai-accent)] text-white'
-                : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
-            )}
+      {/* Image stays mounted across analyze/review so it doesn't reflow when the lock beat ends — only the chrome swaps. */}
+      {/* overflow-hidden + matching radius clips scan-line/bracket glow to the photo's rounded shape. */}
+      <div className="relative overflow-hidden rounded-[var(--radius-lg)]">
+        <img
+          src={group.photos[0].previewUrl}
+          alt={group.photos.length === 1 ? 'Preview' : `${group.photos.length} photos, showing first`}
+          className="block w-full aspect-[16/9] object-cover bg-black/5 dark:bg-white/5"
+        />
+        {group.photos.length > 1 && (
+          <span
+            aria-hidden="true"
+            className="absolute bottom-2 left-2 rounded-full bg-black/65 px-2 py-0.5 font-mono text-[11px] font-medium text-white"
           >
-            <Sparkles className="h-4 w-4" />
-          </button>
+            +{group.photos.length - 1}
+          </span>
+        )}
+        {showProgressBar ? (
+          <PhotoScanFrame phase={confirmPhase === 'locking' ? 'locking' : 'scanning'} />
+        ) : (
+          sparklesButton
         )}
       </div>
 
       {showProgressBar ? (
-        <div className="space-y-2">
-          <AiProgressBar
-            active={isAnyActive || confirmPhase === 'locking'}
-            complete={confirmPhase === 'locking'}
-            showSparkles={false}
-            className="w-full"
-          />
-          <output aria-live="polite" className="row min-w-0">
-            <span className="flex-1 truncate font-mono text-[12px] font-medium text-[var(--text-tertiary)]">
-              {labelState.text}
-              {labelState.showEllipsis && <AnimatedEllipsis />}
-            </span>
-            {isAnyActive && (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Cancel scan"
-                onClick={handleCancel}
-              >
-                <X className="h-3 w-3 mr-1" />
-                Cancel
-              </Button>
-            )}
-          </output>
-        </div>
+        <AiAnalyzeProgress
+          active={isAnyActive || confirmPhase === 'locking'}
+          complete={confirmPhase === 'locking'}
+          mode={streamMode}
+          partialText={streamPartialText}
+          onCancel={isAnyActive ? handleCancel : undefined}
+          className="w-full"
+        />
       ) : (
         <div className="animate-fade-in space-y-5">
+          <div
+            key={aiFill.keyFor('name')}
+            className={cn('space-y-2', nameFilled && 'ai-field-fill')}
+            style={aiFill.styleFor('name', 0)}
+          >
+            <div className="flex items-center justify-between">
+              <Label htmlFor={`name-${group.id}`}>Name</Label>
+              {nameFilled && <AiBadge onUndo={() => handleUndoAiField('name')} />}
+            </div>
+            <Input
+              id={`name-${group.id}`}
+              value={group.name}
+              onChange={(e) =>
+                dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { name: e.target.value } })
+              }
+              placeholder="e.g., Holiday Decorations"
+              className="font-medium"
+            />
+          </div>
+
           {/* AI action bar (correction + reanalyze) */}
           {correctionOpen && group.status === 'reviewed' && (
             <div className="animate-fade-in space-y-1.5">
@@ -592,85 +566,91 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
             </Button>
           )}
 
-          {/* Form Fields */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor={`name-${group.id}`}>Name</Label>
-              <Input
-                id={`name-${group.id}`}
-                value={group.name}
-                onChange={(e) =>
-                  dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { name: e.target.value } })
-                }
-                placeholder="e.g., Holiday Decorations"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <ItemList
-                items={group.items}
-                onItemsChange={(items) =>
-                  dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { items } })
-                }
-              />
-              <QuickAddWidget quickAdd={reviewQuickAdd} aiEnabled={false} />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Area</Label>
-              <AreaPicker
-                locationId={activeLocationId ?? undefined}
-                value={group.areaId}
-                onChange={(areaId) =>
-                  dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { areaId } })
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor={`notes-${group.id}`}>Notes</Label>
-              <Textarea
-                id={`notes-${group.id}`}
-                value={group.notes}
-                onChange={(e) =>
-                  dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { notes: e.target.value } })
-                }
-                placeholder={`Notes about this ${t.bin}...`}
-                rows={2}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <TagInput
-                tags={group.tags}
-                onChange={(tags) =>
-                  dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { tags } })
-                }
-                suggestions={allTags}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Icon</Label>
-              <IconPicker
-                value={group.icon}
-                onChange={(icon) =>
-                  dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { icon } })
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <ColorPicker
-                value={group.color}
-                onChange={(color) =>
-                  dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { color } })
-                }
-              />
-            </div>
+          <div
+            key={aiFill.keyFor('items')}
+            className={cn('space-y-2', itemsFilled && 'ai-field-fill')}
+            style={aiFill.styleFor('items', 1)}
+          >
+            <ItemList
+              items={group.items}
+              onItemsChange={(items) =>
+                dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { items } })
+              }
+              headerExtra={itemsFilled ? <AiBadge onUndo={() => handleUndoAiField('items')} /> : undefined}
+              footerSlot={
+                <QuickAddWidget
+                  quickAdd={reviewQuickAdd}
+                  aiEnabled={aiEnabled}
+                  dictation={reviewDictation}
+                  canTranscribe={canTranscribe}
+                  variant="inline"
+                  isEmptyList={group.items.length === 0}
+                />
+              }
+            />
           </div>
+
+          <div className="space-y-2">
+            <Label>Area</Label>
+            <AreaPicker
+              locationId={activeLocationId ?? undefined}
+              value={group.areaId}
+              onChange={(areaId) =>
+                dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { areaId } })
+              }
+            />
+          </div>
+
+          <Disclosure
+            label="More options"
+            labelClassName="py-2 text-[var(--accent)] cursor-pointer"
+          >
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor={`notes-${group.id}`}>Notes</Label>
+                <Textarea
+                  id={`notes-${group.id}`}
+                  value={group.notes}
+                  onChange={(e) =>
+                    dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { notes: e.target.value } })
+                  }
+                  placeholder={`Notes about this ${t.bin}...`}
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <TagInput
+                  tags={group.tags}
+                  onChange={(tags) =>
+                    dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { tags } })
+                  }
+                  suggestions={allTags}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <IconPicker
+                  value={group.icon}
+                  onChange={(icon) =>
+                    dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { icon } })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <ColorPicker
+                  value={group.color}
+                  onChange={(color) =>
+                    dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { color } })
+                  }
+                />
+              </div>
+            </div>
+          </Disclosure>
         </div>
       )}
 

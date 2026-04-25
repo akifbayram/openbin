@@ -65,21 +65,68 @@ export type BulkAddAction =
 
 export const MAX_PHOTOS_PER_GROUP = 5;
 
-export const BULK_ADD_STEPS = [
-  { id: 'group', label: 'Photos' },
-  { id: 'analyze', label: 'AI' },
-  { id: 'review', label: 'Review' },
-  { id: 'create', label: 'Create' },
-];
+export type FlowDotState = 'pending' | 'current' | 'done';
 
-/** Map reducer state to the 4-step visual indicator index. */
-export function bulkAddStepIndex(state: BulkAddState): number {
-  if (state.step === 'group') return 0;
-  if (state.step === 'summary') return 3;
-  // 'review' step: AI(1) while current group is pending/analyzing, Review(2) otherwise
-  const group = state.groups[state.currentIndex];
-  if (group && (group.status === 'pending' || group.status === 'analyzing')) return 1;
-  return 2;
+export interface FlowDot {
+  /** Stable React key. Group id for per-bin dots; literal for bookends. */
+  key: string;
+  state: FlowDotState;
+}
+
+export interface FlowProgressModel {
+  /** [Photos, ...one per bin, Create] — the bin queue is part of the macro flow. */
+  dots: FlowDot[];
+  /** Mono uppercase label naming the current dot. */
+  label: string;
+  /** 1-based index of the current dot — feeds aria-label. */
+  currentIndex: number;
+  total: number;
+}
+
+/**
+ * Map reducer state to the merged dot model. Each bin gets its own dot so the
+ * per-bin queue position is visible without a second indicator. The
+ * analyze→reviewed lifecycle for a bin collapses to a single "current" dot;
+ * the AiProgressBar inside the photo overlay carries the analyze-vs-review
+ * sub-state.
+ */
+export function computeFlowProgress(state: BulkAddState): FlowProgressModel {
+  const groupCount = state.groups.length;
+  const reviewedCount = state.groups.filter((g) => g.status === 'reviewed').length;
+
+  const dots: FlowDot[] = [
+    { key: 'photos', state: state.step === 'group' ? 'current' : 'done' },
+  ];
+
+  for (let i = 0; i < groupCount; i++) {
+    let s: FlowDotState;
+    if (state.step === 'group') s = 'pending';
+    else if (state.step === 'summary') s = 'done';
+    else if (i === state.currentIndex) s = 'current';
+    else if (i < state.currentIndex) s = 'done';
+    // user navigated back from summary; bin already reviewed
+    else if (i < reviewedCount) s = 'done';
+    else s = 'pending';
+    dots.push({ key: state.groups[i].id, state: s });
+  }
+
+  dots.push({
+    key: 'create',
+    state: state.step === 'summary' ? 'current' : 'pending',
+  });
+
+  let label: string;
+  if (state.step === 'group') label = 'PHOTOS';
+  else if (state.step === 'summary') label = 'CREATE';
+  else label = 'REVIEW';
+
+  const current = dots.findIndex((d) => d.state === 'current');
+  return {
+    dots,
+    label,
+    currentIndex: current === -1 ? 0 : current,
+    total: dots.length,
+  };
 }
 
 export const initialState: BulkAddState = {

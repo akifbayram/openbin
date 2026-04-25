@@ -1,6 +1,7 @@
 import { ArrowDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { prefersReducedMotion } from '@/lib/reducedMotion';
 import { AiTurnCommandPreview } from './AiTurnCommandPreview';
 import { AiTurnError } from './AiTurnError';
 import { AiTurnExecutionResult } from './AiTurnExecutionResult';
@@ -47,20 +48,18 @@ export function ConversationThread({
   useEffect(() => {
     const el = scrollRef.current;
     if (!atBottom || !el) return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.scrollTo({
       top: el.scrollHeight,
-      behavior: prefersReduced ? 'auto' : 'smooth',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
     });
   }, [turns]);
 
   function jumpToBottom() {
     const el = scrollRef.current;
     if (el) {
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       el.scrollTo({
         top: el.scrollHeight,
-        behavior: prefersReduced ? 'auto' : 'smooth',
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
       });
     }
     setAtBottom(true);

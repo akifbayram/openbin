@@ -1,13 +1,14 @@
-import { AlertTriangle, Check, Clock, RefreshCw, Sparkles, X } from 'lucide-react';
+import { Check, RefreshCw, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
-import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip } from '@/components/ui/tooltip';
+import { AiAnalyzeProgress } from '@/features/ai/AiAnalyzeProgress';
+import { AiAnalyzeError } from '@/features/ai/AiStreamingPreview';
+import { LOCK_BEAT_MS } from '@/features/ai/aiConstants';
 import { AiConfiguredIndicator, InlineAiSetup } from '@/features/ai/InlineAiSetup';
 import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
 import { useAiSettings } from '@/features/ai/useAiSettings';
@@ -15,11 +16,10 @@ import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
 import { setCapturedReturnTarget } from '@/features/capture/capturedPhotos';
 import { useAiEnabled } from '@/lib/aiToggle';
-import { isRecordingSupported } from '@/lib/audioRecorder';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
+import { prefersReducedMotion } from '@/lib/reducedMotion';
 import { useTerminology } from '@/lib/terminology';
-import { useDictation } from '@/lib/useDictation';
 import { cn, focusRing, plural, sectionHeader } from '@/lib/utils';
 import type { AiSuggestions, BinItem, BinVisibility } from '@/types';
 import { AiBadge } from './AiBadge';
@@ -32,10 +32,11 @@ import { PhotoUploadSection } from './PhotoUploadSection';
 import { QuickAddWidget } from './QuickAddWidget';
 import { StylePicker } from './StylePicker';
 import { TagInput } from './TagInput';
+import { type AiFillField, useAiFillState } from './useAiFillState';
 import { useBinFormFields } from './useBinFormFields';
 import { useCustomFields } from './useCustomFields';
+import { useItemEntry } from './useItemEntry';
 import { usePhotoAnalysis } from './usePhotoAnalysis';
-import { useQuickAdd } from './useQuickAdd';
 import { VisibilityPicker } from './VisibilityPicker';
 
 export interface BinCreateFormData {
@@ -111,11 +112,7 @@ export function BinCreateForm({
 
   const { fields: customFieldDefs } = useCustomFields(locationId);
 
-  // AI inline auto-populate state
-  type AiField = 'name' | 'items';
-  const [aiFilledFields, setAiFilledFields] = useState<Set<AiField>>(new Set());
-  const [aiFillCycle, setAiFillCycle] = useState(0);
-  const preAiValues = useRef<{ name: string; items: BinItem[] } | null>(null);
+  const aiFill = useAiFillState();
 
   // Progressive disclosure
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
@@ -146,15 +143,15 @@ export function BinCreateForm({
 
   // Deferred AI result: store result during analysis, apply after completion flash
   const pendingAiResult = useRef<AiSuggestions | null>(null);
+  const [confirmPhase, setConfirmPhase] = useState<'idle' | 'locking'>('idle');
+  const lockTimerRef = useRef<number | null>(null);
 
   function applyPendingAiResult() {
     const result = pendingAiResult.current;
     if (!result) return;
     pendingAiResult.current = null;
 
-    // preAiValues was snapshotted when the result arrived (in onApplyDirect)
-    const filled = new Set<AiField>();
-
+    const filled = new Set<AiFillField>();
     if (result.name) {
       setName(result.name);
       filled.add('name');
@@ -163,9 +160,7 @@ export function BinCreateForm({
       setItems(aiItemsToBinItems(result.items));
       filled.add('items');
     }
-
-    setAiFilledFields(filled);
-    setAiFillCycle(c => c + 1);
+    aiFill.markFilled(filled);
   }
 
   const {
@@ -174,6 +169,9 @@ export function BinCreateForm({
     photoPreviews,
     analyzing,
     analyzeError,
+    analyzeMode,
+    analyzePartialText,
+    cancelAnalyze,
     handlePhotoSelect,
     handleRemovePhoto,
     addPhotosFromFiles,
@@ -183,33 +181,38 @@ export function BinCreateForm({
     locationId,
     aiConfigured: isFull ? aiReady : aiConfiguredInline,
     onApplyDirect: (result) => {
-      // Snapshot current values for undo before the 600ms flash
-      preAiValues.current = { name, items };
+      aiFill.snapshot({ name, items });
       pendingAiResult.current = result;
-      setAnalyzeComplete(true);
+      if (prefersReducedMotion()) {
+        applyPendingAiResult();
+      } else {
+        setConfirmPhase('locking');
+        lockTimerRef.current = window.setTimeout(() => {
+          setConfirmPhase('idle');
+          lockTimerRef.current = null;
+          applyPendingAiResult();
+        }, LOCK_BEAT_MS);
+      }
     },
     onAiSetupNeeded: handleAiSetupNeeded,
   });
 
-  // Completion flash: hold progress bar at 100% briefly, then apply AI result
-  const [analyzeComplete, setAnalyzeComplete] = useState(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- applyPendingAiResult reads from refs, no stale closure risk
-  // biome-ignore lint/correctness/useExhaustiveDependencies: applyPendingAiResult reads from refs, no stale closure risk
+  // Cleanup any pending lock timer on unmount.
   useEffect(() => {
-    if (!analyzeComplete) return;
-    const timer = setTimeout(() => {
-      setAnalyzeComplete(false);
-      applyPendingAiResult();
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [analyzeComplete]);
+    return () => {
+      if (lockTimerRef.current !== null) {
+        clearTimeout(lockTimerRef.current);
+        lockTimerRef.current = null;
+      }
+    };
+  }, []);
 
-  // Clear AI success banner when all photos are removed so the user can re-analyze with new photos
+  // Clear AI success banner when all photos are removed so the user can re-analyze with new photos.
   useEffect(() => {
     if (photos.length === 0) {
-      setAiFilledFields(new Set());
+      aiFill.reset();
     }
-  }, [photos.length]);
+  }, [photos.length, aiFill.reset]);
 
   const initialPhotosConsumedRef = useRef(false);
   useEffect(() => {
@@ -220,36 +223,22 @@ export function BinCreateForm({
     onInitialPhotosConsumed?.();
   }, [initialPhotos, addPhotosFromFiles, onInitialPhotosConsumed]);
 
-  function handleUndoAiField(field: 'name' | 'items') {
-    if (!preAiValues.current) return;
-    switch (field) {
-      case 'name': setName(preAiValues.current.name); break;
-      case 'items': setItems(preAiValues.current.items); break;
-    }
-    setAiFilledFields((prev) => {
-      const next = new Set(prev);
-      next.delete(field);
-      return next;
-    });
+  function handleUndoAiField(field: AiFillField) {
+    const snap = aiFill.undo(field);
+    if (!snap) return;
+    if (field === 'name') setName(snap.name);
+    else setItems(snap.items);
   }
 
-  const quickAdd = useQuickAdd({
-    binName: name,
-    existingItems: items.map((i) => i.name),
-    activeLocationId: locationId,
-    aiConfigured: aiReady,
-    onNavigateAiSetup: handleAiSetupNeeded,
-    onAdd: (newItems) => setItems([...items, ...newItems]),
-  });
-
-  const dictation = useDictation({
+  const { quickAdd, dictation, canTranscribe } = useItemEntry({
     binName: name,
     existingItems: items.map((i) => i.name),
     locationId: locationId ?? undefined,
+    aiReady,
+    aiSettings,
     onAdd: (newItems) => setItems([...items, ...newItems]),
+    onNavigateAiSetup: handleAiSetupNeeded,
   });
-
-  const canTranscribe = aiReady && !!aiSettings?.provider && aiSettings.provider !== 'anthropic' && isRecordingSupported();
 
   function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -300,51 +289,21 @@ export function BinCreateForm({
           {(() => {
             // Error state
             if (analyzeError) {
-              const errLower = analyzeError.toLowerCase();
-              const isRateLimit = errLower.includes('rate') || errLower.includes('429');
-              const isProviderDown = !isRateLimit && (errLower.includes('502') || errLower.includes('unavailable') || errLower.includes('not responding'));
               return (
-                <div
-                  role="alert"
-                  className={cn(
-                    'rounded-[var(--radius-md)] border p-3.5',
-                    isRateLimit
-                      ? 'bg-amber-500/5 border-amber-500/20'
-                      : 'bg-[var(--destructive)]/5 border-[var(--destructive)]/20'
-                  )}
-                >
-                  <div className="flex gap-2.5">
-                    {isRateLimit
-                      ? <Clock className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                      : <AlertTriangle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
-                    }
-                    <div className="flex-1 min-w-0">
-                      <p className={cn('text-[13px] font-semibold mb-0.5', isRateLimit ? 'text-amber-600 dark:text-amber-400' : 'text-[var(--destructive)]')}>
-                        {isRateLimit ? 'Rate limit reached' : isProviderDown ? 'Provider unavailable' : 'Analysis failed'}
-                      </p>
-                      <p className="text-[12px] text-[var(--text-tertiary)] mb-2.5">{analyzeError}</p>
-                      <div className="flex gap-2">
-                        <Button type="button" size="sm" onClick={handleAnalyze}>
-                          Retry
-                        </Button>
-                        {!isRateLimit && !isProviderDown && (
-                          <Button type="button" size="sm" variant="outline" onClick={() => setShowAiSetup(true)}>
-                            Check AI Settings
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <AiAnalyzeError
+                  error={analyzeError}
+                  onRetry={handleAnalyze}
+                  onConfigureAi={() => setShowAiSetup(true)}
+                />
               );
             }
 
             // Success banner (after AI fill) — wait for completion flash
-            if (aiFilledFields.size > 0 && !analyzing && !analyzeComplete) {
+            if (aiFill.filled.size > 0 && !analyzing && confirmPhase !== 'locking') {
               return (
                 <output className="rounded-[var(--radius-md)] bg-emerald-500/8 border border-emerald-500/20 px-3.5 py-2.5 text-[13px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5 shrink-0" />
-                  <span className="flex-1 min-w-0">AI filled {aiFilledFields.size} {plural(aiFilledFields.size, 'field')}</span>
+                  <span className="flex-1 min-w-0">AI filled {aiFill.filled.size} {plural(aiFill.filled.size, 'field')}</span>
                   {photos.length > 0 && (
                     <Tooltip content="Re-run AI analysis on your photos with current field values as context">
                       <button
@@ -366,22 +325,17 @@ export function BinCreateForm({
 
             // AI Fill button / progress bar
             if (aiReady) {
-              if (analyzing || analyzeComplete) {
-                const photoLabels: LabelThreshold[] = [
-                  [0, `Uploading ${photos.length} ${plural(photos.length, 'photo')}...`],
-                  [15, 'Identifying items...'],
-                  [45, 'Generating details...'],
-                  [75, 'Almost done...'],
-                ];
+              if (analyzing || confirmPhase === 'locking') {
+                const isLocking = confirmPhase === 'locking';
                 return (
-                  <div className="flex items-center justify-center min-h-[44px]">
-                    <AiProgressBar
-                      active={analyzing}
-                      complete={analyzeComplete}
-                      labels={photoLabels}
-                      className="w-full"
-                    />
-                  </div>
+                  <AiAnalyzeProgress
+                    active={analyzing || isLocking}
+                    complete={isLocking}
+                    mode={isLocking ? 'locking' : analyzeMode}
+                    partialText={analyzePartialText}
+                    onCancel={analyzing ? cancelAnalyze : undefined}
+                    className="w-full"
+                  />
                 );
               }
               return (
@@ -443,10 +397,14 @@ export function BinCreateForm({
           )}
 
           {/* Name with validation and AI badge */}
-          <div key={aiFilledFields.has('name') ? `name-${aiFillCycle}` : 'name'} className={cn('space-y-2', aiFilledFields.has('name') && 'ai-field-fill')} style={aiFilledFields.has('name') ? { '--stagger': 0 } as React.CSSProperties : undefined}>
+          <div
+            key={aiFill.keyFor('name')}
+            className={cn('space-y-2', aiFill.filled.has('name') && 'ai-field-fill')}
+            style={aiFill.styleFor('name', 0)}
+          >
             <div className="flex items-center justify-between">
               <label htmlFor="bin-name" className={sectionHeader}>Name</label>
-              {aiFilledFields.has('name') && <AiBadge onUndo={() => handleUndoAiField('name')} />}
+              {aiFill.filled.has('name') && <AiBadge onUndo={() => handleUndoAiField('name')} />}
             </div>
             <Input
               id="bin-name"
@@ -467,11 +425,15 @@ export function BinCreateForm({
           </div>
 
           {/* Items */}
-          <div key={aiFilledFields.has('items') ? `items-${aiFillCycle}` : 'items'} className={cn('space-y-2', aiFilledFields.has('items') && 'ai-field-fill')} style={aiFilledFields.has('items') ? { '--stagger': 1 } as React.CSSProperties : undefined}>
+          <div
+            key={aiFill.keyFor('items')}
+            className={cn('space-y-2', aiFill.filled.has('items') && 'ai-field-fill')}
+            style={aiFill.styleFor('items', 1)}
+          >
             <ItemList
               items={items}
               onItemsChange={setItems}
-              headerExtra={aiFilledFields.has('items') ? <AiBadge onUndo={() => handleUndoAiField('items')} /> : undefined}
+              headerExtra={aiFill.filled.has('items') ? <AiBadge onUndo={() => handleUndoAiField('items')} /> : undefined}
               footerSlot={
                 <QuickAddWidget
                   quickAdd={quickAdd}

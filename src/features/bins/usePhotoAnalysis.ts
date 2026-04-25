@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MAX_AI_PHOTOS } from '@/features/ai/aiConstants';
+import type { AnalyzeStreamMode } from '@/features/ai/analyzeLabel';
 import { useAiStream } from '@/features/ai/useAiStream';
 import { compressImageForAi } from '@/features/photos/compressImageForAi';
 import type { AiSuggestions } from '@/types';
@@ -48,6 +49,18 @@ export function usePhotoAnalysis({
   const reanalyze = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', 'Failed to reanalyze photos');
   const analyzing = analyze.isStreaming || reanalyze.isStreaming;
   const analyzeError = analyze.error ?? reanalyze.error;
+  const analyzeMode: AnalyzeStreamMode = reanalyze.isStreaming
+    ? 'reanalyze'
+    : analyze.isStreaming
+      ? 'analyze'
+      : 'idle';
+  const analyzePartialText = reanalyze.isStreaming
+    ? reanalyze.partialText
+    : analyze.partialText;
+  const cancelAnalyze = useCallback(() => {
+    analyze.cancel();
+    reanalyze.cancel();
+  }, [analyze.cancel, reanalyze.cancel]);
 
   useEffect(() => {
     return () => {
@@ -117,6 +130,9 @@ export function usePhotoAnalysis({
     photoPreviews,
     analyzing,
     analyzeError,
+    analyzeMode,
+    analyzePartialText,
+    cancelAnalyze,
     handlePhotoSelect,
     handleRemovePhoto,
     handleAnalyze,

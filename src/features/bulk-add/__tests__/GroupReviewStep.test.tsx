@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/ui/toast';
-import { GroupReviewStep, LOCK_BEAT_MS } from '../GroupReviewStep';
+import { LOCK_BEAT_MS } from '@/features/ai/aiConstants';
+import { GroupReviewStep } from '../GroupReviewStep';
 import { type BulkAddState, createGroupFromPhoto, createPhoto, type Group, initialState } from '../useBulkGroupAdd';
 
 vi.mock('@/lib/aiToggle', () => ({
@@ -287,12 +288,12 @@ describe('GroupReviewStep streaming UI', () => {
   it('mounts the HUD scan overlay while streaming', () => {
     setAnalyzeStreaming();
     const { container } = renderStep(makeState({ status: 'analyzing' }));
-    expect(container.querySelector('[data-photo-scan-frame]')).toBeTruthy();
+    expect(container.querySelectorAll('[data-bracket]').length).toBe(4);
   });
 
   it('does not mount the HUD scan overlay when not streaming', () => {
     const { container } = renderStep(makeState({ status: 'reviewed', name: 'Box' }));
-    expect(container.querySelector('[data-photo-scan-frame]')).toBeNull();
+    expect(container.querySelectorAll('[data-bracket]').length).toBe(0);
   });
 
   it('shows "Try AI again" when status is pending and AI is configured', () => {
@@ -311,80 +312,6 @@ describe('GroupReviewStep streaming UI', () => {
   it('does not show "Try AI again" when AI settings are missing', () => {
     renderStep(makeState({ status: 'pending' }), { aiSettings: null });
     expect(screen.queryByRole('button', { name: /try ai again/i })).toBeNull();
-  });
-});
-
-describe('GroupReviewStep header', () => {
-  beforeEach(() => {
-    mockStream.mockReset();
-    mockStream.mockResolvedValue(null);
-    mockCancel.mockReset();
-    mockStreamError = null;
-    mockStreamState = {
-      analyze: { ...idleStream },
-      reanalyze: { ...idleStream },
-      correction: { ...idleStream },
-    };
-  });
-
-  it('shows "Analyzing your photo" for a single-photo single-bin group during analysis', () => {
-    setAnalyzeStreaming();
-    renderStep(makeState({ status: 'analyzing' }));
-    expect(screen.getByRole('heading', { name: 'Analyzing your photo' })).toBeTruthy();
-  });
-
-  it('shows "Analyzing your photos" (plural) for a multi-photo single-bin group', () => {
-    setAnalyzeStreaming();
-    const p1 = createPhoto(new File([''], 'a.jpg', { type: 'image/jpeg' }));
-    const p2 = createPhoto(new File([''], 'b.jpg', { type: 'image/jpeg' }));
-    const grp = { ...createGroupFromPhoto(p1, null), photos: [p1, p2], status: 'analyzing' as const };
-    const state: BulkAddState = { ...initialState, step: 'review', groups: [grp], currentIndex: 0 };
-    renderStep(state);
-    expect(screen.getByRole('heading', { name: 'Analyzing your photos' })).toBeTruthy();
-  });
-
-  it('shows "Analyzing bin 3" for the 3rd group of 5 during analysis', () => {
-    setAnalyzeStreaming();
-    const groups: Group[] = Array.from({ length: 5 }).map(() => {
-      const p = createPhoto(new File([''], 'p.jpg', { type: 'image/jpeg' }));
-      return createGroupFromPhoto(p, null);
-    });
-    groups[2] = { ...groups[2], status: 'analyzing' };
-    const state: BulkAddState = { ...initialState, step: 'review', groups, currentIndex: 2 };
-    renderStep(state);
-    expect(screen.getByRole('heading', { name: 'Analyzing bin 3' })).toBeTruthy();
-  });
-
-  it('shows "Review bin" once analysis is done', () => {
-    renderStep(makeState({ status: 'reviewed', name: 'Box' }));
-    expect(screen.getByRole('heading', { name: 'Review bin' })).toBeTruthy();
-  });
-
-  it('shows "Tap any field to edit" subtitle once analysis is done', () => {
-    renderStep(makeState({ status: 'reviewed', name: 'Box' }));
-    expect(screen.getByText('Tap any field to edit')).toBeTruthy();
-  });
-
-  it('does not show the "Tap any field to edit" subtitle during analysis', () => {
-    setAnalyzeStreaming();
-    renderStep(makeState({ status: 'analyzing' }));
-    expect(screen.queryByText('Tap any field to edit')).toBeNull();
-  });
-
-  it('renders QueueDots when there are 2+ groups', () => {
-    const groups: Group[] = Array.from({ length: 3 }).map(() => {
-      const p = createPhoto(new File([''], 'p.jpg', { type: 'image/jpeg' }));
-      return createGroupFromPhoto(p, null);
-    });
-    const state: BulkAddState = { ...initialState, step: 'review', groups, currentIndex: 0 };
-    const { container } = renderStep(state);
-    const dots = container.querySelectorAll('[data-queue-dot]');
-    expect(dots.length).toBe(3);
-  });
-
-  it('does not render QueueDots when there is only 1 group', () => {
-    const { container } = renderStep(makeState());
-    expect(container.querySelectorAll('[data-queue-dot]').length).toBe(0);
   });
 });
 
@@ -460,7 +387,7 @@ describe('GroupReviewStep lock confirmation beat', () => {
     });
   });
 
-  it('keeps the photo full-size (aspect-square, not max-h-20) during the lock beat', async () => {
+  it('keeps the photo full-size (16:9 banner, not max-h-20) during the lock beat', async () => {
     mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
     const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
     const { container } = renderStep(makeState({ status: 'pending' }), { aiSettings });
@@ -474,7 +401,7 @@ describe('GroupReviewStep lock confirmation beat', () => {
 
     const photo = container.querySelector('img');
     expect(photo).toBeTruthy();
-    expect(photo!.className).toMatch(/aspect-square/);
+    expect(photo!.className).toMatch(/aspect-\[16\/9\]/);
     expect(photo!.className).not.toMatch(/max-h-20/);
   });
 
@@ -493,8 +420,10 @@ describe('GroupReviewStep lock confirmation beat', () => {
     expect(screen.queryByRole('button', { name: /cancel scan/i })).toBeNull();
   });
 
-  it('shows "LOCKED" in the status-row label during the lock beat', async () => {
+  it('shows the final item-count label during the lock beat', async () => {
     mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    // Seed partialText so the lock-beat label can derive the item count.
+    mockStreamState.analyze = { isStreaming: false, partialText: '{"name":"Box","items":["Hammer"' };
     const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
     renderStep(makeState({ status: 'pending' }), { aiSettings });
 
@@ -505,8 +434,7 @@ describe('GroupReviewStep lock confirmation beat', () => {
       await vi.advanceTimersByTimeAsync(50);
     });
 
-    // "LOCKED" appears in the HUD readout (PhotoScanFrame) and in the status-row label.
-    expect(screen.getAllByText('LOCKED').length).toBeGreaterThan(0);
+    expect(screen.getByText('1 item found')).toBeTruthy();
   });
 
   it('switches AiProgressBar to its complete (green) state during the lock beat', async () => {
