@@ -436,21 +436,25 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           const collapsed = !!group.name;
           const photoClasses = (extra?: string) =>
             cn(
-              'w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
-              collapsed ? 'max-h-20 opacity-80' : 'aspect-square',
+              'rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
+              collapsed ? 'block h-20 w-20 opacity-80' : 'w-full aspect-square',
               extra,
             );
           const photos =
             group.photos.length === 1 ? (
-              <img src={group.photos[0].previewUrl} alt="Preview 1" className={photoClasses()} />
+              <img
+                src={group.photos[0].previewUrl}
+                alt="Preview 1"
+                className={photoClasses(collapsed ? 'mx-auto' : '')}
+              />
             ) : (
-              <div className="flex gap-2 overflow-x-auto">
+              <div className={cn('flex gap-2', collapsed ? 'justify-center' : 'overflow-x-auto')}>
                 {group.photos.map((photo, i) => (
                   <img
                     key={photo.id}
                     src={photo.previewUrl}
                     alt={`Preview ${i + 1}`}
-                    className={photoClasses('shrink-0 flex-1 min-w-0')}
+                    className={photoClasses(collapsed ? 'shrink-0' : 'shrink-0 flex-1 min-w-0')}
                   />
                 ))}
               </div>
@@ -484,6 +488,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
         <div className="space-y-2">
           <AiProgressBar
             active={isAnyActive || confirmPhase === 'locking'}
+            complete={confirmPhase === 'locking'}
             showSparkles={false}
             className="w-full"
           />

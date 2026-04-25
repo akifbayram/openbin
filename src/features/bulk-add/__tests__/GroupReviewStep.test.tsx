@@ -509,6 +509,22 @@ describe('GroupReviewStep lock confirmation beat', () => {
     expect(screen.getAllByText('LOCKED').length).toBeGreaterThan(0);
   });
 
+  it('switches AiProgressBar to its complete (green) state during the lock beat', async () => {
+    mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    const { container } = renderStep(makeState({ status: 'pending' }), { aiSettings });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+
+    // The progress fill carries the success-green class instead of the streaming class.
+    expect(container.querySelector('.ai-progress-fill-complete')).toBeTruthy();
+  });
+
   it('skips the lock beat and dispatches immediately when prefers-reduced-motion is set', async () => {
     // Mock matchMedia to report reduced-motion preference.
     const originalMatchMedia = window.matchMedia;
