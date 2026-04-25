@@ -408,110 +408,161 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const showTryAiAgain =
     aiEnabled && !!aiSettings && group.status === 'pending' && !isAnyActive;
 
+  const queueDots = (
+    <QueueDots
+      total={groups.length}
+      currentIndex={currentIndex}
+      doneCount={reviewedCount}
+      termBin={t.Bin}
+    />
+  );
+
+  const sparklesButton = aiEnabled && group.status === 'reviewed' && !showProgressBar && (
+    <button
+      type="button"
+      onClick={() => setCorrectionOpen(!correctionOpen)}
+      title="Adjust AI suggestions"
+      className={cn(
+        'absolute top-1.5 right-1.5 p-1.5 rounded-full transition-colors animate-fade-in',
+        correctionOpen
+          ? 'bg-[var(--ai-accent)] text-white'
+          : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
+      )}
+    >
+      <Sparkles className="h-4 w-4" />
+    </button>
+  );
+
   return (
     <div data-tour="group-review" className="space-y-5">
-      {/* Step title + progress */}
-      <header className="space-y-1">
-        <div className="row-spread">
-          <h2 className="text-[17px] font-semibold leading-tight text-[var(--text-primary)]">
-            {headerState.title}
-          </h2>
-          <QueueDots
-            total={groups.length}
-            currentIndex={currentIndex}
-            doneCount={reviewedCount}
-            termBin={t.Bin}
-          />
-        </div>
-        {headerState.subtitle && (
-          <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
-            {headerState.subtitle}
-          </p>
-        )}
-      </header>
-
-      {/* Photo preview — always visible. HUD overlay mounts during streaming. */}
-      <div className="relative mx-auto max-w-sm">
-        {(() => {
-          const collapsed = !!group.name;
-          const photoClasses = (extra?: string) =>
-            cn(
-              'rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
-              collapsed ? 'block h-20 w-20 opacity-80' : 'w-full aspect-square',
-              extra,
-            );
-          const photos =
-            group.photos.length === 1 ? (
-              <img
-                src={group.photos[0].previewUrl}
-                alt="Preview 1"
-                className={photoClasses(collapsed ? 'mx-auto' : '')}
-              />
-            ) : (
-              <div className={cn('flex gap-2', collapsed ? 'justify-center' : 'overflow-x-auto')}>
-                {group.photos.map((photo, i) => (
-                  <img
-                    key={photo.id}
-                    src={photo.previewUrl}
-                    alt={`Preview ${i + 1}`}
-                    className={photoClasses(collapsed ? 'shrink-0' : 'shrink-0 flex-1 min-w-0')}
-                  />
-                ))}
-              </div>
-            );
-          const hudMounted = isAnyActive || confirmPhase === 'locking';
-          const hudPhase: 'scanning' | 'locking' = confirmPhase === 'locking' ? 'locking' : 'scanning';
-          return hudMounted ? (
-            <PhotoScanFrame itemCount={labelState.itemCount} phase={hudPhase}>{photos}</PhotoScanFrame>
-          ) : (
-            photos
-          );
-        })()}
-        {aiEnabled && group.status === 'reviewed' && !showProgressBar && (
-          <button
-            type="button"
-            onClick={() => setCorrectionOpen(!correctionOpen)}
-            title="Adjust AI suggestions"
-            className={cn(
-              'absolute top-2 right-2 p-1.5 rounded-full transition-colors animate-fade-in',
-              correctionOpen
-                ? 'bg-[var(--ai-accent)] text-white'
-                : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
-            )}
-          >
-            <Sparkles className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
       {showProgressBar ? (
-        <div className="space-y-2">
-          <AiProgressBar
-            active={isAnyActive || confirmPhase === 'locking'}
-            complete={confirmPhase === 'locking'}
-            showSparkles={false}
-            className="w-full"
-          />
-          <output aria-live="polite" className="row min-w-0">
-            <span className="flex-1 truncate font-mono text-[12px] font-medium text-[var(--text-tertiary)]">
-              {labelState.text}
-              {labelState.showEllipsis && <AnimatedEllipsis />}
-            </span>
-            {isAnyActive && (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Cancel scan"
-                onClick={handleCancel}
-              >
-                <X className="h-3 w-3 mr-1" />
-                Cancel
-              </Button>
+        <>
+          {/* Step title + progress (vertical layout while the AI is working) */}
+          <header className="space-y-1">
+            <div className="row-spread">
+              <h2 className="text-[17px] font-semibold leading-tight text-[var(--text-primary)]">
+                {headerState.title}
+              </h2>
+              {queueDots}
+            </div>
+            {headerState.subtitle && (
+              <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
+                {headerState.subtitle}
+              </p>
             )}
-          </output>
-        </div>
+          </header>
+
+          {/* Full-size photo with HUD scan overlay */}
+          <div className="relative mx-auto max-w-sm">
+            {(() => {
+              const photoClasses = (extra?: string) =>
+                cn(
+                  'rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5',
+                  'w-full aspect-square',
+                  extra,
+                );
+              const photos =
+                group.photos.length === 1 ? (
+                  <img
+                    src={group.photos[0].previewUrl}
+                    alt="Preview 1"
+                    className={photoClasses()}
+                  />
+                ) : (
+                  <div className="flex gap-2 overflow-x-auto">
+                    {group.photos.map((photo, i) => (
+                      <img
+                        key={photo.id}
+                        src={photo.previewUrl}
+                        alt={`Preview ${i + 1}`}
+                        className={photoClasses('shrink-0 flex-1 min-w-0')}
+                      />
+                    ))}
+                  </div>
+                );
+              const hudPhase: 'scanning' | 'locking' = confirmPhase === 'locking' ? 'locking' : 'scanning';
+              return (
+                <PhotoScanFrame itemCount={labelState.itemCount} phase={hudPhase}>
+                  {photos}
+                </PhotoScanFrame>
+              );
+            })()}
+          </div>
+
+          <div className="space-y-2">
+            <AiProgressBar
+              active={isAnyActive || confirmPhase === 'locking'}
+              complete={confirmPhase === 'locking'}
+              showSparkles={false}
+              className="w-full"
+            />
+            <output aria-live="polite" className="row min-w-0">
+              <span className="flex-1 truncate font-mono text-[12px] font-medium text-[var(--text-tertiary)]">
+                {labelState.text}
+                {labelState.showEllipsis && <AnimatedEllipsis />}
+              </span>
+              {isAnyActive && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Cancel scan"
+                  onClick={handleCancel}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Cancel
+                </Button>
+              )}
+            </output>
+          </div>
+        </>
       ) : (
         <div className="animate-fade-in space-y-5">
+          {/* Top row: header + Name field on left, thumbnail on right */}
+          <div className="flex gap-4 items-start">
+            <div className="flex-1 min-w-0 space-y-3">
+              <header className="space-y-1">
+                {groups.length > 1 && queueDots}
+                <h2 className="text-[17px] font-semibold leading-tight text-[var(--text-primary)]">
+                  {headerState.title}
+                </h2>
+                {headerState.subtitle && (
+                  <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
+                    {headerState.subtitle}
+                  </p>
+                )}
+              </header>
+
+              <div className="space-y-2">
+                <Label htmlFor={`name-${group.id}`}>Name</Label>
+                <Input
+                  id={`name-${group.id}`}
+                  value={group.name}
+                  onChange={(e) =>
+                    dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { name: e.target.value } })
+                  }
+                  placeholder="e.g., Holiday Decorations"
+                />
+              </div>
+            </div>
+
+            <div className="shrink-0 relative">
+              <img
+                src={group.photos[0].previewUrl}
+                alt={group.photos.length === 1 ? 'Preview' : `${group.photos.length} photos, showing first`}
+                className="block h-24 w-24 sm:h-28 sm:w-28 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5"
+              />
+              {group.photos.length > 1 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute bottom-1 left-1 rounded-full bg-black/65 px-1.5 py-0.5 font-mono text-[10px] font-medium text-white"
+                >
+                  +{group.photos.length - 1}
+                </span>
+              )}
+              {sparklesButton}
+            </div>
+          </div>
+
           {/* AI action bar (correction + reanalyze) */}
           {correctionOpen && group.status === 'reviewed' && (
             <div className="animate-fade-in space-y-1.5">
@@ -592,20 +643,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
             </Button>
           )}
 
-          {/* Form Fields */}
+          {/* Form Fields (Name is rendered in the top row above) */}
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor={`name-${group.id}`}>Name</Label>
-              <Input
-                id={`name-${group.id}`}
-                value={group.name}
-                onChange={(e) =>
-                  dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { name: e.target.value } })
-                }
-                placeholder="e.g., Holiday Decorations"
-              />
-            </div>
-
             <div className="space-y-2">
               <ItemList
                 items={group.items}
