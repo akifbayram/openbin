@@ -33,7 +33,8 @@ describe('usePermissions', () => {
     expect(result.current.isMember).toBe(false);
     expect(result.current.isViewer).toBe(false);
     expect(result.current.canWrite).toBe(true);
-    expect(result.current.canDeleteBin).toBe(true);
+    expect(result.current.canDeleteBin('other-user')).toBe(true);
+    expect(result.current.canDeleteBin('user1')).toBe(true);
     expect(result.current.canManageAreas).toBe(true);
     expect(result.current.canManageMembers).toBe(true);
     expect(result.current.canCreateBin).toBe(true);
@@ -53,7 +54,8 @@ describe('usePermissions', () => {
     expect(result.current.isMember).toBe(true);
     expect(result.current.isAdmin).toBe(false);
     expect(result.current.canWrite).toBe(true);
-    expect(result.current.canDeleteBin).toBe(false);
+    expect(result.current.canDeleteBin('other-user')).toBe(false);
+    expect(result.current.canDeleteBin('user1')).toBe(true);
     expect(result.current.canManageAreas).toBe(false);
     expect(result.current.canCreateBin).toBe(true);
     expect(result.current.canPin).toBe(true);
@@ -64,6 +66,13 @@ describe('usePermissions', () => {
     const { result } = renderHook(() => usePermissions());
     expect(result.current.canEditBin('user1')).toBe(true);
     expect(result.current.canEditBin('other-user')).toBe(false);
+  });
+
+  it('viewer: canDeleteBin false even for own bins', () => {
+    setup('viewer');
+    const { result } = renderHook(() => usePermissions());
+    expect(result.current.canDeleteBin('user1')).toBe(false);
+    expect(result.current.canDeleteBin('other-user')).toBe(false);
   });
 
   it('viewer role: read-only permissions', () => {
@@ -95,7 +104,7 @@ describe('usePermissions', () => {
     expect(result.current.role).toBeUndefined();
     expect(result.current.isAdmin).toBe(false);
     expect(result.current.canWrite).toBe(false);
-    expect(result.current.canDeleteBin).toBe(false);
+    expect(result.current.canDeleteBin('user1')).toBe(false);
     expect(result.current.canCreateBin).toBe(false);
   });
 

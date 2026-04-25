@@ -24,7 +24,7 @@ export function usePermissions() {
     canEditBin: (createdBy: string) => isAdmin || createdBy === user?.id,
     canEditItems: canWrite,
     canChangeVisibility: (createdBy: string) => createdBy === user?.id,
-    canDeleteBin: isAdmin,
+    canDeleteBin: (createdBy: string) => isAdmin || (isMember && createdBy === user?.id),
     canManageAreas: isAdmin,
     canManageMembers: isAdmin,
     canCreateBin: canWrite,

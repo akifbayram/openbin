@@ -128,6 +128,22 @@ export async function requireAdmin(locationId: string, userId: string, action: s
   }
 }
 
+/** Allow admins of the location, or members who created the entity. Viewers and non-members rejected. */
+export async function requireCreatorOrAdmin(
+  locationId: string,
+  userId: string,
+  createdBy: string,
+  action: string,
+): Promise<void> {
+  const role = await getMemberRole(locationId, userId);
+  if (role === 'admin') return;
+  if (role === 'member' && createdBy === userId) return;
+  if (role === 'member' || role === 'viewer') {
+    throw new ForbiddenError(`Only the creator or an admin can ${action}`);
+  }
+  throw new ForbiddenError(`Not a member of this location`);
+}
+
 /** Throw ForbiddenError if the user is a viewer (or not a member at all) */
 export async function requireMemberOrAbove(locationId: string, userId: string, action: string): Promise<void> {
   const role = await getMemberRole(locationId, userId);

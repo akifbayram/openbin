@@ -4,7 +4,7 @@ import { Router } from 'express';
 import { d, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { cleanupBinAttachments } from '../lib/attachmentsCleanup.js';
-import { getMemberRole, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
+import { getMemberRole, requireAdmin, requireCreatorOrAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
 import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinItems } from '../lib/binUpdateHelpers.js';
 import { validateBinFields, validateCodeFormat } from '../lib/binValidation.js';
@@ -366,7 +366,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 
   await assertLocationWritable(access.locationId);
 
-  await requireAdmin(access.locationId, req.user!.id, 'delete bins');
+  await requireCreatorOrAdmin(access.locationId, req.user!.id, access.createdBy, 'delete bins');
 
   // Fetch bin before soft-deleting for response
   const bin = await fetchBinById(id, { excludeDeleted: true });

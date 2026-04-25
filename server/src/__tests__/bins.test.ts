@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { query } from '../db.js';
 import { createApp } from '../index.js';
 import { createTestArea, createTestBin, createTestLocation, createTestUser } from './helpers.js';
 
@@ -352,6 +353,86 @@ describe('DELETE /api/bins/:id (soft delete)', () => {
 
     expect(trashRes.body.count).toBe(1);
     expect(trashRes.body.results[0].id).toBe(bin.id);
+  });
+
+  it('member can delete a bin they created', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const { token: memberToken } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ inviteCode: location.invite_code });
+
+    const bin = await createTestBin(app, memberToken, location.id);
+
+    const res = await request(app)
+      .delete(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${memberToken}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  it("member cannot delete another member's bin", async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const { token: creatorToken } = await createTestUser(app);
+    const { token: otherToken } = await createTestUser(app);
+    for (const t of [creatorToken, otherToken]) {
+      await request(app)
+        .post('/api/locations/join')
+        .set('Authorization', `Bearer ${t}`)
+        .send({ inviteCode: location.invite_code });
+    }
+
+    const bin = await createTestBin(app, creatorToken, location.id);
+
+    const res = await request(app)
+      .delete(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${otherToken}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('admin can delete a bin they did not create', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const { token: memberToken } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ inviteCode: location.invite_code });
+
+    const bin = await createTestBin(app, memberToken, location.id);
+
+    const res = await request(app)
+      .delete(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  it('viewer cannot delete a bin even if they originally created it', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const { token: viewerToken, user: viewerUser } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ inviteCode: location.invite_code });
+
+    // Create the bin while still a member, then demote to viewer.
+    const bin = await createTestBin(app, viewerToken, location.id);
+    await query(
+      "UPDATE location_members SET role = 'viewer' WHERE location_id = $1 AND user_id = $2",
+      [location.id, viewerUser.id]
+    );
+
+    const res = await request(app)
+      .delete(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${viewerToken}`);
+
+    expect(res.status).toBe(403);
   });
 });
 
