@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { StepIndicator } from '@/components/ui/stepper';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
 import { addBin, notifyBinsChanged } from '@/features/bins/useBins';
@@ -7,10 +6,8 @@ import { GroupReviewStep } from '@/features/bulk-add/GroupReviewStep';
 import { GroupSummaryStep } from '@/features/bulk-add/GroupSummaryStep';
 import { PhotoGroupingGrid } from '@/features/bulk-add/PhotoGroupingGrid';
 import {
-  BULK_ADD_STEPS,
   type BulkAddState,
   bulkAddReducer,
-  bulkAddStepIndex,
   createGroupFromPhoto,
   createPhoto,
   type Group,
@@ -203,12 +200,8 @@ export function PhotoBulkAdd({
     );
   }
 
-  const stepIndex = bulkAddStepIndex(state);
-
   return (
     <div className="space-y-5">
-      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
-
       {state.step === 'group' && (
         <PhotoGroupingGrid
           state={state}

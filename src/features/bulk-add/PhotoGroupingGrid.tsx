@@ -11,12 +11,13 @@ import type { BulkAddAction, BulkAddState, Group, Photo } from './useBulkGroupAd
 import { MAX_PHOTOS_PER_GROUP } from './useBulkGroupAdd';
 
 const PHOTO_SIZE = 96;
-const BIN_SIZE = 108;
-const SPREAD = 3;
-const PADDING = 6;
-const ROTATE_STEP = 4;
+const SPREAD = 7;
+const PADDING = 7;
+const MAX_VISIBLE_LAYERS = 3;
+const BIN_SIZE = PHOTO_SIZE + PADDING * 2 + (MAX_VISIBLE_LAYERS - 1) * SPREAD;
 const TOUCH_THRESHOLD = 6;
 const MOUSE_THRESHOLD = 3;
+const RECEIVE_ANIMATION_MS = 280;
 
 type DropTarget = { type: 'bin'; groupId: string } | { type: 'split' } | null;
 
@@ -97,6 +98,24 @@ export function PhotoGroupingGrid({
   const [drag, setDrag] = useState<DragState>({ phase: 'idle' });
   const [keyboardMove, setKeyboardMove] = useState<KeyboardMoveState | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const [recentlyReceivedId, setRecentlyReceivedId] = useState<string | null>(null);
+  const receiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flashReceive = useCallback((groupId: string) => {
+    if (receiveTimerRef.current) clearTimeout(receiveTimerRef.current);
+    setRecentlyReceivedId(groupId);
+    receiveTimerRef.current = setTimeout(() => {
+      setRecentlyReceivedId(null);
+      receiveTimerRef.current = null;
+    }, RECEIVE_ANIMATION_MS);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (receiveTimerRef.current) clearTimeout(receiveTimerRef.current);
+    },
+    [],
+  );
 
   // Surface a new lastToggle as a toast
   useEffect(() => {
@@ -155,6 +174,7 @@ export function PhotoGroupingGrid({
             photoId,
             targetGroupId: dropTarget.groupId,
           });
+          flashReceive(dropTarget.groupId);
           vibrate(12);
         } else if (dropTarget?.type === 'split' && sourceGroupSize > 1) {
           dispatch({ type: 'MOVE_PHOTO_TO_NEW_GROUP', photoId });
@@ -172,7 +192,7 @@ export function PhotoGroupingGrid({
       window.removeEventListener('pointerup', handleUp);
       window.removeEventListener('pointercancel', handleUp);
     };
-  }, [drag, dispatch]);
+  }, [drag, dispatch, flashReceive]);
 
   // Escape cancels keyboard move
   useEffect(() => {
@@ -232,11 +252,12 @@ export function PhotoGroupingGrid({
           photoId: keyboardMove.photoId,
           targetGroupId: payload.sourceGroupId,
         });
+        flashReceive(payload.sourceGroupId);
         setAnnouncement(`Moved photo ${keyboardMove.indexLabel}.`);
         setKeyboardMove(null);
       }
     },
-    [keyboardMove, state.groups, dispatch],
+    [keyboardMove, state.groups, dispatch, flashReceive],
   );
 
   const handleKeyboardSplit = useCallback(() => {
@@ -297,6 +318,7 @@ export function PhotoGroupingGrid({
               baseDisplayIndex={baseIndex}
               activeDrag={activeDrag}
               keyboardMove={keyboardMove}
+              isReceiving={recentlyReceivedId === group.id}
               onPhotoPointerDown={handlePhotoPointerDown}
               onPhotoKeyDown={handlePhotoKeyDown}
               onRemove={(photoId) => dispatch({ type: 'REMOVE_PHOTO', photoId })}
@@ -362,6 +384,7 @@ interface BinStackProps {
   baseDisplayIndex: number;
   activeDrag: ActiveDrag | null;
   keyboardMove: KeyboardMoveState | null;
+  isReceiving: boolean;
   onPhotoPointerDown: (e: React.PointerEvent<HTMLDivElement>, payload: PointerPayload) => void;
   onPhotoKeyDown: (e: React.KeyboardEvent<HTMLDivElement>, payload: KeyboardMoveState) => void;
   onRemove: (photoId: string) => void;
@@ -374,12 +397,12 @@ function BinStack({
   baseDisplayIndex,
   activeDrag,
   keyboardMove,
+  isReceiving,
   onPhotoPointerDown,
   onPhotoKeyDown,
   onRemove,
 }: BinStackProps) {
   const count = group.photos.length;
-  const center = (count - 1) / 2;
   const countLabel = count === 1 ? '1 photo' : `${count} photos`;
   const hoverTarget =
     activeDrag?.dropTarget?.type === 'bin' && activeDrag.dropTarget.groupId === group.id;
@@ -401,43 +424,49 @@ function BinStack({
             'scale-[1.05] ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-page)]',
           showRejectedRing &&
             'ring-2 ring-[var(--destructive)] ring-offset-2 ring-offset-[var(--bg-page)]',
+          isReceiving && !showValidRing && !showRejectedRing && 'animate-stack-receive',
         )}
         style={{ width: BIN_SIZE, height: BIN_SIZE, overflow: 'visible' }}
       >
-        {group.photos.map((photo, i) => (
-          <StackedPhotoTile
-            key={photo.id}
-            photo={photo}
-            indexLabel={baseDisplayIndex + i + 1}
-            offsetX={(i - center) * SPREAD + PADDING}
-            offsetY={(i - center) * SPREAD + PADDING}
-            rotate={(i - center) * ROTATE_STEP}
-            zIndex={i + 1}
-            isTop={i === count - 1}
-            isDragging={activeDrag?.photoId === photo.id}
-            isKeyboardSelected={keyboardMove?.photoId === photo.id}
-            sourceGroupId={group.id}
-            sourceGroupSize={count}
-            onPointerDown={onPhotoPointerDown}
-            onKeyDown={onPhotoKeyDown}
-            onRemove={() => onRemove(photo.id)}
-          />
-        ))}
+        {group.photos.map((photo, i) => {
+          const layerFromTop = count - 1 - i;
+          const depth = Math.min(layerFromTop, MAX_VISIBLE_LAYERS - 1);
+          const isTop = layerFromTop === 0;
+          return (
+            <StackedPhotoTile
+              key={photo.id}
+              photo={photo}
+              indexLabel={baseDisplayIndex + i + 1}
+              offsetX={PADDING + depth * SPREAD}
+              offsetY={PADDING + depth * SPREAD}
+              depth={depth}
+              zIndex={i + 1}
+              isTop={isTop}
+              isDragging={activeDrag?.photoId === photo.id}
+              isKeyboardSelected={keyboardMove?.photoId === photo.id}
+              sourceGroupId={group.id}
+              sourceGroupSize={count}
+              onPointerDown={onPhotoPointerDown}
+              onKeyDown={onPhotoKeyDown}
+              onRemove={() => onRemove(photo.id)}
+            />
+          );
+        })}
         {count > 1 && (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute flex items-center justify-center font-bold text-white"
             style={{
-              top: -4,
-              right: -4,
-              width: 18,
-              height: 18,
+              top: PADDING - 9,
+              left: PADDING + PHOTO_SIZE - 11,
+              width: 20,
+              height: 20,
               borderRadius: '50%',
               backgroundColor: 'var(--accent)',
-              border: '1.5px solid white',
-              fontSize: 10,
+              border: '2px solid var(--bg-page)',
+              fontSize: 11,
               zIndex: count + 10,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
             }}
           >
             {count}
@@ -456,7 +485,7 @@ interface StackedPhotoTileProps {
   indexLabel: number;
   offsetX: number;
   offsetY: number;
-  rotate: number;
+  depth: number;
   zIndex: number;
   isTop: boolean;
   isDragging: boolean;
@@ -468,12 +497,17 @@ interface StackedPhotoTileProps {
   onRemove: () => void;
 }
 
+const DEPTH_BRIGHTNESS = [1, 0.92, 0.84];
+const DEPTH_SATURATION = [1, 0.9, 0.8];
+const TOP_SHADOW = '0 4px 8px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.12)';
+const BACK_SHADOW = '0 1px 2px rgba(0,0,0,0.12)';
+
 function StackedPhotoTile({
   photo,
   indexLabel,
   offsetX,
   offsetY,
-  rotate,
+  depth,
   zIndex,
   isTop,
   isDragging,
@@ -497,6 +531,10 @@ function StackedPhotoTile({
     sourceGroupSize,
     indexLabel,
   };
+  const brightness = DEPTH_BRIGHTNESS[depth] ?? DEPTH_BRIGHTNESS[DEPTH_BRIGHTNESS.length - 1];
+  const saturation = DEPTH_SATURATION[depth] ?? DEPTH_SATURATION[DEPTH_SATURATION.length - 1];
+  const filter = isTop ? undefined : `brightness(${brightness}) saturate(${saturation})`;
+  const shadow = isTop ? TOP_SHADOW : BACK_SHADOW;
   return (
     // biome-ignore lint/a11y/useSemanticElements: a native <button> cannot host the nested Remove <button> child without invalid-DOM warnings, and drag semantics rely on preventing the button's default submit/activation behavior
     <div
@@ -518,10 +556,11 @@ function StackedPhotoTile({
         left: 0,
         width: PHOTO_SIZE,
         height: PHOTO_SIZE,
-        transform: `translate(${offsetX}px, ${offsetY}px) rotate(${rotate}deg)`,
+        transform: `translate(${offsetX}px, ${offsetY}px)`,
         touchAction: 'none',
         transition: isDragging ? 'none' : 'opacity 120ms',
         zIndex,
+        filter,
       }}
     >
       <img
@@ -529,7 +568,8 @@ function StackedPhotoTile({
         draggable={false}
         // biome-ignore lint/a11y/noRedundantAlt: accessible name must match /photo \d+/i for tests
         alt={`Photo ${indexLabel}`}
-        className="pointer-events-none h-full w-full rounded-[var(--radius-sm)] object-cover shadow-[0_1px_2px_rgba(0,0,0,0.18)]"
+        className="pointer-events-none h-full w-full rounded-[var(--radius-sm)] object-cover"
+        style={{ boxShadow: shadow }}
       />
       {isTop && (
         <button
