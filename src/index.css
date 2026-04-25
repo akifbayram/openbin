@@ -757,6 +757,66 @@ body {
   50% { opacity: 0.35; }
 }
 
+/* --- AI Scan Lock (handoff confirmation beat) --- */
+
+/* Brackets converge inward by 6px with a spring overshoot. Per-corner direction. */
+[data-bracket="tl"][data-phase="locking"] {
+  animation: ai-scan-bracket-lock-tl 220ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+[data-bracket="tr"][data-phase="locking"] {
+  animation: ai-scan-bracket-lock-tr 220ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+[data-bracket="bl"][data-phase="locking"] {
+  animation: ai-scan-bracket-lock-bl 220ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+[data-bracket="br"][data-phase="locking"] {
+  animation: ai-scan-bracket-lock-br 220ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes ai-scan-bracket-lock-tl {
+  0%   { transform: translate(0, 0) scale(1); }
+  60%  { transform: translate(6px, 6px) scale(1.05); }
+  100% { transform: translate(6px, 6px) scale(1); }
+}
+@keyframes ai-scan-bracket-lock-tr {
+  0%   { transform: translate(0, 0) scale(1); }
+  60%  { transform: translate(-6px, 6px) scale(1.05); }
+  100% { transform: translate(-6px, 6px) scale(1); }
+}
+@keyframes ai-scan-bracket-lock-bl {
+  0%   { transform: translate(0, 0) scale(1); }
+  60%  { transform: translate(6px, -6px) scale(1.05); }
+  100% { transform: translate(6px, -6px) scale(1); }
+}
+@keyframes ai-scan-bracket-lock-br {
+  0%   { transform: translate(0, 0) scale(1); }
+  60%  { transform: translate(-6px, -6px) scale(1.05); }
+  100% { transform: translate(-6px, -6px) scale(1); }
+}
+
+/* Scan line fades out instead of sweeping during the lock phase */
+.ai-scan-line[data-phase="locking"] {
+  animation: ai-scan-line-fade 180ms ease-out forwards;
+}
+@keyframes ai-scan-line-fade {
+  to { opacity: 0; }
+}
+
+/* Readout crossfade — FOUND N fades out, LOCKED fades in */
+.ai-scan-readout-fade-out {
+  animation: ai-scan-readout-flip-out 160ms ease-out forwards;
+}
+.ai-scan-readout-locked {
+  animation: ai-scan-readout-flip-in 160ms ease-out 80ms both;
+}
+@keyframes ai-scan-readout-flip-out {
+  to { opacity: 0; }
+}
+@keyframes ai-scan-readout-flip-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* --- Animated Ellipsis (cascading dots while AI is working) --- */
 .ai-ellipsis {
   display: inline-flex;
@@ -780,6 +840,13 @@ body {
   .ai-scan-line       { animation: none !important; top: 50% !important; }
   .ai-scan-readout    { animation: none !important; }
   .ai-ellipsis > span { animation: none !important; opacity: 1; }
+
+  /* Lock confirmation: skip all motion. Brackets stay in original position;
+   * locked readout appears immediately. */
+  [data-bracket][data-phase="locking"]    { animation: none !important; transform: none !important; }
+  .ai-scan-line[data-phase="locking"]     { animation: none !important; opacity: 0 !important; }
+  .ai-scan-readout-fade-out               { animation: none !important; opacity: 0 !important; }
+  .ai-scan-readout-locked                 { animation: none !important; opacity: 1 !important; }
 }
 
 /* --- AI Stagger Item (list reveals with inline animationDelay) --- */
