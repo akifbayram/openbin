@@ -6,8 +6,10 @@ import { GroupReviewStep } from '@/features/bulk-add/GroupReviewStep';
 import { GroupSummaryStep } from '@/features/bulk-add/GroupSummaryStep';
 import { PhotoGroupingGrid } from '@/features/bulk-add/PhotoGroupingGrid';
 import {
+  BULK_ADD_STEPS,
   type BulkAddState,
   bulkAddReducer,
+  bulkAddStepIndex,
   createGroupFromPhoto,
   createPhoto,
   type Group,
@@ -19,9 +21,50 @@ import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
 import { binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import type { AiSettings } from '@/types';
 
 const DEMO_MAX_PHOTOS = 3;
+
+function FlowProgress({ state }: { state: BulkAddState }) {
+  const currentIndex = bulkAddStepIndex(state);
+  const currentLabel = BULK_ADD_STEPS[currentIndex]?.label ?? '';
+  return (
+    <div data-flow-progress className="flex items-center justify-end gap-2">
+      <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--text-tertiary)]">
+        {currentLabel}
+        <span className="ml-2 text-[var(--text-quaternary)]">
+          {currentIndex + 1} / {BULK_ADD_STEPS.length}
+        </span>
+      </span>
+      {/* biome-ignore lint/a11y/useSemanticElements: same rationale as QueueDots — role=group is the right ARIA match for an inline labeled grouping */}
+      <span
+        role="group"
+        aria-label={`Step ${currentIndex + 1} of ${BULK_ADD_STEPS.length}: ${currentLabel}`}
+        className="inline-flex items-center gap-1"
+      >
+        {BULK_ADD_STEPS.map((s, i) => {
+          const isCurrent = i === currentIndex;
+          const isDone = i < currentIndex;
+          return (
+            <span
+              key={s.id}
+              data-flow-dot
+              data-state={isCurrent ? 'current' : isDone ? 'done' : 'pending'}
+              aria-hidden="true"
+              className={cn(
+                'h-1.5 rounded-full transition-[width,background-color] duration-200 ease-out',
+                isCurrent ? 'w-[18px] bg-[var(--accent)]' : 'w-1.5',
+                isDone && 'bg-[var(--accent)]',
+                !isCurrent && !isDone && 'bg-[var(--text-quaternary)]',
+              )}
+            />
+          );
+        })}
+      </span>
+    </div>
+  );
+}
 
 interface PhotoBulkAddProps {
   initialFiles: File[];
@@ -202,6 +245,8 @@ export function PhotoBulkAdd({
 
   return (
     <div className="space-y-5">
+      <FlowProgress state={state} />
+
       {state.step === 'group' && (
         <PhotoGroupingGrid
           state={state}

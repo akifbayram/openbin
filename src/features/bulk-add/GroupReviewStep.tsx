@@ -431,7 +431,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       </header>
 
       {/* Photo preview — always visible. HUD overlay mounts during streaming. */}
-      <div className="relative">
+      <div className="relative mx-auto max-w-sm">
         {(() => {
           const collapsed = !!group.name;
           const photoClasses = (extra?: string) =>
