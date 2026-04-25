@@ -26,13 +26,24 @@ import { aiItemsToBinItems } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import type { AiSettings, AiSuggestions } from '@/types';
-import { computeAnalyzeLabel } from './analyzeLabel';
+import { type AnalyzeStreamMode, computeAnalyzeLabel } from './analyzeLabel';
 import { PhotoScanFrame } from './PhotoScanFrame';
 import { QueueDots } from './QueueDots';
 import { computeReviewHeader } from './reviewHeader';
 import type { BulkAddAction, Group, Photo } from './useBulkGroupAdd';
 
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 const MAX_CORRECTIONS = 3;
+
+// Lock confirmation hold: CSS animations finish at ~240ms, leaving the
+// brackets converged and "LOCKED" readout visible. The remainder is held
+// stillness — long enough for the brain to register the lock as a discrete
+// event before the photo collapse and form fade-in start.
+export const LOCK_BEAT_MS = 600;
 
 async function buildPhotosFormData(photos: Photo[]): Promise<FormData> {
   const compressed = await Promise.all(
@@ -75,6 +86,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [correctionText, setCorrectionText] = useState('');
+  const [confirmPhase, setConfirmPhase] = useState<'idle' | 'locking'>('idle');
+  const lockTimerRef = useRef<number | null>(null);
 
   const pendingResult = useRef<PendingResult | null>(null);
 
@@ -124,7 +137,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
 
   const isAnalyzing = group.status === 'analyzing';
   const isAnyActive = isAnalyzing || isAnalyzingStream || isReanalyzing || isCorrecting;
-  const showProgressBar = isAnyActive;
+  const showProgressBar = isAnyActive || confirmPhase === 'locking';
   const anyError = group.analyzeError || analyzeStreamError || correctionError || reanalyzeError;
 
   // Surface stream errors that arrive via the hook's `error` state but never get
@@ -170,6 +183,10 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       cancelAnalyze();
       cancelCorrection();
       cancelReanalyze();
+      if (lockTimerRef.current !== null) {
+        clearTimeout(lockTimerRef.current);
+        lockTimerRef.current = null;
+      }
     };
   }, [cancelAnalyze, cancelCorrection, cancelReanalyze]);
 
@@ -201,7 +218,16 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           name: result.name || '',
           items: aiItemsToBinItems(result.items || []),
         };
-        applyPendingResult();
+        if (prefersReducedMotion()) {
+          applyPendingResult();
+        } else {
+          setConfirmPhase('locking');
+          lockTimerRef.current = window.setTimeout(() => {
+            setConfirmPhase('idle');
+            lockTimerRef.current = null;
+            applyPendingResult();
+          }, LOCK_BEAT_MS);
+        }
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -295,7 +321,19 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     }
   }, [group?.id, group?.status, aiEnabled, aiSettings]);
 
+  function flushPendingLock() {
+    if (lockTimerRef.current !== null) {
+      clearTimeout(lockTimerRef.current);
+      lockTimerRef.current = null;
+    }
+    if (confirmPhase === 'locking') {
+      setConfirmPhase('idle');
+      applyPendingResult();
+    }
+  }
+
   function handleBack() {
+    flushPendingLock();
     abortRef.current.get(group.id)?.abort();
     cancelAnalyze();
     cancelCorrection();
@@ -315,6 +353,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   }
 
   function handleNext() {
+    flushPendingLock();
     abortRef.current.get(group.id)?.abort();
     cancelAnalyze();
     if (group.status === 'pending' || group.status === 'analyzing') {
@@ -327,13 +366,15 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     }
   }
 
-  const streamMode: 'analyze' | 'reanalyze' | 'correction' | 'idle' = isCorrecting
-    ? 'correction'
-    : isReanalyzing
-      ? 'reanalyze'
-      : isAnalyzingStream || isAnalyzing
-        ? 'analyze'
-        : 'idle';
+  const streamMode: AnalyzeStreamMode = confirmPhase === 'locking'
+    ? 'locking'
+    : isCorrecting
+      ? 'correction'
+      : isReanalyzing
+        ? 'reanalyze'
+        : isAnalyzingStream || isAnalyzing
+          ? 'analyze'
+          : 'idle';
 
   const streamPartialText = isCorrecting
     ? correctionPartialText
@@ -395,27 +436,33 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           const collapsed = !!group.name;
           const photoClasses = (extra?: string) =>
             cn(
-              'w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
-              collapsed ? 'max-h-20 opacity-80' : 'aspect-square',
+              'rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
+              collapsed ? 'block h-20 w-20 opacity-80' : 'w-full aspect-square',
               extra,
             );
           const photos =
             group.photos.length === 1 ? (
-              <img src={group.photos[0].previewUrl} alt="Preview 1" className={photoClasses()} />
+              <img
+                src={group.photos[0].previewUrl}
+                alt="Preview 1"
+                className={photoClasses(collapsed ? 'mx-auto' : '')}
+              />
             ) : (
-              <div className="flex gap-2 overflow-x-auto">
+              <div className={cn('flex gap-2', collapsed ? 'justify-center' : 'overflow-x-auto')}>
                 {group.photos.map((photo, i) => (
                   <img
                     key={photo.id}
                     src={photo.previewUrl}
                     alt={`Preview ${i + 1}`}
-                    className={photoClasses('shrink-0 flex-1 min-w-0')}
+                    className={photoClasses(collapsed ? 'shrink-0' : 'shrink-0 flex-1 min-w-0')}
                   />
                 ))}
               </div>
             );
-          return isAnyActive ? (
-            <PhotoScanFrame itemCount={labelState.itemCount}>{photos}</PhotoScanFrame>
+          const hudMounted = isAnyActive || confirmPhase === 'locking';
+          const hudPhase: 'scanning' | 'locking' = confirmPhase === 'locking' ? 'locking' : 'scanning';
+          return hudMounted ? (
+            <PhotoScanFrame itemCount={labelState.itemCount} phase={hudPhase}>{photos}</PhotoScanFrame>
           ) : (
             photos
           );
@@ -440,7 +487,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       {showProgressBar ? (
         <div className="space-y-2">
           <AiProgressBar
-            active={isAnyActive}
+            active={isAnyActive || confirmPhase === 'locking'}
+            complete={confirmPhase === 'locking'}
             showSparkles={false}
             className="w-full"
           />
@@ -623,27 +671,27 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
               />
             </div>
           </div>
-
-          {/* Navigation */}
-          <div className="row-spread pt-2">
-            <Button variant="ghost" onClick={handleBack}>
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              {editingFromSummary ? 'Back to summary' : 'Back'}
-            </Button>
-            {editingFromSummary ? (
-              <Button onClick={() => dispatch({ type: 'GO_TO_SUMMARY' })}>
-                <CheckCircle2 className="h-4 w-4 mr-1" />
-                Done
-              </Button>
-            ) : (
-              <Button onClick={handleNext} disabled={showProgressBar}>
-                {isLast ? 'Review all' : 'Next'}
-                {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
-              </Button>
-            )}
-          </div>
         </div>
       )}
+
+      {/* Navigation — always visible so flushPendingLock fires even during the lock beat */}
+      <div className="row-spread pt-2">
+        <Button variant="ghost" onClick={handleBack}>
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          {editingFromSummary ? 'Back to summary' : 'Back'}
+        </Button>
+        {editingFromSummary ? (
+          <Button onClick={() => dispatch({ type: 'GO_TO_SUMMARY' })}>
+            <CheckCircle2 className="h-4 w-4 mr-1" />
+            Done
+          </Button>
+        ) : (
+          <Button onClick={handleNext} disabled={isAnyActive}>
+            {isLast ? 'Review all' : 'Next'}
+            {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

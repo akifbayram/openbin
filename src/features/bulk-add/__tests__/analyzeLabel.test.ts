@@ -94,4 +94,40 @@ describe('computeAnalyzeLabel', () => {
       expect(r.showEllipsis).toBe(false);
     });
   });
+
+  describe('locking mode', () => {
+    it('returns "LOCKED" with itemCount=0 and no ellipsis when partialText is empty', () => {
+      const r = computeAnalyzeLabel({ mode: 'locking', partialText: '', complete: false });
+      expect(r.text).toBe('LOCKED');
+      expect(r.showEllipsis).toBe(false);
+      expect(r.itemCount).toBe(0);
+    });
+
+    it('returns "LOCKED" with itemCount preserved from a one-item partialText', () => {
+      const r = computeAnalyzeLabel({
+        mode: 'locking',
+        partialText: '{"name": "Box", "items": ["Hammer"',
+        complete: false,
+      });
+      expect(r.text).toBe('LOCKED');
+      expect(r.showEllipsis).toBe(false);
+      expect(r.itemCount).toBe(1);
+    });
+
+    it('returns "LOCKED" with itemCount preserved from a multi-item partialText', () => {
+      const r = computeAnalyzeLabel({
+        mode: 'locking',
+        partialText: '{"name": "Box", "items": ["A", "B", "C", "D"',
+        complete: false,
+      });
+      expect(r.text).toBe('LOCKED');
+      expect(r.itemCount).toBe(4);
+    });
+
+    it('still returns "Done" when complete:true overrides locking mode', () => {
+      // Regression guard: complete:true short-circuits the function before mode is checked.
+      const r = computeAnalyzeLabel({ mode: 'locking', partialText: '', complete: true });
+      expect(r.text).toBe('Done');
+    });
+  });
 });
