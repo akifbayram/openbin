@@ -39,6 +39,12 @@ function prefersReducedMotion(): boolean {
 
 const MAX_CORRECTIONS = 3;
 
+// Lock confirmation hold: CSS animations finish at ~240ms, leaving the
+// brackets converged and "LOCKED" readout visible. The remainder is held
+// stillness — long enough for the brain to register the lock as a discrete
+// event before the photo collapse and form fade-in start.
+export const LOCK_BEAT_MS = 600;
+
 async function buildPhotosFormData(photos: Photo[]): Promise<FormData> {
   const compressed = await Promise.all(
     photos.map(async (p) => {
@@ -220,7 +226,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
             setConfirmPhase('idle');
             lockTimerRef.current = null;
             applyPendingResult();
-          }, 300);
+          }, LOCK_BEAT_MS);
         }
       }
     } catch (err) {

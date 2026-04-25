@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/ui/toast';
-import { GroupReviewStep } from '../GroupReviewStep';
+import { GroupReviewStep, LOCK_BEAT_MS } from '../GroupReviewStep';
 import { type BulkAddState, createGroupFromPhoto, createPhoto, type Group, initialState } from '../useBulkGroupAdd';
 
 vi.mock('@/lib/aiToggle', () => ({
@@ -420,13 +420,13 @@ describe('GroupReviewStep lock confirmation beat', () => {
     expect(resultDispatches).toHaveLength(0);
   });
 
-  it('dispatches SET_ANALYZE_RESULT after the 300ms lock-confirmation timer expires', async () => {
+  it('dispatches SET_ANALYZE_RESULT after the lock-confirmation timer expires', async () => {
     mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
     const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
     const dispatch = vi.fn();
     renderStep(makeState({ status: 'pending' }), { aiSettings, dispatch });
 
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(LOCK_BEAT_MS);
 
     const resultDispatches = dispatch.mock.calls.filter(
       (call) => call[0]?.type === 'SET_ANALYZE_RESULT',
@@ -438,7 +438,7 @@ describe('GroupReviewStep lock confirmation beat', () => {
     });
   });
 
-  it('renders PhotoScanFrame phase="locking" during the 300ms beat', async () => {
+  it('renders PhotoScanFrame phase="locking" during the lock beat', async () => {
     mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
     const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
     const { container } = renderStep(makeState({ status: 'pending' }), { aiSettings });
@@ -448,7 +448,7 @@ describe('GroupReviewStep lock confirmation beat', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    // Now advance to within the 300ms beat (stream resolved, timer not yet fired).
+    // Now advance to within the lock beat (stream resolved, timer not yet fired).
     await act(async () => {
       await vi.advanceTimersByTimeAsync(50);
     });
@@ -560,11 +560,11 @@ describe('GroupReviewStep lock confirmation beat', () => {
     const beforeUnmount = dispatch.mock.calls.filter((c) => c[0]?.type === 'SET_ANALYZE_RESULT');
     expect(beforeUnmount).toHaveLength(0);
 
-    // Unmount before the 300ms expires.
+    // Unmount before the lock-beat timer expires.
     unmount();
 
-    // Now advance well past 300ms — the deferred applyPendingResult must NOT fire.
-    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    // Now advance well past LOCK_BEAT_MS — the deferred applyPendingResult must NOT fire.
+    await act(async () => { await vi.advanceTimersByTimeAsync(LOCK_BEAT_MS + 200); });
 
     const afterUnmount = dispatch.mock.calls.filter((c) => c[0]?.type === 'SET_ANALYZE_RESULT');
     expect(afterUnmount).toHaveLength(0);
