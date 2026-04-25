@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 type Phase = 'scanning' | 'locking';
 
 interface PhotoScanFrameProps {
@@ -7,39 +5,37 @@ interface PhotoScanFrameProps {
   itemCount: number;
   /** Active phase. 'scanning' (default) animates the sweep + FOUND readout; 'locking' converges the brackets and crossfades the readout to "LOCKED". */
   phase?: Phase;
-  /** The photo (or photo grid) being scanned. */
-  children: ReactNode;
 }
 
 /**
  * HUD-style overlay rendered while the AI analyzes a photo.
  *
- * Four glowing corner brackets bracket the photo, a 2px purple scan line
- * sweeps top→bottom, and a tiny monospaced readout at the bottom switches
- * from `SCANNING` to `FOUND N` as items stream in.
+ * Four glowing corner brackets, a 2px purple scan line sweeping top→bottom,
+ * and a tiny monospaced readout switching from `SCANNING` to `FOUND N` as
+ * items stream in.
  *
  * When `phase="locking"`, brackets converge inward via a CSS keyframe and a
  * second readout (`LOCKED`) crossfades over the original. The host component
  * controls how long the locking phase lasts; this component is purely visual.
  *
+ * Renders as a fragment of absolutely-positioned chrome — place inside a
+ * `position: relative` parent that holds the photo so the photo stays mounted
+ * across analyze/review state transitions.
+ *
  * Static brackets remain when `prefers-reduced-motion: reduce` is set; line,
  * blink, and lock keyframes stop.
  */
-export function PhotoScanFrame({ itemCount, phase = 'scanning', children }: PhotoScanFrameProps) {
+export function PhotoScanFrame({ itemCount, phase = 'scanning' }: PhotoScanFrameProps) {
   const readout = itemCount > 0 ? `FOUND ${itemCount}` : 'SCANNING';
   const isLocking = phase === 'locking';
 
   return (
-    <div data-photo-scan-frame className="relative">
-      {children}
-
-      {/* Corner brackets */}
+    <>
       <Bracket position="tl" phase={phase} />
       <Bracket position="tr" phase={phase} />
       <Bracket position="bl" phase={phase} />
       <Bracket position="br" phase={phase} />
 
-      {/* Sweeping scan line */}
       <span
         aria-hidden="true"
         data-phase={phase}
@@ -50,7 +46,6 @@ export function PhotoScanFrame({ itemCount, phase = 'scanning', children }: Phot
         }}
       />
 
-      {/* Mono readout (FOUND N / SCANNING) */}
       <span
         aria-hidden="true"
         className={`ai-scan-readout pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 font-mono text-[9px] font-medium uppercase ${
@@ -65,7 +60,7 @@ export function PhotoScanFrame({ itemCount, phase = 'scanning', children }: Phot
         {readout}
       </span>
 
-      {/* Locked readout (only mounted during locking — fades in over the FOUND N readout) */}
+      {/* Mounted only while locking — fades in over the FOUND N readout for the crossfade. */}
       {isLocking && (
         <span
           aria-hidden="true"
@@ -79,7 +74,7 @@ export function PhotoScanFrame({ itemCount, phase = 'scanning', children }: Phot
           LOCKED
         </span>
       )}
-    </div>
+    </>
   );
 }
 

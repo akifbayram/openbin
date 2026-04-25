@@ -1,4 +1,5 @@
 import { ChevronLeft, SquarePen } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { TourLauncher } from '@/features/tour/TourLauncher';
@@ -8,6 +9,7 @@ import { ConversationUI, useBinNavigate } from './ConversationUI';
 export function AskPage() {
   const navigate = useNavigate();
   const handleBinNavigate = useBinNavigate();
+  const [photoToolbarEl, setPhotoToolbarEl] = useState<HTMLDivElement | null>(null);
 
   function handleBack() {
     // Fall back to home if we'd otherwise land outside the SPA
@@ -23,7 +25,8 @@ export function AskPage() {
         onPhotoClose={handleBack}
         onOpenAiSettings={() => navigate('/settings/ai')}
         onDismissAiSetup={handleBack}
-        photoFrameClassName="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-[calc(24px+var(--safe-bottom))]"
+        photoFrameClassName="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable] px-4 pt-4 pb-[calc(24px+var(--safe-bottom))]"
+        headerToolbarTarget={photoToolbarEl}
         renderChrome={({ conversation, photoMode }) => (
           <div
             className="flex items-center gap-2 px-3 border-b border-[var(--border-subtle)] bg-[var(--bg-base)]"
@@ -39,7 +42,7 @@ export function AskPage() {
               <ChevronLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-[17px] font-semibold text-[var(--text-primary)] leading-none">
-              {photoMode ? 'Create from Photos' : 'Ask AI'}
+              {photoMode ? 'New Bin' : 'Ask AI'}
             </h1>
             {conversation.scopeInfo.isScoped && !photoMode && (
               <div className="ml-2">
@@ -63,6 +66,7 @@ export function AskPage() {
                   <SquarePen className="h-5 w-5" />
                 </Button>
               )}
+              {photoMode && <div ref={setPhotoToolbarEl} className="flex items-center gap-1" />}
             </div>
           </div>
         )}

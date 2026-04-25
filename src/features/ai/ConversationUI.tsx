@@ -56,6 +56,8 @@ interface ConversationUIProps {
   photoFrameClassName?: string;
   /** Render the chrome (header, new-chat button, etc.) around the shared body. */
   renderChrome: (shell: ConversationShellState) => React.ReactNode;
+  /** Portal target for the photo bulk-add flow progress indicator (rendered in the chrome between title and close). */
+  headerToolbarTarget?: HTMLElement | null;
 }
 
 export function ConversationUI({
@@ -69,6 +71,7 @@ export function ConversationUI({
   onDismissAiSetup,
   photoFrameClassName,
   renderChrome,
+  headerToolbarTarget,
 }: ConversationUIProps): React.ReactElement {
   const { activeLocationId } = useAuth();
   const { settings, isLoading: aiSettingsLoading } = useAiSettings();
@@ -163,6 +166,7 @@ export function ConversationUI({
         setInitialFiles([]);
         setInitialGroups(null);
       }}
+      headerToolbarTarget={headerToolbarTarget}
     />
   );
 
