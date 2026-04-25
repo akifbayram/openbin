@@ -741,6 +741,47 @@ body {
   .ai-thinking-pulse { animation: none !important; }
 }
 
+/* --- AI Scan Line (HUD overlay during photo analysis) --- */
+.ai-scan-line {
+  animation: ai-scan-line-sweep 1.6s linear infinite;
+}
+@keyframes ai-scan-line-sweep {
+  0%   { top: -2px; }
+  100% { top: 100%; }
+}
+
+.ai-scan-readout {
+  animation: ai-scan-readout-blink 1.2s steps(2) infinite;
+}
+@keyframes ai-scan-readout-blink {
+  50% { opacity: 0.35; }
+}
+
+/* --- Animated Ellipsis (cascading dots while AI is working) --- */
+.ai-ellipsis {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.08em;
+  width: 1em;
+  margin-left: 0.1em;
+}
+.ai-ellipsis > span {
+  opacity: 0;
+  animation: ai-ellipsis-dot 1.4s infinite;
+}
+.ai-ellipsis > span:nth-child(2) { animation-delay: 0.2s; }
+.ai-ellipsis > span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes ai-ellipsis-dot {
+  0%, 70%, 100% { opacity: 0; }
+  30%, 60%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-scan-line       { animation: none !important; top: 50% !important; }
+  .ai-scan-readout    { animation: none !important; }
+  .ai-ellipsis > span { animation: none !important; opacity: 1; }
+}
+
 /* --- AI Stagger Item (list reveals with inline animationDelay) --- */
 .ai-stagger-item {
   opacity: 0;

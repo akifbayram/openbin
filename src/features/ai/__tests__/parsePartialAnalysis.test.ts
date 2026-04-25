@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsePartialAnalysis } from '../parsePartialAnalysis';
+import { parseAnalysisItemCount, parsePartialAnalysis } from '../parsePartialAnalysis';
 
 describe('parsePartialAnalysis', () => {
   it('returns empty name and items for empty string', () => {
@@ -83,5 +83,37 @@ describe('parsePartialAnalysis', () => {
   it('handles empty items array', () => {
     const text = '{"name": "Empty", "items": []}';
     expect(parsePartialAnalysis(text)).toEqual({ name: 'Empty', items: [] });
+  });
+});
+
+describe('parseAnalysisItemCount', () => {
+  it('returns 0 for empty string', () => {
+    expect(parseAnalysisItemCount('')).toBe(0);
+  });
+
+  it('returns 0 when only name parsed (no items array yet)', () => {
+    expect(parseAnalysisItemCount('{"name": "Holiday Decorations"')).toBe(0);
+  });
+
+  it('returns 0 for empty items array', () => {
+    expect(parseAnalysisItemCount('{"name": "Empty", "items": []}')).toBe(0);
+  });
+
+  it('returns 1 when one complete item', () => {
+    expect(parseAnalysisItemCount('{"name": "Box", "items": ["Hammer"')).toBe(1);
+  });
+
+  it('returns N for N complete items', () => {
+    const text = '{"name": "Box", "items": ["A", "B", "C", "D", "E"';
+    expect(parseAnalysisItemCount(text)).toBe(5);
+  });
+
+  it('does not count a truncated mid-string item', () => {
+    expect(parseAnalysisItemCount('{"name": "Box", "items": ["Done", "Partial ite')).toBe(1);
+  });
+
+  it('counts items in object format', () => {
+    const text = '{"name": "Box", "items": [{"name": "A"}, {"name": "B"}';
+    expect(parseAnalysisItemCount(text)).toBe(2);
   });
 });

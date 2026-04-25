@@ -296,7 +296,6 @@ export interface AiSuggestedItem {
 export interface AiSuggestions {
   name: string;
   items: AiSuggestedItem[];
-  customFields?: Record<string, string>;
 }
 
 export interface PlanFeatures {

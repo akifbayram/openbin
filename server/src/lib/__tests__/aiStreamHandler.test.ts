@@ -38,14 +38,13 @@ vi.mock('../aiCaller.js', () => ({
   createPinnedFetch: vi.fn(() => undefined),
 }));
 
-vi.mock('../aiRequestHelpers.js', () => ({
-  verifyLocationAndFetchMeta: vi.fn(async () => ({ customFieldDefs: [] })),
+vi.mock('../binAccess.js', () => ({
+  verifyOptionalLocationMembership: vi.fn(async () => true),
 }));
 
 vi.mock('../aiProviders.js', () => ({
   buildSystemPrompt: vi.fn(() => 'system'),
   buildAnalysisUserText: vi.fn(() => 'text'),
-  buildContextPreamble: vi.fn(() => ''),
   IMAGE_TOKENS_SINGLE: 10000,
   IMAGE_TOKENS_MULTI: 10000,
 }));
@@ -66,7 +65,7 @@ describe('runAnalysisStream', () => {
     const originalBuffer = Buffer.from('ORIGINAL');
     const capturedImageParts: Array<{ image: Buffer; mimeType: string }> = [];
 
-    const buildUserContent = vi.fn((args: { imageParts: Array<{ type: 'image'; image: Buffer; mimeType: string }>; preamble: string; imageCount: number }) => {
+    const buildUserContent = vi.fn((args: { imageParts: Array<{ type: 'image'; image: Buffer; mimeType: string }>; imageCount: number }) => {
       for (const part of args.imageParts) {
         capturedImageParts.push({ image: part.image, mimeType: part.mimeType });
       }

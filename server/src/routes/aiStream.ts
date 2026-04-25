@@ -2,19 +2,20 @@ import { Router } from 'express';
 import { query } from '../db.js';
 import { buildCommandContext, buildInventoryContext } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
-import { buildContextPreamble, buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent } from '../lib/aiProviders.js';
-import { extractPhotoIds, extractUploadedFiles, sanitizePreviousResult, validatePreviousResult, verifyLocationAndFetchMeta } from '../lib/aiRequestHelpers.js';
+import { buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent } from '../lib/aiProviders.js';
+import { extractPhotoIds, extractUploadedFiles, sanitizePreviousResult, validatePreviousResult } from '../lib/aiRequestHelpers.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { sanitizeForPrompt } from '../lib/aiSanitize.js';
 import { AiSuggestionsSchema, QueryResultSchema, TagProposalSchema } from '../lib/aiSchemas.js';
 import { initSseResponse, pipeAiStreamToResponse, streamAiToWriter } from '../lib/aiStream.js';
 import { defaultAnalysisSystem, defaultAnalysisUserContent, resolveUserModel, runAnalysisStream, streamOpts } from '../lib/aiStreamHandler.js';
+import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import { buildTagSuggestionPrompt, type TagSuggestionBin } from '../lib/buildTagSuggestionPrompt.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, buildUnifiedSystemPrompt } from '../lib/commandParser.js';
 import { config, isDemoUser } from '../lib/config.js';
 import { parseHistoryFromBody } from '../lib/conversationHistory.js';
-import { ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
 import { classifyIntent } from '../lib/intentClassifier.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg, enrichQueryMatches, type RawMatch } from '../lib/inventoryQuery.js';
 import { assertReorganizeBinLimit, refundAiCredit } from '../lib/planGate.js';
@@ -291,7 +292,6 @@ streamRouter.post('/analyze/stream', ...aiRateLimiters, requirePlusOrAbove(), re
     req,
     res,
     images: loaded.images.map((img) => ({ buffer: img.buffer, mimeType: img.mimeType })),
-    meta: { customFieldDefs: loaded.customFieldDefs },
     buildSystem: defaultAnalysisSystem(isDemoUser(req)),
     buildUserContent: defaultAnalysisUserContent,
   });
@@ -314,9 +314,8 @@ streamRouter.post('/reanalyze/stream', ...aiRateLimiters, requirePlusOrAbove(), 
     req,
     res,
     images: loaded.images.map((img) => ({ buffer: img.buffer, mimeType: img.mimeType })),
-    meta: { customFieldDefs: loaded.customFieldDefs },
     buildSystem: () => buildReanalysisPrompt(),
-    buildUserContent: ({ imageParts, preamble }) => buildReanalysisUserContent(safePrevious, imageParts, preamble),
+    buildUserContent: ({ imageParts }) => buildReanalysisUserContent(safePrevious, imageParts),
   });
 }));
 
@@ -335,12 +334,13 @@ streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), check
     return;
   }
 
+  if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
+    throw new ForbiddenError('Not a member of this location');
+  }
   const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
-  const { customFieldDefs } = await verifyLocationAndFetchMeta(locationId, req.user!.id);
 
-  const correctionPreamble = buildContextPreamble(customFieldDefs);
   const sanitizedCorrection = sanitizeForPrompt(correctionText);
-  const userMessage = `${correctionPreamble}<previous_result>\n${JSON.stringify(safePrevious, null, 2)}\n</previous_result>\n\n<correction_feedback>\n${sanitizedCorrection}\n</correction_feedback>`;
+  const userMessage = `<previous_result>\n${JSON.stringify(safePrevious, null, 2)}\n</previous_result>\n\n<correction_feedback>\n${sanitizedCorrection}\n</correction_feedback>`;
 
   await pipeAiStreamToResponse(res, model, {
     system: buildCorrectionPrompt(),
@@ -375,7 +375,7 @@ streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
     images: allFiles.map((f) => ({ buffer: f.buffer, mimeType: f.mimetype })),
     locationId: req.body?.locationId,
     buildSystem: () => buildReanalysisPrompt(),
-    buildUserContent: ({ imageParts, preamble }) => buildReanalysisUserContent(safePrevious, imageParts, preamble),
+    buildUserContent: ({ imageParts }) => buildReanalysisUserContent(safePrevious, imageParts),
   });
 }));
 

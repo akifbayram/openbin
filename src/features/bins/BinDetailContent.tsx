@@ -30,7 +30,6 @@ interface BinDetailContentProps {
   onApplySuggestions: (changes: Partial<{
     name: string;
     items: { name: string; quantity?: number | null }[];
-    customFields: Record<string, string>;
   }>) => void;
   onClearSuggestions: () => void;
 }
@@ -83,8 +82,6 @@ export function BinDetailContent({
                 previousResult={previousResult}
                 currentName={bin.name}
                 currentItems={bin.items}
-                customFieldDefs={customFields}
-                currentCustomFields={bin.custom_fields}
                 onApply={onApplySuggestions}
                 onDismiss={onClearSuggestions}
               />

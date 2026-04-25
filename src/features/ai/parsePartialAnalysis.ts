@@ -41,3 +41,8 @@ export function parsePartialAnalysis(text: string): PartialAnalysis {
 
   return { name, items };
 }
+
+/** Number of complete items in a partial JSON analysis stream. */
+export function parseAnalysisItemCount(text: string): number {
+  return parsePartialAnalysis(text).items.length;
+}

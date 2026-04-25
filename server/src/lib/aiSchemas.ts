@@ -10,7 +10,6 @@ const AiItemSchema = z.object({
 export const AiSuggestionsSchema = z.object({
   name: z.string(),
   items: z.array(AiItemSchema),
-  customFields: z.record(z.string(), z.string()).optional(),
 });
 
 /** Schema for structure-text results. Used with generateObject() in structureText.ts. */

@@ -1,7 +1,7 @@
-import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Sparkles } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
+import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, RotateCw, Sparkles, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { AiProgressBar } from '@/components/ui/ai-progress-bar';
+import { AnimatedEllipsis } from '@/components/ui/animated-ellipsis';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,10 @@ import { aiItemsToBinItems } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import type { AiSettings, AiSuggestions } from '@/types';
+import { computeAnalyzeLabel } from './analyzeLabel';
+import { PhotoScanFrame } from './PhotoScanFrame';
+import { QueueDots } from './QueueDots';
+import { computeReviewHeader } from './reviewHeader';
 import type { BulkAddAction, Group, Photo } from './useBulkGroupAdd';
 
 const MAX_CORRECTIONS = 3;
@@ -47,19 +51,6 @@ async function buildPhotosFormData(photos: Photo[]): Promise<FormData> {
   }
   return formData;
 }
-
-const REANALYSIS_LABELS: LabelThreshold[] = [
-  [0, 'Preparing reanalysis...'],
-  [15, 'Comparing changes...'],
-  [45, 'Updating suggestions...'],
-  [75, 'Almost done...'],
-];
-const CORRECTION_LABELS: LabelThreshold[] = [
-  [0, 'Applying correction...'],
-  [15, 'Reprocessing...'],
-  [45, 'Updating results...'],
-  [75, 'Almost done...'],
-];
 
 interface PendingResult {
   id: string;
@@ -85,22 +76,17 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [correctionText, setCorrectionText] = useState('');
 
-  // Completion flash: defer result dispatch until after 600ms green bar
-  const [analyzeComplete, setAnalyzeComplete] = useState(false);
   const pendingResult = useRef<PendingResult | null>(null);
 
   const autoAnalyzedRef = useRef(new Set<string>());
   const abortRef = useRef<Map<string, AbortController>>(new Map());
-
-  // Deferred completion detection
-  const wasStreamingRef = useRef(false);
-  const expectingCompletionRef = useRef(false);
 
   const {
     isStreaming: isAnalyzingStream,
     error: analyzeStreamError,
     stream: streamAnalyze,
     cancel: cancelAnalyze,
+    partialText: analyzePartialText,
   } = useAiStream<AiSuggestions>('/api/ai/analyze-image/stream', "Couldn't analyze the photo — try again");
 
   const {
@@ -108,6 +94,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     error: correctionError,
     stream: streamCorrection,
     cancel: cancelCorrection,
+    partialText: correctionPartialText,
   } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
 
   const {
@@ -115,6 +102,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     error: reanalyzeError,
     stream: streamReanalyze,
     cancel: cancelReanalyze,
+    partialText: reanalyzePartialText,
   } = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', "Couldn't reanalyze — try again");
 
   const group = groups[currentIndex];
@@ -136,21 +124,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
 
   const isAnalyzing = group.status === 'analyzing';
   const isAnyActive = isAnalyzing || isAnalyzingStream || isReanalyzing || isCorrecting;
-  const showProgressBar = isAnyActive || analyzeComplete;
+  const showProgressBar = isAnyActive;
   const anyError = group.analyzeError || analyzeStreamError || correctionError || reanalyzeError;
-
-  // Race-free completion detection — fires before paint
-  // biome-ignore lint/correctness/useHookAtTopLevel: group guard returns null above only if groups array is empty
-  useLayoutEffect(() => {
-    const justStopped = wasStreamingRef.current && !isAnyActive;
-    wasStreamingRef.current = isAnyActive;
-    if (justStopped && expectingCompletionRef.current) {
-      expectingCompletionRef.current = false;
-      if (!anyError) {
-        setAnalyzeComplete(true);
-      }
-    }
-  }, [isAnyActive, anyError]);
 
   // Surface stream errors that arrive via the hook's `error` state but never get
   // dispatched onto the group. Without this, a mid-stream error event makes the
@@ -163,7 +138,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     const streamError = analyzeStreamError || reanalyzeError || correctionError;
     if (streamError) {
       dispatch({ type: 'SET_ANALYZE_ERROR', id: group.id, error: streamError });
-      expectingCompletionRef.current = false;
       setCorrectionOpen(false);
     }
   }, [analyzeStreamError, reanalyzeError, correctionError, group?.id, group?.status, dispatch]);
@@ -187,23 +161,10 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     }
   }
 
-  // Completion flash timer — apply deferred result after 600ms
-  // biome-ignore lint/correctness/useHookAtTopLevel: group guard returns null above only if groups array is empty
-  // biome-ignore lint/correctness/useExhaustiveDependencies: applyPendingResult reads from refs only, no stale closure risk
-  useEffect(() => {
-    if (!analyzeComplete) return;
-    const timer = setTimeout(() => {
-      setAnalyzeComplete(false);
-      applyPendingResult();
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [analyzeComplete]);
-
   // Abort streams on unmount or navigate away
   // biome-ignore lint/correctness/useHookAtTopLevel: group guard returns null above only if groups array is empty
   useEffect(() => {
     return () => {
-      expectingCompletionRef.current = false;
       for (const ctrl of abortRef.current.values()) ctrl.abort();
       abortRef.current.clear();
       cancelAnalyze();
@@ -218,7 +179,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   useEffect(() => {
     setCorrectionOpen(false);
     setCorrectionText('');
-    setAnalyzeComplete(false);
     pendingResult.current = null;
   }, [currentIndex]);
 
@@ -234,7 +194,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       const formData = await buildPhotosFormData(target.photos.slice(0, MAX_AI_PHOTOS));
       if (activeLocationId) formData.append('locationId', activeLocationId);
 
-      expectingCompletionRef.current = true;
       const result = await streamAnalyze(formData);
       if (result) {
         pendingResult.current = {
@@ -242,7 +201,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           name: result.name || '',
           items: aiItemsToBinItems(result.items || []),
         };
-        setAnalyzeComplete(true);
+        applyPendingResult();
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -268,7 +227,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       formData.append('previousResult', JSON.stringify(previousResult));
       if (activeLocationId) formData.append('locationId', activeLocationId);
 
-      expectingCompletionRef.current = true;
       const result = await streamReanalyze(formData);
       if (result) {
         pendingResult.current = {
@@ -276,7 +234,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           name: result.name || '',
           items: aiItemsToBinItems(result.items || []),
         };
-        setAnalyzeComplete(true);
+        applyPendingResult();
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -293,7 +251,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       items: target.items.map((i) => ({ name: i.name, quantity: i.quantity })),
     };
 
-    expectingCompletionRef.current = true;
     const result = await streamCorrection({
       previousResult,
       correction: text,
@@ -307,7 +264,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
         items: aiItemsToBinItems(result.items || []),
         isCorrection: true,
       };
-      setAnalyzeComplete(true);
+      applyPendingResult();
     }
   }
 
@@ -340,7 +297,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
 
   function handleBack() {
     abortRef.current.get(group.id)?.abort();
-    expectingCompletionRef.current = false;
     cancelAnalyze();
     cancelCorrection();
     cancelReanalyze();
@@ -371,12 +327,45 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     }
   }
 
-  const photoCount = Math.min(group.photos.length, MAX_AI_PHOTOS);
-  const streamLabels: LabelThreshold[] = isCorrecting
-    ? CORRECTION_LABELS
+  const streamMode: 'analyze' | 'reanalyze' | 'correction' | 'idle' = isCorrecting
+    ? 'correction'
     : isReanalyzing
-      ? REANALYSIS_LABELS
-      : [[0, `Analyzing ${photoCount} photo${photoCount !== 1 ? 's' : ''}...`], [15, 'Identifying items...'], [45, 'Streaming results...'], [75, 'Finishing up...']];
+      ? 'reanalyze'
+      : isAnalyzingStream || isAnalyzing
+        ? 'analyze'
+        : 'idle';
+
+  const streamPartialText = isCorrecting
+    ? correctionPartialText
+    : isReanalyzing
+      ? reanalyzePartialText
+      : analyzePartialText;
+
+  const labelState = computeAnalyzeLabel({
+    mode: streamMode,
+    partialText: streamPartialText,
+    complete: false,
+  });
+
+  const headerState = computeReviewHeader({
+    groupCount: groups.length,
+    currentIndex,
+    photoCount: group.photos.length,
+    editingFromSummary,
+    isAnalyzing: isAnyActive,
+    term: { bin: t.bin, Bin: t.Bin },
+  });
+
+  function handleCancel() {
+    if (isCorrecting) cancelCorrection();
+    else if (isReanalyzing) cancelReanalyze();
+    else cancelAnalyze();
+    dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { status: 'pending' } });
+  }
+
+  const reviewedCount = groups.filter((g) => g.status === 'reviewed').length;
+  const showTryAiAgain =
+    aiEnabled && !!aiSettings && group.status === 'pending' && !isAnyActive;
 
   return (
     <div data-tour="group-review" className="space-y-5">
@@ -384,51 +373,53 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       <header className="space-y-1">
         <div className="row-spread">
           <h2 className="text-[17px] font-semibold leading-tight text-[var(--text-primary)]">
-            {editingFromSummary
-              ? `Edit ${t.bin}`
-              : groups.length > 1
-                ? `Review ${t.bin} ${currentIndex + 1}`
-                : `Review ${t.bin}`}
+            {headerState.title}
           </h2>
-          {groups.length > 1 && (
-            <span className="text-[12px] text-[var(--text-tertiary)]">
-              {groups.filter((g) => g.status === 'reviewed').length}/{groups.length} reviewed
-            </span>
-          )}
+          <QueueDots
+            total={groups.length}
+            currentIndex={currentIndex}
+            doneCount={reviewedCount}
+            termBin={t.Bin}
+          />
         </div>
-        <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
-          {isAnyActive || analyzeComplete
-            ? 'AI is identifying items in your photos.'
-            : `Confirm the details for this ${t.bin}.`}
-        </p>
+        {headerState.subtitle && (
+          <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
+            {headerState.subtitle}
+          </p>
+        )}
       </header>
 
-      {/* Photo preview — always visible */}
+      {/* Photo preview — always visible. HUD overlay mounts during streaming. */}
       <div className="relative">
-        {group.photos.length === 1 ? (
-          <img
-            src={group.photos[0].previewUrl}
-            alt="Preview 1"
-            className={cn(
+        {(() => {
+          const collapsed = !!group.name;
+          const photoClasses = (extra?: string) =>
+            cn(
               'w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
-              (group.name || showProgressBar) ? 'max-h-20 opacity-80' : 'aspect-square',
-            )}
-          />
-        ) : (
-          <div className="flex gap-2 overflow-x-auto">
-            {group.photos.map((photo, i) => (
-              <img
-                key={photo.id}
-                src={photo.previewUrl}
-                alt={`Preview ${i + 1}`}
-                className={cn(
-                  'shrink-0 flex-1 min-w-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
-                  (group.name || showProgressBar) ? 'max-h-20 opacity-80' : 'aspect-square',
-                )}
-              />
-            ))}
-          </div>
-        )}
+              collapsed ? 'max-h-20 opacity-80' : 'aspect-square',
+              extra,
+            );
+          const photos =
+            group.photos.length === 1 ? (
+              <img src={group.photos[0].previewUrl} alt="Preview 1" className={photoClasses()} />
+            ) : (
+              <div className="flex gap-2 overflow-x-auto">
+                {group.photos.map((photo, i) => (
+                  <img
+                    key={photo.id}
+                    src={photo.previewUrl}
+                    alt={`Preview ${i + 1}`}
+                    className={photoClasses('shrink-0 flex-1 min-w-0')}
+                  />
+                ))}
+              </div>
+            );
+          return isAnyActive ? (
+            <PhotoScanFrame itemCount={labelState.itemCount}>{photos}</PhotoScanFrame>
+          ) : (
+            photos
+          );
+        })()}
         {aiEnabled && group.status === 'reviewed' && !showProgressBar && (
           <button
             type="button"
@@ -447,13 +438,29 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       </div>
 
       {showProgressBar ? (
-        <div className="flex items-center justify-center min-h-[44px]">
+        <div className="space-y-2">
           <AiProgressBar
             active={isAnyActive}
-            complete={analyzeComplete}
-            labels={streamLabels}
+            showSparkles={false}
             className="w-full"
           />
+          <output aria-live="polite" className="row min-w-0">
+            <span className="flex-1 truncate font-mono text-[12px] font-medium text-[var(--text-tertiary)]">
+              {labelState.text}
+              {labelState.showEllipsis && <AnimatedEllipsis />}
+            </span>
+            {isAnyActive && (
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Cancel scan"
+                onClick={handleCancel}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Cancel
+              </Button>
+            )}
+          </output>
         </div>
       ) : (
         <div className="animate-fade-in space-y-5">
@@ -522,6 +529,19 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           {/* Inline AI Setup */}
           {aiEnabled && aiSetupExpanded && !aiSettings && (
             <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
+          )}
+
+          {/* Retry AI when user cancelled mid-stream */}
+          {showTryAiAgain && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="self-start"
+              onClick={() => triggerAnalyze(group)}
+            >
+              <RotateCw className="h-3.5 w-3.5 mr-1" />
+              Try AI again
+            </Button>
           )}
 
           {/* Form Fields */}

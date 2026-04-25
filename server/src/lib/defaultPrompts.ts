@@ -123,9 +123,7 @@ All field conventions match the original analysis:
 
 ${NAME_CONVENTION}
 
-${ITEMS_CONVENTION}
-
-"customFields" — If an EXISTING CUSTOM FIELDS block is provided in the user message, include suggested values keyed by field name when relevant. Preserve any field the <correction_feedback> does not address.`;
+${ITEMS_CONVENTION}`;
 
 export const DEFAULT_REORGANIZATION_PROMPT = `You are a storage reorganization assistant. You receive a list of bins with their items and propose a new, better-organized set of bins.
 
