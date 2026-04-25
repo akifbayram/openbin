@@ -508,4 +508,42 @@ describe('GroupReviewStep lock confirmation beat', () => {
     // "LOCKED" appears in the HUD readout (PhotoScanFrame) and in the status-row label.
     expect(screen.getAllByText('LOCKED').length).toBeGreaterThan(0);
   });
+
+  it('skips the lock beat and dispatches immediately when prefers-reduced-motion is set', async () => {
+    // Mock matchMedia to report reduced-motion preference.
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    try {
+      mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+      const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+      const dispatch = vi.fn();
+      const { container } = renderStep(makeState({ status: 'pending' }), { aiSettings, dispatch });
+
+      // Let the stream resolve. NO timer advancement past the moment the stream resolves —
+      // the dispatch must happen synchronously when reduced-motion is set.
+      await vi.advanceTimersByTimeAsync(0);
+
+      const resultDispatches = dispatch.mock.calls.filter(
+        (call) => call[0]?.type === 'SET_ANALYZE_RESULT',
+      );
+      expect(resultDispatches).toHaveLength(1);
+
+      // Phase="locking" must not have been rendered at any point.
+      container.querySelectorAll('[data-bracket]').forEach((el) => {
+        expect(el.getAttribute('data-phase')).not.toBe('locking');
+      });
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
 });
