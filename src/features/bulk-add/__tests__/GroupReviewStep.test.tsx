@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/ui/toast';
 import { GroupReviewStep } from '../GroupReviewStep';
 import { type BulkAddState, createGroupFromPhoto, createPhoto, type Group, initialState } from '../useBulkGroupAdd';
@@ -385,5 +385,127 @@ describe('GroupReviewStep header', () => {
   it('does not render QueueDots when there is only 1 group', () => {
     const { container } = renderStep(makeState());
     expect(container.querySelectorAll('[data-queue-dot]').length).toBe(0);
+  });
+});
+
+describe('GroupReviewStep lock confirmation beat', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    mockStream.mockReset();
+    mockCancel.mockReset();
+    mockStreamError = null;
+    mockStreamState = {
+      analyze: { ...idleStream },
+      reanalyze: { ...idleStream },
+      correction: { ...idleStream },
+    };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('does not dispatch SET_ANALYZE_RESULT immediately when streamAnalyze resolves', async () => {
+    mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    const dispatch = vi.fn();
+    renderStep(makeState({ status: 'pending' }), { aiSettings, dispatch });
+
+    // Let microtasks (auto-analyze useEffect, stream promise) settle, but do NOT advance timers.
+    await vi.advanceTimersByTimeAsync(0);
+
+    const resultDispatches = dispatch.mock.calls.filter(
+      (call) => call[0]?.type === 'SET_ANALYZE_RESULT',
+    );
+    expect(resultDispatches).toHaveLength(0);
+  });
+
+  it('dispatches SET_ANALYZE_RESULT after the 300ms lock-confirmation timer expires', async () => {
+    mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    const dispatch = vi.fn();
+    renderStep(makeState({ status: 'pending' }), { aiSettings, dispatch });
+
+    await vi.advanceTimersByTimeAsync(300);
+
+    const resultDispatches = dispatch.mock.calls.filter(
+      (call) => call[0]?.type === 'SET_ANALYZE_RESULT',
+    );
+    expect(resultDispatches).toHaveLength(1);
+    expect(resultDispatches[0][0]).toMatchObject({
+      type: 'SET_ANALYZE_RESULT',
+      name: 'Holiday Decorations',
+    });
+  });
+
+  it('renders PhotoScanFrame phase="locking" during the 300ms beat', async () => {
+    mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    const { container } = renderStep(makeState({ status: 'pending' }), { aiSettings });
+
+    // Flush microtasks so the async chain (buildPhotosFormData → streamAnalyze → setConfirmPhase)
+    // completes and React re-renders before we advance fake timers into the beat window.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    // Now advance to within the 300ms beat (stream resolved, timer not yet fired).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+
+    const brackets = container.querySelectorAll('[data-bracket]');
+    expect(brackets.length).toBe(4);
+    brackets.forEach((el) => {
+      expect(el.getAttribute('data-phase')).toBe('locking');
+    });
+  });
+
+  it('keeps the photo full-size (aspect-square, not max-h-20) during the lock beat', async () => {
+    mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    const { container } = renderStep(makeState({ status: 'pending' }), { aiSettings });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+
+    const photo = container.querySelector('img');
+    expect(photo).toBeTruthy();
+    expect(photo!.className).toMatch(/aspect-square/);
+    expect(photo!.className).not.toMatch(/max-h-20/);
+  });
+
+  it('hides the Cancel button during the lock beat', async () => {
+    mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+
+    expect(screen.queryByRole('button', { name: /cancel scan/i })).toBeNull();
+  });
+
+  it('shows "LOCKED" in the status-row label during the lock beat', async () => {
+    mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+
+    // "LOCKED" appears in the HUD readout (PhotoScanFrame) and in the status-row label.
+    expect(screen.getAllByText('LOCKED').length).toBeGreaterThan(0);
   });
 });

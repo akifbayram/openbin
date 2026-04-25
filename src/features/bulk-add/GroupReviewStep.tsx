@@ -26,11 +26,16 @@ import { aiItemsToBinItems } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import type { AiSettings, AiSuggestions } from '@/types';
-import { computeAnalyzeLabel } from './analyzeLabel';
+import { type AnalyzeStreamMode, computeAnalyzeLabel } from './analyzeLabel';
 import { PhotoScanFrame } from './PhotoScanFrame';
 import { QueueDots } from './QueueDots';
 import { computeReviewHeader } from './reviewHeader';
 import type { BulkAddAction, Group, Photo } from './useBulkGroupAdd';
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 const MAX_CORRECTIONS = 3;
 
@@ -75,6 +80,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [correctionText, setCorrectionText] = useState('');
+  const [confirmPhase, setConfirmPhase] = useState<'idle' | 'locking'>('idle');
+  const lockTimerRef = useRef<number | null>(null);
 
   const pendingResult = useRef<PendingResult | null>(null);
 
@@ -124,7 +131,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
 
   const isAnalyzing = group.status === 'analyzing';
   const isAnyActive = isAnalyzing || isAnalyzingStream || isReanalyzing || isCorrecting;
-  const showProgressBar = isAnyActive;
+  const showProgressBar = isAnyActive || confirmPhase === 'locking';
   const anyError = group.analyzeError || analyzeStreamError || correctionError || reanalyzeError;
 
   // Surface stream errors that arrive via the hook's `error` state but never get
@@ -201,7 +208,16 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           name: result.name || '',
           items: aiItemsToBinItems(result.items || []),
         };
-        applyPendingResult();
+        if (prefersReducedMotion()) {
+          applyPendingResult();
+        } else {
+          setConfirmPhase('locking');
+          lockTimerRef.current = window.setTimeout(() => {
+            setConfirmPhase('idle');
+            lockTimerRef.current = null;
+            applyPendingResult();
+          }, 300);
+        }
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -327,13 +343,15 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     }
   }
 
-  const streamMode: 'analyze' | 'reanalyze' | 'correction' | 'idle' = isCorrecting
-    ? 'correction'
-    : isReanalyzing
-      ? 'reanalyze'
-      : isAnalyzingStream || isAnalyzing
-        ? 'analyze'
-        : 'idle';
+  const streamMode: AnalyzeStreamMode = confirmPhase === 'locking'
+    ? 'locking'
+    : isCorrecting
+      ? 'correction'
+      : isReanalyzing
+        ? 'reanalyze'
+        : isAnalyzingStream || isAnalyzing
+          ? 'analyze'
+          : 'idle';
 
   const streamPartialText = isCorrecting
     ? correctionPartialText
@@ -414,8 +432,10 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
                 ))}
               </div>
             );
-          return isAnyActive ? (
-            <PhotoScanFrame itemCount={labelState.itemCount}>{photos}</PhotoScanFrame>
+          const hudMounted = isAnyActive || confirmPhase === 'locking';
+          const hudPhase: 'scanning' | 'locking' = confirmPhase === 'locking' ? 'locking' : 'scanning';
+          return hudMounted ? (
+            <PhotoScanFrame itemCount={labelState.itemCount} phase={hudPhase}>{photos}</PhotoScanFrame>
           ) : (
             photos
           );
@@ -440,7 +460,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       {showProgressBar ? (
         <div className="space-y-2">
           <AiProgressBar
-            active={isAnyActive}
+            active={isAnyActive || confirmPhase === 'locking'}
             showSparkles={false}
             className="w-full"
           />
