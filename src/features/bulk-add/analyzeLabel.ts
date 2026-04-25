@@ -1,6 +1,6 @@
 import { parseAnalysisItemCount } from '@/features/ai/parsePartialAnalysis';
 
-export type AnalyzeStreamMode = 'analyze' | 'reanalyze' | 'correction' | 'idle';
+export type AnalyzeStreamMode = 'analyze' | 'reanalyze' | 'correction' | 'locking' | 'idle';
 
 export interface AnalyzeLabelState {
   /** Plain text label, no trailing ellipsis. */
@@ -25,6 +25,14 @@ export function computeAnalyzeLabel(opts: {
 }): AnalyzeLabelState {
   if (opts.complete) {
     return { text: 'Done', showEllipsis: false, itemCount: 0 };
+  }
+
+  if (opts.mode === 'locking') {
+    return {
+      text: 'LOCKED',
+      showEllipsis: false,
+      itemCount: parseAnalysisItemCount(opts.partialText),
+    };
   }
 
   if (opts.mode === 'idle') {
