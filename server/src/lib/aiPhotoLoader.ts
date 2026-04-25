@@ -1,19 +1,15 @@
 import fs from 'node:fs/promises';
 import { query } from '../db.js';
-import type { CustomFieldDef } from './customFieldHelpers.js';
-import { fetchCustomFieldDefs } from './customFieldHelpers.js';
 import { safePath } from './pathSafety.js';
 import { PHOTO_STORAGE_PATH } from './uploadConfig.js';
 
 interface LoadedPhotos {
   images: Array<{ buffer: Buffer; mimeType: string }>;
   locationId: string;
-  customFieldDefs: CustomFieldDef[] | undefined;
 }
 
 /**
- * Load stored photos for AI analysis: validates access, reads files,
- * and fetches custom field definitions.
+ * Load stored photos for AI analysis: validates access and reads files.
  * Returns null if photo files are missing on disk.
  */
 export async function loadPhotosForAnalysis(ids: string[], userId: string): Promise<LoadedPhotos | null> {
@@ -33,30 +29,27 @@ export async function loadPhotosForAnalysis(ids: string[], userId: string): Prom
 
   const locationId: string = photoResult.rows[0].location_id;
 
-  const [imageBuffers, customFieldDefs] = await Promise.all([
-    Promise.all(
-      photoResult.rows.map(async (row) => {
-        const filePath = safePath(PHOTO_STORAGE_PATH, row.storage_path);
-        if (!filePath) {
-          throw Object.assign(new Error('Invalid photo path'), { statusCode: 404 });
-        }
-        const buffer = await fs.readFile(filePath);
-        return { buffer, mimeType: row.mime_type as string };
-      })
-    ).catch((err) => {
-      if ((err as NodeJS.ErrnoException).code === 'ENOENT' || (err as { statusCode?: number }).statusCode === 404) {
-        return null;
+  const imageBuffers = await Promise.all(
+    photoResult.rows.map(async (row) => {
+      const filePath = safePath(PHOTO_STORAGE_PATH, row.storage_path);
+      if (!filePath) {
+        throw Object.assign(new Error('Invalid photo path'), { statusCode: 404 });
       }
-      throw err;
-    }),
-    fetchCustomFieldDefs(locationId),
-  ]);
+      const buffer = await fs.readFile(filePath);
+      return { buffer, mimeType: row.mime_type as string };
+    })
+  ).catch((err) => {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT' || (err as { statusCode?: number }).statusCode === 404) {
+      return null;
+    }
+    throw err;
+  });
 
   if (!imageBuffers) {
     return null;
   }
 
-  return { images: imageBuffers, locationId, customFieldDefs };
+  return { images: imageBuffers, locationId };
 }
 
 /** Build a deterministic mock analysis result. */

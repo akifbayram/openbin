@@ -2,14 +2,14 @@ import type { UserContent } from 'ai';
 import type { Request, Response } from 'express';
 import { createPinnedFetch, validateEndpointUrl } from './aiCaller.js';
 import { resizeImageForAi } from './aiImageResize.js';
-import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildContextPreamble, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from './aiProviders.js';
-import type { LocationAiMeta } from './aiRequestHelpers.js';
-import { verifyLocationAndFetchMeta } from './aiRequestHelpers.js';
+import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from './aiProviders.js';
 import { AiSuggestionsSchema } from './aiSchemas.js';
 import type { TaskType, UserAiSettings } from './aiSettings.js';
 import { getConfigForTask, getUserAiSettings } from './aiSettings.js';
 import { pipeAiStreamToResponse } from './aiStream.js';
+import { verifyOptionalLocationMembership } from './binAccess.js';
 import { isDemoUser } from './config.js';
+import { ForbiddenError } from './httpErrors.js';
 import { createSdkModel } from './sdkProviderFactory.js';
 import { resolveTaskConfig, TASK_GROUP_MAP } from './taskRouting.js';
 
@@ -55,14 +55,12 @@ export interface AnalysisStreamArgs {
   res: Response;
   /** Images to analyze. */
   images: AnalysisImage[];
-  /** Location ID for membership check + meta fetch. */
+  /** Location ID for membership check. Omit when the caller already verified access (e.g. the stored-photo loader joins on `location_members`). */
   locationId?: string;
-  /** Pre-fetched meta — skip the fetch when provided (e.g. analyze stored-photo flow). */
-  meta?: LocationAiMeta;
   /** System-prompt builder. Receives user settings so it can read custom_prompt. */
   buildSystem: (settings: UserAiSettings) => string;
-  /** User-content builder. Receives image parts + preamble text so callers can wrap them (e.g. reanalysis). */
-  buildUserContent: (args: { imageParts: Array<{ type: 'image'; image: Buffer; mimeType: string }>; preamble: string; imageCount: number }) => UserContent;
+  /** User-content builder. Receives image parts so callers can wrap them (e.g. reanalysis). */
+  buildUserContent: (args: { imageParts: Array<{ type: 'image'; image: Buffer; mimeType: string }>; imageCount: number }) => UserContent;
   /** Optional maxTokens override; defaults to the image-token budget based on image count. */
   maxTokens?: number;
 }
@@ -70,14 +68,15 @@ export interface AnalysisStreamArgs {
 /**
  * Shared flow for image-analysis streaming endpoints.
  *
- * Handles: analysis-task model resolution, location membership + meta fetch,
- * image-part assembly, context preamble, and SSE piping.
+ * Handles: location membership check, analysis-task model resolution,
+ * image-part assembly, and SSE piping.
  */
 export async function runAnalysisStream(args: AnalysisStreamArgs): Promise<void> {
   const { req, res, images, locationId, buildSystem, buildUserContent, maxTokens } = args;
+  if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
+    throw new ForbiddenError('Not a member of this location');
+  }
   const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
-  const { customFieldDefs } = args.meta
-    ?? await verifyLocationAndFetchMeta(locationId, req.user!.id);
 
   const resized = await Promise.all(
     images.map((img) => resizeImageForAi(img.buffer, img.mimeType)),
@@ -87,11 +86,10 @@ export async function runAnalysisStream(args: AnalysisStreamArgs): Promise<void>
     image: img.buffer,
     mimeType: img.mimeType,
   }));
-  const preamble = buildContextPreamble(customFieldDefs);
 
   await pipeAiStreamToResponse(res, model, {
     system: buildSystem(settings),
-    userContent: buildUserContent({ imageParts, preamble, imageCount: images.length }),
+    userContent: buildUserContent({ imageParts, imageCount: images.length }),
     schema: AiSuggestionsSchema,
     ...streamOpts(settings, {
       maxTokens: maxTokens ?? (images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE),
@@ -105,9 +103,9 @@ export function defaultAnalysisSystem(demo: boolean): (settings: UserAiSettings)
 }
 
 /** Convenience: default user-content builder that appends the standard analyze text after the images. */
-export function defaultAnalysisUserContent(args: { imageParts: Array<{ type: 'image'; image: Buffer; mimeType: string }>; preamble: string; imageCount: number }): UserContent {
+export function defaultAnalysisUserContent(args: { imageParts: Array<{ type: 'image'; image: Buffer; mimeType: string }>; imageCount: number }): UserContent {
   return [
     ...args.imageParts,
-    { type: 'text' as const, text: args.preamble + buildAnalysisUserText(args.imageCount) },
+    { type: 'text' as const, text: buildAnalysisUserText(args.imageCount) },
   ];
 }

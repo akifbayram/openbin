@@ -163,9 +163,6 @@ export function BinCreateForm({
       setItems(aiItemsToBinItems(result.items));
       filled.add('items');
     }
-    if (result.customFields && Object.keys(result.customFields).length > 0) {
-      setCustomFields(result.customFields);
-    }
 
     setAiFilledFields(filled);
     setAiFillCycle(c => c + 1);

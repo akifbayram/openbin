@@ -1,5 +1,4 @@
 import { resolvePrompt, withHardening } from './aiSanitize.js';
-import type { CustomFieldDef } from './customFieldHelpers.js';
 import { AI_CORRECTION_PROMPT, AI_REANALYSIS_PROMPT, DEFAULT_AI_PROMPT } from './defaultPrompts.js';
 
 export interface AiSuggestedItem {
@@ -33,19 +32,6 @@ export function buildTagBlock(existingTags?: string[]): string {
 You MUST use tags from this list whenever they are even loosely relevant. Do NOT create synonyms, abbreviations, or variations of existing tags (e.g., if "tools" exists, never output "tool", "tooling", or "hand-tools"). Only create a new tag when the bin's contents represent a category not covered by ANY existing tag. New tags should be rare.`;
 }
 
-function buildCustomFieldsBlock(customFieldDefs?: CustomFieldDef[]): string {
-  if (!customFieldDefs || customFieldDefs.length === 0) return '';
-  const fieldList = customFieldDefs.map((f) => `"${f.name}" (id: ${f.id})`).join(', ');
-  return `CUSTOM FIELDS defined for this location: [${fieldList}]
-If any of these fields are relevant to the bin's contents, include a "customFields" object in your response mapping field IDs to suggested values. Only include fields where you can provide a meaningful value.`;
-}
-
-/** Build a user-message preamble with per-request custom-field context. */
-export function buildContextPreamble(customFieldDefs?: CustomFieldDef[]): string {
-  const cfBlock = buildCustomFieldsBlock(customFieldDefs);
-  return cfBlock ? `${cfBlock}\n\n` : '';
-}
-
 function stripTagPlaceholder(prompt: string): string {
   return prompt.replace(/\{available_tags\}/g, '');
 }
@@ -67,9 +53,8 @@ export function buildReanalysisPrompt(): string {
 export function buildReanalysisUserContent(
   previousResult: object,
   imageParts: Array<{ type: 'image'; image: Buffer; mimeType: string }>,
-  contextPreamble?: string,
 ): Array<{ type: 'image'; image: Buffer; mimeType: string } | { type: 'text'; text: string }> {
-  const contextText = `${contextPreamble ?? ''}Previous analysis result:\n${JSON.stringify(previousResult, null, 2)}\n\nRe-examine these photos. Be more thorough than last time.`;
+  const contextText = `Previous analysis result:\n${JSON.stringify(previousResult, null, 2)}\n\nRe-examine these photos. Be more thorough than last time.`;
   return [
     { type: 'text' as const, text: contextText },
     ...imageParts,

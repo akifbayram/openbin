@@ -120,7 +120,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     }
   }
 
-  async function handleApplySuggestions(changes: Partial<{ name: string; items: { name: string; quantity?: number | null }[]; customFields: Record<string, string> }>) {
+  async function handleApplySuggestions(changes: Partial<{ name: string; items: { name: string; quantity?: number | null }[] }>) {
     if (!id || Object.keys(changes).length === 0) return;
     try {
       await updateBin(id, changes);

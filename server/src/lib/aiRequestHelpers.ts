@@ -1,8 +1,5 @@
 import type { Request } from 'express';
-import { verifyOptionalLocationMembership } from './binAccess.js';
-import type { CustomFieldDef } from './customFieldHelpers.js';
-import { fetchCustomFieldDefs } from './customFieldHelpers.js';
-import { ForbiddenError, ValidationError } from './httpErrors.js';
+import { ValidationError } from './httpErrors.js';
 
 // ── Uploaded-file extraction ───────────────────────────────────────
 
@@ -36,25 +33,6 @@ export function extractPhotoIds(body: Record<string, unknown>): string[] {
   return ids;
 }
 
-// ── Location membership + AI metadata ──────────────────────────────
-
-export interface LocationAiMeta {
-  customFieldDefs: CustomFieldDef[] | undefined;
-}
-
-/** Verify optional location membership, then fetch custom field defs. */
-export async function verifyLocationAndFetchMeta(
-  locationId: string | undefined,
-  userId: string,
-): Promise<LocationAiMeta> {
-  if (!await verifyOptionalLocationMembership(locationId, userId)) {
-    throw new ForbiddenError('Not a member of this location');
-  }
-  if (!locationId) return { customFieldDefs: undefined };
-  const customFieldDefs = await fetchCustomFieldDefs(locationId);
-  return { customFieldDefs };
-}
-
 // ── Previous-result validation & sanitization ──────────────────────
 
 /** Validate that a value has `name` (string) and `items` (array). Throws ValidationError if not. */
@@ -85,8 +63,5 @@ export function sanitizePreviousResult(previousResult: Record<string, unknown>) 
       }
       return { name: String(i).slice(0, 500) };
     }),
-    ...(previousResult.customFields && typeof previousResult.customFields === 'object'
-      ? { customFields: previousResult.customFields }
-      : {}),
   };
 }

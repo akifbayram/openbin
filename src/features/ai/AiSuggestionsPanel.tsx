@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { AiSuggestedItem, AiSuggestions, BinItem, CustomField } from '@/types';
+import type { AiSuggestedItem, AiSuggestions, BinItem } from '@/types';
 
-export type AiSuggestionChanges = Partial<{ name: string; items: AiSuggestedItem[]; customFields: Record<string, string> }>;
+export type AiSuggestionChanges = Partial<{ name: string; items: AiSuggestedItem[] }>;
 
 function nameChanged(prev: AiSuggestions | null | undefined, suggestions: AiSuggestions): boolean {
   if (!prev) return false;
@@ -26,8 +26,6 @@ interface AiSuggestionsPanelProps {
   previousResult?: AiSuggestions | null;
   currentName: string;
   currentItems: BinItem[];
-  customFieldDefs?: CustomField[];
-  currentCustomFields?: Record<string, string>;
   onApply: (changes: AiSuggestionChanges) => void;
   onDismiss: () => void;
 }
@@ -37,8 +35,6 @@ export function AiSuggestionsPanel({
   previousResult,
   currentName,
   currentItems,
-  customFieldDefs,
-  currentCustomFields,
   onApply,
   onDismiss,
 }: AiSuggestionsPanelProps) {
@@ -47,39 +43,18 @@ export function AiSuggestionsPanel({
   const itemsDidChange = isReanalysis && itemsChanged(previousResult, suggestions);
   const [acceptName, setAcceptName] = useState(true);
   const [acceptItems, setAcceptItems] = useState(true);
-  const [acceptCustomFields, setAcceptCustomFields] = useState(true);
 
   const hasName = !!suggestions.name;
   const hasItems = suggestions.items.length > 0;
-
-  // Map AI-suggested custom fields (by name) to field IDs
-  const suggestedCfEntries = (() => {
-    if (!suggestions.customFields || !customFieldDefs?.length) return [];
-    const nameToField = new Map(customFieldDefs.map((f) => [f.name.toLowerCase(), f]));
-    return Object.entries(suggestions.customFields)
-      .map(([name, value]) => {
-        const field = nameToField.get(name.toLowerCase());
-        return field && value ? { field, value } : null;
-      })
-      .filter((e): e is NonNullable<typeof e> => e !== null);
-  })();
-  const hasCustomFields = suggestedCfEntries.length > 0;
 
   function handleApply() {
     const changes: AiSuggestionChanges = {};
     if (acceptName && hasName) changes.name = suggestions.name;
     if (acceptItems && hasItems) changes.items = suggestions.items;
-    if (acceptCustomFields && hasCustomFields) {
-      const merged = { ...(currentCustomFields ?? {}) };
-      for (const entry of suggestedCfEntries) {
-        merged[entry.field.id] = entry.value;
-      }
-      changes.customFields = merged;
-    }
     onApply(changes);
   }
 
-  const anySelected = (acceptName && hasName) || (acceptItems && hasItems) || (acceptCustomFields && hasCustomFields);
+  const anySelected = (acceptName && hasName) || (acceptItems && hasItems);
 
   return (
     <Card>
@@ -153,29 +128,6 @@ export function AiSuggestionsPanel({
                   Will replace current {currentItems.length} item{currentItems.length !== 1 ? 's' : ''}
                 </p>
               )}
-            </div>
-          </button>
-        )}
-
-        {/* Custom Fields */}
-        {hasCustomFields && (
-          <button type="button" onClick={() => setAcceptCustomFields(!acceptCustomFields)} className="flex items-start gap-3 cursor-pointer text-left w-full">
-            <span className={cn(
-              'shrink-0 mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors',
-              acceptCustomFields ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)] bg-transparent',
-            )}>
-              {acceptCustomFields && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Custom Fields</p>
-              <div className="mt-1 space-y-1">
-                {suggestedCfEntries.map((entry) => (
-                  <p key={entry.field.id} className="text-[14px] text-[var(--text-primary)]">
-                    <span className="text-[var(--text-tertiary)]">{entry.field.name}:</span>{' '}
-                    {entry.value}
-                  </p>
-                ))}
-              </div>
             </div>
           </button>
         )}
