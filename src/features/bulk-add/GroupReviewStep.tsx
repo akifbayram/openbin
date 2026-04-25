@@ -177,6 +177,10 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       cancelAnalyze();
       cancelCorrection();
       cancelReanalyze();
+      if (lockTimerRef.current !== null) {
+        clearTimeout(lockTimerRef.current);
+        lockTimerRef.current = null;
+      }
     };
   }, [cancelAnalyze, cancelCorrection, cancelReanalyze]);
 
@@ -311,7 +315,19 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     }
   }, [group?.id, group?.status, aiEnabled, aiSettings]);
 
+  function flushPendingLock() {
+    if (lockTimerRef.current !== null) {
+      clearTimeout(lockTimerRef.current);
+      lockTimerRef.current = null;
+    }
+    if (confirmPhase === 'locking') {
+      setConfirmPhase('idle');
+      applyPendingResult();
+    }
+  }
+
   function handleBack() {
+    flushPendingLock();
     abortRef.current.get(group.id)?.abort();
     cancelAnalyze();
     cancelCorrection();
@@ -331,6 +347,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   }
 
   function handleNext() {
+    flushPendingLock();
     abortRef.current.get(group.id)?.abort();
     cancelAnalyze();
     if (group.status === 'pending' || group.status === 'analyzing') {
@@ -643,27 +660,27 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
               />
             </div>
           </div>
-
-          {/* Navigation */}
-          <div className="row-spread pt-2">
-            <Button variant="ghost" onClick={handleBack}>
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              {editingFromSummary ? 'Back to summary' : 'Back'}
-            </Button>
-            {editingFromSummary ? (
-              <Button onClick={() => dispatch({ type: 'GO_TO_SUMMARY' })}>
-                <CheckCircle2 className="h-4 w-4 mr-1" />
-                Done
-              </Button>
-            ) : (
-              <Button onClick={handleNext} disabled={showProgressBar}>
-                {isLast ? 'Review all' : 'Next'}
-                {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
-              </Button>
-            )}
-          </div>
         </div>
       )}
+
+      {/* Navigation — always visible so flushPendingLock fires even during the lock beat */}
+      <div className="row-spread pt-2">
+        <Button variant="ghost" onClick={handleBack}>
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          {editingFromSummary ? 'Back to summary' : 'Back'}
+        </Button>
+        {editingFromSummary ? (
+          <Button onClick={() => dispatch({ type: 'GO_TO_SUMMARY' })}>
+            <CheckCircle2 className="h-4 w-4 mr-1" />
+            Done
+          </Button>
+        ) : (
+          <Button onClick={handleNext} disabled={isAnyActive}>
+            {isLast ? 'Review all' : 'Next'}
+            {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

@@ -546,4 +546,57 @@ describe('GroupReviewStep lock confirmation beat', () => {
       window.matchMedia = originalMatchMedia;
     }
   });
+
+  it('clears the lock timer on unmount (no orphaned setTimeout)', async () => {
+    mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    const dispatch = vi.fn();
+    const { unmount } = renderStep(makeState({ status: 'pending' }), { aiSettings, dispatch });
+
+    // Trigger the stream to resolve and enter the lock phase.
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+
+    // Sanity: dispatch hasn't been called with SET_ANALYZE_RESULT yet (still in lock window).
+    const beforeUnmount = dispatch.mock.calls.filter((c) => c[0]?.type === 'SET_ANALYZE_RESULT');
+    expect(beforeUnmount).toHaveLength(0);
+
+    // Unmount before the 300ms expires.
+    unmount();
+
+    // Now advance well past 300ms — the deferred applyPendingResult must NOT fire.
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+
+    const afterUnmount = dispatch.mock.calls.filter((c) => c[0]?.type === 'SET_ANALYZE_RESULT');
+    expect(afterUnmount).toHaveLength(0);
+  });
+
+  it('commits the pending result when navigating Next during the lock beat', async () => {
+    mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+    const dispatch = vi.fn();
+
+    // Two-group state so Next isn't disabled.
+    let state = initialState;
+    const p1 = createPhoto(new File([''], 'a.jpg', { type: 'image/jpeg' }));
+    const p2 = createPhoto(new File([''], 'b.jpg', { type: 'image/jpeg' }));
+    const g1 = { ...createGroupFromPhoto(p1, null), status: 'pending' as const };
+    const g2 = { ...createGroupFromPhoto(p2, null), status: 'pending' as const };
+    state = { ...state, step: 'review', groups: [g1, g2], currentIndex: 0 };
+
+    renderStep(state, { aiSettings, dispatch });
+
+    // Enter the lock phase (stream resolved, timer running).
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+
+    // User clicks Next mid-lock.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^next/i }));
+    });
+
+    // The pending result must have been applied before navigation.
+    const resultDispatches = dispatch.mock.calls.filter(
+      (call) => call[0]?.type === 'SET_ANALYZE_RESULT',
+    );
+    expect(resultDispatches).toHaveLength(1);
+  });
 });
