@@ -70,6 +70,8 @@ interface BinCreateFormProps {
   onInitialPhotosConsumed?: () => void;
   initialGroups?: number[] | null;
   onWizardComplete?: () => void;
+  /** When true, programmatically clicks the photo file input once on mount (gallery deep-link). */
+  triggerFilePickerOnMount?: boolean;
 }
 
 export function BinCreateForm({
@@ -88,6 +90,7 @@ export function BinCreateForm({
   onInitialPhotosConsumed,
   initialGroups,
   onWizardComplete,
+  triggerFilePickerOnMount,
 }: BinCreateFormProps) {
   const t = useTerminology();
   const { areas } = useAreaList(locationId);
@@ -244,6 +247,14 @@ export function BinCreateForm({
     addPhotosFromFiles(initialPhotos);
     onInitialPhotosConsumed?.();
   }, [initialPhotos, addPhotosFromFiles, onInitialPhotosConsumed]);
+
+  const filePickerTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (filePickerTriggeredRef.current) return;
+    if (!triggerFilePickerOnMount) return;
+    filePickerTriggeredRef.current = true;
+    fileInputRef.current?.click();
+  }, [triggerFilePickerOnMount, fileInputRef]);
 
   function handleUndoAiField(field: AiFillField) {
     const snap = aiFill.undo(field);

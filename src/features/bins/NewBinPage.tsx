@@ -32,6 +32,8 @@ export function NewBinPage() {
     navigate('/capture', { state: { returnTo: location.pathname } });
   }, [searchParams, navigate, location.pathname]);
 
+  const galleryRequested = searchParams.get('gallery') === 'open';
+
   const handleSubmit = useCallback(async (data: BinCreateFormData) => {
     if (!activeLocation) return;
     const bin = await addBin({
@@ -82,6 +84,7 @@ export function NewBinPage() {
         initialPhotos={initialPhotos}
         onInitialPhotosConsumed={handleConsumed}
         initialGroups={initialGroups}
+        triggerFilePickerOnMount={galleryRequested}
       />
     </div>
   );

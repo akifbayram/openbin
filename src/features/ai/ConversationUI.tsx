@@ -37,8 +37,10 @@ interface ConversationUIProps {
   active?: boolean;
   /** Called when user taps a bin in a query match; parent decides whether to close/navigate. */
   onBinNavigate: (binId: string, isTrashed: boolean) => void;
-  /** Called when user taps the camera or gallery button in the composer. */
+  /** Called when user taps the camera button in the composer. */
   onCameraRequest: () => void;
+  /** Called when user taps the gallery (upload) button in the composer. Falls back to onCameraRequest if omitted. */
+  onGalleryRequest?: () => void;
   /** Called when the AI setup view wants to route to settings. */
   onOpenAiSettings: () => void;
   /** Called when the AI setup view is dismissed without configuring. */
@@ -52,6 +54,7 @@ export function ConversationUI({
   active = true,
   onBinNavigate,
   onCameraRequest,
+  onGalleryRequest,
   onOpenAiSettings,
   onDismissAiSetup,
   renderChrome,
@@ -118,7 +121,7 @@ export function ConversationUI({
           <ConversationComposer
             onSend={conversation.ask}
             onCancel={conversation.cancelStreaming}
-            onPhotoClick={onCameraRequest}
+            onPhotoClick={onGalleryRequest ?? onCameraRequest}
             onCameraClick={onCameraRequest}
             isStreaming={conversation.isStreaming}
             transcription={canTranscribe ? transcription : undefined}

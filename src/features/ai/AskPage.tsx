@@ -20,6 +20,7 @@ export function AskPage() {
       <ConversationUI
         onBinNavigate={handleBinNavigate}
         onCameraRequest={() => navigate('/new-bin?camera=open&from=ask')}
+        onGalleryRequest={() => navigate('/new-bin?gallery=open&from=ask')}
         onOpenAiSettings={() => navigate('/settings/ai')}
         onDismissAiSetup={handleBack}
         renderChrome={({ conversation }) => (

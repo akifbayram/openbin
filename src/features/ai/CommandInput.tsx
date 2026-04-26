@@ -27,6 +27,10 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
             onOpenChange(false);
             navigate('/new-bin?camera=open&from=ask');
           }}
+          onGalleryRequest={() => {
+            onOpenChange(false);
+            navigate('/new-bin?gallery=open&from=ask');
+          }}
           onOpenAiSettings={() => {
             onOpenChange(false);
             navigate('/settings/ai');
