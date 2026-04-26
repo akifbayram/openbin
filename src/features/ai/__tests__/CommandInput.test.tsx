@@ -98,10 +98,10 @@ vi.mock('@/lib/useTranscription', () => ({
 }));
 
 vi.mock('@/features/bins/PhotoBulkAdd', () => ({
-  PhotoBulkAdd: ({ onClose, onBack }: { onClose: () => void; onBack: () => void }) => (
+  PhotoBulkAdd: ({ onComplete, onExitToForm }: { onComplete: () => void; onExitToForm: () => void }) => (
     <div data-testid="photo-bulk-add">
-      <button type="button" onClick={onBack}>photo-back</button>
-      <button type="button" onClick={onClose}>photo-close</button>
+      <button type="button" onClick={onExitToForm}>photo-back</button>
+      <button type="button" onClick={onComplete}>photo-close</button>
     </div>
   ),
 }));

@@ -157,11 +157,11 @@ export function ConversationUI({
 
   const photoBulkAdd = (
     <PhotoBulkAdd
-      initialFiles={initialFiles}
+      initialPhotos={initialFiles}
       initialGroups={initialGroups}
       aiSettings={settings}
-      onClose={onPhotoClose}
-      onBack={() => {
+      onComplete={onPhotoClose}
+      onExitToForm={() => {
         setPhotoMode(false);
         setInitialFiles([]);
         setInitialGroups(null);
