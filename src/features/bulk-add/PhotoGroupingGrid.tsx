@@ -432,13 +432,15 @@ function BinStack({
           const layerFromTop = count - 1 - i;
           const depth = Math.min(layerFromTop, MAX_VISIBLE_LAYERS - 1);
           const isTop = layerFromTop === 0;
+          const isSingle = count === 1;
           return (
             <StackedPhotoTile
               key={photo.id}
               photo={photo}
               indexLabel={baseDisplayIndex + i + 1}
-              offsetX={PADDING + depth * SPREAD}
-              offsetY={PADDING + depth * SPREAD}
+              offsetX={isSingle ? 0 : PADDING + depth * SPREAD}
+              offsetY={isSingle ? 0 : PADDING + depth * SPREAD}
+              tileSize={isSingle ? BIN_SIZE : PHOTO_SIZE}
               depth={depth}
               zIndex={i + 1}
               isTop={isTop}
@@ -485,6 +487,7 @@ interface StackedPhotoTileProps {
   indexLabel: number;
   offsetX: number;
   offsetY: number;
+  tileSize: number;
   depth: number;
   zIndex: number;
   isTop: boolean;
@@ -507,6 +510,7 @@ function StackedPhotoTile({
   indexLabel,
   offsetX,
   offsetY,
+  tileSize,
   depth,
   zIndex,
   isTop,
@@ -554,8 +558,8 @@ function StackedPhotoTile({
       style={{
         top: 0,
         left: 0,
-        width: PHOTO_SIZE,
-        height: PHOTO_SIZE,
+        width: tileSize,
+        height: tileSize,
         transform: `translate(${offsetX}px, ${offsetY}px)`,
         touchAction: 'none',
         transition: isDragging ? 'none' : 'opacity 120ms',

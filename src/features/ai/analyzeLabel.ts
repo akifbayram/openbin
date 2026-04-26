@@ -28,11 +28,12 @@ export function computeAnalyzeLabel(opts: {
   }
 
   if (opts.mode === 'locking') {
-    return {
-      text: 'LOCKED',
-      showEllipsis: false,
-      itemCount: parseAnalysisItemCount(opts.partialText),
-    };
+    const itemCount = parseAnalysisItemCount(opts.partialText);
+    const text =
+      itemCount === 0
+        ? 'No items found'
+        : `${itemCount} ${itemCount === 1 ? 'item' : 'items'} found`;
+    return { text, showEllipsis: false, itemCount };
   }
 
   if (opts.mode === 'idle') {

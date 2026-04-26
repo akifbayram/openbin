@@ -750,13 +750,6 @@ body {
   100% { top: 100%; }
 }
 
-.ai-scan-readout {
-  animation: ai-scan-readout-blink 1.2s steps(2) infinite;
-}
-@keyframes ai-scan-readout-blink {
-  50% { opacity: 0.35; }
-}
-
 /* --- AI Scan Lock (handoff confirmation beat) --- */
 
 /* Brackets converge inward by 6px with a spring overshoot. Per-corner direction. */
@@ -802,21 +795,6 @@ body {
   to { opacity: 0; }
 }
 
-/* Readout crossfade — FOUND N fades out, LOCKED fades in */
-.ai-scan-readout-fade-out {
-  animation: ai-scan-readout-flip-out 160ms ease-out forwards;
-}
-.ai-scan-readout-locked {
-  animation: ai-scan-readout-flip-in 160ms ease-out 80ms both;
-}
-@keyframes ai-scan-readout-flip-out {
-  to { opacity: 0; }
-}
-@keyframes ai-scan-readout-flip-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
 /* --- Animated Ellipsis (cascading dots while AI is working) --- */
 .ai-ellipsis {
   display: inline-flex;
@@ -838,15 +816,11 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .ai-scan-line       { animation: none !important; top: 50% !important; }
-  .ai-scan-readout    { animation: none !important; }
   .ai-ellipsis > span { animation: none !important; opacity: 1; }
 
-  /* Lock confirmation: skip all motion. Brackets stay in original position;
-   * locked readout appears immediately. */
+  /* Lock confirmation: skip all motion. Brackets stay in original position. */
   [data-bracket][data-phase="locking"]    { animation: none !important; transform: none !important; }
   .ai-scan-line[data-phase="locking"]     { animation: none !important; opacity: 0 !important; }
-  .ai-scan-readout-fade-out               { animation: none !important; opacity: 0 !important; }
-  .ai-scan-readout-locked                 { animation: none !important; opacity: 1 !important; }
 }
 
 /* --- AI Stagger Item (list reveals with inline animationDelay) --- */

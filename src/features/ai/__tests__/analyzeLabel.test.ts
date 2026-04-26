@@ -96,31 +96,31 @@ describe('computeAnalyzeLabel', () => {
   });
 
   describe('locking mode', () => {
-    it('returns "LOCKED" with itemCount=0 and no ellipsis when partialText is empty', () => {
+    it('returns "No items found" with itemCount=0 and no ellipsis when partialText is empty', () => {
       const r = computeAnalyzeLabel({ mode: 'locking', partialText: '', complete: false });
-      expect(r.text).toBe('LOCKED');
+      expect(r.text).toBe('No items found');
       expect(r.showEllipsis).toBe(false);
       expect(r.itemCount).toBe(0);
     });
 
-    it('returns "LOCKED" with itemCount preserved from a one-item partialText', () => {
+    it('returns "1 item found" with itemCount preserved from a one-item partialText', () => {
       const r = computeAnalyzeLabel({
         mode: 'locking',
         partialText: '{"name": "Box", "items": ["Hammer"',
         complete: false,
       });
-      expect(r.text).toBe('LOCKED');
+      expect(r.text).toBe('1 item found');
       expect(r.showEllipsis).toBe(false);
       expect(r.itemCount).toBe(1);
     });
 
-    it('returns "LOCKED" with itemCount preserved from a multi-item partialText', () => {
+    it('returns "N items found" with itemCount preserved from a multi-item partialText', () => {
       const r = computeAnalyzeLabel({
         mode: 'locking',
         partialText: '{"name": "Box", "items": ["A", "B", "C", "D"',
         complete: false,
       });
-      expect(r.text).toBe('LOCKED');
+      expect(r.text).toBe('4 items found');
       expect(r.itemCount).toBe(4);
     });
 

@@ -1,16 +1,16 @@
-import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, RotateCw, Sparkles, X } from 'lucide-react';
+import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, RotateCw, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AiProgressBar } from '@/components/ui/ai-progress-bar';
-import { AnimatedEllipsis } from '@/components/ui/animated-ellipsis';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { AiAnalyzeProgress } from '@/features/ai/AiAnalyzeProgress';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { AiAnalyzeError } from '@/features/ai/AiStreamingPreview';
-import { MAX_AI_PHOTOS } from '@/features/ai/aiConstants';
+import { LOCK_BEAT_MS, MAX_AI_PHOTOS } from '@/features/ai/aiConstants';
 import { mapAiError } from '@/features/ai/aiErrors';
+import type { AnalyzeStreamMode } from '@/features/ai/analyzeLabel';
 import { useAiStream } from '@/features/ai/useAiStream';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { AiBadge } from '@/features/bins/AiBadge';
@@ -19,33 +19,21 @@ import { IconPicker } from '@/features/bins/IconPicker';
 import { ItemList } from '@/features/bins/ItemList';
 import { QuickAddWidget } from '@/features/bins/QuickAddWidget';
 import { TagInput } from '@/features/bins/TagInput';
+import { type AiFillField, useAiFillState } from '@/features/bins/useAiFillState';
 import { useAllTags } from '@/features/bins/useBins';
-import { useQuickAdd } from '@/features/bins/useQuickAdd';
+import { useItemEntry } from '@/features/bins/useItemEntry';
 import { compressImageForAi } from '@/features/photos/compressImageForAi';
 import { useAiEnabled } from '@/lib/aiToggle';
-import { isRecordingSupported } from '@/lib/audioRecorder';
 import { useAuth } from '@/lib/auth';
 import { aiItemsToBinItems } from '@/lib/itemQuantities';
+import { prefersReducedMotion } from '@/lib/reducedMotion';
 import { useTerminology } from '@/lib/terminology';
-import { useDictation } from '@/lib/useDictation';
 import { cn } from '@/lib/utils';
 import type { AiSettings, AiSuggestions, BinItem } from '@/types';
-import { type AnalyzeStreamMode, computeAnalyzeLabel } from './analyzeLabel';
 import { PhotoScanFrame } from './PhotoScanFrame';
 import type { BulkAddAction, Group, Photo } from './useBulkGroupAdd';
 
-function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
 const MAX_CORRECTIONS = 3;
-
-// Lock confirmation hold: CSS animations finish at ~240ms, leaving the
-// brackets converged and "LOCKED" readout visible. The remainder is held
-// stillness — long enough for the brain to register the lock as a discrete
-// event before the photo collapse and form fade-in start.
-export const LOCK_BEAT_MS = 600;
 
 async function buildPhotosFormData(photos: Photo[]): Promise<FormData> {
   const compressed = await Promise.all(
@@ -91,10 +79,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const [confirmPhase, setConfirmPhase] = useState<'idle' | 'locking'>('idle');
   const lockTimerRef = useRef<number | null>(null);
 
-  type AiField = 'name' | 'items';
-  const [aiFilledFields, setAiFilledFields] = useState<Set<AiField>>(new Set());
-  const [aiFillCycle, setAiFillCycle] = useState(0);
-  const preAiValues = useRef<{ name: string; items: BinItem[] } | null>(null);
+  const aiFill = useAiFillState();
 
   const pendingResult = useRef<PendingResult | null>(null);
 
@@ -139,24 +124,15 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { items: [...group.items, ...newItems] } });
   };
 
-  const reviewQuickAdd = useQuickAdd({
-    binName: group?.name ?? '',
-    existingItems: existingItemNames,
-    activeLocationId: activeLocationId ?? undefined,
-    aiConfigured: aiReady,
-    onNavigateAiSetup: () => setAiSetupExpanded(true),
-    onAdd: handleAddItems,
-  });
-
-  const reviewDictation = useDictation({
+  const { quickAdd: reviewQuickAdd, dictation: reviewDictation, canTranscribe } = useItemEntry({
     binName: group?.name ?? '',
     existingItems: existingItemNames,
     locationId: activeLocationId ?? undefined,
+    aiReady,
+    aiSettings,
     onAdd: handleAddItems,
+    onNavigateAiSetup: () => setAiSetupExpanded(true),
   });
-
-  const canTranscribe =
-    aiReady && !!aiSettings?.provider && aiSettings.provider !== 'anthropic' && isRecordingSupported();
 
   if (!group) return null;
 
@@ -167,8 +143,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const isAnyActive = isAnalyzing || isAnalyzingStream || isReanalyzing || isCorrecting;
   const showProgressBar = isAnyActive || confirmPhase === 'locking';
   const anyError = group.analyzeError || analyzeStreamError || correctionError || reanalyzeError;
-  const nameFilled = aiFilledFields.has('name');
-  const itemsFilled = aiFilledFields.has('items');
+  const nameFilled = aiFill.filled.has('name');
+  const itemsFilled = aiFill.filled.has('items');
 
   // Surface stream errors that arrive via the hook's `error` state but never get
   // dispatched onto the group. Without this, a mid-stream error event makes the
@@ -197,11 +173,10 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       items: result.items,
     });
 
-    const filled = new Set<AiField>();
+    const filled = new Set<AiFillField>();
     if (result.name) filled.add('name');
     if (result.items.length > 0) filled.add('items');
-    setAiFilledFields(filled);
-    setAiFillCycle((c) => c + 1);
+    aiFill.markFilled(filled);
 
     if (result.isCorrection) {
       dispatch({ type: 'INCREMENT_CORRECTION', id: result.id });
@@ -210,22 +185,11 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     }
   }
 
-  function handleUndoAiField(field: AiField) {
-    if (!preAiValues.current) return;
-    const changes: Partial<Group> =
-      field === 'name'
-        ? { name: preAiValues.current.name }
-        : { items: preAiValues.current.items };
+  function handleUndoAiField(field: AiFillField) {
+    const snap = aiFill.undo(field);
+    if (!snap) return;
+    const changes: Partial<Group> = field === 'name' ? { name: snap.name } : { items: snap.items };
     dispatch({ type: 'UPDATE_GROUP', id: group.id, changes });
-    setAiFilledFields((prev) => {
-      const next = new Set(prev);
-      next.delete(field);
-      return next;
-    });
-  }
-
-  function snapshotPreAi(target: Group) {
-    preAiValues.current = { name: target.name, items: target.items };
   }
 
   // Abort streams on unmount or navigate away
@@ -251,8 +215,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     setCorrectionOpen(false);
     setCorrectionText('');
     pendingResult.current = null;
-    setAiFilledFields(new Set());
-    preAiValues.current = null;
+    aiFill.reset();
   }, [currentIndex]);
 
   async function triggerAnalyze(target: Group) {
@@ -261,7 +224,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       return;
     }
 
-    snapshotPreAi(target);
+    aiFill.snapshot({ name: target.name, items: target.items });
     dispatch({ type: 'SET_ANALYZING', id: target.id });
 
     try {
@@ -299,7 +262,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     }
 
     abortRef.current.get(target.id)?.abort();
-    snapshotPreAi(target);
+    aiFill.snapshot({ name: target.name, items: target.items });
     dispatch({ type: 'SET_ANALYZING', id: target.id });
 
     try {
@@ -328,7 +291,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
 
   async function triggerCorrection(target: Group, text: string) {
     abortRef.current.get(target.id)?.abort();
-    snapshotPreAi(target);
+    aiFill.snapshot({ name: target.name, items: target.items });
     dispatch({ type: 'SET_ANALYZING', id: target.id });
 
     const previousResult = {
@@ -441,12 +404,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       ? reanalyzePartialText
       : analyzePartialText;
 
-  const labelState = computeAnalyzeLabel({
-    mode: streamMode,
-    partialText: streamPartialText,
-    complete: false,
-  });
-
   function handleCancel() {
     if (isCorrecting) cancelCorrection();
     else if (isReanalyzing) cancelReanalyze();
@@ -476,11 +433,12 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   return (
     <div data-tour="group-review" className="space-y-5">
       {/* Image stays mounted across analyze/review so it doesn't reflow when the lock beat ends — only the chrome swaps. */}
-      <div className="relative">
+      {/* overflow-hidden + matching radius clips scan-line/bracket glow to the photo's rounded shape. */}
+      <div className="relative overflow-hidden rounded-[var(--radius-lg)]">
         <img
           src={group.photos[0].previewUrl}
           alt={group.photos.length === 1 ? 'Preview' : `${group.photos.length} photos, showing first`}
-          className="block w-full aspect-[16/9] rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5"
+          className="block w-full aspect-[16/9] object-cover bg-black/5 dark:bg-white/5"
         />
         {group.photos.length > 1 && (
           <span
@@ -491,47 +449,27 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           </span>
         )}
         {showProgressBar ? (
-          <PhotoScanFrame
-            itemCount={labelState.itemCount}
-            phase={confirmPhase === 'locking' ? 'locking' : 'scanning'}
-          />
+          <PhotoScanFrame phase={confirmPhase === 'locking' ? 'locking' : 'scanning'} />
         ) : (
           sparklesButton
         )}
       </div>
 
       {showProgressBar ? (
-        <div className="space-y-2">
-          <AiProgressBar
-            active={isAnyActive || confirmPhase === 'locking'}
-            complete={confirmPhase === 'locking'}
-            showSparkles={false}
-            className="w-full"
-          />
-          <output aria-live="polite" className="row min-w-0">
-            <span className="flex-1 truncate font-mono text-[12px] font-medium text-[var(--text-tertiary)]">
-              {labelState.text}
-              {labelState.showEllipsis && <AnimatedEllipsis />}
-            </span>
-            {isAnyActive && (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Cancel scan"
-                onClick={handleCancel}
-              >
-                <X className="h-3 w-3 mr-1" />
-                Cancel
-              </Button>
-            )}
-          </output>
-        </div>
+        <AiAnalyzeProgress
+          active={isAnyActive || confirmPhase === 'locking'}
+          complete={confirmPhase === 'locking'}
+          mode={streamMode}
+          partialText={streamPartialText}
+          onCancel={isAnyActive ? handleCancel : undefined}
+          className="w-full"
+        />
       ) : (
         <div className="animate-fade-in space-y-5">
           <div
-            key={nameFilled ? `name-${aiFillCycle}` : 'name'}
+            key={aiFill.keyFor('name')}
             className={cn('space-y-2', nameFilled && 'ai-field-fill')}
-            style={nameFilled ? ({ '--stagger': 0 } as React.CSSProperties) : undefined}
+            style={aiFill.styleFor('name', 0)}
           >
             <div className="flex items-center justify-between">
               <Label htmlFor={`name-${group.id}`}>Name</Label>
@@ -629,9 +567,9 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           )}
 
           <div
-            key={itemsFilled ? `items-${aiFillCycle}` : 'items'}
+            key={aiFill.keyFor('items')}
             className={cn('space-y-2', itemsFilled && 'ai-field-fill')}
-            style={itemsFilled ? ({ '--stagger': 1 } as React.CSSProperties) : undefined}
+            style={aiFill.styleFor('items', 1)}
           >
             <ItemList
               items={group.items}

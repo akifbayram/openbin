@@ -118,8 +118,7 @@ export function computeFlowProgress(state: BulkAddState): FlowProgressModel {
   let label: string;
   if (state.step === 'group') label = 'PHOTOS';
   else if (state.step === 'summary') label = 'CREATE';
-  else if (groupCount <= 1) label = 'REVIEW';
-  else label = `BIN ${state.currentIndex + 1} / ${groupCount}`;
+  else label = 'REVIEW';
 
   const current = dots.findIndex((d) => d.state === 'current');
   return {

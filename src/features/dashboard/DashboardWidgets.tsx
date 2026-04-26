@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { prefersReducedMotion } from '@/lib/reducedMotion';
 import { cn } from '@/lib/utils';
 
 function useAnimatedNumber(target: number, duration = 400) {
@@ -8,7 +9,7 @@ function useAnimatedNumber(target: number, duration = 400) {
   const rafRef = useRef<number>();
 
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (prefersReducedMotion()) {
       setDisplay(target);
       return;
     }

@@ -32,9 +32,6 @@ function FlowProgress({ state }: { state: BulkAddState }) {
     <div className="flex items-center justify-end gap-2">
       <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--text-tertiary)]">
         {label}
-        <span className="ml-2 text-[var(--text-quaternary)]">
-          {currentIndex + 1} / {total}
-        </span>
       </span>
       {/* biome-ignore lint/a11y/useSemanticElements: role=group is the right ARIA match for an inline labeled grouping of related visuals */}
       <span

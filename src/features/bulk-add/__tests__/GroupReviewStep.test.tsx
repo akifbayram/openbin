@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/ui/toast';
-import { GroupReviewStep, LOCK_BEAT_MS } from '../GroupReviewStep';
+import { LOCK_BEAT_MS } from '@/features/ai/aiConstants';
+import { GroupReviewStep } from '../GroupReviewStep';
 import { type BulkAddState, createGroupFromPhoto, createPhoto, type Group, initialState } from '../useBulkGroupAdd';
 
 vi.mock('@/lib/aiToggle', () => ({
@@ -419,8 +420,10 @@ describe('GroupReviewStep lock confirmation beat', () => {
     expect(screen.queryByRole('button', { name: /cancel scan/i })).toBeNull();
   });
 
-  it('shows "LOCKED" in the status-row label during the lock beat', async () => {
+  it('shows the final item-count label during the lock beat', async () => {
     mockStream.mockResolvedValue({ name: 'Holiday Decorations', items: [{ name: 'String lights' }] });
+    // Seed partialText so the lock-beat label can derive the item count.
+    mockStreamState.analyze = { isStreaming: false, partialText: '{"name":"Box","items":["Hammer"' };
     const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
     renderStep(makeState({ status: 'pending' }), { aiSettings });
 
@@ -431,8 +434,7 @@ describe('GroupReviewStep lock confirmation beat', () => {
       await vi.advanceTimersByTimeAsync(50);
     });
 
-    // "LOCKED" appears in the HUD readout (PhotoScanFrame) and in the status-row label.
-    expect(screen.getAllByText('LOCKED').length).toBeGreaterThan(0);
+    expect(screen.getByText('1 item found')).toBeTruthy();
   });
 
   it('switches AiProgressBar to its complete (green) state during the lock beat', async () => {

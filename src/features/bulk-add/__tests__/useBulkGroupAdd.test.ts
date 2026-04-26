@@ -827,7 +827,7 @@ describe('computeFlowProgress', () => {
     expect(result.currentIndex).toBe(1);
   });
 
-  it('review step with multiple bins shows BIN n/total label', () => {
+  it('review step with multiple bins still uses REVIEW label (count comes from dots)', () => {
     const groups = [
       makeGroup([makePhoto()], { status: 'reviewed' }),
       makeGroup([makePhoto()], { status: 'analyzing' }),
@@ -835,7 +835,7 @@ describe('computeFlowProgress', () => {
     ];
     const result = computeFlowProgress({ ...initialState, step: 'review', groups, currentIndex: 1 });
     expect(result.dots.map((d) => d.state)).toEqual(['done', 'done', 'current', 'pending', 'pending']);
-    expect(result.label).toBe('BIN 2 / 3');
+    expect(result.label).toBe('REVIEW');
   });
 
   it('review step collapses analyze and review into one current dot per bin', () => {

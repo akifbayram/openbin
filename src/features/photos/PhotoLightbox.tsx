@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
+import { prefersReducedMotion } from '@/lib/reducedMotion';
 import { cn } from '@/lib/utils';
 import type { Photo } from '@/types';
 import { getPhotoUrl } from './usePhotos';
@@ -19,9 +20,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
   const containerRef = useRef<HTMLDivElement>(null);
   const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [prefersReducedMotion] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  );
+  const [reducedMotion] = useState(prefersReducedMotion);
 
   // Swipe tracking
   const touchStartX = useRef(0);
@@ -38,13 +37,13 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
   }, []);
 
   const handleClose = useCallback(() => {
-    if (prefersReducedMotion) {
+    if (reducedMotion) {
       onClose();
       return;
     }
     setAnimating('exit');
     setTimeout(onClose, 200);
-  }, [onClose, prefersReducedMotion]);
+  }, [onClose, reducedMotion]);
 
   const goPrev = useCallback(() => {
     setCurrentIndex((i) => Math.max(0, i - 1));
@@ -120,7 +119,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
   if (!photo) return null;
 
   const show = animating === 'enter';
-  const duration = prefersReducedMotion ? 'duration-0' : 'duration-200';
+  const duration = reducedMotion ? 'duration-0' : 'duration-200';
 
   return (
     <div

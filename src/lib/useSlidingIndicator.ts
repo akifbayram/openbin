@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { prefersReducedMotion } from './reducedMotion';
 import { observeResize } from './sharedResizeObserver';
 
 interface Indicator {
@@ -10,9 +11,7 @@ export function useSlidingIndicator(activeKey: string | null) {
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef(new Map<string, HTMLElement>());
   const [hasMounted, setHasMounted] = useState(false);
-  const prefersReducedMotion = useRef(
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  );
+  const reducedMotion = useRef(prefersReducedMotion());
   const [indicator, setIndicator] = useState<Indicator | null>(null);
 
   const setButtonRef = useCallback(
@@ -53,7 +52,7 @@ export function useSlidingIndicator(activeKey: string | null) {
     return observeResize(container, measure);
   }, [measure]);
 
-  const animate = hasMounted && !prefersReducedMotion.current;
+  const animate = hasMounted && !reducedMotion.current;
 
   return { containerRef, setButtonRef, indicator, animate };
 }
