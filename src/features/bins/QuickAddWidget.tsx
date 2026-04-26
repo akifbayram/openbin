@@ -166,11 +166,12 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
             </button>
             <div className="flex-1" />
             <Button
+              variant="ai"
               type="button"
               size="sm"
               onClick={quickAdd.handleExtractClick}
               disabled={!quickAdd.expandedText.trim() || quickAdd.isStructuring}
-              className="gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
+              className="gap-1.5"
             >
               {quickAdd.isStructuring ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

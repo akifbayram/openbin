@@ -424,8 +424,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       className={cn(
         'absolute top-2 right-2 p-1.5 rounded-full transition-colors animate-fade-in',
         correctionOpen
-          ? 'bg-[var(--ai-accent)] text-white'
-          : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
+          ? 'bg-[var(--ai-accent)] text-[var(--text-on-accent)]'
+          : 'bg-black/40 text-[var(--text-on-accent)] hover:bg-[var(--ai-accent)]',
       )}
     >
       <Sparkles className="h-4 w-4" />
@@ -445,7 +445,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
         {group.photos.length > 1 && (
           <span
             aria-hidden="true"
-            className="absolute bottom-2 left-2 rounded-full bg-black/65 px-2 py-0.5 font-mono text-[11px] font-medium text-white"
+            className="absolute bottom-2 left-2 rounded-full bg-black/65 px-2 py-0.5 font-mono text-[11px] font-medium text-[var(--text-on-accent)]"
           >
             +{group.photos.length - 1}
           </span>
@@ -471,9 +471,9 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           {showRetryBand && (
             <div className="rounded-[var(--radius-lg)] border border-[var(--ai-accent)]/20 bg-[var(--ai-accent)]/5 p-3 flex flex-col gap-2">
               <Button
+                variant="ai"
                 onClick={() => triggerAnalyze(group)}
                 fullWidth
-                className="bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)] text-[var(--text-on-accent)]"
               >
                 <Sparkles className="h-4 w-4 mr-1.5" />
                 Scan with AI
@@ -533,7 +533,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
                     <button
                       type="button"
                       onClick={handleCorrectionSubmit}
-                      className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                      className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-[var(--text-on-accent)] hover:bg-[var(--ai-accent-hover)] transition-colors"
                     >
                       <ArrowUp className="h-4 w-4" />
                     </button>
@@ -541,7 +541,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
                     <button
                       type="button"
                       onClick={() => { setCorrectionOpen(false); triggerReanalyze(group); }}
-                      className="shrink-0 h-9 px-3 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors text-[13px] font-medium"
+                      className="shrink-0 h-9 px-3 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-[var(--text-on-accent)] hover:bg-[var(--ai-accent-hover)] transition-colors text-[13px] font-medium"
                     >
                       Reanalyze
                     </button>

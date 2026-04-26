@@ -369,10 +369,11 @@ export function BinCreateForm({
               }
               return (
                 <Button
+                  variant="ai"
                   type="button"
                   onClick={handleAnalyze}
                   disabled={photos.length === 0}
-                  className="w-full gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)] text-[var(--text-on-accent)] min-h-[44px]"
+                  className="w-full gap-1.5 min-h-[44px]"
                 >
                   <Sparkles className="h-4 w-4" />
                   {photos.length > 0
