@@ -3,7 +3,7 @@
  * back to downstream consumers without shared React state.
  *
  * returnTarget controls which consumer picks up the photos:
- * - null (default) → useAutoOpenOnCapture opens CommandInput with a flat list
+ * - null (default) → no consumer picks up the photos
  * - 'bin-create'   → BinCreateForm picks them up, CommandInput ignores
  * - 'bulk-add'     → ConversationUI hands them to PhotoBulkAdd with pre-grouped state
  *
