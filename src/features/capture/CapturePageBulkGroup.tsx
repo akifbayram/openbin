@@ -151,7 +151,7 @@ export function CapturePageBulkGroup() {
       groupIds.push(p.groupId ?? currentGroup);
     });
     setCapturedPhotos(files, groupIds);
-    setCapturedReturnTarget('bulk-add');
+    setCapturedReturnTarget('bin-create');
     navigate(-1);
   }
 

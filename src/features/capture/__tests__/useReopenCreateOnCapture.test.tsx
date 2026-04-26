@@ -54,18 +54,6 @@ describe('useReopenCreateOnCapture', () => {
     );
   });
 
-  it('does not invoke the callback when target is bulk-add', () => {
-    setCapturedPhotos([new File(['x'], 'a.jpg')]);
-    setCapturedReturnTarget('bulk-add');
-    const onReopen = vi.fn();
-
-    renderHook(() => useReopenCreateOnCapture(onReopen), { wrapper });
-
-    expect(onReopen).not.toHaveBeenCalled();
-    expect(hasCapturedPhotos()).toBe(true); // unchanged
-    expect(getCapturedReturnTarget()).toBe('bulk-add');
-  });
-
   it('does not invoke the callback when target is null', () => {
     const onReopen = vi.fn();
     renderHook(() => useReopenCreateOnCapture(onReopen), { wrapper });

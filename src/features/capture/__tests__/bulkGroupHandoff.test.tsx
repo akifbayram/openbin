@@ -17,9 +17,9 @@ describe('bulk-group camera → PhotoBulkAdd handoff', () => {
     const groupIds = [0, 0, 1];
 
     setCapturedPhotos(files, groupIds);
-    setCapturedReturnTarget('bulk-add');
+    setCapturedReturnTarget('bin-create');
 
-    expect(getCapturedReturnTarget()).toBe('bulk-add');
+    expect(getCapturedReturnTarget()).toBe('bin-create');
     const taken = takeCapturedPhotos();
     expect(taken.files).toEqual(files);
     expect(taken.groups).toEqual(groupIds);
