@@ -32,6 +32,13 @@ export function useLocationList() {
   return ctx;
 }
 
+/** Returns the currently active Location object, or null if not yet loaded. */
+export function useActiveLocation(): Location | null {
+  const { activeLocationId } = useAuth();
+  const { locations } = useLocationList();
+  return locations.find((l) => l.id === activeLocationId) ?? null;
+}
+
 export function useLocationMembers(locationId: string | null) {
   const { token } = useAuth();
   const { data: members, isLoading } = useListData<LocationMember>(
