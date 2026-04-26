@@ -251,6 +251,16 @@ export function BinCreateForm({
     fileInputRef.current?.click();
   }, [triggerFilePickerOnMount, fileInputRef]);
 
+  // When photos accumulate to ≥2 in single-bin mode, lift them into the wizard.
+  // Each photo becomes its own group (user can merge in the wizard's group step).
+  useEffect(() => {
+    if (wizardActive) return;
+    if (photos.length < 2) return;
+    cancelAnalyze();
+    setPickedFiles(photos);
+    setPickedGroups(photos.map((_, i) => i));
+  }, [photos, wizardActive, cancelAnalyze]);
+
   function handleUndoAiField(field: AiFillField) {
     const snap = aiFill.undo(field);
     if (!snap) return;
