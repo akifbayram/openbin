@@ -16,13 +16,11 @@ export function NewBinPage() {
   const [initialPhotos, setInitialPhotos] = useState<File[] | null>(null);
   const [initialGroups, setInitialGroups] = useState<number[] | null>(null);
 
-  // TODO(Task 9): useReopenCreateOnCapture will be updated to pass groups as second arg.
-  // The extra parameter is unused until then (groups will be undefined, treated as null).
   const handleReopen = useCallback((files: File[], groups: number[] | null) => {
     setInitialPhotos(files.length > 0 ? files : null);
     setInitialGroups(groups ?? null);
   }, []);
-  useReopenCreateOnCapture(handleReopen as (photos: File[]) => void);
+  useReopenCreateOnCapture(handleReopen);
 
   // Auto-open camera once on mount when ?camera=open is present.
   const cameraAutoOpenedRef = useRef(false);

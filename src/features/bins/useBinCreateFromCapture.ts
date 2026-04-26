@@ -12,7 +12,7 @@ export function useBinCreateFromCapture(): BinCreateFromCaptureState {
   const [createOpen, setCreateOpenRaw] = useState(false);
   const [createInitialPhotos, setCreateInitialPhotos] = useState<File[] | null>(null);
 
-  useReopenCreateOnCapture(useCallback((photos: File[]) => {
+  useReopenCreateOnCapture(useCallback((photos: File[], _groups: number[] | null) => {
     setCreateInitialPhotos(photos.length > 0 ? photos : null);
     setCreateOpenRaw(true);
   }, []));
