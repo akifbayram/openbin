@@ -95,7 +95,7 @@ vi.mock('@/lib/useTranscription', () => ({
   }),
 }));
 
-vi.mock('../PhotoBulkAdd', () => ({
+vi.mock('@/features/bins/PhotoBulkAdd', () => ({
   PhotoBulkAdd: () => <div data-testid="photo-bulk-add" />,
 }));
 

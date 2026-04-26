@@ -97,7 +97,7 @@ vi.mock('@/lib/useTranscription', () => ({
   }),
 }));
 
-vi.mock('../PhotoBulkAdd', () => ({
+vi.mock('@/features/bins/PhotoBulkAdd', () => ({
   PhotoBulkAdd: ({ onClose, onBack }: { onClose: () => void; onBack: () => void }) => (
     <div data-testid="photo-bulk-add">
       <button type="button" onClick={onBack}>photo-back</button>

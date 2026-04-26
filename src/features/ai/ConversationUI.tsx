@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PhotoBulkAdd } from '@/features/bins/PhotoBulkAdd';
 import { takeCapturedPhotos } from '@/features/capture/capturedPhotos';
 import { isRecordingSupported } from '@/lib/audioRecorder';
 import { useAuth } from '@/lib/auth';
@@ -9,7 +10,6 @@ import { ConversationComposer } from './ConversationComposer';
 import { ConversationThread } from './ConversationThread';
 import { EmptyConversationState } from './EmptyConversationState';
 import { AiSetupView } from './InlineAiSetup';
-import { PhotoBulkAdd } from './PhotoBulkAdd';
 import { useAiSettings } from './useAiSettings';
 import { type UseConversationReturn, useConversation } from './useConversation';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initBulkAddStateFromFiles } from '@/features/ai/PhotoBulkAdd';
+import { initBulkAddStateFromFiles } from '@/features/bins/PhotoBulkAdd';
 import {
   getCapturedReturnTarget,
   setCapturedPhotos,
