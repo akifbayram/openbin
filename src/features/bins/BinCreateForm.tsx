@@ -14,7 +14,8 @@ import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
-import { setCapturedReturnTarget } from '@/features/capture/capturedPhotos';
+import { setCapturedPhotos, setCapturedReturnTarget } from '@/features/capture/capturedPhotos';
+import { getCommandInputRef } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
@@ -24,6 +25,7 @@ import { cn, focusRing, plural, sectionHeader } from '@/lib/utils';
 import type { AiSuggestions, BinItem, BinVisibility } from '@/types';
 import { AiBadge } from './AiBadge';
 import { BinPreviewCard } from './BinPreviewCard';
+import { BulkAddHint } from './BulkAddHint';
 import { ColorPicker } from './ColorPicker';
 import { CustomFieldsEditCard } from './CustomFieldsEditCard';
 import { IconPicker } from './IconPicker';
@@ -116,6 +118,11 @@ export function BinCreateForm({
 
   // Progressive disclosure
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+
+  // Hint that nudges users with 2+ photos toward the bulk-add flow.
+  // Resets automatically when the user clears their photo selection so a
+  // fresh batch can re-trigger the hint.
+  const [bulkHintDismissed, setBulkHintDismissed] = useState(false);
 
   // Name validation
   const [nameError, setNameError] = useState<string | null>(null);
@@ -211,8 +218,16 @@ export function BinCreateForm({
   useEffect(() => {
     if (photos.length === 0) {
       aiFill.reset();
+      setBulkHintDismissed(false);
     }
   }, [photos.length, aiFill.reset]);
+
+  function handleSwitchToBulkAdd() {
+    setCapturedPhotos([...photos]);
+    setCapturedReturnTarget('bulk-add');
+    onCancel?.();
+    getCommandInputRef().current?.open();
+  }
 
   const initialPhotosConsumedRef = useRef(false);
   useEffect(() => {
@@ -284,6 +299,20 @@ export function BinCreateForm({
             onFilesDropped={addPhotosFromFiles}
             analyzing={analyzing}
           />
+
+          {/* Bulk-add nudge: surfaces once the user has 2+ photos, before they tap AI Fill. */}
+          {photos.length >= 2
+            && !analyzing
+            && !analyzeError
+            && confirmPhase === 'idle'
+            && aiFill.filled.size === 0
+            && !bulkHintDismissed && (
+            <BulkAddHint
+              photoCount={photos.length}
+              onSwitch={handleSwitchToBulkAdd}
+              onDismiss={() => setBulkHintDismissed(true)}
+            />
+          )}
 
           {/* AI Fill button / Error card / Success banner */}
           {(() => {

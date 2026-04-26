@@ -1,4 +1,4 @@
-import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, RotateCw, Sparkles } from 'lucide-react';
+import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -76,6 +76,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [correctionText, setCorrectionText] = useState('');
+  const [retryBandDismissed, setRetryBandDismissed] = useState(false);
   const [confirmPhase, setConfirmPhase] = useState<'idle' | 'locking'>('idle');
   const lockTimerRef = useRef<number | null>(null);
 
@@ -214,6 +215,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   useEffect(() => {
     setCorrectionOpen(false);
     setCorrectionText('');
+    setRetryBandDismissed(false);
     pendingResult.current = null;
     aiFill.reset();
   }, [currentIndex]);
@@ -411,8 +413,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { status: 'pending' } });
   }
 
-  const showTryAiAgain =
-    aiEnabled && !!aiSettings && group.status === 'pending' && !isAnyActive;
+  const showRetryBand =
+    aiEnabled && !!aiSettings && group.status === 'pending' && !isAnyActive && !retryBandDismissed;
 
   const sparklesButton = aiEnabled && group.status === 'reviewed' && !showProgressBar && (
     <button
@@ -431,7 +433,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   );
 
   return (
-    <div data-tour="group-review" className="space-y-5">
+    <div data-tour="group-review" className="flex flex-1 flex-col space-y-5">
       {/* Image stays mounted across analyze/review so it doesn't reflow when the lock beat ends — only the chrome swaps. */}
       {/* overflow-hidden + matching radius clips scan-line/bracket glow to the photo's rounded shape. */}
       <div className="relative overflow-hidden rounded-[var(--radius-lg)]">
@@ -466,6 +468,26 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
         />
       ) : (
         <div className="animate-fade-in space-y-5">
+          {showRetryBand && (
+            <div className="rounded-[var(--radius-lg)] border border-[var(--ai-accent)]/20 bg-[var(--ai-accent)]/5 p-3 flex flex-col gap-2">
+              <Button
+                onClick={() => triggerAnalyze(group)}
+                fullWidth
+                className="bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)] text-[var(--text-on-accent)]"
+              >
+                <Sparkles className="h-4 w-4 mr-1.5" />
+                Scan with AI
+              </Button>
+              <button
+                type="button"
+                onClick={() => setRetryBandDismissed(true)}
+                className="self-center text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors py-1"
+              >
+                Continue manually
+              </button>
+            </div>
+          )}
+
           <div
             key={aiFill.keyFor('name')}
             className={cn('space-y-2', nameFilled && 'ai-field-fill')}
@@ -551,19 +573,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           {/* Inline AI Setup */}
           {aiEnabled && aiSetupExpanded && !aiSettings && (
             <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
-          )}
-
-          {/* Retry AI when user cancelled mid-stream */}
-          {showTryAiAgain && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="self-start"
-              onClick={() => triggerAnalyze(group)}
-            >
-              <RotateCw className="h-3.5 w-3.5 mr-1" />
-              Try AI again
-            </Button>
           )}
 
           <div
@@ -655,7 +664,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       )}
 
       {/* Navigation — always visible so flushPendingLock fires even during the lock beat */}
-      <div className="row-spread pt-2">
+      <div className="row-spread sticky bottom-0 -mx-5 mt-auto bg-[var(--bg-flat-heavy)] border-t border-[var(--border-subtle)] px-5 pt-3 pb-[calc(12px+var(--safe-bottom))]">
         <Button variant="ghost" onClick={handleBack}>
           <ChevronLeft className="h-4 w-4 mr-1" />
           {editingFromSummary ? 'Back to summary' : 'Back'}

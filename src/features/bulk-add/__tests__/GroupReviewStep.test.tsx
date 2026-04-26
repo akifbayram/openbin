@@ -296,22 +296,113 @@ describe('GroupReviewStep streaming UI', () => {
     expect(container.querySelectorAll('[data-bracket]').length).toBe(0);
   });
 
-  it('shows "Try AI again" when status is pending and AI is configured', () => {
-    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+});
+
+describe('GroupReviewStep retry band (post-cancel)', () => {
+  beforeEach(() => {
+    mockStream.mockReset();
+    mockStream.mockResolvedValue(null);
+    mockCancel.mockReset();
+    mockStreamError = null;
+    mockStreamState = {
+      analyze: { ...idleStream },
+      reanalyze: { ...idleStream },
+      correction: { ...idleStream },
+    };
+  });
+
+  const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+
+  it('renders a primary "Scan with AI" button when status is pending and AI is configured', () => {
     renderStep(makeState({ status: 'pending' }), { aiSettings });
-    expect(screen.getByRole('button', { name: /try ai again/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /scan with ai/i })).toBeTruthy();
   });
 
-  it('does not show "Try AI again" while streaming', () => {
+  it('renders a secondary "Continue manually" button alongside Scan with AI', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+    expect(screen.getByRole('button', { name: /continue manually/i })).toBeTruthy();
+  });
+
+  it('positions the retry band before the Name field in DOM order', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+    const scanBtn = screen.getByRole('button', { name: /scan with ai/i });
+    const nameLabel = screen.getByText('Name');
+    // DOCUMENT_POSITION_FOLLOWING (4) means scanBtn is BEFORE nameLabel.
+    // eslint-disable-next-line no-bitwise
+    expect(scanBtn.compareDocumentPosition(nameLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('clicking "Scan with AI" triggers the analyze stream', async () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+    // Reset to ignore the auto-analyze call that fires on mount.
+    mockStream.mockClear();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /scan with ai/i }));
+    });
+    expect(mockStream).toHaveBeenCalled();
+  });
+
+  it('clicking "Continue manually" hides both retry-band buttons', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+    fireEvent.click(screen.getByRole('button', { name: /continue manually/i }));
+    expect(screen.queryByRole('button', { name: /scan with ai/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /continue manually/i })).toBeNull();
+  });
+
+  it('hides the retry band while streaming', () => {
     setAnalyzeStreaming();
-    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
     renderStep(makeState({ status: 'analyzing' }), { aiSettings });
+    expect(screen.queryByRole('button', { name: /scan with ai/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /continue manually/i })).toBeNull();
+  });
+
+  it('hides the retry band when AI settings are missing', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings: null });
+    expect(screen.queryByRole('button', { name: /scan with ai/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /continue manually/i })).toBeNull();
+  });
+
+  it('does not render the legacy "Try AI again" ghost button', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
     expect(screen.queryByRole('button', { name: /try ai again/i })).toBeNull();
   });
 
-  it('does not show "Try AI again" when AI settings are missing', () => {
-    renderStep(makeState({ status: 'pending' }), { aiSettings: null });
-    expect(screen.queryByRole('button', { name: /try ai again/i })).toBeNull();
+  it('reshows the retry band after dismiss when navigating to a new group', () => {
+    let state = initialState;
+    const p1 = createPhoto(new File([''], 'a.jpg', { type: 'image/jpeg' }));
+    const p2 = createPhoto(new File([''], 'b.jpg', { type: 'image/jpeg' }));
+    const g1 = { ...createGroupFromPhoto(p1, null), status: 'pending' as const };
+    const g2 = { ...createGroupFromPhoto(p2, null), status: 'pending' as const };
+    state = { ...state, step: 'review', groups: [g1, g2], currentIndex: 0 };
+
+    const { rerender } = render(
+      <ToastProvider>
+        <GroupReviewStep
+          groups={state.groups}
+          currentIndex={0}
+          editingFromSummary={state.editingFromSummary}
+          aiSettings={aiSettings}
+          dispatch={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /continue manually/i }));
+    expect(screen.queryByRole('button', { name: /scan with ai/i })).toBeNull();
+
+    rerender(
+      <ToastProvider>
+        <GroupReviewStep
+          groups={state.groups}
+          currentIndex={1}
+          editingFromSummary={state.editingFromSummary}
+          aiSettings={aiSettings}
+          dispatch={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: /scan with ai/i })).toBeTruthy();
   });
 });
 

@@ -270,19 +270,21 @@ export function PhotoGroupingGrid({
   const activeDrag = drag.phase === 'active' ? drag.drag : null;
   const showSplitZone = activeDrag !== null && activeDrag.sourceGroupSize > 1;
   const showKeyboardSplitButton = keyboardMove !== null && keyboardMove.sourceGroupSize > 1;
-  const showInstruction = totalPhotos > 1;
+  const isSinglePhoto = totalPhotos === 1;
 
   let displayIndex = 0;
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex flex-1 flex-col">
       <header className="mb-6 space-y-1">
         <h2 className="text-[17px] font-semibold leading-tight text-[var(--text-primary)]">
-          Group your {totalPhotos === 1 ? 'photo' : 'photos'}
+          One {t.bin} per stack
         </h2>
-        {showInstruction && !keyboardMove && (
+        {!keyboardMove && (
           <p className="text-[13px] leading-snug text-[var(--text-secondary)]">
-            Drag a photo onto another {t.bin} to stack them.
+            {isSinglePhoto
+              ? `Add more photos to create several ${t.bins} at once.`
+              : `Drag photos onto each other to put them in the same ${t.bin}.`}
           </p>
         )}
         {keyboardMove && (
@@ -348,7 +350,7 @@ export function PhotoGroupingGrid({
 
       <div className="mt-6 space-y-2">
         <Label className="text-[13px] font-medium text-[var(--text-primary)]">
-          {t.Area} for all {t.bins}
+          {t.Area}
           <span className="ml-1 text-[12px] font-normal text-[var(--text-tertiary)]">· optional</span>
         </Label>
         <AreaPicker
@@ -358,7 +360,7 @@ export function PhotoGroupingGrid({
         />
       </div>
 
-      <div className="row-spread mt-auto pt-7">
+      <div className="row-spread sticky bottom-0 -mx-5 mt-auto bg-[var(--bg-flat-heavy)] border-t border-[var(--border-subtle)] px-5 pt-3 pb-[calc(12px+var(--safe-bottom))]">
         <Button variant="ghost" onClick={onBack}>
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back
