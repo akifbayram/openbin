@@ -112,14 +112,9 @@ export function BinCreateForm({
   const effectiveGroups = pickedGroups ?? initialGroups ?? null;
   const wizardMode = (effectiveGroups && new Set(effectiveGroups).size > 1) ?? false;
   const [wizardActive, setWizardActive] = useState(wizardMode);
-  const wizardActivatedRef = useRef(false);
 
   useEffect(() => {
-    if (wizardActivatedRef.current) return;
-    if (wizardMode) {
-      wizardActivatedRef.current = true;
-      setWizardActive(true);
-    }
+    if (wizardMode) setWizardActive(true);
   }, [wizardMode]);
 
   const {
