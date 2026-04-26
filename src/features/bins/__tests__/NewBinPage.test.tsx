@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setCapturedPhotos, setCapturedReturnTarget } from '@/features/capture/capturedPhotos';
 
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -28,6 +29,7 @@ import { NewBinPage } from '../NewBinPage';
 
 afterEach(() => {
   navigateMock.mockReset();
+  setCapturedReturnTarget(null);
 });
 
 describe('NewBinPage', () => {
@@ -47,5 +49,22 @@ describe('NewBinPage', () => {
       </MemoryRouter>,
     );
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/capture', expect.anything()));
+  });
+
+  it('forwards captured photos and groups to BinCreateForm', () => {
+    const files = [
+      new File(['a'], 'a.jpg', { type: 'image/jpeg' }),
+      new File(['b'], 'b.jpg', { type: 'image/jpeg' }),
+    ];
+    setCapturedPhotos(files, [0, 1]);
+    setCapturedReturnTarget('bin-create');
+
+    render(
+      <MemoryRouter initialEntries={['/new-bin']}>
+        <Routes><Route path="/new-bin" element={<NewBinPage />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('bin-create-form')).toHaveTextContent('photos:2 groups:2');
   });
 });
