@@ -10,7 +10,7 @@ import { addBin } from './useBins';
 export function NewBinPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const activeLocation = useActiveLocation();
 
   const [initialPhotos, setInitialPhotos] = useState<File[] | null>(null);
@@ -23,16 +23,29 @@ export function NewBinPage() {
   useReopenCreateOnCapture(handleReopen);
 
   // Auto-open camera once on mount when ?camera=open is present.
+  // Strip the param so a remount (after returning from /capture) doesn't re-fire.
   const cameraAutoOpenedRef = useRef(false);
   useEffect(() => {
     if (cameraAutoOpenedRef.current) return;
     if (searchParams.get('camera') !== 'open') return;
     cameraAutoOpenedRef.current = true;
+    const next = new URLSearchParams(searchParams);
+    next.delete('camera');
+    setSearchParams(next, { replace: true });
     setCapturedReturnTarget('bin-create');
     navigate('/capture', { state: { returnTo: location.pathname } });
-  }, [searchParams, navigate, location.pathname]);
+  }, [searchParams, setSearchParams, navigate, location.pathname]);
 
   const galleryRequested = searchParams.get('gallery') === 'open';
+  const galleryConsumedRef = useRef(false);
+  useEffect(() => {
+    if (galleryConsumedRef.current) return;
+    if (!galleryRequested) return;
+    galleryConsumedRef.current = true;
+    const next = new URLSearchParams(searchParams);
+    next.delete('gallery');
+    setSearchParams(next, { replace: true });
+  }, [galleryRequested, searchParams, setSearchParams]);
 
   const handleSubmit = useCallback(async (data: BinCreateFormData) => {
     if (!activeLocation) return;
