@@ -91,6 +91,10 @@ vi.mock('@/lib/audioRecorder', () => ({
   isRecordingSupported: () => false,
 }));
 
+vi.mock('@/features/bins/PhotoBulkAdd', () => ({
+  PhotoBulkAdd: () => <div data-testid="photo-bulk-add">wizard</div>,
+}));
+
 vi.mock('@/lib/terminology', () => ({
   useTerminology: () => ({
     bin: 'bin', bins: 'bins', Bin: 'Bin', Bins: 'Bins',
@@ -195,5 +199,30 @@ describe('BinCreateForm initialPhotos seeding', () => {
     renderForm({ initialPhotos: [], onInitialPhotosConsumed });
     expect(mockAddPhotosFromFiles).not.toHaveBeenCalled();
     expect(onInitialPhotosConsumed).not.toHaveBeenCalled();
+  });
+});
+
+describe('BinCreateForm wizard mode', () => {
+  it('renders single-bin form when initialGroups is null', () => {
+    const { getByLabelText, queryByTestId } = renderForm({ initialGroups: null, initialPhotos: null });
+    expect(getByLabelText(/name/i)).toBeInTheDocument();
+    expect(queryByTestId('photo-bulk-add')).not.toBeInTheDocument();
+  });
+
+  it('renders single-bin form when all photos belong to one group', () => {
+    const files = [new File(['a'], 'a.jpg', { type: 'image/jpeg' })];
+    const { getByLabelText, queryByTestId } = renderForm({ initialPhotos: files, initialGroups: [0] });
+    expect(getByLabelText(/name/i)).toBeInTheDocument();
+    expect(queryByTestId('photo-bulk-add')).not.toBeInTheDocument();
+  });
+
+  it('renders PhotoBulkAdd when initialGroups has more than one distinct id', () => {
+    const files = [
+      new File(['a'], 'a.jpg', { type: 'image/jpeg' }),
+      new File(['b'], 'b.jpg', { type: 'image/jpeg' }),
+    ];
+    const { queryByLabelText, getByTestId } = renderForm({ initialPhotos: files, initialGroups: [0, 1] });
+    expect(queryByLabelText(/name/i)).not.toBeInTheDocument();
+    expect(getByTestId('photo-bulk-add')).toBeInTheDocument();
   });
 });

@@ -28,6 +28,7 @@ import { ColorPicker } from './ColorPicker';
 import { CustomFieldsEditCard } from './CustomFieldsEditCard';
 import { IconPicker } from './IconPicker';
 import { ItemList } from './ItemList';
+import { PhotoBulkAdd } from './PhotoBulkAdd';
 import { PhotoUploadSection } from './PhotoUploadSection';
 import { QuickAddWidget } from './QuickAddWidget';
 import { StylePicker } from './StylePicker';
@@ -67,6 +68,8 @@ interface BinCreateFormProps {
   className?: string;
   initialPhotos?: File[] | null;
   onInitialPhotosConsumed?: () => void;
+  initialGroups?: number[] | null;
+  onWizardComplete?: () => void;
 }
 
 export function BinCreateForm({
@@ -83,6 +86,8 @@ export function BinCreateForm({
   className,
   initialPhotos,
   onInitialPhotosConsumed,
+  initialGroups,
+  onWizardComplete,
 }: BinCreateFormProps) {
   const t = useTerminology();
   const { areas } = useAreaList(locationId);
@@ -96,6 +101,18 @@ export function BinCreateForm({
     setCapturedReturnTarget('bin-create');
     navigate('/capture', { state: { returnTo: location.pathname } });
   }
+
+  const wizardMode = (initialGroups && new Set(initialGroups).size > 1) ?? false;
+  const [wizardActive, setWizardActive] = useState(wizardMode);
+  const wizardActivatedRef = useRef(false);
+
+  useEffect(() => {
+    if (wizardActivatedRef.current) return;
+    if (wizardMode) {
+      wizardActivatedRef.current = true;
+      setWizardActive(true);
+    }
+  }, [wizardMode]);
 
   const {
     name, setName,
@@ -256,6 +273,25 @@ export function BinCreateForm({
       customFields,
       photos,
     });
+  }
+
+  if (wizardActive) {
+    return (
+      <PhotoBulkAdd
+        initialPhotos={initialPhotos ?? []}
+        initialGroups={initialGroups ?? null}
+        aiSettings={aiSettings}
+        onComplete={() => {
+          setWizardActive(false);
+          onInitialPhotosConsumed?.();
+          onWizardComplete?.();
+        }}
+        onExitToForm={() => {
+          setWizardActive(false);
+          onInitialPhotosConsumed?.();
+        }}
+      />
+    );
   }
 
   const compactLabel = 'text-[13px] text-[var(--text-tertiary)] mb-1.5 block';
