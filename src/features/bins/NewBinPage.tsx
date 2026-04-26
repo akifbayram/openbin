@@ -3,7 +3,9 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { setCapturedReturnTarget } from '@/features/capture/capturedPhotos';
 import { useReopenCreateOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useActiveLocation } from '@/features/locations/useLocations';
+import type { BinCreateFormData } from './BinCreateForm';
 import { BinCreateForm } from './BinCreateForm';
+import { addBin } from './useBins';
 
 export function NewBinPage() {
   const location = useLocation();
@@ -12,8 +14,7 @@ export function NewBinPage() {
   const activeLocation = useActiveLocation();
 
   const [initialPhotos, setInitialPhotos] = useState<File[] | null>(null);
-  // TODO(Task 4): wire initialGroups into BinCreateForm once it accepts the prop
-  const [_initialGroups, setInitialGroups] = useState<number[] | null>(null);
+  const [initialGroups, setInitialGroups] = useState<number[] | null>(null);
 
   // TODO(Task 9): useReopenCreateOnCapture will be updated to pass groups as second arg.
   // The extra parameter is unused until then (groups will be undefined, treated as null).
@@ -32,6 +33,28 @@ export function NewBinPage() {
     setCapturedReturnTarget('bin-create');
     navigate('/capture', { state: { returnTo: location.pathname } });
   }, [searchParams, navigate, location.pathname]);
+
+  const handleSubmit = useCallback(async (data: BinCreateFormData) => {
+    if (!activeLocation) return;
+    const bin = await addBin({
+      locationId: activeLocation.id,
+      name: data.name,
+      items: data.items,
+      notes: data.notes,
+      tags: data.tags,
+      areaId: data.areaId,
+      icon: data.icon,
+      color: data.color,
+      cardStyle: data.cardStyle || undefined,
+      visibility: data.visibility,
+      customFields: data.customFields,
+    });
+    navigate(`/bin/${bin.id}`);
+  }, [activeLocation, navigate]);
+
+  const handleWizardComplete = useCallback(() => {
+    navigate('/');
+  }, [navigate]);
 
   const fromAsk = searchParams.get('from') === 'ask';
   const handleCancel = useCallback(() => {
@@ -54,12 +77,13 @@ export function NewBinPage() {
       <BinCreateForm
         mode="full"
         locationId={activeLocation.id}
-        onSubmit={() => { /* wired in Task 5 */ }}
+        onSubmit={handleSubmit}
+        onWizardComplete={handleWizardComplete}
         showCancel
         onCancel={handleCancel}
         initialPhotos={initialPhotos}
         onInitialPhotosConsumed={handleConsumed}
-        // TODO(Task 4): pass initialGroups={initialGroups} once BinCreateForm accepts the prop
+        initialGroups={initialGroups}
       />
     </div>
   );
