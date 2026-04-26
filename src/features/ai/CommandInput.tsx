@@ -30,7 +30,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
           onBinNavigate={handleBinNavigate}
           onCameraRequest={() => {
             onOpenChange(false);
-            navigate('/capture');
+            navigate('/new-bin?camera=open&from=ask');
           }}
           onPhotoClose={() => onOpenChange(false)}
           onOpenAiSettings={() => {

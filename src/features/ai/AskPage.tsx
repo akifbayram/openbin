@@ -21,7 +21,7 @@ export function AskPage() {
     <div className="fixed inset-0 z-50 flex flex-col min-h-dvh bg-[var(--bg-base)] text-[var(--text-primary)]">
       <ConversationUI
         onBinNavigate={handleBinNavigate}
-        onCameraRequest={() => navigate('/capture')}
+        onCameraRequest={() => navigate('/new-bin?camera=open&from=ask')}
         onPhotoClose={handleBack}
         onOpenAiSettings={() => navigate('/settings/ai')}
         onDismissAiSetup={handleBack}
