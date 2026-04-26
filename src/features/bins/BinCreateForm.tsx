@@ -195,6 +195,7 @@ export function BinCreateForm({
     handlePhotoSelect,
     handleRemovePhoto,
     addPhotosFromFiles,
+    clearPhotos,
     handleAnalyze,
     handleReanalyze,
   } = usePhotoAnalysis({
@@ -253,13 +254,18 @@ export function BinCreateForm({
 
   // When photos accumulate to ≥2 in single-bin mode, lift them into the wizard.
   // Each photo becomes its own group (user can merge in the wizard's group step).
+  // Hand ownership to the wizard by clearing the form's photo state — so when the
+  // wizard exits (success, cancel, or all photos removed), the form starts fresh.
   useEffect(() => {
     if (wizardActive) return;
     if (photos.length < 2) return;
+    const captured = photos;
     cancelAnalyze();
-    setPickedFiles(photos);
-    setPickedGroups(photos.map((_, i) => i));
-  }, [photos, wizardActive, cancelAnalyze]);
+    setPickedFiles(captured);
+    setPickedGroups(captured.map((_, i) => i));
+    clearPhotos();
+    setWizardActive(true);
+  }, [photos, wizardActive, cancelAnalyze, clearPhotos]);
 
   function handleUndoAiField(field: AiFillField) {
     const snap = aiFill.undo(field);
