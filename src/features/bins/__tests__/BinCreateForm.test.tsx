@@ -1,4 +1,4 @@
-import { act, render } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -224,5 +224,17 @@ describe('BinCreateForm wizard mode', () => {
     const { queryByLabelText, getByTestId } = renderForm({ initialPhotos: files, initialGroups: [0, 1] });
     expect(queryByLabelText(/name/i)).not.toBeInTheDocument();
     expect(getByTestId('photo-bulk-add')).toBeInTheDocument();
+  });
+
+  it('switches to wizard mode when 2 files are selected via file input', async () => {
+    const { container } = renderForm();
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const files = [
+      new File(['a'], 'a.jpg', { type: 'image/jpeg' }),
+      new File(['b'], 'b.jpg', { type: 'image/jpeg' }),
+    ];
+    Object.defineProperty(input, 'files', { value: files });
+    fireEvent.change(input);
+    await waitFor(() => expect(screen.getByTestId('photo-bulk-add')).toBeInTheDocument());
   });
 });

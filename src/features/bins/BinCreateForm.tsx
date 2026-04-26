@@ -102,7 +102,12 @@ export function BinCreateForm({
     navigate('/capture', { state: { returnTo: location.pathname } });
   }
 
-  const wizardMode = (initialGroups && new Set(initialGroups).size > 1) ?? false;
+  const [pickedFiles, setPickedFiles] = useState<File[] | null>(null);
+  const [pickedGroups, setPickedGroups] = useState<number[] | null>(null);
+
+  const effectivePhotos = pickedFiles ?? initialPhotos ?? null;
+  const effectiveGroups = pickedGroups ?? initialGroups ?? null;
+  const wizardMode = (effectiveGroups && new Set(effectiveGroups).size > 1) ?? false;
   const [wizardActive, setWizardActive] = useState(wizardMode);
   const wizardActivatedRef = useRef(false);
 
@@ -278,16 +283,20 @@ export function BinCreateForm({
   if (wizardActive) {
     return (
       <PhotoBulkAdd
-        initialPhotos={initialPhotos ?? []}
-        initialGroups={initialGroups ?? null}
+        initialPhotos={effectivePhotos ?? []}
+        initialGroups={effectiveGroups ?? null}
         aiSettings={aiSettings}
         onComplete={() => {
           setWizardActive(false);
+          setPickedFiles(null);
+          setPickedGroups(null);
           onInitialPhotosConsumed?.();
           onWizardComplete?.();
         }}
         onExitToForm={() => {
           setWizardActive(false);
+          setPickedFiles(null);
+          setPickedGroups(null);
           onInitialPhotosConsumed?.();
         }}
       />
@@ -318,6 +327,10 @@ export function BinCreateForm({
             onRemovePhoto={handleRemovePhoto}
             onCameraClick={handleCameraClick}
             onFilesDropped={addPhotosFromFiles}
+            onMultiFileSelection={(files) => {
+              setPickedFiles(files);
+              setPickedGroups(files.map((_, i) => i));
+            }}
             analyzing={analyzing}
           />
 
@@ -610,6 +623,10 @@ export function BinCreateForm({
             onRemovePhoto={handleRemovePhoto}
             onCameraClick={handleCameraClick}
             onFilesDropped={addPhotosFromFiles}
+            onMultiFileSelection={(files) => {
+              setPickedFiles(files);
+              setPickedGroups(files.map((_, i) => i));
+            }}
             analyzing={analyzing}
           />
 
