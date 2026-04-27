@@ -70,11 +70,14 @@ export function ReorganizeTagsOptions(props: Props) {
         style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
       >
         <div className="overflow-hidden">
-          <div className="mt-3 space-y-4">
-            <fieldset className="border-0 p-0 m-0">
-              <legend className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2 p-0">
+          <div className="mt-3 space-y-5">
+            <fieldset className="border-0 m-0 px-0 pt-0 pb-2">
+              <legend className="text-[12px] text-[var(--text-secondary)] font-medium block p-0">
                 Change level
               </legend>
+              <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5 mb-2">
+                {changeLevelHints[changeLevel]}
+              </p>
               <OptionGroup
                 options={[
                   { key: 'additive', label: 'Additive' },
@@ -85,12 +88,9 @@ export function ReorganizeTagsOptions(props: Props) {
                 onChange={onChangeLevelChange as (v: string) => void}
                 size="sm"
               />
-              <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5">
-                {changeLevelHints[changeLevel]}
-              </p>
             </fieldset>
 
-            <fieldset className="border-0 p-0 m-0">
+            <fieldset className="border-0 m-0 px-0 pt-0 pb-2">
               <legend className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2 p-0">
                 Tag granularity
               </legend>

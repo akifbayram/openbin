@@ -21,12 +21,12 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent flush className="sm:max-w-lg h-[min(720px,85vh)]">
+      <DialogContent flush className="sm:max-w-lg max-h-[min(720px,85vh)]">
         <ConversationUI
           active={open}
           autoTriggerPhoto={autoTriggerPhoto}
           initialSelectedBinIds={selectedBinIds}
-          photoFrameClassName="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable] px-5 pt-5 pb-[calc(24px+var(--safe-bottom))]"
+          photoFrameClassName="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable] px-5 pt-5"
           onBinNavigate={handleBinNavigate}
           onCameraRequest={() => {
             onOpenChange(false);

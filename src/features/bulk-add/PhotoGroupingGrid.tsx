@@ -6,18 +6,31 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
+import { useMediaQuery } from '@/lib/useMediaQuery';
+import { cn, stickyDialogFooter } from '@/lib/utils';
 import type { BulkAddAction, BulkAddState, Group, Photo } from './useBulkGroupAdd';
 import { MAX_PHOTOS_PER_GROUP } from './useBulkGroupAdd';
 
-const PHOTO_SIZE = 96;
-const SPREAD = 7;
-const PADDING = 7;
 const MAX_VISIBLE_LAYERS = 3;
-const BIN_SIZE = PHOTO_SIZE + PADDING * 2 + (MAX_VISIBLE_LAYERS - 1) * SPREAD;
 const TOUCH_THRESHOLD = 6;
 const MOUSE_THRESHOLD = 3;
 const RECEIVE_ANIMATION_MS = 280;
+
+interface BinSizes {
+  photoSize: number;
+  padding: number;
+  spread: number;
+  binSize: number;
+  gap: number;
+}
+
+const COMPACT_SIZES: BinSizes = { photoSize: 80, padding: 5, spread: 5, binSize: 100, gap: 8 };
+const DEFAULT_SIZES: BinSizes = { photoSize: 96, padding: 7, spread: 7, binSize: 124, gap: 10 };
+
+function useBinSizes(): BinSizes {
+  const isWide = useMediaQuery('(min-width: 640px)');
+  return isWide ? DEFAULT_SIZES : COMPACT_SIZES;
+}
 
 type DropTarget = { type: 'bin'; groupId: string } | { type: 'split' } | null;
 
@@ -92,6 +105,7 @@ export function PhotoGroupingGrid({
   onBack,
 }: PhotoGroupingGridProps) {
   const t = useTerminology();
+  const sizes = useBinSizes();
   const totalPhotos = state.groups.reduce((acc, g) => acc + g.photos.length, 0);
   const { showToast } = useToast();
   const lastToggleRef = useRef<typeof state.lastToggle>(null);
@@ -307,7 +321,7 @@ export function PhotoGroupingGrid({
         onChange={onAddMore}
       />
 
-      <div className="flex flex-wrap" style={{ gap: 10 }}>
+      <div className="flex flex-wrap" style={{ gap: sizes.gap }}>
         {state.groups.map((group, gi) => {
           const baseIndex = displayIndex;
           displayIndex += group.photos.length;
@@ -317,6 +331,7 @@ export function PhotoGroupingGrid({
               group={group}
               binNumber={gi + 1}
               t={t}
+              sizes={sizes}
               baseDisplayIndex={baseIndex}
               activeDrag={activeDrag}
               keyboardMove={keyboardMove}
@@ -328,7 +343,7 @@ export function PhotoGroupingGrid({
           );
         })}
         {totalPhotos < effectiveMax && (
-          <AddMoreTile onClick={() => fileInputRef.current?.click()} />
+          <AddMoreTile sizes={sizes} onClick={() => fileInputRef.current?.click()} />
         )}
       </div>
 
@@ -348,7 +363,7 @@ export function PhotoGroupingGrid({
         t={t}
       />
 
-      <div className="mt-6 space-y-2">
+      <div className="mt-6 mb-6 space-y-2">
         <Label className="text-[13px] font-medium text-[var(--text-primary)]">
           {t.Area}
           <span className="ml-1 text-[12px] font-normal text-[var(--text-tertiary)]">· optional</span>
@@ -360,7 +375,7 @@ export function PhotoGroupingGrid({
         />
       </div>
 
-      <div className="row-spread sticky bottom-0 -mx-5 mt-auto bg-[var(--bg-flat-heavy)] border-t border-[var(--border-subtle)] px-5 pt-3 pb-[calc(12px+var(--safe-bottom))]">
+      <div className={cn('row-spread', stickyDialogFooter)}>
         <Button variant="ghost" onClick={onBack}>
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back
@@ -374,7 +389,7 @@ export function PhotoGroupingGrid({
         {announcement}
       </output>
 
-      {activeDrag && <DragGhost drag={activeDrag} />}
+      {activeDrag && <DragGhost drag={activeDrag} sizes={sizes} />}
     </div>
   );
 }
@@ -383,6 +398,7 @@ interface BinStackProps {
   group: Group;
   binNumber: number;
   t: ReturnType<typeof useTerminology>;
+  sizes: BinSizes;
   baseDisplayIndex: number;
   activeDrag: ActiveDrag | null;
   keyboardMove: KeyboardMoveState | null;
@@ -396,6 +412,7 @@ function BinStack({
   group,
   binNumber,
   t,
+  sizes,
   baseDisplayIndex,
   activeDrag,
   keyboardMove,
@@ -404,6 +421,7 @@ function BinStack({
   onPhotoKeyDown,
   onRemove,
 }: BinStackProps) {
+  const { photoSize, padding, spread, binSize } = sizes;
   const count = group.photos.length;
   const countLabel = count === 1 ? '1 photo' : `${count} photos`;
   const hoverTarget =
@@ -428,7 +446,7 @@ function BinStack({
             'ring-2 ring-[var(--destructive)] ring-offset-2 ring-offset-[var(--bg-page)]',
           isReceiving && !showValidRing && !showRejectedRing && 'animate-stack-receive',
         )}
-        style={{ width: BIN_SIZE, height: BIN_SIZE, overflow: 'visible' }}
+        style={{ width: binSize, height: binSize, overflow: 'visible' }}
       >
         {group.photos.map((photo, i) => {
           const layerFromTop = count - 1 - i;
@@ -440,9 +458,9 @@ function BinStack({
               key={photo.id}
               photo={photo}
               indexLabel={baseDisplayIndex + i + 1}
-              offsetX={isSingle ? 0 : PADDING + depth * SPREAD}
-              offsetY={isSingle ? 0 : PADDING + depth * SPREAD}
-              tileSize={isSingle ? BIN_SIZE : PHOTO_SIZE}
+              offsetX={isSingle ? 0 : padding + depth * spread}
+              offsetY={isSingle ? 0 : padding + depth * spread}
+              tileSize={isSingle ? binSize : photoSize}
               depth={depth}
               zIndex={i + 1}
               isTop={isTop}
@@ -461,8 +479,8 @@ function BinStack({
             aria-hidden="true"
             className="pointer-events-none absolute flex items-center justify-center font-bold text-white"
             style={{
-              top: PADDING - 9,
-              left: PADDING + PHOTO_SIZE - 11,
+              top: padding - 9,
+              left: padding + photoSize - 11,
               width: 20,
               height: 20,
               borderRadius: '50%',
@@ -596,10 +614,11 @@ function StackedPhotoTile({
 }
 
 interface AddMoreTileProps {
+  sizes: BinSizes;
   onClick: () => void;
 }
 
-function AddMoreTile({ onClick }: AddMoreTileProps) {
+function AddMoreTile({ sizes, onClick }: AddMoreTileProps) {
   return (
     <div className="flex flex-col items-center">
       <button
@@ -607,7 +626,7 @@ function AddMoreTile({ onClick }: AddMoreTileProps) {
         onClick={onClick}
         aria-label="Add more photos"
         className="flex flex-col items-center justify-center gap-1 rounded-[6px] border-2 border-dashed border-[var(--border-flat)] text-[var(--text-tertiary)] transition-colors hover:border-[var(--accent)] hover:bg-[var(--bg-input)] hover:text-[var(--accent)]"
-        style={{ width: BIN_SIZE, height: BIN_SIZE }}
+        style={{ width: sizes.binSize, height: sizes.binSize }}
       >
         <Plus className="h-5 w-5" />
         <span className="text-[11px] leading-tight">Add</span>
@@ -650,9 +669,10 @@ function SplitZone({ visible, active, t }: SplitZoneProps) {
 
 interface DragGhostProps {
   drag: ActiveDrag;
+  sizes: BinSizes;
 }
 
-function DragGhost({ drag }: DragGhostProps) {
+function DragGhost({ drag, sizes }: DragGhostProps) {
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div
@@ -662,8 +682,8 @@ function DragGhost({ drag }: DragGhostProps) {
         left: 0,
         top: 0,
         transform: `translate(${drag.x - drag.offsetX}px, ${drag.y - drag.offsetY}px) scale(1.08) rotate(-2deg)`,
-        width: PHOTO_SIZE,
-        height: PHOTO_SIZE,
+        width: sizes.photoSize,
+        height: sizes.photoSize,
         pointerEvents: 'none',
         zIndex: 100,
         willChange: 'transform',

@@ -159,7 +159,7 @@ describe('GroupReviewStep skeleton', () => {
   it('renders Back and Next buttons', () => {
     renderStep(makeState());
     expect(screen.getByRole('button', { name: /back/i })).toBeDefined();
-    expect(screen.getByRole('button', { name: /next|review all/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /next|review all|create bin/i })).toBeDefined();
   });
 });
 
@@ -633,5 +633,80 @@ describe('GroupReviewStep lock confirmation beat', () => {
       (call) => call[0]?.type === 'SET_ANALYZE_RESULT',
     );
     expect(resultDispatches).toHaveLength(1);
+  });
+});
+
+describe('GroupReviewStep single-bin create flow', () => {
+  beforeEach(() => {
+    mockStream.mockReset();
+    mockStream.mockResolvedValue(null);
+    mockCancel.mockReset();
+    mockStreamError = null;
+    mockStreamState = {
+      analyze: { ...idleStream },
+      reanalyze: { ...idleStream },
+      correction: { ...idleStream },
+    };
+  });
+
+  it('shows "Create bin" button (not "Review all") when there is exactly one group', () => {
+    renderStep(makeState({ name: 'My bin', status: 'reviewed' }));
+    expect(screen.getByRole('button', { name: /create bin/i })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /review all/i })).toBeNull();
+  });
+
+  it('disables the "Create bin" button when the group name is empty', () => {
+    renderStep(makeState({ name: '', status: 'reviewed' }));
+    const button = screen.getByRole('button', { name: /create bin/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  it('enables the "Create bin" button once the group has a non-empty trimmed name', () => {
+    renderStep(makeState({ name: '  Box  ', status: 'reviewed' }));
+    const button = screen.getByRole('button', { name: /create bin/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+  });
+
+  it('clicking "Create bin" calls onCreateNow and does not dispatch GO_TO_SUMMARY', () => {
+    const dispatch = vi.fn();
+    const onCreateNow = vi.fn();
+    renderStep(makeState({ name: 'Box', status: 'reviewed' }), { dispatch, onCreateNow });
+    fireEvent.click(screen.getByRole('button', { name: /create bin/i }));
+    expect(onCreateNow).toHaveBeenCalledTimes(1);
+    const summaryDispatches = dispatch.mock.calls.filter(
+      (call) => call[0]?.type === 'GO_TO_SUMMARY',
+    );
+    expect(summaryDispatches).toHaveLength(0);
+  });
+
+  it('multi-bin mode: last bin still shows "Review all" and dispatches GO_TO_SUMMARY (does not call onCreateNow)', () => {
+    const dispatch = vi.fn();
+    const onCreateNow = vi.fn();
+    const p1 = createPhoto(new File([''], 'a.jpg', { type: 'image/jpeg' }));
+    const p2 = createPhoto(new File([''], 'b.jpg', { type: 'image/jpeg' }));
+    const g1 = { ...createGroupFromPhoto(p1, null), name: 'Bin one', status: 'reviewed' as const };
+    const g2 = { ...createGroupFromPhoto(p2, null), name: 'Bin two', status: 'reviewed' as const };
+    const state: BulkAddState = { ...initialState, step: 'review', groups: [g1, g2], currentIndex: 1 };
+    renderStep(state, { dispatch, onCreateNow });
+
+    expect(screen.getByRole('button', { name: /review all/i })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /create bin/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /review all/i }));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'GO_TO_SUMMARY' });
+    expect(onCreateNow).not.toHaveBeenCalled();
+  });
+
+  it('places the data-tour="bulk-add-confirm" anchor on the "Create bin" button in single-bin mode', () => {
+    renderStep(makeState({ name: 'Box', status: 'reviewed' }));
+    const button = screen.getByRole('button', { name: /create bin/i });
+    expect(button.getAttribute('data-tour')).toBe('bulk-add-confirm');
+  });
+
+  it('swaps the button label to "Creating..." and disables it while a single-bin create is in flight', () => {
+    renderStep(makeState({ name: 'Box', status: 'creating' }), { isCreating: true });
+    const button = screen.getByRole('button', { name: /creating/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: /^create bin$/i })).toBeNull();
   });
 });

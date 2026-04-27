@@ -14,10 +14,10 @@ import { useAiSettings } from './useAiSettings';
 import { type UseConversationReturn, useConversation } from './useConversation';
 
 /**
- * Shared shell powering both the desktop `CommandInput` dialog and the mobile
- * `AskPage` route. Owns conversation state, photo-mode state, and the capture
- * pickup effect. Callers render their own chrome (dialog frame vs full-page
- * frame) via `renderChrome` and read state from the `shell` arg passed to it.
+ * Shared shell powering the `CommandInput` dialog. Owns conversation state,
+ * photo-mode state, and the capture pickup effect. The caller renders its own
+ * chrome (dialog frame, header) via `renderChrome` and reads state from the
+ * `shell` arg passed to it.
  */
 
 export interface ConversationShellState {
@@ -38,8 +38,7 @@ interface ConversationUIProps {
   autoTriggerPhoto?: boolean;
   /**
    * When transitioning from true → false, resets conversation, photo mode, and
-   * transcription. Defaults to true. CommandInput drives this from its `open` prop;
-   * AskPage leaves it at the default (route unmounts instead).
+   * transcription. Defaults to true. CommandInput drives this from its `open` prop.
    */
   active?: boolean;
   /** Called when user taps a bin in a query match; parent decides whether to close/navigate. */
@@ -223,9 +222,8 @@ export function ConversationUI({
 }
 
 /**
- * Shared bin-click navigator used by both entry points. The optional
- * `afterNavigate` callback runs before navigation — CommandInput uses it to
- * close the dialog, AskPage skips it entirely.
+ * Bin-click navigator. The optional `afterNavigate` callback runs before
+ * navigation — CommandInput uses it to close the dialog.
  */
 export function useBinNavigate(afterNavigate?: () => void) {
   const navigate = useNavigate();

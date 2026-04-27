@@ -21,7 +21,7 @@ import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
 import { prefersReducedMotion } from '@/lib/reducedMotion';
 import { useTerminology } from '@/lib/terminology';
-import { cn, focusRing, plural, sectionHeader } from '@/lib/utils';
+import { cn, focusRing, plural, sectionHeader, stickyDialogFooter } from '@/lib/utils';
 import type { AiSuggestions, BinItem, BinVisibility } from '@/types';
 import { AiBadge } from './AiBadge';
 import { BinPreviewCard } from './BinPreviewCard';
@@ -282,7 +282,7 @@ export function BinCreateForm({
     : header;
 
   return (
-    <form onSubmit={handleFormSubmit} className={cn(isFull ? 'space-y-5' : 'space-y-3', className)}>
+    <form onSubmit={handleFormSubmit} className={cn(isFull ? 'flex flex-1 flex-col gap-5' : 'space-y-3', className)}>
       {renderedHeader}
 
       {/* --- FULL MODE LAYOUT --- */}
@@ -651,7 +651,7 @@ export function BinCreateForm({
 
       {/* Footer */}
       {isFull ? (
-        <div className="flex gap-2 justify-end pt-2">
+        <div className={cn('flex gap-2 justify-end', stickyDialogFooter)}>
           {showCancel && (
             <Button type="button" variant="ghost" onClick={onCancel}>
               Cancel

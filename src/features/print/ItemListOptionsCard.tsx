@@ -3,6 +3,7 @@ import {
   ChevronDown,
   Edit3,
   Hash,
+  LayoutList,
   ListOrdered,
   type LucideIcon,
   MapPin,
@@ -81,7 +82,7 @@ export function ItemListOptionsCard({ options, onUpdate, expanded, onExpandedCha
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="row">
-            <ListOrdered className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <LayoutList className="h-4 w-4 text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] pointer-events-none">List Options</Label>
           </div>
           <ChevronDown className={cn(
@@ -91,15 +92,10 @@ export function ItemListOptionsCard({ options, onUpdate, expanded, onExpandedCha
         </button>
 
         {expanded && (
-          <div className="mt-3 px-1">
-            <SubsectionHeader title="Header" />
-            <div className="space-y-1">{headerRows.map(renderRow)}</div>
-
-            <SubsectionHeader title="Content" />
-            <div className="space-y-1">{contentRows.map(renderRow)}</div>
-
-            <SubsectionHeader title="Layout" />
-            <div className="space-y-1">{layoutRows.map(renderRow)}</div>
+          <div className="mt-3 space-y-4">
+            <Subsection title="Header">{headerRows.map(renderRow)}</Subsection>
+            <Subsection title="Content">{contentRows.map(renderRow)}</Subsection>
+            <Subsection title="Layout">{layoutRows.map(renderRow)}</Subsection>
 
             <CopiesStepper
               label="Blank rows at end"
@@ -116,10 +112,11 @@ export function ItemListOptionsCard({ options, onUpdate, expanded, onExpandedCha
   );
 }
 
-function SubsectionHeader({ title }: { title: string }) {
+function Subsection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="ui-eyebrow px-2 pt-3 pb-1">
-      {title}
+    <div className="px-1">
+      <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">{title}</span>
+      <div className="space-y-1">{children}</div>
     </div>
   );
 }

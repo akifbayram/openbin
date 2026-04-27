@@ -124,10 +124,6 @@ const CapturePage = lazyWithRetry(() =>
   import('@/features/capture/CapturePage').then((m) => ({ default: m.CapturePage }))
 );
 
-const AskPage = lazyWithRetry(() =>
-  import('@/features/ai/AskPage').then((m) => ({ default: m.AskPage }))
-);
-
 const AdminUsersPage = lazyWithRetry(() =>
   import('@/features/admin/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage }))
 );
@@ -407,7 +403,6 @@ export default function App() {
 
                 <Route path="/reorganize" element={<RouteWithBoundary><ReorganizePage /></RouteWithBoundary>} />
                 <Route path="/capture" element={<RouteWithBoundary><CapturePage /></RouteWithBoundary>} />
-                <Route path="/ask" element={<RouteWithBoundary><AskPage /></RouteWithBoundary>} />
                 <Route path="/admin/users" element={<RouteWithBoundary><AdminUsersPage /></RouteWithBoundary>} />
                 <Route path="/admin/users/:id" element={<RouteWithBoundary><AdminUserDetailPage /></RouteWithBoundary>} />
                 <Route path="/admin/system" element={<RouteWithBoundary><AdminSystemPage /></RouteWithBoundary>} />

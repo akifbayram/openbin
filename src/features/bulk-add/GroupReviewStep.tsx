@@ -28,7 +28,7 @@ import { useAuth } from '@/lib/auth';
 import { aiItemsToBinItems } from '@/lib/itemQuantities';
 import { prefersReducedMotion } from '@/lib/reducedMotion';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
+import { cn, stickyDialogFooter } from '@/lib/utils';
 import type { AiSettings, AiSuggestions, BinItem } from '@/types';
 import { PhotoScanFrame } from './PhotoScanFrame';
 import type { BulkAddAction, Group, Photo } from './useBulkGroupAdd';
@@ -66,9 +66,13 @@ interface GroupReviewStepProps {
   editingFromSummary: boolean;
   aiSettings: AiSettings | null;
   dispatch: React.Dispatch<BulkAddAction>;
+  /** Single-bin shortcut: when there's exactly one group, the last button creates immediately instead of advancing to the summary step. */
+  onCreateNow?: () => void;
+  /** True while a single-bin create is in flight — locks the button and swaps the label so the user gets feedback. */
+  isCreating?: boolean;
 }
 
-export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSettings, dispatch }: GroupReviewStepProps) {
+export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSettings, dispatch, onCreateNow, isCreating }: GroupReviewStepProps) {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
   const { aiEnabled, setAiEnabled } = useAiEnabled();
@@ -139,6 +143,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
 
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === groups.length - 1;
+  const isSingleBin = groups.length === 1;
 
   const isAnalyzing = group.status === 'analyzing';
   const isAnyActive = isAnalyzing || isAnalyzingStream || isReanalyzing || isCorrecting;
@@ -384,7 +389,11 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { status: 'reviewed' } });
     }
     if (isLast) {
-      dispatch({ type: 'GO_TO_SUMMARY' });
+      if (isSingleBin && onCreateNow) {
+        onCreateNow();
+      } else {
+        dispatch({ type: 'GO_TO_SUMMARY' });
+      }
     } else {
       dispatch({ type: 'SET_CURRENT_INDEX', index: currentIndex + 1 });
     }
@@ -416,6 +425,14 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const showRetryBand =
     aiEnabled && !!aiSettings && group.status === 'pending' && !isAnyActive && !retryBandDismissed;
 
+  const nextLabel = !isLast
+    ? 'Next'
+    : isSingleBin
+      ? isCreating
+        ? 'Creating...'
+        : `Create ${t.Bin}`
+      : 'Review all';
+
   const sparklesButton = aiEnabled && group.status === 'reviewed' && !showProgressBar && (
     <button
       type="button"
@@ -433,7 +450,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   );
 
   return (
-    <div data-tour="group-review" className="flex flex-1 flex-col space-y-5">
+    <div data-tour="group-review" className="flex flex-1 flex-col gap-5">
       {/* Image stays mounted across analyze/review so it doesn't reflow when the lock beat ends — only the chrome swaps. */}
       {/* overflow-hidden + matching radius clips scan-line/bracket glow to the photo's rounded shape. */}
       <div className="relative overflow-hidden rounded-[var(--radius-lg)]">
@@ -664,7 +681,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       )}
 
       {/* Navigation — always visible so flushPendingLock fires even during the lock beat */}
-      <div className="row-spread sticky bottom-0 -mx-5 mt-auto bg-[var(--bg-flat-heavy)] border-t border-[var(--border-subtle)] px-5 pt-3 pb-[calc(12px+var(--safe-bottom))]">
+      <div className={cn('row-spread', stickyDialogFooter)}>
         <Button variant="ghost" onClick={handleBack}>
           <ChevronLeft className="h-4 w-4 mr-1" />
           {editingFromSummary ? 'Back to summary' : 'Back'}
@@ -675,8 +692,15 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
             Done
           </Button>
         ) : (
-          <Button onClick={handleNext} disabled={isAnyActive}>
-            {isLast ? 'Review all' : 'Next'}
+          <Button
+            onClick={handleNext}
+            disabled={
+              isAnyActive ||
+              (isSingleBin && (!group.name.trim() || isCreating === true))
+            }
+            data-tour={isSingleBin ? 'bulk-add-confirm' : undefined}
+          >
+            {nextLabel}
             {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
           </Button>
         )}

@@ -67,65 +67,75 @@ export const MAX_PHOTOS_PER_GROUP = 5;
 
 export type FlowDotState = 'pending' | 'current' | 'done';
 
+export type FlowPhase = 'photos' | 'analyze' | 'review' | 'create';
+
 export interface FlowDot {
-  /** Stable React key. Group id for per-bin dots; literal for bookends. */
-  key: string;
+  /** Phase id, also used as React key. */
+  key: FlowPhase;
   state: FlowDotState;
 }
 
 export interface FlowProgressModel {
-  /** [Photos, ...one per bin, Create] — the bin queue is part of the macro flow. */
+  /** Four fixed macro phases: photos → analyze → review → create. */
   dots: FlowDot[];
-  /** Mono uppercase label naming the current dot. */
+  /** Mono uppercase label naming the current phase (with per-bin counter when multi-bin). */
   label: string;
   /** 1-based index of the current dot — feeds aria-label. */
   currentIndex: number;
   total: number;
+  /** True when the current bin is mid-AI-analysis — drives ANALYZE label and ai-accent dot styling. */
+  isAnalyzing: boolean;
 }
 
+const FLOW_ORDER: FlowPhase[] = ['photos', 'analyze', 'review', 'create'];
+
+const PHASE_LABELS: Record<FlowPhase, string> = {
+  photos: 'PHOTOS',
+  analyze: 'ANALYZE',
+  review: 'REVIEW',
+  create: 'CREATE',
+};
+
 /**
- * Map reducer state to the merged dot model. Each bin gets its own dot so the
- * per-bin queue position is visible without a second indicator. The
- * analyze→reviewed lifecycle for a bin collapses to a single "current" dot;
- * the AiProgressBar inside the photo overlay carries the analyze-vs-review
- * sub-state.
+ * Map reducer state to four macro phase dots. The dots represent the user-facing
+ * phases of the bulk-add flow, not per-bin queue position. When there are multiple
+ * bins, the label gets a "BIN n/N" suffix so the queue position is still visible.
+ *
+ * Phase mapping:
+ *   PHOTOS  ─ step === 'group'
+ *   ANALYZE ─ step === 'review' AND current bin is being analyzed (or hasn't been yet)
+ *   REVIEW  ─ step === 'review' AND current bin is awaiting human review (status: reviewed)
+ *   CREATE  ─ step === 'summary'
  */
 export function computeFlowProgress(state: BulkAddState): FlowProgressModel {
-  const groupCount = state.groups.length;
-  const reviewedCount = state.groups.filter((g) => g.status === 'reviewed').length;
+  const currentGroup = state.step === 'review' ? state.groups[state.currentIndex] : null;
+  // Only 'analyzing' status counts. 'pending' would mis-label the manual-mode case
+  // (AI disabled → bin stays pending → user is reviewing manually, not analyzing).
+  const isAnalyzing = !!currentGroup && currentGroup.status === 'analyzing';
 
-  const dots: FlowDot[] = [
-    { key: 'photos', state: state.step === 'group' ? 'current' : 'done' },
-  ];
+  let currentPhase: FlowPhase;
+  if (state.step === 'group') currentPhase = 'photos';
+  else if (state.step === 'summary') currentPhase = 'create';
+  else if (isAnalyzing) currentPhase = 'analyze';
+  else currentPhase = 'review';
 
-  for (let i = 0; i < groupCount; i++) {
-    let s: FlowDotState;
-    if (state.step === 'group') s = 'pending';
-    else if (state.step === 'summary') s = 'done';
-    else if (i === state.currentIndex) s = 'current';
-    else if (i < state.currentIndex) s = 'done';
-    // user navigated back from summary; bin already reviewed
-    else if (i < reviewedCount) s = 'done';
-    else s = 'pending';
-    dots.push({ key: state.groups[i].id, state: s });
+  const currentIdx = FLOW_ORDER.indexOf(currentPhase);
+  const dots: FlowDot[] = FLOW_ORDER.map((key, i) => ({
+    key,
+    state: i < currentIdx ? 'done' : i === currentIdx ? 'current' : 'pending',
+  }));
+
+  let label = PHASE_LABELS[currentPhase];
+  if (state.groups.length > 1 && (currentPhase === 'analyze' || currentPhase === 'review')) {
+    label += ` ${state.currentIndex + 1}/${state.groups.length}`;
   }
 
-  dots.push({
-    key: 'create',
-    state: state.step === 'summary' ? 'current' : 'pending',
-  });
-
-  let label: string;
-  if (state.step === 'group') label = 'PHOTOS';
-  else if (state.step === 'summary') label = 'CREATE';
-  else label = 'REVIEW';
-
-  const current = dots.findIndex((d) => d.state === 'current');
   return {
     dots,
     label,
-    currentIndex: current === -1 ? 0 : current,
+    currentIndex: currentIdx,
     total: dots.length,
+    isAnalyzing,
   };
 }
 

@@ -1,8 +1,10 @@
 import '@/components/ui/animations.css';
 import { Camera, MessageCircle, PackagePlus, Printer, QrCode, Settings, Sparkles, X } from 'lucide-react';
+import { useEffect } from 'react';
 import { BrandIcon } from '@/components/BrandIcon';
 import { AnimatedHeight } from '@/components/ui/animated-height';
-import { cn, focusRing, iconButton } from '@/lib/utils';
+import { getCommandInputRef } from '@/features/tour/TourProvider';
+import { closeButton, cn, focusRing } from '@/lib/utils';
 import type { OnboardingActions } from './onboardingConstants';
 import { markDemoTourDone } from './onboardingConstants';
 import type { CompletionAction } from './steps/CompletionStep';
@@ -27,7 +29,12 @@ function buildProdCompletionActions(newBinId: string | null): CompletionAction[]
   return [
     { icon: Printer, label: 'Print a QR label', description: 'For the bin you just created', path: printPath },
     { icon: Camera, label: 'Add a photo', description: "Let AI detect what's inside", path: binPath },
-    { icon: MessageCircle, label: 'Try Ask AI', description: 'Find your stuff by asking a question', path: '/ask' },
+    {
+      icon: MessageCircle,
+      label: 'Try Ask AI',
+      description: 'Find your stuff by asking a question',
+      onSelect: () => getCommandInputRef().current?.open(),
+    },
   ];
 }
 
@@ -37,24 +44,50 @@ export function OnboardingOverlay(props: OnboardingActions) {
   const { displayedStep, transitioning, loading, navigate } = state;
   const dots = Array.from({ length: totalSteps });
 
-  function handleNavigate(path: string) {
+  function handleAction(action: CompletionAction) {
     if (demoMode) markDemoTourDone();
     complete();
-    navigate(path);
+    if ('path' in action) navigate(action.path);
+    else action.onSelect();
   }
 
+  function handleDashboard() {
+    if (demoMode) markDemoTourDone();
+    complete();
+    navigate('/');
+  }
+
+  useEffect(() => {
+    if (!demoMode) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !loading) state.handleSkipSetup();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [demoMode, loading, state.handleSkipSetup]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-backdrop)]">
-      <div className="flat-heavy rounded-[var(--radius-xl)] w-full max-w-sm mx-5 px-8 py-8 relative max-h-[85vh] overflow-hidden flex flex-col">
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop dismisses demo only; Escape provides keyboard equivalent
+    // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard equivalent handled via document-level Escape listener above
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-backdrop)]"
+      onClick={demoMode && !loading ? state.handleSkipSetup : undefined}
+    >
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: card swallows backdrop clicks so only the backdrop dismisses */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation only — no keyboard equivalent needed */}
+      <div
+        className="flat-heavy rounded-[var(--radius-xl)] w-full max-w-sm mx-5 px-8 py-8 relative max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Close button */}
         <button
           type="button"
           onClick={state.handleSkipSetup}
           disabled={loading}
           aria-label="Close setup"
-          className={cn(iconButton, focusRing, 'absolute top-3 right-3 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-40 z-10')}
+          className={cn(closeButton, focusRing, 'disabled:opacity-40')}
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
         </button>
         {/* Progress dots */}
         <div className="flex justify-center gap-2 mb-8">
@@ -109,8 +142,8 @@ export function OnboardingOverlay(props: OnboardingActions) {
             <CompletionStep
               icon={<div className="h-16 w-16 rounded-[var(--radius-xl)] flex items-center justify-center mb-5 bg-[var(--accent)]/10"><Sparkles className="h-8 w-8 text-[var(--accent)]" /></div>}
               actions={buildProdCompletionActions(state.newBinId)}
-              onAction={handleNavigate}
-              onDashboard={() => handleNavigate('/')}
+              onAction={handleAction}
+              onDashboard={handleDashboard}
             />
           )}
           {displayedStep === 3 && demoMode && (
@@ -119,8 +152,8 @@ export function OnboardingOverlay(props: OnboardingActions) {
               title="Tour complete"
               subtitle="That's the essentials. Dive in and explore."
               actions={DEMO_COMPLETION_ACTIONS}
-              onAction={handleNavigate}
-              onDashboard={() => handleNavigate('/')}
+              onAction={handleAction}
+              onDashboard={handleDashboard}
             />
           )}
           </div>
