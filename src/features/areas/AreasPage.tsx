@@ -475,7 +475,7 @@ export function AreasPage() {
           <DialogContent>
             {__EE__ && (
               <Suspense fallback={null}>
-                <UpgradePrompt feature="Custom Fields" description="Define custom fields for your bins." upgradeUrl={planInfo.upgradeUrl} />
+                <UpgradePrompt feature="Custom Fields" description="Define custom fields for your bins." upgradeAction={planInfo.upgradeAction} />
               </Suspense>
             )}
           </DialogContent>

@@ -57,6 +57,11 @@ function makePlanInfo(overrides: Partial<PlanInfo>): PlanInfo {
     upgradeProUrl: null,
     portalUrl: null,
     subscribePlanUrl: null,
+    upgradeAction: null,
+    upgradePlusAction: null,
+    upgradeProAction: null,
+    subscribePlanAction: null,
+    portalAction: null,
     canDowngradeToFree: false,
     aiCredits: null,
     ...overrides,
@@ -138,13 +143,21 @@ describe('SubscriptionSection', () => {
   });
 
   it('shows single "Upgrade" button for free plan users instead of "Manage Subscription"', () => {
+    // After the 2026-04-26 hardening pass the SubscriptionSection consumes
+    // the structured *Action fields. /plans (the plan picker for free
+    // users) is GET-shaped because it's a static page, so CheckoutLink
+    // renders an <a href="..."> here — the legacy assertion still applies.
     setupMock(makePlanInfo({
       plan: 'free',
       status: 'inactive',
       portalUrl: 'https://billing.example.com/portal',
+      portalAction: { url: 'https://billing.example.com/portal', method: 'POST', fields: {} },
       upgradeUrl: 'https://billing.example.com/upgrade',
+      upgradeAction: { url: 'https://billing.example.com/upgrade', method: 'GET', fields: {} },
       upgradePlusUrl: 'https://billing.example.com/plus',
+      upgradePlusAction: { url: 'https://billing.example.com/plus', method: 'POST', fields: {} },
       upgradeProUrl: 'https://billing.example.com/pro',
+      upgradeProAction: { url: 'https://billing.example.com/pro', method: 'POST', fields: {} },
     }));
 
     renderSection();

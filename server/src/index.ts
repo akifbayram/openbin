@@ -198,6 +198,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
         error: err.code,
         message: err.message,
         upgrade_url: err.upgradeUrl,
+        upgrade_action: err.upgradeAction,
       });
       return;
     }
@@ -206,6 +207,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
         error: err.code,
         message: err.message,
         upgrade_url: err.upgradeUrl,
+        upgrade_action: err.upgradeAction,
       });
       return;
     }

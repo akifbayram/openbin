@@ -22,6 +22,7 @@ import type { TourContext } from '@/features/tour/tourSteps';
 import { useTour } from '@/features/tour/useTour';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
+import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
 import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTerminology } from '@/lib/terminology';
 import { useTheme } from '@/lib/theme';
@@ -31,7 +32,7 @@ import { usePermissions } from '@/lib/usePermissions';
 import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
 import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
-import { cn, isSafeExternalUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { BottomNav } from './BottomNav';
 import { DrawerProvider } from './DrawerContext';
 import { MobileDrawer } from './MobileDrawer';
@@ -84,14 +85,9 @@ export function AppLayout() {
     (path: string, opts?: { state?: unknown }) => guardedNavigate(() => rawNavigate(path, opts)),
     [rawNavigate, guardedNavigate],
   );
-  // Dispatch: mobile navigates to /ask full-page view; desktop opens the CommandInput dialog.
   const openAskAi = useCallback(() => {
-    if (isMobile) {
-      navigate('/ask');
-    } else {
-      setCommandOpen(true);
-    }
-  }, [isMobile, navigate]);
+    setCommandOpen(true);
+  }, []);
   // Register directly on the module-level ref (can't use useRegisterCommandInput here
   // because AppLayout is *above* TourProvider, so useTourContext() would return null).
   useEffect(() => {
@@ -268,19 +264,25 @@ export function AppLayout() {
                   ? getLockedMessage(planInfo.previousSubStatus)
                   : 'You\'re over your plan limits. Reduce usage or upgrade to resume editing.'}
               </p>
-              {(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) && isSafeExternalUrl((showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) ?? '') && (
-                <a
-                  href={(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) ?? ''}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-md bg-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/30 transition-colors shrink-0"
-                >
-                  {showLockedBanner
-                    ? getLockedCta(planInfo.previousSubStatus)
-                    : 'Upgrade'}
-                  <ArrowUpRight className="h-3 w-3" />
-                </a>
-              )}
+              {(() => {
+                // Locked banner uses the plan-picker (still GET because /plans
+                // is static). Over-limit banner uses upgradeProAction (POST,
+                // token in body, never in URL).
+                const action = showLockedBanner ? planInfo.upgradeAction : planInfo.upgradeProAction;
+                if (!isSafeCheckoutAction(action)) return null;
+                return (
+                  <CheckoutLink
+                    action={action}
+                    target="_blank"
+                    className="inline-flex items-center gap-1 rounded-md bg-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/30 transition-colors shrink-0"
+                  >
+                    {showLockedBanner
+                      ? getLockedCta(planInfo.previousSubStatus)
+                      : 'Upgrade'}
+                    <ArrowUpRight className="h-3 w-3" />
+                  </CheckoutLink>
+                );
+              })()}
             </div>
           </div>
         )}

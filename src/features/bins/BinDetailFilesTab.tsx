@@ -66,7 +66,7 @@ export function BinDetailFilesTab({ binId, photos, canEdit }: BinDetailFilesTabP
               <UpgradePrompt
                 feature="Document Attachments"
                 description="Upload PDFs, spreadsheets, and other files to bins."
-                upgradeUrl={planInfo.upgradeUrl}
+                upgradeAction={planInfo.upgradeAction}
               />
             </Suspense>
           )}

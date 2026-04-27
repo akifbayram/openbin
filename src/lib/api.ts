@@ -1,4 +1,5 @@
 import { Events, notify } from '@/lib/eventBus';
+import type { CheckoutAction } from '@/types';
 
 const API_BASE = '';
 const CSRF_COOKIE = 'openbin-csrf';
@@ -21,12 +22,20 @@ export class ApiError extends Error {
   status: number;
   code?: string;
   upgradeUrl?: string | null;
-  constructor(status: number, message: string, code?: string, upgradeUrl?: string | null) {
+  upgradeAction?: CheckoutAction | null;
+  constructor(
+    status: number,
+    message: string,
+    code?: string,
+    upgradeUrl?: string | null,
+    upgradeAction?: CheckoutAction | null,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.upgradeUrl = upgradeUrl;
+    this.upgradeAction = upgradeAction ?? null;
   }
 }
 
@@ -128,15 +137,16 @@ async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boole
     const data = await res.json().catch(() => ({ error: res.statusText }));
     const code = data.error as string | undefined;
     const upgradeUrl = data.upgrade_url as string | null | undefined;
+    const upgradeAction = (data.upgrade_action ?? null) as CheckoutAction | null;
     if (code === 'PLAN_RESTRICTED' || code === 'SUBSCRIPTION_EXPIRED' || code === 'OVER_LIMIT' || code === 'AI_CREDITS_EXHAUSTED') {
       notify(Events.PLAN);
-      window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl } }));
+      window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl, upgradeAction } }));
     }
     if (res.status === 403 && Date.now() - lastLocationRefresh > 5_000) {
       lastLocationRefresh = Date.now();
       notify(Events.LOCATIONS);
     }
-    throw new ApiError(res.status, data.message || data.error || res.statusText, code, upgradeUrl);
+    throw new ApiError(res.status, data.message || data.error || res.statusText, code, upgradeUrl, upgradeAction);
   }
 
   if (res.status === 204) return undefined as T;

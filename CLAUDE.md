@@ -55,7 +55,7 @@ OpenAPI spec at `server/openapi.yaml`.
 - **`CORS_ORIGIN`**: Defaults to `http://localhost:5173`. Must be set to the production URL (e.g. `https://cloud.openbin.app`) in deployment — otherwise the dev origin leaks into production ACAO headers.
 - **Thumbnail generation**: Worker pool via `piscina` (`server/src/lib/thumbnailPool.ts`). Sharp runs off-main-thread to avoid blocking the event loop.
 - **Export streaming**: Large exports stream JSON via `res.write()` to prevent OOM. Don't buffer the full response in `server/src/routes/export.ts`.
-- **Ask AI chat**: `useConversation` in `src/features/ai/useConversation.ts` drives turn-based chat. Per-session memory only — conversation clears on dialog close or route change. Desktop uses `CommandInput` dialog; mobile (`< 1024px`) uses `/ask` full-page route. Both consume `ConversationThread` + `ConversationComposer`. Server accepts optional `history` on `/ai/ask/stream`, `/ai/query/stream`, `/ai/command/stream` via `parseHistoryFromBody()` (`server/src/lib/conversationHistory.ts`). Command-action turns execute in a single round-trip via `POST /api/batch` (`server/src/routes/batch.ts`).
+- **Ask AI chat**: `useConversation` in `src/features/ai/useConversation.ts` drives turn-based chat. Per-session memory only — conversation clears on dialog close. Both desktop and mobile use the `CommandInput` dialog (bottom sheet on mobile, centered dialog on desktop). Consumes `ConversationThread` + `ConversationComposer`. Server accepts optional `history` on `/ai/ask/stream`, `/ai/query/stream`, `/ai/command/stream` via `parseHistoryFromBody()` (`server/src/lib/conversationHistory.ts`). Command-action turns execute in a single round-trip via `POST /api/batch` (`server/src/routes/batch.ts`).
 
 ## Security (non-obvious)
 
@@ -66,6 +66,7 @@ OpenAPI spec at `server/openapi.yaml`.
 - **Roles**: Three-tier role system — `admin`, `member`, `viewer`. Viewers are read-only (no create/edit/delete/pin). Use `usePermissions()` hook for client-side guards and `requireMemberOrAbove()` middleware for server-side.
 - **SSRF protection**: AI provider calls use `undici` Agent with DNS pinning (`server/src/lib/aiCaller.ts`). Resolved IPs are pinned at request time to close TOCTOU gap. Self-hosted mode skips validation (allows local endpoints like Ollama).
 - **Registration modes**: `REGISTRATION_MODE` env var — `open` (default), `invite` (require location invite code), `closed` (no sign-ups).
+- **Billing checkout — never put the JWT in a URL.** `/api/plan` returns both legacy `*Url` strings and structured `*Action` objects (`{ url, method, fields }`). New UI MUST consume `*Action` and render via `<CheckoutLink>` (`src/lib/checkoutAction.tsx`) or call `submitCheckoutAction()` for imperative window-open replacements. `*Action` POSTs the subscription JWT in the form body so it never lands in browser history, the Referer header, the Umami analytics URL, or billing's access log. The `/plans` action is intentionally GET-shaped because billing's plan picker is a static page that needs the token client-side; everything else is POST. Server-side: middleware that throws `PlanRestrictedError` / `OverLimitError` should pass both `upgradeUrl` and `upgradeAction` (use `actionAndUrl()` helper in `requirePlan.ts`). See openbin-deploy/SECURITY.md → "Token redaction in logs" for full context.
 
 ## Development
 

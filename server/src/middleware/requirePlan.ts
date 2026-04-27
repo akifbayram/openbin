@@ -3,9 +3,10 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { PlanRestrictedError } from '../lib/httpErrors.js';
 import {
+  type CheckoutAction,
   checkAndIncrementAiCredits,
-  generateUpgradePlanUrl,
-  generateUpgradeUrl,
+  generateUpgradeAction,
+  generateUpgradePlanAction,
   getUserFeatures,
   getUserPlanInfo,
   hasAiAccess,
@@ -13,7 +14,16 @@ import {
   isProUser,
   isSelfHosted,
   isSubscriptionActive,
+  renderActionAsUrl,
 } from '../lib/planGate.js';
+
+// Helper: derive the legacy URL form from an action so we don't sign the
+// JWT twice every time we throw an upgrade-flavored error. Both fields
+// are populated together so old API consumers keep their `upgrade_url`
+// while new ones can use the structured `upgrade_action`.
+function actionAndUrl(action: CheckoutAction | null): { url: string | null; action: CheckoutAction | null } {
+  return { url: action ? renderActionAsUrl(action) : null, action };
+}
 
 /** Self-hosted mode bypasses all checks with zero DB queries. */
 function requirePlanAccess(
@@ -37,13 +47,13 @@ function requirePlanAccess(
     res.locals.planInfo = planInfo;
 
     if (!isSubscriptionActive(planInfo)) {
-      const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
-      throw new PlanRestrictedError('Your subscription has expired', upgradeUrl);
+      const u = actionAndUrl(await generateUpgradeAction(userId, planInfo.email));
+      throw new PlanRestrictedError('Your subscription has expired', u.url, u.action);
     }
 
     if (!check(planInfo)) {
-      const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
-      throw new PlanRestrictedError(message, upgradeUrl);
+      const u = actionAndUrl(await generateUpgradeAction(userId, planInfo.email));
+      throw new PlanRestrictedError(message, u.url, u.action);
     }
 
     next();
@@ -75,11 +85,12 @@ export function requireActiveSubscription(): RequestHandler {
 
     if (isSubscriptionActive(planInfo)) { next(); return; }
 
-    const upgradeUrl = await generateUpgradeUrl(req.user.id, planInfo.email);
+    const u = actionAndUrl(await generateUpgradeAction(req.user.id, planInfo.email));
     res.status(403).json({
       error: 'SUBSCRIPTION_EXPIRED',
       message: 'Your subscription has expired. Subscribe to continue using OpenBin.',
-      upgrade_url: upgradeUrl,
+      upgrade_url: u.url,
+      upgrade_action: u.action,
     });
   });
 }
@@ -102,8 +113,8 @@ export function requireExportAccess(): RequestHandler {
     if (features.fullExport) { next(); return; }
 
     const planInfo = await getUserPlanInfo(userId);
-    const upgradeUrl = planInfo ? await generateUpgradeUrl(userId, planInfo.email) : null;
-    throw new PlanRestrictedError('Export requires a Plus or Pro plan', upgradeUrl);
+    const u = actionAndUrl(planInfo ? await generateUpgradeAction(userId, planInfo.email) : null);
+    throw new PlanRestrictedError('Export requires a Plus or Pro plan', u.url, u.action);
   });
 }
 
@@ -117,13 +128,13 @@ export function requireAiAccess(): RequestHandler {
     if (!planInfo) throw new PlanRestrictedError('User plan not found');
 
     if (!isSubscriptionActive(planInfo)) {
-      const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
-      throw new PlanRestrictedError('Your subscription has expired', upgradeUrl);
+      const u = actionAndUrl(await generateUpgradeAction(userId, planInfo.email));
+      throw new PlanRestrictedError('Your subscription has expired', u.url, u.action);
     }
 
     if (!hasAiAccess(planInfo)) {
-      const upgradeUrl = await generateUpgradePlanUrl(userId, planInfo.email, 'plus');
-      throw new PlanRestrictedError('AI features require a Plus or Pro plan', upgradeUrl);
+      const u = actionAndUrl(await generateUpgradePlanAction(userId, planInfo.email, 'plus'));
+      throw new PlanRestrictedError('AI features require a Plus or Pro plan', u.url, u.action);
     }
 
     // Stash for downstream middleware (checkAiCredits) to avoid re-fetching
@@ -136,7 +147,7 @@ export const checkAiCredits: RequestHandler = asyncHandler(async (req, res, next
   const result = await checkAndIncrementAiCredits(req.user!.id);
   if (!result.allowed) {
     const planInfo = res.locals.planInfo ?? await getUserPlanInfo(req.user!.id);
-    const upgradeUrl = planInfo ? await generateUpgradePlanUrl(req.user!.id, planInfo.email, 'pro') : null;
+    const u = actionAndUrl(planInfo ? await generateUpgradePlanAction(req.user!.id, planInfo.email, 'pro') : null);
     const message = result.resetsAt
       ? `You've used all ${result.limit} AI credits for this billing period.`
       : `You've used all ${result.limit} AI credits included in your trial. Upgrade to Pro for unlimited AI.`;
@@ -144,7 +155,8 @@ export const checkAiCredits: RequestHandler = asyncHandler(async (req, res, next
       error: 'AI_CREDITS_EXHAUSTED',
       message,
       aiCredits: { used: result.used, limit: result.limit, resetsAt: result.resetsAt },
-      upgrade_url: upgradeUrl,
+      upgrade_url: u.url,
+      upgrade_action: u.action,
     });
     return;
   }

@@ -505,7 +505,7 @@ export function AccountSection() {
               <UpgradePrompt
                 feature="API Keys"
                 description="Create API keys to integrate with external tools."
-                upgradeUrl={planInfo.upgradeUrl}
+                upgradeAction={planInfo.upgradeAction}
               />
             </Suspense>
           </SettingsSection>

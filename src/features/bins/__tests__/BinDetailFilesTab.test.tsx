@@ -25,6 +25,11 @@ const basePlanInfo = {
   upgradeProUrl: null,
   portalUrl: null,
   subscribePlanUrl: null,
+  upgradeAction: null,
+  upgradePlusAction: null,
+  upgradeProAction: null,
+  subscribePlanAction: null,
+  portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
   features: {

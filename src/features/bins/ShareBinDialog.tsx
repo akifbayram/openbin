@@ -89,7 +89,7 @@ export function ShareBinDialog({ binId, open, onOpenChange }: ShareBinDialogProp
               <UpgradePrompt
                 feature="Bin Sharing"
                 description="Generate public or unlisted links to share bins with anyone."
-                upgradeUrl={planInfo.upgradeUrl}
+                upgradeAction={planInfo.upgradeAction}
               />
             </Suspense>
           )

@@ -1,15 +1,20 @@
 import { ArrowUpRight } from 'lucide-react';
+import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
 import { usePlan } from '@/lib/usePlan';
-import { cn, focusRing, isSafeExternalUrl } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
+import type { CheckoutAction } from '@/types';
 
 interface UpgradePromptProps {
-  feature: string;  // e.g. "AI Features", "API Keys"
-  description?: string;  // Optional explanation
-  upgradeUrl: string | null;
+  feature: string; // e.g. "AI Features", "API Keys"
+  description?: string; // Optional explanation
+  // Pass the structured CheckoutAction from `planInfo.upgradeAction` (or
+  // `upgradeProAction` etc.). Renders a form-POST when the underlying action
+  // is POST so the JWT lands in the request body, not the URL.
+  upgradeAction: CheckoutAction | null;
   className?: string;
 }
 
-export function UpgradePrompt({ feature, description, upgradeUrl, className }: UpgradePromptProps) {
+export function UpgradePrompt({ feature, description, upgradeAction, className }: UpgradePromptProps) {
   const { isFree, isPlus, isLocked } = usePlan();
   const isActiveFreeOrPlus = (isFree || isPlus) && !isLocked;
 
@@ -28,16 +33,15 @@ export function UpgradePrompt({ feature, description, upgradeUrl, className }: U
           <p className="text-[13px] text-[var(--text-tertiary)] mt-1">{description}</p>
         )}
       </div>
-      {upgradeUrl && isSafeExternalUrl(upgradeUrl) && (
-        <a
-          href={upgradeUrl}
+      {isSafeCheckoutAction(upgradeAction) && (
+        <CheckoutLink
+          action={upgradeAction}
           target="_blank"
-          rel="noopener noreferrer"
           className={cn('inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] h-10 px-4 text-[14px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors shrink-0', focusRing)}
         >
           Upgrade
           <ArrowUpRight className="h-3 w-3" />
-        </a>
+        </CheckoutLink>
       )}
     </div>
   );

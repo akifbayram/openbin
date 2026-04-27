@@ -13,7 +13,7 @@ import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/custo
 import { ForbiddenError, NotFoundError, OverLimitError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import { assertLocationWritable, assertPhotoStorageAllowedTx, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
+import { assertLocationWritable, assertPhotoStorageAllowedTx, generateUpgradeAction, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache, renderActionAsUrl } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { getUserUsageTrackingPrefs, recordBinUsage } from '../lib/recordBinUsage.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
@@ -31,8 +31,9 @@ router.use(authenticate);
 
 async function throwPhotoOverLimit(userId: string, message: string): Promise<never> {
   const planInfo = await getUserPlanInfo(userId);
-  const upgradeUrl = planInfo ? await generateUpgradeUrl(userId, planInfo.email) : null;
-  throw new OverLimitError(message, upgradeUrl);
+  const upgradeAction = planInfo ? await generateUpgradeAction(userId, planInfo.email) : null;
+  const upgradeUrl = upgradeAction ? renderActionAsUrl(upgradeAction) : null;
+  throw new OverLimitError(message, upgradeUrl, upgradeAction);
 }
 
 // POST /api/bins — create bin

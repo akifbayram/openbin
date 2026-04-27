@@ -2,10 +2,17 @@ import { Router } from 'express';
 import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
-import { computeOverLimits, generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, SELF_HOSTED_USAGE_STUB, SELF_HOSTED_USAGE_SUMMARY_STUB, SubStatus, subStatusLabel } from '../lib/planGate.js';
+import { type CheckoutAction, computeOverLimits, generatePortalAction, generateUpgradeAction, generateUpgradePlanAction, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, renderActionAsUrl, SELF_HOSTED_USAGE_STUB, SELF_HOSTED_USAGE_SUMMARY_STUB, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
+
+// Helper: render an action's URL form for the *Url back-compat field, or
+// return null if the action itself is null. Lets the response object stay
+// readable below without ?: chains around every URL field.
+function actionToUrl(action: CheckoutAction | null): string | null {
+  return action ? renderActionAsUrl(action) : null;
+}
 
 router.get('/', authenticate, asyncHandler(async (req, res) => {
   if (isSelfHosted()) {
@@ -21,6 +28,14 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       upgradeProUrl: null,
       subscribePlanUrl: null,
       portalUrl: null,
+      // CheckoutAction-shaped fields (see lib/planGate.ts). New consumers
+      // should use *Action over *Url so tokens never land in URLs / browser
+      // history / Referer for endpoints we control (POST-able).
+      upgradeAction: null,
+      upgradePlusAction: null,
+      upgradeProAction: null,
+      subscribePlanAction: null,
+      portalAction: null,
       aiCredits: null,
     });
     return;
@@ -46,6 +61,16 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     ? { used: aiCreditsRaw.used, limit: aiCreditsRaw.limit, resetsAt: aiCreditsRaw.resetsAt }
     : null;
 
+  // Generate every *Action once so we can derive matching *Url fields
+  // without firing the JWT-sign code path twice for the same surface.
+  const [upgradeAction, upgradePlusAction, upgradeProAction, subscribePlanAction, portalAction] = await Promise.all([
+    active && isPro ? null : generateUpgradeAction(userId, email, planInfo.previousSubStatus !== null),
+    isFree || (isPlus && isLapsed) ? generateUpgradePlanAction(userId, email, 'plus') : null,
+    !isPro || !isPaidActive ? generateUpgradePlanAction(userId, email, 'pro') : null,
+    isTrial || (!isFree && isLapsed) ? generateUpgradePlanAction(userId, email, planLabel(plan) as 'plus' | 'pro') : null,
+    isPaidActive ? generatePortalAction(userId, email) : null,
+  ]);
+
   res.json({
     plan: planLabel(plan),
     status: subStatusLabel(subStatus),
@@ -56,14 +81,20 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       ? (planInfo.previousSubStatus === SubStatus.TRIAL ? 'trial' : 'active')
       : null,
     features: getFeatureMap(plan),
-    upgradeUrl: active && isPro ? null : await generateUpgradeUrl(userId, email, planInfo.previousSubStatus !== null),
-    upgradePlusUrl: isFree || (isPlus && isLapsed)
-      ? await generateUpgradePlanUrl(userId, email, 'plus') : null,
-    upgradeProUrl: !isPro || !isPaidActive
-      ? await generateUpgradePlanUrl(userId, email, 'pro') : null,
-    subscribePlanUrl: isTrial || (!isFree && isLapsed)
-      ? await generateUpgradePlanUrl(userId, email, planLabel(plan) as 'plus' | 'pro') : null,
-    portalUrl: isPaidActive ? await generatePortalUrl(userId, email) : null,
+    // Legacy URL fields. Kept populated for back-compat with older clients
+    // and for email templates that need a plain href. New client code MUST
+    // prefer the matching *Action field (token in form body, not URL).
+    upgradeUrl: actionToUrl(upgradeAction),
+    upgradePlusUrl: actionToUrl(upgradePlusAction),
+    upgradeProUrl: actionToUrl(upgradeProAction),
+    subscribePlanUrl: actionToUrl(subscribePlanAction),
+    portalUrl: actionToUrl(portalAction),
+    // Preferred shape for new consumers.
+    upgradeAction,
+    upgradePlusAction,
+    upgradeProAction,
+    subscribePlanAction,
+    portalAction,
     canDowngradeToFree: !isFree && !isPaidActive,
     aiCredits,
   });

@@ -8,9 +8,10 @@ import { SettingsPageHeader } from '@/features/settings/SettingsPageHeader';
 import { SettingsRow } from '@/features/settings/SettingsRow';
 import { SettingsSection } from '@/features/settings/SettingsSection';
 import { apiFetch } from '@/lib/api';
+import { CheckoutLink, isSafeCheckoutAction, submitCheckoutAction } from '@/lib/checkoutAction';
 import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
-import { cn, focusRing, isSafeExternalUrl, plural } from '@/lib/utils';
-import type { PlanFeatures, PlanTier } from '@/types';
+import { cn, focusRing, plural } from '@/lib/utils';
+import type { CheckoutAction, PlanFeatures, PlanTier } from '@/types';
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -147,23 +148,23 @@ function getPlanSubtitle(plan: PlanTier, features: PlanFeatures): string {
 function getPrimaryCta(
   planInfo: ReturnType<typeof usePlan>['planInfo'],
   isLocked: boolean,
-): { label: string; href: string } | null {
+): { label: string; action: CheckoutAction } | null {
   if (isLocked) {
     const label = getLockedCta(planInfo.previousSubStatus);
-    const href = planInfo.subscribePlanUrl ?? planInfo.upgradeUrl;
-    if (href) return { label, href };
+    const action = planInfo.subscribePlanAction ?? planInfo.upgradeAction;
+    if (isSafeCheckoutAction(action)) return { label, action };
     return null;
   }
 
   const isTrialing = planInfo.status === 'trial';
 
-  if (planInfo.plan === 'free' && planInfo.upgradeUrl) {
-    return { label: 'Upgrade', href: planInfo.upgradeUrl };
+  if (planInfo.plan === 'free' && isSafeCheckoutAction(planInfo.upgradeAction)) {
+    return { label: 'Upgrade', action: planInfo.upgradeAction };
   }
 
-  if (isTrialing && planInfo.subscribePlanUrl) {
+  if (isTrialing && isSafeCheckoutAction(planInfo.subscribePlanAction)) {
     const planName = planInfo.plan === 'plus' ? 'Plus' : 'Pro';
-    return { label: `Subscribe to ${planName}`, href: planInfo.subscribePlanUrl };
+    return { label: `Subscribe to ${planName}`, action: planInfo.subscribePlanAction };
   }
 
   return null;
@@ -223,16 +224,15 @@ function PlanHeader({
         </p>
       )}
 
-      {cta && isSafeExternalUrl(cta.href) && (
-        <a
-          href={cta.href}
+      {cta && (
+        <CheckoutLink
+          action={cta.action}
           target="_blank"
-          rel="noopener noreferrer"
           className={cn(actionPrimary, 'mt-3 w-full sm:w-auto')}
         >
           {cta.label}
           <ArrowUpRight className="h-3.5 w-3.5" />
-        </a>
+        </CheckoutLink>
       )}
     </div>
   );
@@ -275,18 +275,17 @@ function UnlockSection({
   if (planInfo.locked) return null;
 
   if (plan === 'plus' && isTrialing) {
-    if (!planInfo.upgradeProUrl) return null;
+    if (!isSafeCheckoutAction(planInfo.upgradeProAction)) return null;
     return (
       <SettingsSection label="Want more?">
-        <a
-          href={planInfo.upgradeProUrl}
+        <CheckoutLink
+          action={planInfo.upgradeProAction}
           target="_blank"
-          rel="noopener noreferrer"
           className={cn('inline-flex items-center gap-1 rounded-[var(--radius-xs)] text-[13px] font-medium text-[var(--accent)] hover:underline', focusRing)}
         >
           Upgrade to Pro
           <ArrowUpRight className="h-3 w-3" />
-        </a>
+        </CheckoutLink>
       </SettingsSection>
     );
   }
@@ -296,7 +295,10 @@ function UnlockSection({
 
   const isFreePlan = plan === 'free';
   const label = isFreePlan ? 'Unlock with Plus' : 'Unlock with Pro';
-  const upgradeHref = isFreePlan ? null : planInfo.upgradeProUrl;
+  // Free users get their upgrade CTA from the PlanHeader above; the
+  // UnlockSection is just a feature list. Plus users get an inline
+  // "Upgrade to Pro" button using the POST-shaped upgradeProAction.
+  const upgradeAction = isFreePlan ? null : planInfo.upgradeProAction;
 
   return (
     <SettingsSection label={label}>
@@ -308,16 +310,15 @@ function UnlockSection({
           </li>
         ))}
       </ul>
-      {upgradeHref && isSafeExternalUrl(upgradeHref) && (
-        <a
-          href={upgradeHref}
+      {isSafeCheckoutAction(upgradeAction) && (
+        <CheckoutLink
+          action={upgradeAction}
           target="_blank"
-          rel="noopener noreferrer"
           className={actionSecondary}
         >
           Upgrade to Pro
           <ArrowUpRight className="h-3 w-3" />
-        </a>
+        </CheckoutLink>
       )}
     </SettingsSection>
   );
@@ -401,9 +402,8 @@ export function SubscriptionSection() {
   const isFree = planInfo.plan === 'free';
   const isTrialing = planInfo.status === 'trial';
   const tiles = buildUsageTiles(planInfo, usage);
-  const hasBillingContent =
-    (planInfo.portalUrl && isSafeExternalUrl(planInfo.portalUrl)) ||
-    planInfo.canDowngradeToFree;
+  const portalAvailable = isSafeCheckoutAction(planInfo.portalAction);
+  const hasBillingContent = portalAvailable || planInfo.canDowngradeToFree;
   const showBilling = (!isFree || isTrialing) && hasBillingContent;
 
   return (
@@ -425,11 +425,15 @@ export function SubscriptionSection() {
 
       {showBilling && (
         <SettingsSection label="Billing">
-          {planInfo.portalUrl && isSafeExternalUrl(planInfo.portalUrl) && (
+          {portalAvailable && planInfo.portalAction && (
             <SettingsRow
               label="Manage Subscription"
               description="Update payment method, view invoices, or cancel"
-              onClick={() => window.open(planInfo.portalUrl ?? '', '_blank', 'noopener,noreferrer')}
+              // submitCheckoutAction performs a transient form-POST in a
+              // new tab so the JWT lands in the request body, not the URL.
+              // Replaces the old window.open(portalUrl) which leaked the
+              // token via location.href to Umami / browser history.
+              onClick={() => submitCheckoutAction(planInfo.portalAction!, { target: '_blank' })}
             />
           )}
           {planInfo.canDowngradeToFree && (

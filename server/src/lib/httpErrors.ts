@@ -1,3 +1,13 @@
+// CheckoutAction lives in planGate.ts. We re-declare the structural shape
+// here (instead of importing the alias) to keep this module dependency-free
+// for non-billing call sites — httpErrors is loaded by routes that don't
+// otherwise care about the plan layer.
+export interface CheckoutActionShape {
+  url: string;
+  method: 'GET' | 'POST';
+  fields: Record<string, string>;
+}
+
 export class HttpError extends Error {
   constructor(
     public readonly statusCode: number,
@@ -53,10 +63,16 @@ export class QuotaExceededError extends HttpError {
 
 export class PlanRestrictedError extends HttpError {
   public readonly upgradeUrl: string | null;
-  constructor(message: string, upgradeUrl: string | null = null) {
+  public readonly upgradeAction: CheckoutActionShape | null;
+  constructor(
+    message: string,
+    upgradeUrl: string | null = null,
+    upgradeAction: CheckoutActionShape | null = null,
+  ) {
     super(403, 'PLAN_RESTRICTED', message);
     this.name = 'PlanRestrictedError';
     this.upgradeUrl = upgradeUrl;
+    this.upgradeAction = upgradeAction;
   }
 }
 
@@ -76,10 +92,16 @@ export class ScanUnavailableError extends HttpError {
 
 export class OverLimitError extends HttpError {
   public readonly upgradeUrl: string | null;
-  constructor(message: string, upgradeUrl: string | null = null) {
+  public readonly upgradeAction: CheckoutActionShape | null;
+  constructor(
+    message: string,
+    upgradeUrl: string | null = null,
+    upgradeAction: CheckoutActionShape | null = null,
+  ) {
     super(403, 'OVER_LIMIT', message);
     this.name = 'OverLimitError';
     this.upgradeUrl = upgradeUrl;
+    this.upgradeAction = upgradeAction;
   }
 }
 
