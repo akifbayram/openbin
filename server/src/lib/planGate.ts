@@ -494,10 +494,13 @@ export async function getManagerToken(userId: string, email: string | null): Pro
 // removing the token from the wire entirely on every endpoint that can
 // accept POST body or an Authorization: Bearer header.
 //
-// /plans is intentionally still GET-with-token because the page is static
-// HTML and its JS needs the token client-side to build plan-selection
-// links. Mitigations there: Cache-Control: no-store from billing,
-// Caddy's strict-origin Referrer-Policy, and access-log redaction.
+// All three actions are POST. The token rides in the form body and never
+// touches a URL — not the address bar, not browser history, not Referer,
+// not Umami pageview events, not access logs. The billing service's
+// /auth/openbin entry sets a short-lived HttpOnly cookie (obc_session)
+// from the POST body and then 302s the user to /plans without any token
+// in the URL; subsequent same-origin clicks within the /plans → checkout
+// flow read the token from that cookie.
 export interface CheckoutAction {
   url: string;
   method: 'GET' | 'POST';
@@ -507,7 +510,7 @@ export interface CheckoutAction {
 export function buildUpgradeAction(token: string, returning?: boolean): CheckoutAction {
   const fields: Record<string, string> = { token, origin: config.corsOrigin };
   if (returning) fields.returning = '1';
-  return { url: `${config.managerUrl}/plans`, method: 'GET', fields };
+  return { url: `${config.managerUrl}/auth/openbin`, method: 'POST', fields };
 }
 
 export function buildUpgradePlanAction(token: string, plan: 'plus' | 'pro'): CheckoutAction {
@@ -536,20 +539,30 @@ export function renderActionAsUrl(action: CheckoutAction): string {
   return params ? `${action.url}?${params}` : action.url;
 }
 
-// Legacy URL builders. New code should call build*Action above. These are
-// kept so we can populate the *Url fields on /api/plan for one release
-// cycle while the openbin app frontend migrates to *Action consumers.
-// Email templates also still reference these — they can't POST.
+// Legacy URL builders. Used by:
+//   - Email templates (clickable links can't POST a form body)
+//   - The legacy *Url fields on /api/plan responses (back-compat)
+//
+// These intentionally still target /plans?token=… and /portal?token=…
+// rather than the action endpoints. The PlansLayout client-side script
+// detects the URL token, POSTs it to /auth/openbin to set the cookie,
+// then strips the token from the URL via history.replaceState — so the
+// magic-link UX still works while keeping the URL-bar exposure to a
+// single page render. New surfaces should consume *Action, not these.
 export function buildUpgradeUrl(token: string, returning?: boolean): string {
-  return renderActionAsUrl(buildUpgradeAction(token, returning));
+  const params = new URLSearchParams({ token, origin: config.corsOrigin });
+  if (returning) params.set('returning', '1');
+  return `${config.managerUrl}/plans?${params.toString()}`;
 }
 
 export function buildUpgradePlanUrl(token: string, plan: 'plus' | 'pro'): string {
-  return renderActionAsUrl(buildUpgradePlanAction(token, plan));
+  const params = new URLSearchParams({ token, plan });
+  return `${config.managerUrl}/auth/openbin?${params.toString()}`;
 }
 
 export function buildPortalUrl(token: string): string {
-  return renderActionAsUrl(buildPortalAction(token));
+  const params = new URLSearchParams({ token });
+  return `${config.managerUrl}/portal?${params.toString()}`;
 }
 
 export async function generateUpgradeAction(userId: string, email: string | null, returning?: boolean): Promise<CheckoutAction | null> {
@@ -567,19 +580,23 @@ export async function generatePortalAction(userId: string, email: string | null)
   return token ? buildPortalAction(token) : null;
 }
 
+// generate*Url: returns the URL form (for emails / legacy clients).
+// These call build*Url directly rather than rendering an *Action so that
+// emails get the user-friendly /plans?token=… landing page rather than
+// the /auth/openbin entry which is now POST-shaped.
 export async function generateUpgradeUrl(userId: string, email: string | null, returning?: boolean): Promise<string | null> {
-  const action = await generateUpgradeAction(userId, email, returning);
-  return action ? renderActionAsUrl(action) : null;
+  const token = await getManagerToken(userId, email);
+  return token ? buildUpgradeUrl(token, returning) : null;
 }
 
 export async function generateUpgradePlanUrl(userId: string, email: string | null, plan: 'plus' | 'pro'): Promise<string | null> {
-  const action = await generateUpgradePlanAction(userId, email, plan);
-  return action ? renderActionAsUrl(action) : null;
+  const token = await getManagerToken(userId, email);
+  return token ? buildUpgradePlanUrl(token, plan) : null;
 }
 
 export async function generatePortalUrl(userId: string, email: string | null): Promise<string | null> {
-  const action = await generatePortalAction(userId, email);
-  return action ? renderActionAsUrl(action) : null;
+  const token = await getManagerToken(userId, email);
+  return token ? buildPortalUrl(token) : null;
 }
 
 export interface OverLimits {
