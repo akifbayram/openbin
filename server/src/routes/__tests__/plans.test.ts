@@ -1,10 +1,14 @@
+import type { Express } from 'express';
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../../index.js';
 
-const app = createApp();
-
 describe('GET /api/plans', () => {
+  let app: Express;
+  beforeEach(() => {
+    app = createApp();
+  });
+
   it('returns catalog without auth', async () => {
     const res = await request(app).get('/api/plans');
     expect(res.status).toBe(200);
