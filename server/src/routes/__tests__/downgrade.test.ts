@@ -24,6 +24,7 @@ vi.mock('../../lib/billingClient.js', () => ({
 import { createTestUser } from '../../__tests__/helpers.js';
 import { createApp } from '../../index.js';
 import { postBillingDowngrade } from '../../lib/billingClient.js';
+import { BillingNotConfiguredError } from '../../lib/httpErrors.js';
 import { getUserPlanInfo, isSelfHosted, isSubscriptionActive, Plan, SubStatus } from '../../lib/planGate.js';
 
 let app: Express;
@@ -158,5 +159,20 @@ describe('POST /api/plan/downgrade', () => {
       .send({ targetPlan: 'free' });
     expect(res.status).toBe(200);
     expect(postBillingDowngrade).toHaveBeenCalledWith({ userId: user.id, targetPlan: 'free' });
+  });
+
+  it('returns 503 BILLING_NOT_CONFIGURED when billing client throws BillingNotConfiguredError', async () => {
+    const { token } = await createTestUser(app);
+    mockActivePlusPaidUser('');
+    vi.mocked(postBillingDowngrade).mockRejectedValueOnce(
+      new BillingNotConfiguredError('BILLING_INTERNAL_URL or BILLING_INTERNAL_KEY not configured'),
+    );
+
+    const res = await request(app)
+      .post('/api/plan/downgrade')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ targetPlan: 'free' });
+    expect(res.status).toBe(503);
+    expect(res.body.error).toBe('BILLING_NOT_CONFIGURED');
   });
 });

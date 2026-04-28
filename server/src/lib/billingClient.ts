@@ -1,4 +1,5 @@
 import { config } from './config.js';
+import { BillingNotConfiguredError } from './httpErrors.js';
 
 export interface BillingDowngradeRequest {
   userId: string;
@@ -13,7 +14,9 @@ export interface BillingDowngradeResult {
 
 export async function postBillingDowngrade(req: BillingDowngradeRequest): Promise<BillingDowngradeResult> {
   if (!config.billingInternalUrl || !config.billingInternalKey) {
-    throw new Error('BILLING_INTERNAL_URL or BILLING_INTERNAL_KEY not configured');
+    throw new BillingNotConfiguredError(
+      'BILLING_INTERNAL_URL or BILLING_INTERNAL_KEY not configured',
+    );
   }
 
   const res = await fetch(`${config.billingInternalUrl}/internal/downgrade`, {
