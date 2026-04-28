@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { computeDowngradeImpact } from '../lib/downgradeImpact.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { type CheckoutAction, computeOverLimits, generatePortalAction, generateUpgradeAction, generateUpgradePlanAction, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, renderActionAsUrl, SELF_HOSTED_USAGE_STUB, SELF_HOSTED_USAGE_SUMMARY_STUB, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';
@@ -12,6 +13,18 @@ const router = Router();
 // readable below without ?: chains around every URL field.
 function actionToUrl(action: CheckoutAction | null): string | null {
   return action ? renderActionAsUrl(action) : null;
+}
+
+const VALID_TARGETS = new Set(['free', 'plus']);
+
+function planLabelToTier(label: 'free' | 'plus' | 'pro') {
+  if (label === 'free') return Plan.FREE;
+  if (label === 'plus') return Plan.PLUS;
+  return Plan.PRO;
+}
+
+function rankPlan(label: 'free' | 'plus' | 'pro'): number {
+  return label === 'free' ? 0 : label === 'plus' ? 1 : 2;
 }
 
 router.get('/', authenticate, asyncHandler(async (req, res) => {
@@ -176,6 +189,34 @@ router.post('/downgrade-to-free', authenticate, asyncHandler(async (req, res) =>
   invalidateOverLimitCache(userId);
 
   res.json({ ok: true });
+}));
+
+router.post('/downgrade-impact', authenticate, asyncHandler(async (req, res) => {
+  if (isSelfHosted()) throw new NotFoundError('Not available in self-hosted mode');
+
+  const { targetPlan } = req.body as { targetPlan?: unknown };
+  if (typeof targetPlan !== 'string' || !VALID_TARGETS.has(targetPlan)) {
+    throw new ValidationError('targetPlan must be "free" or "plus"');
+  }
+
+  const userId = req.user!.id;
+  const planInfo = await getUserPlanInfo(userId);
+  if (!planInfo) throw new NotFoundError('User not found');
+
+  const currentLabel = planLabel(planInfo.plan) as 'free' | 'plus' | 'pro';
+  if (rankPlan(targetPlan as 'free' | 'plus') >= rankPlan(currentLabel)) {
+    throw new ValidationError('Target plan must be a downgrade');
+  }
+
+  const usage = await getUserUsage(userId);
+  const impact = computeDowngradeImpact({
+    currentFeatures: getFeatureMap(planInfo.plan),
+    targetFeatures: getFeatureMap(planLabelToTier(targetPlan as 'free' | 'plus')),
+    targetPlan: targetPlan as 'free' | 'plus',
+    usage,
+  });
+
+  res.json(impact);
 }));
 
 export { router as planRoutes };
