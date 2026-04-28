@@ -11,6 +11,7 @@ const router = Router();
 
 const validPlans = new Set(Object.values(Plan));
 const validStatuses = new Set(Object.values(SubStatus));
+const VALID_PERIODS = new Set<'monthly' | 'annual' | null | undefined>([null, undefined, 'monthly', 'annual']);
 
 const SUBSCRIPTION_ISSUER = 'openbin-manager';
 const SUBSCRIPTION_AUDIENCE = 'openbin-backend';
@@ -72,7 +73,6 @@ router.post('/callback', asyncHandler(async (req, res) => {
     throw new ValidationError('Invalid plan/status combination: TRIAL is only valid for PLUS');
   }
 
-  const VALID_PERIODS = new Set([null, undefined, 'monthly', 'annual']);
   if (!VALID_PERIODS.has(payload.billingPeriod ?? null)) {
     throw new ValidationError('Invalid billingPeriod value');
   }
