@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,14 +54,16 @@ export function DowngradeImpactDialog(props: DowngradeImpactDialogProps) {
         ) : impact && impact.warnings.length > 0 ? (
           <div className="py-2 space-y-3">
             <p className="text-sm text-[var(--text-secondary)]">Here's what changes after you downgrade:</p>
-            <ul className="space-y-3">
+            <ul className="divide-y divide-[var(--border-subtle)]">
               {impact.warnings.map((w, idx) => (
-                <li key={`${w.kind}-${idx}`} className="space-y-0.5">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">
-                    {w.kind === 'usage-exceeded' && <span className="mr-1">⚠</span>}
+                <li key={`${w.kind}-${idx}`} className="py-2.5 first:pt-0 last:pb-0">
+                  <p className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-1.5">
+                    {w.kind === 'usage-exceeded' && (
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500 dark:text-amber-400" />
+                    )}
                     {w.title}
                   </p>
-                  <p className="text-xs text-[var(--text-tertiary)]">{w.description}</p>
+                  <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{w.description}</p>
                 </li>
               ))}
             </ul>

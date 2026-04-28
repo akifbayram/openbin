@@ -12,7 +12,7 @@ interface AnnualUpsellBannerProps {
 export function AnnualUpsellBanner({ savingsCents, switchAction }: AnnualUpsellBannerProps) {
   if (savingsCents <= 0 || !switchAction || !isSafeCheckoutAction(switchAction)) return null;
   return (
-    <div className="rounded-[var(--radius-md)] bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 p-3 flex items-center justify-between gap-3">
+    <div className="rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] border border-[color-mix(in_srgb,var(--accent)_22%,transparent)] p-3 flex items-center justify-between gap-3">
       <p className="text-sm text-[var(--text-primary)]">
         Save {formatPriceCents(savingsCents)}/year by switching to annual
       </p>

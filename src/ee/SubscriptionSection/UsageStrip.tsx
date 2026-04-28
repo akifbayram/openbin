@@ -42,7 +42,7 @@ export function UsageStrip({ usage, features, aiCredits }: UsageStripProps) {
   if (visible.length === 0) return null;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {visible.map(m => {
         const pct = m.limit > 0 ? (m.used / m.limit) * 100 : 0;
         const valueText = m.formatValue ? m.formatValue(m.used, m.limit) : `${m.used} / ${m.limit}`;

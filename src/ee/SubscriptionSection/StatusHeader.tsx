@@ -57,7 +57,7 @@ export function StatusHeader(props: StatusHeaderProps) {
     stateLabel = 'Expired';
     dateLine = activeUntil ? `since ${formatDate(activeUntil)}` : null;
   } else if (isTrial) {
-    stateLabel = `${PLAN_LABELS[plan]} · Trial · ${trialDaysLeft ?? 0} days remaining`;
+    stateLabel = `${PLAN_LABELS[plan]} · Trial`;
   } else if (isCancelPending && cancelAtPeriodEnd) {
     stateLabel = `${PLAN_LABELS[plan]} · Active`;
     dateLine = `Cancels ${formatDate(cancelAtPeriodEnd)}`;
@@ -70,17 +70,23 @@ export function StatusHeader(props: StatusHeaderProps) {
   const trialBarPct = trialDaysLeft !== null
     ? Math.max(0, Math.min(100, ((trialPeriodDays - trialDaysLeft) / trialPeriodDays) * 100))
     : null;
+  const trialTone = trialDaysLeft !== null && trialDaysLeft < 3 ? 'red' : 'amber';
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <h2 className="text-lg font-semibold text-[var(--text-primary)]">{stateLabel}</h2>
+      {isTrial && trialDaysLeft !== null && (
+        <p className={trialDaysLeft < 3 ? 'text-sm font-medium text-red-600 dark:text-red-400' : 'text-sm font-medium text-amber-600 dark:text-amber-400'}>
+          {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} remaining
+        </p>
+      )}
       {dateLine && (
         <p className={isCancelPending ? 'text-amber-600 dark:text-amber-400 text-sm' : 'text-[var(--text-tertiary)] text-sm'}>
           {dateLine}
         </p>
       )}
       {trialBarPct !== null && trialDaysLeft !== null && (
-        <ProgressBar value={trialBarPct} tone={trialDaysLeft < 3 ? 'red' : 'amber'} ariaLabel="Trial time elapsed" />
+        <ProgressBar value={trialBarPct} tone={trialTone} ariaLabel="Trial time elapsed" />
       )}
     </div>
   );

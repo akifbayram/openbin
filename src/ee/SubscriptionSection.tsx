@@ -77,18 +77,22 @@ export function SubscriptionSection() {
       ? computeAnnualSavings(proPlan.prices)
       : 0;
 
+  const showDowngradeLinks = isPaidActive && !isCancelPending;
+
   return (
     <div className="space-y-6">
-      <StatusHeader
-        plan={planInfo.plan}
-        status={planInfo.status}
-        activeUntil={planInfo.activeUntil}
-        cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
-        previousSubStatus={planInfo.previousSubStatus}
-        trialPeriodDays={planInfo.trialPeriodDays}
-      />
-
-      <UsageStrip usage={usage ?? ZERO_USAGE} features={planInfo.features} aiCredits={planInfo.aiCredits} />
+      {/* Status + usage — tightly grouped */}
+      <div className="space-y-3">
+        <StatusHeader
+          plan={planInfo.plan}
+          status={planInfo.status}
+          activeUntil={planInfo.activeUntil}
+          cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
+          previousSubStatus={planInfo.previousSubStatus}
+          trialPeriodDays={planInfo.trialPeriodDays}
+        />
+        <UsageStrip usage={usage ?? ZERO_USAGE} features={planInfo.features} aiCredits={planInfo.aiCredits} />
+      </div>
 
       {showAnnualUpsell && (
         <AnnualUpsellBanner savingsCents={currentSavings} switchAction={planInfo.portalAction} />
@@ -115,23 +119,27 @@ export function SubscriptionSection() {
         <ManageSubscriptionRow action={planInfo.portalAction} isCancelPending={isCancelPending} />
       )}
 
-      {planInfo.plan === 'pro' && isPaidActive && !isCancelPending && (
-        <button
-          type="button"
-          className={cn('text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]', focusRing)}
-          onClick={() => setDowngradeTarget('plus')}
-        >
-          Downgrade to Plus
-        </button>
-      )}
-      {(planInfo.plan === 'plus' || planInfo.plan === 'pro') && isPaidActive && !isCancelPending && (
-        <button
-          type="button"
-          className={cn('text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]', focusRing)}
-          onClick={() => setDowngradeTarget('free')}
-        >
-          Switch to Free Plan
-        </button>
+      {showDowngradeLinks && (
+        <div className="space-y-2">
+          {planInfo.plan === 'pro' && (
+            <button
+              type="button"
+              className={cn('text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]', focusRing)}
+              onClick={() => setDowngradeTarget('plus')}
+            >
+              Downgrade to Plus
+            </button>
+          )}
+          {(planInfo.plan === 'plus' || planInfo.plan === 'pro') && (
+            <button
+              type="button"
+              className={cn('text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]', focusRing)}
+              onClick={() => setDowngradeTarget('free')}
+            >
+              Switch to Free Plan
+            </button>
+          )}
+        </div>
       )}
 
       {downgradeTarget && (

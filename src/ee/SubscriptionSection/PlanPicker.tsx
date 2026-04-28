@@ -57,6 +57,7 @@ export function PlanPicker(props: PlanPickerProps) {
             ctaLabel={ctaFor(currentPlan, plan)}
             action={actionFor(plan)}
             isCurrentPlan={plan.id === currentPlan}
+            recommended={plan.id === 'pro'}
           />
         ))}
       </div>

@@ -60,7 +60,7 @@ describe('SubscriptionSection orchestrator', () => {
     }));
     render(<SubscriptionSection />);
     expect(screen.getByText(/Save .* by switching to annual/i)).toBeInTheDocument();
-    expect(screen.getByText(/Get Pro/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Upgrade to Pro/i })).toBeInTheDocument();
     expect(screen.getByText(/Manage Subscription/i)).toBeInTheDocument();
   });
 
