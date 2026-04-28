@@ -8,6 +8,10 @@ interface StatusHeaderProps {
   activeUntil: string | null;
   cancelAtPeriodEnd: string | null;
   previousSubStatus: PlanInfo['previousSubStatus'];
+  /** Trial total length in days. Defaults to 7 to match server config default
+   * (`server/src/lib/config.ts` → `trialPeriodDays`). Pass an override here if
+   * the server config diverges or future PlanInfo surfaces it explicitly. */
+  trialPeriodDays?: number;
 }
 
 const PLAN_LABELS: Record<PlanTier, string> = {
@@ -35,7 +39,7 @@ function daysUntil(iso: string | null): number | null {
 }
 
 export function StatusHeader(props: StatusHeaderProps) {
-  const { plan, status, activeUntil, cancelAtPeriodEnd, previousSubStatus } = props;
+  const { plan, status, activeUntil, cancelAtPeriodEnd, previousSubStatus, trialPeriodDays = 7 } = props;
 
   const isLapsed = status === 'inactive' && previousSubStatus !== null;
   const isFree = plan === 'free' && !isLapsed;
@@ -53,7 +57,7 @@ export function StatusHeader(props: StatusHeaderProps) {
     stateLabel = 'Expired';
     dateLine = activeUntil ? `since ${formatDate(activeUntil)}` : null;
   } else if (isTrial) {
-    stateLabel = `${PLAN_LABELS[plan]} · Trial · ${trialDaysLeft} days remaining`;
+    stateLabel = `${PLAN_LABELS[plan]} · Trial · ${trialDaysLeft ?? 0} days remaining`;
   } else if (isCancelPending && cancelAtPeriodEnd) {
     stateLabel = `${PLAN_LABELS[plan]} · Active`;
     dateLine = `Cancels ${formatDate(cancelAtPeriodEnd)}`;
@@ -62,9 +66,9 @@ export function StatusHeader(props: StatusHeaderProps) {
     dateLine = activeUntil ? `Renews ${formatDate(activeUntil)}` : null;
   }
 
-  // Trial countdown bar over a default 14-day period.
+  // Trial countdown bar over the configured trial length (default 7 days, matches server).
   const trialBarPct = trialDaysLeft !== null
-    ? Math.max(0, Math.min(100, ((14 - trialDaysLeft) / 14) * 100))
+    ? Math.max(0, Math.min(100, ((trialPeriodDays - trialDaysLeft) / trialPeriodDays) * 100))
     : null;
 
   return (
