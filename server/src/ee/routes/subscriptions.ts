@@ -11,6 +11,7 @@ const router = Router();
 
 const validPlans = new Set(Object.values(Plan));
 const validStatuses = new Set(Object.values(SubStatus));
+const VALID_PERIODS = new Set<'monthly' | 'annual' | null | undefined>([null, undefined, 'monthly', 'annual']);
 
 const SUBSCRIPTION_ISSUER = 'openbin-manager';
 const SUBSCRIPTION_AUDIENCE = 'openbin-backend';
@@ -33,7 +34,15 @@ router.post('/callback', asyncHandler(async (req, res) => {
 
   const token = authHeader.slice(7);
 
-  let payload: jose.JWTPayload & { userId: string; plan: number; status: number; activeUntil: string; updatedAt?: string };
+  let payload: jose.JWTPayload & {
+    userId: string;
+    plan: number;
+    status: number;
+    activeUntil: string;
+    updatedAt?: string;
+    cancelAtPeriodEnd?: string | null;
+    billingPeriod?: 'monthly' | 'annual' | null;
+  };
   try {
     const result = await jose.jwtVerify(token, new TextEncoder().encode(secret), {
       issuer: SUBSCRIPTION_ISSUER,
@@ -62,6 +71,10 @@ router.post('/callback', asyncHandler(async (req, res) => {
   }
   if (!validatePlanTransition(plan as PlanTier, status as SubStatusType)) {
     throw new ValidationError('Invalid plan/status combination: TRIAL is only valid for PLUS');
+  }
+
+  if (!VALID_PERIODS.has(payload.billingPeriod ?? null)) {
+    throw new ValidationError('Invalid billingPeriod value');
   }
 
   // Replay protection: persist jti on first use. Uniqueness collision => replay.
@@ -94,8 +107,17 @@ router.post('/callback', asyncHandler(async (req, res) => {
   const result = await query(
     `UPDATE users SET plan = $1, sub_status = $2, active_until = $3,
      previous_sub_status = CASE WHEN $2 = ${SubStatus.INACTIVE} THEN sub_status ELSE NULL END,
-     updated_at = ${d.now()} WHERE id = $4`,
-    [plan, status, activeUntil || null, userId],
+     cancel_at_period_end = $4,
+     billing_period = COALESCE($5, billing_period),
+     updated_at = ${d.now()} WHERE id = $6`,
+    [
+      plan,
+      status,
+      activeUntil || null,
+      payload.cancelAtPeriodEnd ?? null,
+      payload.billingPeriod ?? null,
+      userId,
+    ],
   );
 
   if (result.rowCount === 0) {

@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
   sub_status         INTEGER NOT NULL DEFAULT 1,
   active_until       TEXT,
   previous_sub_status INTEGER,
+  cancel_at_period_end TEXT,
+  billing_period     TEXT,
   ai_credits_used    INTEGER NOT NULL DEFAULT 0,
   ai_credits_reset_at TEXT,
   last_active_at TEXT,

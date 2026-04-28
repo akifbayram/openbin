@@ -373,6 +373,43 @@ export interface PlanInfo {
   portalAction: CheckoutAction | null;
   canDowngradeToFree: boolean;
   aiCredits: { used: number; limit: number; resetsAt: string | null } | null;
+  // ISO timestamp when the subscription will cancel at period end (set by
+  // billing webhook on `customer.subscription.updated` with
+  // cancel_at_period_end=true). null when the subscription is active and
+  // not scheduled to cancel.
+  cancelAtPeriodEnd: string | null;
+  // Current billing cadence on the subscription. null on free / inactive
+  // plans or when the value has not yet been set by the billing webhook.
+  billingPeriod: 'monthly' | 'annual' | null;
+  // Trial total length in days, sourced from `config.trialPeriodDays` on the
+  // server. Surfaces here so the client trial bar uses the same denominator
+  // as billing instead of hardcoding 7.
+  trialPeriodDays: number;
+}
+
+export interface CatalogPlan {
+  id: 'free' | 'plus' | 'pro';
+  name: string;
+  prices: {
+    monthly: number;          // cents; 0 for free
+    annual: number | null;    // cents/year; null for free
+  };
+  features: PlanFeatures;
+}
+
+export interface PlanCatalog {
+  plans: CatalogPlan[];
+}
+
+export interface DowngradeWarning {
+  kind: 'usage-exceeded' | 'feature-loss';
+  title: string;
+  description: string;
+}
+
+export interface DowngradeImpact {
+  targetPlan: 'free' | 'plus';
+  warnings: DowngradeWarning[];
 }
 
 export interface UsageDay {

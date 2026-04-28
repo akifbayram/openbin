@@ -1,0 +1,93 @@
+import { useMemo } from 'react';
+import { ProgressBar } from '@/components/ui/progress-bar';
+import type { PlanInfo, PlanTier, SubscriptionStatus } from '@/types';
+
+interface StatusHeaderProps {
+  plan: PlanTier;
+  status: SubscriptionStatus;
+  activeUntil: string | null;
+  cancelAtPeriodEnd: string | null;
+  previousSubStatus: PlanInfo['previousSubStatus'];
+  /** Trial total length in days. Defaults to 7 to match server config default
+   * (`server/src/lib/config.ts` → `trialPeriodDays`). Pass an override here if
+   * the server config diverges or future PlanInfo surfaces it explicitly. */
+  trialPeriodDays?: number;
+}
+
+const PLAN_LABELS: Record<PlanTier, string> = {
+  free: 'Free',
+  plus: 'Plus',
+  pro: 'Pro',
+};
+
+function formatDate(iso: string): string {
+  // Format in UTC so a date-only ISO timestamp (e.g. "2026-05-27T00:00:00Z")
+  // renders as the same calendar day regardless of viewer's local timezone.
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / (24 * 3600 * 1000));
+}
+
+export function StatusHeader(props: StatusHeaderProps) {
+  const { plan, status, activeUntil, cancelAtPeriodEnd, previousSubStatus, trialPeriodDays = 7 } = props;
+
+  const isLapsed = status === 'inactive' && previousSubStatus !== null;
+  const isFree = plan === 'free' && !isLapsed;
+  const isTrial = status === 'trial';
+  const isCancelPending = !!cancelAtPeriodEnd;
+
+  const trialDaysLeft = useMemo(() => (isTrial ? daysUntil(activeUntil) : null), [isTrial, activeUntil]);
+
+  let stateLabel: string;
+  let dateLine: string | null = null;
+
+  if (isFree) {
+    stateLabel = 'Free Plan';
+  } else if (isLapsed) {
+    stateLabel = 'Expired';
+    dateLine = activeUntil ? `since ${formatDate(activeUntil)}` : null;
+  } else if (isTrial) {
+    stateLabel = `${PLAN_LABELS[plan]} · Trial`;
+  } else if (isCancelPending && cancelAtPeriodEnd) {
+    stateLabel = `${PLAN_LABELS[plan]} · Active`;
+    dateLine = `Cancels ${formatDate(cancelAtPeriodEnd)}`;
+  } else {
+    stateLabel = `${PLAN_LABELS[plan]} · Active`;
+    dateLine = activeUntil ? `Renews ${formatDate(activeUntil)}` : null;
+  }
+
+  // Trial countdown bar over the configured trial length (default 7 days, matches server).
+  const trialBarPct = trialDaysLeft !== null
+    ? Math.max(0, Math.min(100, ((trialPeriodDays - trialDaysLeft) / trialPeriodDays) * 100))
+    : null;
+  const trialTone = trialDaysLeft !== null && trialDaysLeft < 3 ? 'red' : 'amber';
+
+  return (
+    <div className="space-y-1.5">
+      <h2 className="text-lg font-semibold text-[var(--text-primary)]">{stateLabel}</h2>
+      {isTrial && trialDaysLeft !== null && (
+        <p className={trialDaysLeft < 3 ? 'text-sm font-medium text-red-600 dark:text-red-400' : 'text-sm font-medium text-amber-600 dark:text-amber-400'}>
+          {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} remaining
+        </p>
+      )}
+      {dateLine && (
+        <p className={isCancelPending ? 'text-amber-600 dark:text-amber-400 text-sm' : 'text-[var(--text-tertiary)] text-sm'}>
+          {dateLine}
+        </p>
+      )}
+      {trialBarPct !== null && trialDaysLeft !== null && (
+        <ProgressBar value={trialBarPct} tone={trialTone} ariaLabel="Trial time elapsed" />
+      )}
+    </div>
+  );
+}

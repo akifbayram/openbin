@@ -17,6 +17,7 @@ import {
 } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
 import { createLogger } from './lib/logger.js';
+import { getPlanCatalog } from './lib/planCatalog.js';
 import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { isRestoreInProgress } from './lib/restore.js';
 import { tryAuthenticate } from './middleware/auth.js';
@@ -98,6 +99,33 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
     );
     next();
   });
+
+  // Public plan catalog — explicit per-route CORS allow-list so cloud + billing
+  // origins can read pricing without auth. Mounted before global cors() so its
+  // ACAO header wins over the single-origin default. config.corsOrigin is only
+  // included when set explicitly to avoid leaking the localhost dev default
+  // into production allow-lists; dev origin is added separately when not in prod.
+  const PLANS_CORS_ORIGINS = new Set<string>([
+    'https://openbin.app',
+    'https://cloud.openbin.app',
+    'https://billing.openbin.app',
+    ...(config.corsOriginExplicit ? [config.corsOrigin] : []),
+    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:5173'] : []),
+  ]);
+  app.get(
+    '/api/plans',
+    cors({
+      origin: (origin, cb) => {
+        if (!origin || PLANS_CORS_ORIGINS.has(origin)) cb(null, true);
+        else cb(null, false);
+      },
+      methods: ['GET'],
+      credentials: false,
+    }),
+    (_req, res) => {
+      res.json(getPlanCatalog());
+    },
+  );
 
   app.use(cors({
     origin: config.corsOrigin,

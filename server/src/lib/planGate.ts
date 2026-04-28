@@ -24,6 +24,14 @@ export interface UserPlanInfo {
   activeUntil: string | null;
   email: string | null;
   previousSubStatus: SubStatusType | null;
+  // ISO timestamp when the subscription will cancel at period end. Mirrors
+  // the `users.cancel_at_period_end` column written by the billing webhook
+  // (server/src/ee/routes/subscriptions.ts). null while the subscription
+  // is active and not scheduled to cancel.
+  cancelAtPeriodEnd: string | null;
+  // Current billing cadence on the subscription. null on free/inactive
+  // plans or when not yet set by the webhook.
+  billingPeriod: 'monthly' | 'annual' | null;
 }
 
 export interface PlanFeatures {
@@ -76,8 +84,16 @@ export function isSubscriptionActive(planInfo: { subStatus: SubStatusType; activ
 }
 
 export async function getUserPlanInfo(userId: string): Promise<UserPlanInfo | null> {
-  const result = await query<{ plan: number; sub_status: number; active_until: string | null; email: string | null; previous_sub_status: number | null }>(
-    'SELECT plan, sub_status, active_until, email, previous_sub_status FROM users WHERE id = $1',
+  const result = await query<{
+    plan: number;
+    sub_status: number;
+    active_until: string | null;
+    email: string | null;
+    previous_sub_status: number | null;
+    cancel_at_period_end: string | null;
+    billing_period: string | null;
+  }>(
+    'SELECT plan, sub_status, active_until, email, previous_sub_status, cancel_at_period_end, billing_period FROM users WHERE id = $1',
     [userId],
   );
   if (result.rows.length === 0) return null;
@@ -88,6 +104,8 @@ export async function getUserPlanInfo(userId: string): Promise<UserPlanInfo | nu
     activeUntil: row.active_until,
     email: row.email,
     previousSubStatus: row.previous_sub_status as SubStatusType | null,
+    cancelAtPeriodEnd: row.cancel_at_period_end,
+    billingPeriod: row.billing_period as 'monthly' | 'annual' | null,
   };
 }
 

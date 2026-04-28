@@ -71,6 +71,9 @@ const SELF_HOSTED_PLAN: PlanInfo = {
   portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
 };
 
 const FREE_PLAN: PlanInfo = {
@@ -108,6 +111,9 @@ const FREE_PLAN: PlanInfo = {
   portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
 };
 
 const PLUS_PLAN: PlanInfo = {
@@ -145,6 +151,9 @@ const PLUS_PLAN: PlanInfo = {
   portalAction: null,
   canDowngradeToFree: false,
   aiCredits: { used: 5, limit: 25, resetsAt: null },
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
 };
 
 const PRO_PLAN: PlanInfo = {
@@ -182,6 +191,9 @@ const PRO_PLAN: PlanInfo = {
   portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
 };
 
 function makeWrapper() {

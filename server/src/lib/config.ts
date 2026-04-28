@@ -100,6 +100,8 @@ export const config = Object.freeze({
   managerUrl: process.env.MANAGER_URL || null,
   subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
+  billingInternalUrl: process.env.BILLING_INTERNAL_URL || null,
+  billingInternalKey: process.env.BILLING_INTERNAL_KEY || null,
 
   // OAuth (cloud only)
   googleClientId: process.env.GOOGLE_CLIENT_ID || null,
@@ -149,6 +151,12 @@ export const config = Object.freeze({
     proReorganizeMaxBins: parseNullableInt(process.env.PLAN_PRO_REORG_MAX_BINS, 40),
     freeAiCreditsPerMonth: 10,
     trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '25', 10), 1, 1000, 25),
+  }),
+  planPrices: Object.freeze({
+    plusMonthlyCents: parseStrictInt(process.env.PLAN_PRICE_PLUS_MONTHLY, 500),
+    plusAnnualCents: parseStrictInt(process.env.PLAN_PRICE_PLUS_ANNUAL, 5000),
+    proMonthlyCents: parseStrictInt(process.env.PLAN_PRICE_PRO_MONTHLY, 1000),
+    proAnnualCents: parseStrictInt(process.env.PLAN_PRICE_PRO_ANNUAL, 10000),
   }),
   // Email (Resend)
   emailEnabled: parseBool(process.env.EMAIL_ENABLED, false),

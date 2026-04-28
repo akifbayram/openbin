@@ -50,6 +50,9 @@ const SELF_HOSTED_PLAN: PlanInfo = {
   portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
 };
 
 /** Restrictive fallback used when plan fetch fails and no prior data exists */
@@ -88,6 +91,9 @@ const LOCKED_FALLBACK: PlanInfo = {
   portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
 };
 
 interface PlanContextValue {
