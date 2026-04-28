@@ -318,6 +318,70 @@ describe('POST /api/subscriptions/callback', () => {
     expect(dbResult.rows[0].active_until).toBeNull();
   });
 
+  it('persists cancelAtPeriodEnd and billingPeriod on users row', async () => {
+    const { user } = await createTestUser(app);
+    const token = await makeSubToken({
+      userId: user.id,
+      plan: 0,    // Plan.PLUS
+      status: 1,  // SubStatus.ACTIVE
+      activeUntil: '2026-05-27T00:00:00Z',
+      cancelAtPeriodEnd: '2026-05-27T00:00:00Z',
+      billingPeriod: 'monthly',
+    });
+
+    const res = await request(app)
+      .post('/api/subscriptions/callback')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(200);
+
+    const row = await query<{ cancel_at_period_end: string | null; billing_period: string | null }>(
+      'SELECT cancel_at_period_end, billing_period FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(row.rows[0].cancel_at_period_end).toBe('2026-05-27T00:00:00Z');
+    expect(row.rows[0].billing_period).toBe('monthly');
+  });
+
+  it('clears cancelAtPeriodEnd when payload omits it (subscription resumed)', async () => {
+    const { user } = await createTestUser(app);
+    // First, set cancel_at_period_end to a non-null value
+    const token1 = await makeSubToken({
+      userId: user.id, plan: 0, status: 1,
+      activeUntil: '2026-05-27T00:00:00Z',
+      cancelAtPeriodEnd: '2026-05-27T00:00:00Z',
+      billingPeriod: 'monthly',
+    });
+    await request(app).post('/api/subscriptions/callback').set('Authorization', `Bearer ${token1}`).send({});
+
+    // Now send a webhook that omits cancelAtPeriodEnd (subscription resumed)
+    const token2 = await makeSubToken({
+      userId: user.id, plan: 0, status: 1,
+      activeUntil: '2026-06-27T00:00:00Z',
+      billingPeriod: 'monthly',
+      // no cancelAtPeriodEnd
+    });
+    const res = await request(app).post('/api/subscriptions/callback').set('Authorization', `Bearer ${token2}`).send({});
+    expect(res.status).toBe(200);
+
+    const row = await query<{ cancel_at_period_end: string | null }>(
+      'SELECT cancel_at_period_end FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(row.rows[0].cancel_at_period_end).toBeNull();
+  });
+
+  it('rejects invalid billingPeriod values', async () => {
+    const { user } = await createTestUser(app);
+    const token = await makeSubToken({
+      userId: user.id, plan: 0, status: 1, activeUntil: '2026-05-27T00:00:00Z',
+      billingPeriod: 'quarterly',
+    });
+    const res = await request(app).post('/api/subscriptions/callback').set('Authorization', `Bearer ${token}`).send({});
+    expect(res.status).toBe(422);  // ValidationError
+    expect(res.body.error).toBe('VALIDATION_ERROR');
+  });
+
   describe('replay & claim validation', () => {
     it('rejects reused token (jti replay)', async () => {
       const { user } = await createTestUser(app);
