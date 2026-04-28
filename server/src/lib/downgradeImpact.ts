@@ -62,6 +62,22 @@ export function computeDowngradeImpact(input: ComputeImpactInput): DowngradeImpa
     });
   }
 
+  if (targetFeatures.maxMembersPerLocation !== null) {
+    const overLocations = Object.entries(usage.memberCounts)
+      .filter(([_, count]) => count > targetFeatures.maxMembersPerLocation!);
+    if (overLocations.length > 0) {
+      const totalOverMembers = overLocations.reduce(
+        (sum, [_, count]) => sum + (count - targetFeatures.maxMembersPerLocation!),
+        0,
+      );
+      warnings.push({
+        kind: 'usage-exceeded',
+        title: `${overLocations.length} location${overLocations.length === 1 ? '' : 's'} exceed${overLocations.length === 1 ? 's' : ''} ${planLabelTitle(targetPlan)}'s ${targetFeatures.maxMembersPerLocation} member${targetFeatures.maxMembersPerLocation === 1 ? '' : 's'} limit`,
+        description: `${totalOverMembers} member${totalOverMembers === 1 ? '' : 's'} across these locations will become read-only.`,
+      });
+    }
+  }
+
   for (const [key, [title, description]] of Object.entries(FEATURE_LABELS) as Array<[keyof typeof FEATURE_LABELS, [string, string]]>) {
     if (currentFeatures[key] && !targetFeatures[key]) {
       warnings.push({ kind: 'feature-loss', title, description });

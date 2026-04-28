@@ -65,4 +65,31 @@ describe('computeDowngradeImpact', () => {
     });
     expect(impact.warnings.every(w => w.kind === 'feature-loss')).toBe(true);
   });
+
+  it('reports member overage when target plan has lower per-location limit', () => {
+    const usage = {
+      binCount: 5, locationCount: 2, photoStorageMb: 0, photoCount: 0,
+      memberCounts: { 'loc-1': 5, 'loc-2': 3 },  // Pro allows 10/loc, Plus allows 1/loc
+    };
+    const PLUS_LIKE = { ...PRO_FEATURES, maxMembersPerLocation: 1 };
+    const impact = computeDowngradeImpact({
+      currentFeatures: PRO_FEATURES, targetFeatures: PLUS_LIKE, targetPlan: 'plus', usage,
+    });
+    const memberWarning = impact.warnings.find(w => w.title.includes('member'));
+    expect(memberWarning).toBeDefined();
+    expect(memberWarning!.kind).toBe('usage-exceeded');
+    expect(memberWarning!.description).toContain('6');  // (5-1) + (3-1) = 6 over
+  });
+
+  it('does NOT warn when no location exceeds member limit', () => {
+    const usage = {
+      binCount: 5, locationCount: 1, photoStorageMb: 0, photoCount: 0,
+      memberCounts: { 'loc-1': 1 },  // exactly at limit
+    };
+    const PLUS_LIKE = { ...PRO_FEATURES, maxMembersPerLocation: 1 };
+    const impact = computeDowngradeImpact({
+      currentFeatures: PRO_FEATURES, targetFeatures: PLUS_LIKE, targetPlan: 'plus', usage,
+    });
+    expect(impact.warnings.some(w => w.title.includes('member'))).toBe(false);
+  });
 });
