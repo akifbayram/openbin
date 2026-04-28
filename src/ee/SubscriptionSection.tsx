@@ -85,6 +85,7 @@ export function SubscriptionSection() {
         activeUntil={planInfo.activeUntil}
         cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
         previousSubStatus={planInfo.previousSubStatus}
+        trialPeriodDays={planInfo.trialPeriodDays}
       />
 
       <UsageStrip usage={usage ?? ZERO_USAGE} features={planInfo.features} aiCredits={planInfo.aiCredits} />

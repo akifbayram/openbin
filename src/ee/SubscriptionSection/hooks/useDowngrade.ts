@@ -18,7 +18,7 @@ export function useDowngrade(): UseDowngradeResult {
     try {
       await apiFetch('/api/plan/downgrade', {
         method: 'POST',
-        body: JSON.stringify({ targetPlan }),
+        body: { targetPlan },
       });
       notify(Events.PLAN);
     } catch (err) {

@@ -28,7 +28,7 @@ export function useDowngradeImpact(targetPlan: 'free' | 'plus' | null): UseDowng
     setError(null);
     apiFetch<DowngradeImpact>('/api/plan/downgrade-impact', {
       method: 'POST',
-      body: JSON.stringify({ targetPlan }),
+      body: { targetPlan },
     })
       .then(data => { if (!cancelled) setImpact(data); })
       .catch(err => { if (!cancelled) setError(err instanceof Error ? err : new Error(String(err))); })
