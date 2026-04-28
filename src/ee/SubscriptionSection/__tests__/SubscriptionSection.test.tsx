@@ -6,6 +6,12 @@ import { EMPTY_USAGE, makePlanInfo } from './fixtures/planInfo';
 
 vi.mock('@/lib/usePlan', () => ({
   usePlan: vi.fn(),
+  getLockedMessage: (prev: 'trial' | 'active' | null) => {
+    if (prev === 'trial') return 'Your trial has ended. Subscribe to continue using OpenBin.';
+    if (prev === 'active') return 'Your subscription has expired. Resubscribe to continue using OpenBin.';
+    return 'Your plan is inactive. Subscribe to continue using OpenBin.';
+  },
+  getLockedCta: (prev: 'trial' | 'active' | null) => (prev === 'trial' ? 'Subscribe' : 'Resubscribe'),
 }));
 vi.mock('../hooks/usePlanCatalog', () => ({
   usePlanCatalog: vi.fn(() => ({ plans: FIXTURE_CATALOG.plans, isLoading: false, error: null })),
@@ -82,5 +88,18 @@ describe('SubscriptionSection orchestrator', () => {
     render(<SubscriptionSection />);
     expect(screen.getAllByText(/Resubscribe/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Plus.*Active/i)).toBeNull();
+  });
+
+  it('locked from trial: shows trial-ended message + Subscribe CTA', () => {
+    setPlan(makePlanInfo({
+      plan: 'plus',
+      status: 'inactive',
+      locked: true,
+      previousSubStatus: 'trial',
+      subscribePlanAction: { url: 'https://billing.openbin.app/sub', method: 'POST', fields: { token: 't' } },
+    }));
+    render(<SubscriptionSection />);
+    expect(screen.getByText(/trial has ended/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Subscribe/i).length).toBeGreaterThan(0);
   });
 });

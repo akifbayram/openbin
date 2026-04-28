@@ -1,7 +1,7 @@
 import { ArrowUpRight } from 'lucide-react';
 import { useState } from 'react';
 import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
-import { usePlan } from '@/lib/usePlan';
+import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
 import type { PlanTier, PlanUsage } from '@/types';
 import { AnnualUpsellBanner } from './SubscriptionSection/AnnualUpsellBanner';
@@ -34,7 +34,8 @@ export function SubscriptionSection() {
   if (planInfo.selfHosted) return null;
 
   if (planInfo.locked) {
-    const ctaLabel = planInfo.previousSubStatus === 'active' ? 'Resubscribe' : 'Subscribe';
+    const ctaLabel = getLockedCta(planInfo.previousSubStatus);
+    const lockedMessage = getLockedMessage(planInfo.previousSubStatus);
     const ctaClassName = cn(
       'inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] h-10 px-5 text-[14px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors',
       focusRing,
@@ -48,9 +49,7 @@ export function SubscriptionSection() {
           cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
           previousSubStatus={planInfo.previousSubStatus}
         />
-        <p className="text-sm text-[var(--text-secondary)]">
-          Your subscription has expired. {ctaLabel} to restore your features.
-        </p>
+        <p className="text-sm text-[var(--text-secondary)]">{lockedMessage}</p>
         {planInfo.subscribePlanAction && isSafeCheckoutAction(planInfo.subscribePlanAction) && (
           <CheckoutLink action={planInfo.subscribePlanAction} target="_blank" className={ctaClassName}>
             {ctaLabel}
@@ -117,7 +116,7 @@ export function SubscriptionSection() {
       {planInfo.plan === 'pro' && isPaidActive && !isCancelPending && (
         <button
           type="button"
-          className="text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)]"
+          className={cn('text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]', focusRing)}
           onClick={() => setDowngradeTarget('plus')}
         >
           Downgrade to Plus
@@ -126,7 +125,7 @@ export function SubscriptionSection() {
       {(planInfo.plan === 'plus' || planInfo.plan === 'pro') && isPaidActive && !isCancelPending && (
         <button
           type="button"
-          className="text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)]"
+          className={cn('text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]', focusRing)}
           onClick={() => setDowngradeTarget('free')}
         >
           Switch to Free Plan
