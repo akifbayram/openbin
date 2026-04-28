@@ -381,7 +381,7 @@ describe('getUserPlanInfo()', () => {
 
   it('returns mapped UserPlanInfo when user found', async () => {
     vi.mocked(query).mockResolvedValue({
-      rows: [{ plan: Plan.PRO, sub_status: SubStatus.ACTIVE, active_until: null, email: 'user@example.com', previous_sub_status: null }],
+      rows: [{ plan: Plan.PRO, sub_status: SubStatus.ACTIVE, active_until: null, email: 'user@example.com', previous_sub_status: null, cancel_at_period_end: null, billing_period: null }],
       rowCount: 1,
     });
     const result = await getUserPlanInfo('user-id');
@@ -391,13 +391,15 @@ describe('getUserPlanInfo()', () => {
       activeUntil: null,
       email: 'user@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
   });
 
   it('maps snake_case DB columns to camelCase', async () => {
     const activeUntil = '2027-01-01T00:00:00.000Z';
     vi.mocked(query).mockResolvedValue({
-      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.TRIAL, active_until: activeUntil, email: null, previous_sub_status: SubStatus.ACTIVE }],
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.TRIAL, active_until: activeUntil, email: null, previous_sub_status: SubStatus.ACTIVE, cancel_at_period_end: '2027-02-01T00:00:00.000Z', billing_period: 'monthly' }],
       rowCount: 1,
     });
     const result = await getUserPlanInfo('user-id');
@@ -406,6 +408,8 @@ describe('getUserPlanInfo()', () => {
     expect(result?.activeUntil).toBe(activeUntil);
     expect(result?.email).toBeNull();
     expect(result?.previousSubStatus).toBe(SubStatus.ACTIVE);
+    expect(result?.cancelAtPeriodEnd).toBe('2027-02-01T00:00:00.000Z');
+    expect(result?.billingPeriod).toBe('monthly');
   });
 
   it('queries with the correct SQL and userId', async () => {

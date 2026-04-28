@@ -129,6 +129,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'pro@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
@@ -157,6 +159,8 @@ describe('GET /api/plan', () => {
       activeUntil: '2027-01-01T00:00:00.000Z',
       email: 'trial@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/auth/openbin?token=trial');
@@ -182,6 +186,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'plus@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/auth/openbin?token=abc');
@@ -209,6 +215,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'inactive@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
@@ -247,6 +255,8 @@ describe('GET /api/plan', () => {
       activeUntil: '2027-01-01T00:00:00.000Z',
       email: 'trial@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
@@ -276,6 +286,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'plus@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
@@ -305,6 +317,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'pro@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
@@ -334,6 +348,8 @@ describe('GET /api/plan', () => {
       activeUntil: '2027-01-01T00:00:00.000Z',
       email: 'trial@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
@@ -358,6 +374,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'expired@example.com',
       previousSubStatus: SubStatus.TRIAL,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
@@ -382,6 +400,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'free@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
@@ -408,6 +428,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'plus@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
@@ -434,6 +456,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'pro@example.com',
       previousSubStatus: SubStatus.ACTIVE,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
@@ -464,6 +488,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'plus@example.com',
       previousSubStatus: SubStatus.ACTIVE,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
@@ -496,6 +522,8 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'free@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');

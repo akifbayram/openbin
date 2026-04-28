@@ -32,6 +32,8 @@ const basePlanInfo = {
   portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
   features: {
     ai: true, apiKeys: false, customFields: false, fullExport: false,
     reorganize: false, binSharing: false, attachments: false,

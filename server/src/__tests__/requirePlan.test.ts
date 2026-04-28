@@ -90,6 +90,8 @@ describe('requirePro()', () => {
       activeUntil: null,
       email: 'pro@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(true);
@@ -108,6 +110,8 @@ describe('requirePro()', () => {
       activeUntil: null,
       email: 'lite@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(false);
@@ -129,6 +133,8 @@ describe('requirePro()', () => {
       activeUntil: '2020-01-01T00:00:00.000Z',
       email: 'expired@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(false);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
@@ -160,6 +166,8 @@ describe('requirePro()', () => {
       activeUntil: null,
       email: 'lite@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(false);
@@ -184,6 +192,8 @@ describe('requirePro()', () => {
       activeUntil: '2020-01-01T00:00:00.000Z',
       email: 'expired@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(false);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(upgradeUrl);

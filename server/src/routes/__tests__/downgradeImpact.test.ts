@@ -65,6 +65,8 @@ function mockProUserWithUsage(usage: Partial<Awaited<ReturnType<typeof getUserUs
     activeUntil: null,
     email: 'pro@example.com',
     previousSubStatus: null,
+    cancelAtPeriodEnd: null,
+    billingPeriod: null,
   });
   vi.mocked(getUserUsage).mockResolvedValue({
     binCount: 47,
@@ -85,6 +87,8 @@ function mockFreeUser() {
     activeUntil: null,
     email: 'free@example.com',
     previousSubStatus: null,
+    cancelAtPeriodEnd: null,
+    billingPeriod: null,
   });
   vi.mocked(getUserUsage).mockResolvedValue({
     binCount: 0, locationCount: 1, photoStorageMb: 0, memberCounts: {}, photoCount: 0,

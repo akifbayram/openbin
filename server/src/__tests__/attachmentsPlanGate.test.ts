@@ -64,6 +64,8 @@ function mockFreeUser(): void {
     activeUntil: null,
     email: 'free@example.com',
     previousSubStatus: null,
+    cancelAtPeriodEnd: null,
+    billingPeriod: null,
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(false);
@@ -78,6 +80,8 @@ function mockPlusUser(): void {
     activeUntil: null,
     email: 'plus@example.com',
     previousSubStatus: null,
+    cancelAtPeriodEnd: null,
+    billingPeriod: null,
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(false);
@@ -92,6 +96,8 @@ function mockProUser(): void {
     activeUntil: null,
     email: 'pro@example.com',
     previousSubStatus: null,
+    cancelAtPeriodEnd: null,
+    billingPeriod: null,
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(true);

@@ -36,6 +36,22 @@ function mockActivePlusPaidUser(_userId: string) {
     activeUntil: '2026-05-27T00:00:00Z',
     email: 'plus@example.com',
     previousSubStatus: null,
+    cancelAtPeriodEnd: null,
+    billingPeriod: 'monthly',
+  });
+  vi.mocked(isSubscriptionActive).mockReturnValue(true);
+}
+
+function mockActiveProPaidUser() {
+  vi.mocked(isSelfHosted).mockReturnValue(false);
+  vi.mocked(getUserPlanInfo).mockResolvedValue({
+    plan: Plan.PRO,
+    subStatus: SubStatus.ACTIVE,
+    activeUntil: '2026-05-27T00:00:00Z',
+    email: 'pro@example.com',
+    previousSubStatus: null,
+    cancelAtPeriodEnd: null,
+    billingPeriod: 'monthly',
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
 }
@@ -48,6 +64,8 @@ function mockLapsedUser(_userId: string) {
     activeUntil: '2026-04-15T00:00:00Z',
     email: 'lapsed@example.com',
     previousSubStatus: SubStatus.ACTIVE,
+    cancelAtPeriodEnd: null,
+    billingPeriod: null,
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(false);
 }
@@ -116,5 +134,29 @@ describe('POST /api/plan/downgrade', () => {
       .send({ targetPlan: 'free' });
     expect(res.status).toBe(200);
     expect(postBillingDowngrade).not.toHaveBeenCalled();
+  });
+
+  it('forwards active Pro -> Plus to billing service', async () => {
+    const { user, token } = await createTestUser(app);
+    mockActiveProPaidUser();
+
+    const res = await request(app)
+      .post('/api/plan/downgrade')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ targetPlan: 'plus' });
+    expect(res.status).toBe(200);
+    expect(postBillingDowngrade).toHaveBeenCalledWith({ userId: user.id, targetPlan: 'plus' });
+  });
+
+  it('forwards active Pro -> Free to billing service', async () => {
+    const { user, token } = await createTestUser(app);
+    mockActiveProPaidUser();
+
+    const res = await request(app)
+      .post('/api/plan/downgrade')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ targetPlan: 'free' });
+    expect(res.status).toBe(200);
+    expect(postBillingDowngrade).toHaveBeenCalledWith({ userId: user.id, targetPlan: 'free' });
   });
 });

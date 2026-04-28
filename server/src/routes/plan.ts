@@ -51,6 +51,8 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       subscribePlanAction: null,
       portalAction: null,
       aiCredits: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     return;
   }
@@ -111,6 +113,8 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     portalAction,
     canDowngradeToFree: !isFree && !isPaidActive,
     aiCredits,
+    cancelAtPeriodEnd: planInfo.cancelAtPeriodEnd,
+    billingPeriod: planInfo.billingPeriod,
   });
 }));
 
@@ -257,7 +261,7 @@ router.post('/downgrade', authenticate, asyncHandler(async (req, res) => {
     plan: planLabel(updated.plan),
     status: subStatusLabel(updated.subStatus),
     activeUntil: updated.activeUntil,
-    cancelAtPeriodEnd: null,
+    cancelAtPeriodEnd: updated.cancelAtPeriodEnd,
   });
 }));
 

@@ -64,6 +64,8 @@ function makePlanInfo(overrides: Partial<PlanInfo>): PlanInfo {
     portalAction: null,
     canDowngradeToFree: false,
     aiCredits: null,
+    cancelAtPeriodEnd: null,
+    billingPeriod: null,
     ...overrides,
   };
 }
