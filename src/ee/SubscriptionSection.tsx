@@ -21,6 +21,11 @@ const ZERO_USAGE: PlanUsage = {
   overLimits: { locations: false, photos: false, members: [] },
 };
 
+const downgradeLinkClass = cn(
+  'text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]',
+  focusRing,
+);
+
 export function SubscriptionSection() {
   const { planInfo, usage, refresh } = usePlan();
   const { plans } = usePlanCatalog();
@@ -65,8 +70,9 @@ export function SubscriptionSection() {
   const isPaidActive = planInfo.status === 'active' && !!planInfo.activeUntil && (planInfo.plan === 'plus' || planInfo.plan === 'pro');
   const isMonthlyPaid = isPaidActive && planInfo.billingPeriod === 'monthly';
   const isCancelPending = !!planInfo.cancelAtPeriodEnd;
+  const isTrial = planInfo.status === 'trial';
   const showAnnualUpsell = isMonthlyPaid && !isCancelPending;
-  const showPicker = planInfo.plan === 'free' || planInfo.status === 'trial';
+  const showPicker = planInfo.plan === 'free' || isTrial;
   const showProUpsell = planInfo.plan === 'plus' && isPaidActive;
 
   const proPlan = plans.find(p => p.id === 'pro');
@@ -111,7 +117,7 @@ export function SubscriptionSection() {
         />
       )}
 
-      {planInfo.status === 'trial' && (
+      {isTrial && (
         <p className="text-sm text-[var(--text-tertiary)] text-center">
           Cancel anytime · No questions asked
         </p>
@@ -128,32 +134,20 @@ export function SubscriptionSection() {
       {showDowngradeLinks && (
         <div className="space-y-2">
           {planInfo.plan === 'pro' && (
-            <button
-              type="button"
-              className={cn('text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]', focusRing)}
-              onClick={() => setDowngradeTarget('plus')}
-            >
+            <button type="button" className={downgradeLinkClass} onClick={() => setDowngradeTarget('plus')}>
               Downgrade to Plus
             </button>
           )}
           {(planInfo.plan === 'plus' || planInfo.plan === 'pro') && (
-            <button
-              type="button"
-              className={cn('text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]', focusRing)}
-              onClick={() => setDowngradeTarget('free')}
-            >
+            <button type="button" className={downgradeLinkClass} onClick={() => setDowngradeTarget('free')}>
               Switch to Free Plan
             </button>
           )}
         </div>
       )}
 
-      {planInfo.status === 'trial' && (
-        <button
-          type="button"
-          className={cn('text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]', focusRing)}
-          onClick={() => setDowngradeTarget('free')}
-        >
+      {isTrial && (
+        <button type="button" className={downgradeLinkClass} onClick={() => setDowngradeTarget('free')}>
           Switch to Free Plan
         </button>
       )}
