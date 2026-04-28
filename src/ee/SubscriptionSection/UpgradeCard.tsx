@@ -1,14 +1,8 @@
-import { ArrowUpRight, Check } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
 import { cn, focusRing } from '@/lib/utils';
 import type { CatalogPlan, CheckoutAction } from '@/types';
 import { formatPriceCents } from './annualSavings';
-
-const PRO_HIGHLIGHTS = [
-  'API access for integrations',
-  'Custom fields & bin sharing',
-  'File attachments',
-];
 
 interface UpgradeCardProps {
   targetPlan: CatalogPlan;
@@ -23,21 +17,13 @@ export function UpgradeCard({ targetPlan, action }: UpgradeCardProps) {
     focusRing,
   );
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--border-flat)] p-5 space-y-4">
-      <div className="flex items-baseline justify-between">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--border-flat)] p-5 space-y-3 flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="space-y-1">
         <h3 className="text-base font-semibold text-[var(--text-primary)]">Upgrade to {targetPlan.name}</h3>
-        <span className="text-sm text-[var(--text-tertiary)]">
+        <p className="text-sm text-[var(--text-tertiary)]">
           {monthly}/mo{annual && ` · ${annual}/yr`}
-        </span>
+        </p>
       </div>
-      <ul className="space-y-1.5">
-        {PRO_HIGHLIGHTS.map((item) => (
-          <li key={item} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-            <Check className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
-            {item}
-          </li>
-        ))}
-      </ul>
       {action && isSafeCheckoutAction(action) && (
         <CheckoutLink action={action} target="_blank" className={ctaClassName}>
           Upgrade to {targetPlan.name}

@@ -111,6 +111,12 @@ export function SubscriptionSection() {
         />
       )}
 
+      {planInfo.status === 'trial' && (
+        <p className="text-sm text-[var(--text-tertiary)] text-center">
+          Cancel anytime · No questions asked
+        </p>
+      )}
+
       {showProUpsell && proPlan && (
         <UpgradeCard targetPlan={proPlan} action={planInfo.upgradeProAction} />
       )}
@@ -140,6 +146,16 @@ export function SubscriptionSection() {
             </button>
           )}
         </div>
+      )}
+
+      {planInfo.status === 'trial' && (
+        <button
+          type="button"
+          className={cn('text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]', focusRing)}
+          onClick={() => setDowngradeTarget('free')}
+        >
+          Switch to Free Plan
+        </button>
       )}
 
       {downgradeTarget && (
