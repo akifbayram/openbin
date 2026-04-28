@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useMountOnOpen } from '@/lib/useMountOnOpen';
 import { useDowngrade } from './hooks/useDowngrade';
 import { useDowngradeImpact } from './hooks/useDowngradeImpact';
@@ -32,7 +33,7 @@ export function DowngradeImpactDialog(props: DowngradeImpactDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!isPending) onOpenChange(v); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Switch to {TARGET_LABEL[targetPlan]} Plan?</DialogTitle>
@@ -40,9 +41,9 @@ export function DowngradeImpactDialog(props: DowngradeImpactDialogProps) {
 
         {!mounted ? null : isLoading ? (
           <div className="py-6 space-y-2">
-            <div className="h-4 bg-[var(--bg-input)] rounded animate-pulse" />
-            <div className="h-4 bg-[var(--bg-input)] rounded animate-pulse w-3/4" />
-            <div className="h-4 bg-[var(--bg-input)] rounded animate-pulse w-1/2" />
+            <Skeleton className="h-4" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
           </div>
         ) : error ? (
           <div className="py-4 space-y-2">
