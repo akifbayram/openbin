@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { postBillingDowngrade } from '../lib/billingClient.js';
 import { computeDowngradeImpact } from '../lib/downgradeImpact.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { type CheckoutAction, computeOverLimits, generatePortalAction, generateUpgradeAction, generateUpgradePlanAction, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, renderActionAsUrl, SELF_HOSTED_USAGE_STUB, SELF_HOSTED_USAGE_SUMMARY_STUB, SubStatus, subStatusLabel } from '../lib/planGate.js';
@@ -217,6 +218,47 @@ router.post('/downgrade-impact', authenticate, asyncHandler(async (req, res) => 
   });
 
   res.json(impact);
+}));
+
+router.post('/downgrade', authenticate, asyncHandler(async (req, res) => {
+  if (isSelfHosted()) throw new NotFoundError('Not available in self-hosted mode');
+
+  const { targetPlan } = req.body as { targetPlan?: unknown };
+  if (typeof targetPlan !== 'string' || !VALID_TARGETS.has(targetPlan)) {
+    throw new ValidationError('targetPlan must be "free" or "plus"');
+  }
+
+  const userId = req.user!.id;
+  const planInfo = await getUserPlanInfo(userId);
+  if (!planInfo) throw new NotFoundError('User not found');
+
+  const currentLabel = planLabel(planInfo.plan) as 'free' | 'plus' | 'pro';
+  if (rankPlan(targetPlan as 'free' | 'plus') >= rankPlan(currentLabel)) {
+    throw new ValidationError('Target plan must be a downgrade');
+  }
+
+  const isActivePaid = isSubscriptionActive(planInfo) && planInfo.subStatus === SubStatus.ACTIVE;
+
+  if (!isActivePaid && targetPlan === 'free') {
+    // Lapsed -> free: direct DB mutation (existing pattern from /downgrade-to-free)
+    await query(
+      `UPDATE users SET plan = $1, sub_status = $2, active_until = NULL, previous_sub_status = NULL, updated_at = ${d.now()} WHERE id = $3`,
+      [Plan.FREE, SubStatus.ACTIVE, userId],
+    );
+    invalidateOverLimitCache(userId);
+  } else {
+    // Active paid -> forward to billing service. Webhook fires asynchronously to update the row.
+    await postBillingDowngrade({ userId, targetPlan: targetPlan as 'free' | 'plus' });
+  }
+
+  const updated = await getUserPlanInfo(userId);
+  if (!updated) throw new NotFoundError('User vanished');
+  res.json({
+    plan: planLabel(updated.plan),
+    status: subStatusLabel(updated.subStatus),
+    activeUntil: updated.activeUntil,
+    cancelAtPeriodEnd: null,
+  });
 }));
 
 export { router as planRoutes };

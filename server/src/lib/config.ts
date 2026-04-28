@@ -100,6 +100,8 @@ export const config = Object.freeze({
   managerUrl: process.env.MANAGER_URL || null,
   subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
+  billingInternalUrl: process.env.BILLING_INTERNAL_URL || null,
+  billingInternalKey: process.env.BILLING_INTERNAL_KEY || null,
 
   // OAuth (cloud only)
   googleClientId: process.env.GOOGLE_CLIENT_ID || null,
