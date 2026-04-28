@@ -25,6 +25,7 @@ export function makePlanInfo(overrides: Partial<PlanInfo> = {}): PlanInfo {
     subscribePlanAction: null, portalAction: null,
     canDowngradeToFree: false,
     aiCredits: null,
+    trialPeriodDays: 7,
     ...overrides,
   };
 }

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { postBillingDowngrade } from '../lib/billingClient.js';
+import { config } from '../lib/config.js';
 import { computeDowngradeImpact } from '../lib/downgradeImpact.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { type CheckoutAction, computeOverLimits, generatePortalAction, generateUpgradeAction, generateUpgradePlanAction, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, renderActionAsUrl, SELF_HOSTED_USAGE_STUB, SELF_HOSTED_USAGE_SUMMARY_STUB, SubStatus, subStatusLabel } from '../lib/planGate.js';
@@ -53,6 +54,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       aiCredits: null,
       cancelAtPeriodEnd: null,
       billingPeriod: null,
+      trialPeriodDays: config.trialPeriodDays,
     });
     return;
   }
@@ -115,6 +117,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     aiCredits,
     cancelAtPeriodEnd: planInfo.cancelAtPeriodEnd,
     billingPeriod: planInfo.billingPeriod,
+    trialPeriodDays: config.trialPeriodDays,
   });
 }));
 

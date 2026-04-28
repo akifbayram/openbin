@@ -48,6 +48,7 @@ export function SubscriptionSection() {
           activeUntil={planInfo.activeUntil}
           cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
           previousSubStatus={planInfo.previousSubStatus}
+          trialPeriodDays={planInfo.trialPeriodDays}
         />
         <p className="text-sm text-[var(--text-secondary)]">{lockedMessage}</p>
         {planInfo.subscribePlanAction && isSafeCheckoutAction(planInfo.subscribePlanAction) && (

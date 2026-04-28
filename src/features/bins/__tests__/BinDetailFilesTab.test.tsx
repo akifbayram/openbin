@@ -34,6 +34,7 @@ const basePlanInfo = {
   aiCredits: null,
   cancelAtPeriodEnd: null,
   billingPeriod: null,
+  trialPeriodDays: 7,
   features: {
     ai: true, apiKeys: false, customFields: false, fullExport: false,
     reorganize: false, binSharing: false, attachments: false,
