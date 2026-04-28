@@ -10,8 +10,8 @@ interface ProgressBarProps {
 }
 
 const TONE_CLASSES: Record<ProgressTone, string> = {
-  neutral: 'bg-emerald-500 dark:bg-emerald-400',
-  amber:   'bg-amber-500 dark:bg-amber-400',
+  neutral: 'bg-emerald-600 dark:bg-emerald-400',
+  amber:   'bg-amber-600 dark:bg-amber-400',
   red:     'bg-red-500 dark:bg-red-400',
 };
 
@@ -19,7 +19,7 @@ export function ProgressBar({ value, tone = 'neutral', className, ariaLabel }: P
   const clamped = Math.min(100, Math.max(0, value));
   return (
     <div
-      className={cn('h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden', className)}
+      className={cn('h-1.5 w-full rounded-full bg-[var(--bg-input)] overflow-hidden', className)}
       role="progressbar"
       aria-label={ariaLabel}
       aria-valuenow={clamped}

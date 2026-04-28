@@ -34,6 +34,7 @@ export function UsageStrip({ usage, features, aiCredits }: UsageStripProps) {
     candidates.push({ label: 'AI this month', used: aiCredits.used, limit: aiCredits.limit });
   }
 
+  // Explicit null check narrows TS inside the loop; shouldHideMetric also catches null but TS can't see through it.
   const visible = candidates.flatMap(m => {
     if (shouldHideMetric({ used: m.used, limit: m.limit }) || m.limit === null) return [];
     return [{ ...m, limit: m.limit }];
@@ -48,8 +49,8 @@ export function UsageStrip({ usage, features, aiCredits }: UsageStripProps) {
         return (
           <div key={m.label} className="space-y-1">
             <div className="flex justify-between text-xs">
-              <span className="text-slate-600 dark:text-slate-400">{m.label}</span>
-              <span className="text-slate-900 dark:text-slate-100 tabular-nums">{valueText}</span>
+              <span className="text-[var(--text-tertiary)]">{m.label}</span>
+              <span className="text-[var(--text-primary)] tabular-nums">{valueText}</span>
             </div>
             <ProgressBar value={pct} tone={tone(m.used, m.limit)} ariaLabel={`${m.label} usage`} />
           </div>
