@@ -28,7 +28,10 @@ export function PlanPicker(props: PlanPickerProps) {
   const { catalog, currentPlan, billingPeriod, onBillingPeriodChange, actions } = props;
 
   const upgradePlans = catalog.plans.filter((p) => p.id !== 'free');
-  const maxSavings = Math.max(...upgradePlans.map((p) => computeAnnualSavings(p.prices)));
+  const maxSavings =
+    upgradePlans.length === 0
+      ? 0
+      : Math.max(...upgradePlans.map((p) => computeAnnualSavings(p.prices)));
 
   const actionFor = (plan: CatalogPlan): CheckoutAction | null => {
     if (plan.id === 'plus') return actions.plus;

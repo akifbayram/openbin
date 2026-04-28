@@ -26,7 +26,7 @@ export function AnnualToggle({ value, onChange, maxSavingsCents }: AnnualToggleP
             aria-checked={value === period}
             onClick={() => onChange(period)}
             className={cn(
-              'px-3 py-1 text-sm rounded-[var(--radius-sm)] transition-colors',
+              'min-h-9 px-3 py-1.5 text-sm rounded-[var(--radius-sm)] transition-colors',
               value === period
                 ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
                 : 'text-[var(--text-tertiary)]',
