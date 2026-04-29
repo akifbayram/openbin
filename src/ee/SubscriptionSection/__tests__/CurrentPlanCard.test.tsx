@@ -86,7 +86,7 @@ describe('CurrentPlanCard', () => {
     expect(screen.getByText('PRO TRIAL')).toBeInTheDocument();
     expect(screen.getByText(/5 days remaining/)).toBeInTheDocument();
     expect(screen.getByText(/Then \$10 \/ month/)).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: /trial time elapsed/i })).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: /trial progress/i })).toBeInTheDocument();
   });
 
   it('Active without activeUntil: hides the meta line entirely', () => {
@@ -125,5 +125,45 @@ describe('CurrentPlanCard', () => {
       />,
     );
     expect(screen.getByText(/bins/)).toBeInTheDocument();
+  });
+
+  it('Trial with trialDaysLeft===0: shows "Trial ended" copy', () => {
+    render(
+      <CurrentPlanCard
+        plan="pro" status="trial" activeUntil="2020-01-01T00:00:00Z"
+        cancelAtPeriodEnd={null} billingPeriod={null} trialPeriodDays={7}
+        priceCents={1000} annualSavingsCents={0}
+        usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null}
+      />,
+    );
+    expect(screen.getByText('Trial ended')).toBeInTheDocument();
+    expect(screen.queryByText(/days remaining/)).toBeNull();
+  });
+
+  it('Trial with null activeUntil: shows "Trial ended", never "null days remaining"', () => {
+    render(
+      <CurrentPlanCard
+        plan="pro" status="trial" activeUntil={null}
+        cancelAtPeriodEnd={null} billingPeriod={null} trialPeriodDays={7}
+        priceCents={1000} annualSavingsCents={0}
+        usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null}
+      />,
+    );
+    expect(screen.getByText('Trial ended')).toBeInTheDocument();
+    expect(screen.queryByText(/null/)).toBeNull();
+  });
+
+  it('Plus active monthly: eyebrow shows PLUS (not PRO)', () => {
+    render(
+      <CurrentPlanCard
+        plan="plus" status="active" activeUntil="2026-05-27T00:00:00Z"
+        cancelAtPeriodEnd={null} billingPeriod="monthly" trialPeriodDays={7}
+        priceCents={500} annualSavingsCents={1000}
+        usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null}
+      />,
+    );
+    expect(screen.getByText('PLUS')).toBeInTheDocument();
+    expect(screen.queryByText('PRO')).toBeNull();
+    expect(screen.getByText('Active')).toBeInTheDocument();
   });
 });

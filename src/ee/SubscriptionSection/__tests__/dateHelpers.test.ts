@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { daysUntil, formatDate } from '../dateHelpers';
+import { daysUntil, formatBillingDate } from '../dateHelpers';
 
-describe('formatDate', () => {
+describe('formatBillingDate', () => {
   it('formats ISO timestamp as "Month D, YYYY" in UTC', () => {
-    expect(formatDate('2026-05-27T00:00:00Z')).toBe('May 27, 2026');
+    expect(formatBillingDate('2026-05-27T00:00:00Z')).toBe('May 27, 2026');
   });
 
   it('keeps the same calendar day across timezones (UTC anchor)', () => {
-    expect(formatDate('2026-01-01T00:00:00Z')).toBe('January 1, 2026');
+    expect(formatBillingDate('2026-01-01T00:00:00Z')).toBe('January 1, 2026');
   });
 });
 

@@ -133,6 +133,25 @@ describe('SubscriptionSection orchestrator', () => {
     expect(screen.queryByText(/Switch to Free/)).toBeNull();
   });
 
+  it('Active trial: renders CurrentPlanCard above PlanPicker + trial trust line + Switch to Free link', () => {
+    const future = new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString();
+    setPlan(
+      makePlanInfo({
+        plan: 'plus',
+        status: 'trial',
+        activeUntil: future,
+      }),
+    );
+    render(<SubscriptionSection />);
+    expect(screen.getByText('PLUS TRIAL')).toBeInTheDocument();
+    expect(screen.getByText(/days remaining/)).toBeInTheDocument();
+    expect(screen.getByText(/Cancel anytime · No questions asked/)).toBeInTheDocument();
+    expect(screen.getByText('Switch to Free Plan')).toBeInTheDocument();
+    // Picker is also visible
+    expect(screen.getByRole('heading', { name: 'Plus' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
+  });
+
   it('locked: shows Expired + resubscribe', () => {
     setPlan(
       makePlanInfo({

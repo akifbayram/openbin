@@ -7,7 +7,7 @@ import type { CatalogPlan, CheckoutAction, PlanTier, PlanUsage } from '@/types';
 import { computeAnnualSavings, formatPriceCents } from './SubscriptionSection/annualSavings';
 import { CurrentPlanCard } from './SubscriptionSection/CurrentPlanCard';
 import { DowngradeImpactDialog } from './SubscriptionSection/DowngradeImpactDialog';
-import { formatDate } from './SubscriptionSection/dateHelpers';
+import { formatBillingDate } from './SubscriptionSection/dateHelpers';
 import { usePlanCatalog } from './SubscriptionSection/hooks/usePlanCatalog';
 import { ManageSubscriptionRow } from './SubscriptionSection/ManageSubscriptionRow';
 import { PlanPicker } from './SubscriptionSection/PlanPicker';
@@ -58,8 +58,6 @@ export function SubscriptionSection() {
 
   if (planInfo.selfHosted) return null;
 
-  // Locked branch: lapsed subscribers, layout unchanged in spirit (still
-  // header + message + CTA + support footer), just without StatusHeader.
   if (planInfo.locked) {
     const ctaLabel = getLockedCta(planInfo.previousSubStatus);
     const lockedMessage = getLockedMessage(planInfo.previousSubStatus);
@@ -69,7 +67,7 @@ export function SubscriptionSection() {
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">Expired</h2>
           {planInfo.activeUntil && (
             <p className="text-sm text-[var(--text-tertiary)] mt-1">
-              since {formatDate(planInfo.activeUntil)}
+              since {formatBillingDate(planInfo.activeUntil)}
             </p>
           )}
         </div>
@@ -101,7 +99,7 @@ export function SubscriptionSection() {
   const showProUpsell = plan === 'plus' && isPaidActive;
   const showDowngradeLinks = isPaidActive && !isCancelPending;
 
-  const currentCatalogPlan = findPlan(plans, plan as PlanTier);
+  const currentCatalogPlan = findPlan(plans, plan);
   const priceCents = priceCentsFor(currentCatalogPlan, planInfo.billingPeriod);
   const monthlyPriceCents = currentCatalogPlan?.prices.monthly ?? null;
   const annualSavings = currentCatalogPlan ? computeAnnualSavings(currentCatalogPlan.prices) : 0;
@@ -136,7 +134,7 @@ export function SubscriptionSection() {
       <div className="flex flex-col gap-4">
         {isTrial && (
           <CurrentPlanCard
-            plan={plan as PlanTier}
+            plan={plan}
             status={planInfo.status}
             activeUntil={planInfo.activeUntil}
             cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
@@ -152,7 +150,7 @@ export function SubscriptionSection() {
         {plans.length > 0 && (
           <PlanPicker
             catalog={{ plans }}
-            currentPlan={plan as PlanTier}
+            currentPlan={plan}
             billingPeriod={billingPeriod}
             onBillingPeriodChange={setBillingPeriod}
             actions={{
@@ -198,7 +196,7 @@ export function SubscriptionSection() {
   return (
     <div className="flex flex-col gap-3">
       <CurrentPlanCard
-        plan={plan as PlanTier}
+        plan={plan}
         status={planInfo.status}
         activeUntil={planInfo.activeUntil}
         cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}

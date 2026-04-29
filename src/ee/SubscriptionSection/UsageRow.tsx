@@ -35,8 +35,8 @@ export function UsageRow({ usage, features, aiCredits }: UsageRowProps) {
   ];
 
   const visible = candidates.flatMap((m) => {
-    if (shouldHideMetric({ used: m.used, limit: m.limit }) || m.limit === null) return [];
-    return [{ ...m, limit: m.limit }];
+    if (shouldHideMetric({ used: m.used, limit: m.limit })) return [];
+    return [{ ...m, limit: m.limit as number }];
   });
 
   if (visible.length === 0) return null;

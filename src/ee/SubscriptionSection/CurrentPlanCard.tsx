@@ -1,8 +1,7 @@
-import { useMemo } from 'react';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import type { PlanFeatures, PlanInfo, PlanTier, PlanUsage, SubscriptionStatus } from '@/types';
 import { formatPriceCents } from './annualSavings';
-import { daysUntil, formatDate } from './dateHelpers';
+import { daysUntil, formatBillingDate } from './dateHelpers';
 import { UsageRow } from './UsageRow';
 
 interface CurrentPlanCardProps {
@@ -35,10 +34,7 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
   const planLabel = PLAN_LABELS[plan];
   const isTrial = status === 'trial';
   const isCancelPending = !!cancelAtPeriodEnd;
-  const trialDaysLeft = useMemo(
-    () => (isTrial ? daysUntil(activeUntil) : null),
-    [isTrial, activeUntil],
-  );
+  const trialDaysLeft = isTrial ? daysUntil(activeUntil) : null;
 
   let eyebrow = planLabel.toUpperCase();
   let eyebrowAmber = false;
@@ -50,20 +46,20 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
   if (isCancelPending && cancelAtPeriodEnd) {
     eyebrowAmber = true;
     cardAmber = true;
-    title = `Cancels ${formatDate(cancelAtPeriodEnd)}`;
+    title = `Cancels ${formatBillingDate(cancelAtPeriodEnd)}`;
     metaLine = `You'll keep ${planLabel} access until then`;
   } else if (isTrial) {
     eyebrow = `${planLabel.toUpperCase()} TRIAL`;
     eyebrowAmber = true;
     title =
-      trialDaysLeft === 0
+      trialDaysLeft === null || trialDaysLeft === 0
         ? 'Trial ended'
         : `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining`;
     metaLine = priceCents !== null ? `Then ${formatPriceCents(priceCents)} / month` : null;
   } else {
     title = 'Active';
     if (activeUntil) {
-      const datePart = `Renews ${formatDate(activeUntil)}`;
+      const datePart = `Renews ${formatBillingDate(activeUntil)}`;
       const pricePart =
         priceCents !== null && billingPeriod
           ? ` · ${formatPriceCents(priceCents)} / ${billingPeriod === 'annual' ? 'year' : 'month'}`
@@ -96,9 +92,12 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
       {metaLine && <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{metaLine}</p>}
       {bonusLine && <p className="text-xs text-[var(--accent)] mt-1 font-medium">{bonusLine}</p>}
       {trialBarPct !== null && (
-        <div className="mt-3">
-          <ProgressBar value={trialBarPct} tone={trialTone} ariaLabel="Trial time elapsed" />
-        </div>
+        <ProgressBar
+          value={trialBarPct}
+          tone={trialTone}
+          ariaLabel="Trial progress"
+          className="mt-3"
+        />
       )}
       <UsageRow usage={usage} features={features} aiCredits={aiCredits} />
     </div>

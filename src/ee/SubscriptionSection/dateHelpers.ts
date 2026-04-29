@@ -1,6 +1,7 @@
-export function formatDate(iso: string): string {
-  // Format in UTC so a date-only ISO timestamp (e.g. "2026-05-27T00:00:00Z")
-  // renders as the same calendar day regardless of viewer's local timezone.
+// UTC-pinned so a date-only ISO timestamp renders as the same calendar day in
+// every viewer's timezone. Distinct from src/lib/utils.ts:formatDate, which is
+// short-format and locale-zoned.
+export function formatBillingDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
