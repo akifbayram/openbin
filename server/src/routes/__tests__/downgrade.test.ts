@@ -2,7 +2,6 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// ---- Module-level mocks ----
 vi.mock('../../lib/planGate.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/planGate.js')>();
   return {
@@ -10,26 +9,17 @@ vi.mock('../../lib/planGate.js', async (importOriginal) => {
     isSelfHosted: vi.fn(),
     getUserPlanInfo: vi.fn(),
     isSubscriptionActive: vi.fn(),
+    generateDowngradeFlowAction: vi.fn(),
   };
 });
 
-vi.mock('../../lib/billingClient.js', () => ({
-  postBillingDowngrade: vi.fn(async (req: { targetPlan: string }) => ({
-    ok: true,
-    cancelAtPeriodEnd: '2026-05-27T00:00:00Z',
-    effectiveAt: req.targetPlan === 'free' ? 'period-end' : 'now',
-  })),
-}));
-
 import { createTestUser } from '../../__tests__/helpers.js';
 import { createApp } from '../../index.js';
-import { postBillingDowngrade } from '../../lib/billingClient.js';
-import { BillingNotConfiguredError } from '../../lib/httpErrors.js';
-import { getUserPlanInfo, isSelfHosted, isSubscriptionActive, Plan, SubStatus } from '../../lib/planGate.js';
+import { generateDowngradeFlowAction, getUserPlanInfo, isSelfHosted, isSubscriptionActive, Plan, SubStatus } from '../../lib/planGate.js';
 
 let app: Express;
 
-function mockActivePlusPaidUser(_userId: string) {
+function mockActivePlusPaidUser() {
   vi.mocked(isSelfHosted).mockReturnValue(false);
   vi.mocked(getUserPlanInfo).mockResolvedValue({
     plan: Plan.PLUS,
@@ -57,7 +47,7 @@ function mockActiveProPaidUser() {
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
 }
 
-function mockLapsedUser(_userId: string) {
+function mockLapsedUser() {
   vi.mocked(isSelfHosted).mockReturnValue(false);
   vi.mocked(getUserPlanInfo).mockResolvedValue({
     plan: Plan.PLUS,
@@ -76,68 +66,34 @@ beforeEach(() => {
   vi.mocked(isSelfHosted).mockReset();
   vi.mocked(getUserPlanInfo).mockReset();
   vi.mocked(isSubscriptionActive).mockReset();
-  vi.mocked(postBillingDowngrade).mockClear();
+  vi.mocked(generateDowngradeFlowAction).mockReset();
+  vi.mocked(generateDowngradeFlowAction).mockResolvedValue({
+    url: 'https://billing.example.com/portal-flow',
+    method: 'POST',
+    fields: { token: 'jwt-stub', targetPlan: 'free' },
+  });
 });
 
 describe('POST /api/plan/downgrade', () => {
-  it('forwards active Plus -> Free to billing service', async () => {
+  it('returns portalFlowAction for active Plus -> Free', async () => {
     const { user, token } = await createTestUser(app);
-    mockActivePlusPaidUser(user.id);
+    mockActivePlusPaidUser();
 
     const res = await request(app)
       .post('/api/plan/downgrade')
       .set('Authorization', `Bearer ${token}`)
       .send({ targetPlan: 'free' });
+
     expect(res.status).toBe(200);
-    expect(postBillingDowngrade).toHaveBeenCalledWith({ userId: user.id, targetPlan: 'free' });
+    expect(res.body.portalFlowAction).toEqual({
+      url: 'https://billing.example.com/portal-flow',
+      method: 'POST',
+      fields: { token: 'jwt-stub', targetPlan: 'free' },
+    });
+    expect(generateDowngradeFlowAction).toHaveBeenCalledWith(user.id, 'plus@example.com', 'free');
   });
 
-  it('returns updated PlanInfo on success', async () => {
-    const { user, token } = await createTestUser(app);
-    mockActivePlusPaidUser(user.id);
-
-    const res = await request(app)
-      .post('/api/plan/downgrade')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ targetPlan: 'free' });
-    expect(res.body.plan).toBeDefined();
-  });
-
-  it('rejects invalid targetPlan', async () => {
-    const { user, token } = await createTestUser(app);
-    mockActivePlusPaidUser(user.id);
-
-    const res = await request(app)
-      .post('/api/plan/downgrade')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ targetPlan: 'enterprise' });
-    expect(res.status).toBe(422); // ValidationError = 422 (codebase convention from Task 4)
-  });
-
-  it('rejects upgrade direction (plus -> pro)', async () => {
-    const { user, token } = await createTestUser(app);
-    mockActivePlusPaidUser(user.id);
-
-    const res = await request(app)
-      .post('/api/plan/downgrade')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ targetPlan: 'pro' });
-    expect(res.status).toBe(422);
-  });
-
-  it('handles lapsed user -> free directly without calling billing', async () => {
-    const { user, token } = await createTestUser(app);
-    mockLapsedUser(user.id);
-
-    const res = await request(app)
-      .post('/api/plan/downgrade')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ targetPlan: 'free' });
-    expect(res.status).toBe(200);
-    expect(postBillingDowngrade).not.toHaveBeenCalled();
-  });
-
-  it('forwards active Pro -> Plus to billing service', async () => {
+  it('returns portalFlowAction for active Pro -> Plus', async () => {
     const { user, token } = await createTestUser(app);
     mockActiveProPaidUser();
 
@@ -145,34 +101,82 @@ describe('POST /api/plan/downgrade', () => {
       .post('/api/plan/downgrade')
       .set('Authorization', `Bearer ${token}`)
       .send({ targetPlan: 'plus' });
+
     expect(res.status).toBe(200);
-    expect(postBillingDowngrade).toHaveBeenCalledWith({ userId: user.id, targetPlan: 'plus' });
+    expect(res.body.portalFlowAction).toBeDefined();
+    expect(generateDowngradeFlowAction).toHaveBeenCalledWith(user.id, 'pro@example.com', 'plus');
   });
 
-  it('forwards active Pro -> Free to billing service', async () => {
-    const { user, token } = await createTestUser(app);
+  it('returns portalFlowAction for active Pro -> Free', async () => {
+    const { token } = await createTestUser(app);
     mockActiveProPaidUser();
 
     const res = await request(app)
       .post('/api/plan/downgrade')
       .set('Authorization', `Bearer ${token}`)
       .send({ targetPlan: 'free' });
+
     expect(res.status).toBe(200);
-    expect(postBillingDowngrade).toHaveBeenCalledWith({ userId: user.id, targetPlan: 'free' });
+    expect(res.body.portalFlowAction).toBeDefined();
   });
 
-  it('returns 503 BILLING_NOT_CONFIGURED when billing client throws BillingNotConfiguredError', async () => {
+  it('handles lapsed user -> free directly without a portal action', async () => {
     const { token } = await createTestUser(app);
-    mockActivePlusPaidUser('');
-    vi.mocked(postBillingDowngrade).mockRejectedValueOnce(
-      new BillingNotConfiguredError('BILLING_INTERNAL_URL or BILLING_INTERNAL_KEY not configured'),
-    );
+    mockLapsedUser();
 
     const res = await request(app)
       .post('/api/plan/downgrade')
       .set('Authorization', `Bearer ${token}`)
       .send({ targetPlan: 'free' });
-    expect(res.status).toBe(503);
-    expect(res.body.error).toBe('BILLING_NOT_CONFIGURED');
+
+    expect(res.status).toBe(200);
+    expect(res.body.portalFlowAction).toBeUndefined();
+    expect(res.body.plan).toBeDefined();
+    expect(generateDowngradeFlowAction).not.toHaveBeenCalled();
+  });
+
+  it('rejects lapsed user trying to downgrade to plus (not free)', async () => {
+    const { token } = await createTestUser(app);
+    mockLapsedUser();
+    vi.mocked(getUserPlanInfo).mockResolvedValueOnce({
+      plan: Plan.PRO,
+      subStatus: SubStatus.INACTIVE,
+      activeUntil: '2026-04-15T00:00:00Z',
+      email: 'lapsed@example.com',
+      previousSubStatus: SubStatus.ACTIVE,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
+    });
+
+    const res = await request(app)
+      .post('/api/plan/downgrade')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ targetPlan: 'plus' });
+
+    expect(res.status).toBe(422);
+  });
+
+  it('rejects invalid targetPlan', async () => {
+    const { token } = await createTestUser(app);
+    mockActivePlusPaidUser();
+
+    const res = await request(app)
+      .post('/api/plan/downgrade')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ targetPlan: 'enterprise' });
+
+    expect(res.status).toBe(422);
+  });
+
+  it('rejects upgrade direction (plus -> pro)', async () => {
+    const { token } = await createTestUser(app);
+    mockActivePlusPaidUser();
+
+    const res = await request(app)
+      .post('/api/plan/downgrade')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ targetPlan: 'pro' });
+
+    expect(res.status).toBe(422);
   });
 });

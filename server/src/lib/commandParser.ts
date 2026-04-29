@@ -57,6 +57,8 @@ export interface CommandRequest {
     trash_bins: Array<{ bin_code: string; name: string }>;
     availableColors: string[];
     availableIcons: string[];
+    /** See `InventoryContext.complete`. */
+    complete: boolean;
   };
 }
 
@@ -162,13 +164,13 @@ ${CRITICAL_RULES}`;
 }
 
 export function buildUserMessage(request: CommandRequest): string {
-  const { bins, other_bins, areas, trash_bins } = request.context;
+  const { bins, other_bins, areas, trash_bins, complete } = request.context;
 
   const existingTags = [...new Set(bins.flatMap((b) => b.tags))].sort();
   const tagBlock = buildTagBlock(existingTags);
   const tagSection = tagBlock ? `\n${tagBlock}\n` : '';
 
-  const data: Record<string, unknown> = { bins, areas, trash_bins };
+  const data: Record<string, unknown> = { bins, areas, trash_bins, complete };
   if (other_bins?.length) data.other_bins = other_bins;
   return `Command: ${sanitizeForPrompt(request.text)}${tagSection}
 

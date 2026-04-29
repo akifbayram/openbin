@@ -25,13 +25,19 @@ export function DowngradeImpactDialog(props: DowngradeImpactDialogProps) {
 
   const handleConfirm = async () => {
     try {
-      await downgrade(targetPlan);
+      const outcome = await downgrade(targetPlan);
+      // The tab is navigating away; leave the dialog mounted so the disabled state holds until unload.
+      if (outcome === 'redirected') return;
       onConfirmed();
       onOpenChange(false);
     } catch {
-      // error is captured in useDowngrade.error, surfaced via the UI's pending state
+      // swallowed
     }
   };
+
+  const labels = targetPlan === 'free'
+    ? { confirm: 'Cancel subscription', pending: 'Cancelling…' }
+    : { confirm: 'Change plan', pending: 'Switching…' };
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!isPending) onOpenChange(v); }}>
@@ -78,7 +84,7 @@ export function DowngradeImpactDialog(props: DowngradeImpactDialogProps) {
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>Cancel</Button>
           <Button variant="destructive" onClick={handleConfirm} disabled={isLoading || isPending}>
-            {isPending ? 'Switching…' : `Switch to ${TARGET_LABEL[targetPlan]}`}
+            {isPending ? labels.pending : labels.confirm}
           </Button>
         </DialogFooter>
       </DialogContent>

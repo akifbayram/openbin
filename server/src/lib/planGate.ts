@@ -543,6 +543,14 @@ export function buildPortalAction(token: string): CheckoutAction {
   return { url: `${config.managerUrl}/portal`, method: 'POST', fields: { token } };
 }
 
+export function buildDowngradeFlowAction(token: string, targetPlan: 'free' | 'plus'): CheckoutAction {
+  return {
+    url: `${config.managerUrl}/portal-flow`,
+    method: 'POST',
+    fields: { token, targetPlan },
+  };
+}
+
 // Render a CheckoutAction back into a single URL string. Used for:
 //   - Backwards-compat *Url fields on /api/plan responses
 //   - Email templates that need a plain href
@@ -596,6 +604,11 @@ export async function generateUpgradePlanAction(userId: string, email: string | 
 export async function generatePortalAction(userId: string, email: string | null): Promise<CheckoutAction | null> {
   const token = await getManagerToken(userId, email);
   return token ? buildPortalAction(token) : null;
+}
+
+export async function generateDowngradeFlowAction(userId: string, email: string | null, targetPlan: 'free' | 'plus'): Promise<CheckoutAction | null> {
+  const token = await getManagerToken(userId, email);
+  return token ? buildDowngradeFlowAction(token, targetPlan) : null;
 }
 
 // generate*Url: returns the URL form (for emails / legacy clients).

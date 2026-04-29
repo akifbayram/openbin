@@ -68,7 +68,13 @@ export async function createTestBin(
   app: Express,
   token: string,
   locationId: string,
-  overrides?: { name?: string; items?: string[]; tags?: string[]; notes?: string },
+  overrides?: {
+    name?: string;
+    items?: string[];
+    tags?: string[];
+    notes?: string;
+    visibility?: 'location' | 'private';
+  },
 ) {
   const res = await request(app)
     .post('/api/bins')
@@ -79,6 +85,7 @@ export async function createTestBin(
       items: overrides?.items,
       tags: overrides?.tags,
       notes: overrides?.notes,
+      visibility: overrides?.visibility,
     });
 
   return res.body as {
@@ -89,6 +96,14 @@ export async function createTestBin(
     tags: string[];
     notes: string;
   };
+}
+
+export async function joinTestLocation(app: Express, token: string, inviteCode: string) {
+  const res = await request(app)
+    .post('/api/locations/join')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ inviteCode });
+  if (res.status >= 400) throw new Error(`join failed: ${res.status} ${JSON.stringify(res.body)}`);
 }
 
 export async function createTestArea(app: Express, token: string, locationId: string, name?: string) {

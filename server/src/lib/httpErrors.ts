@@ -90,13 +90,6 @@ export class ScanUnavailableError extends HttpError {
   }
 }
 
-export class BillingNotConfiguredError extends HttpError {
-  constructor(message = 'Billing service is not configured') {
-    super(503, 'BILLING_NOT_CONFIGURED', message);
-    this.name = 'BillingNotConfiguredError';
-  }
-}
-
 export class OverLimitError extends HttpError {
   public readonly upgradeUrl: string | null;
   public readonly upgradeAction: CheckoutActionShape | null;

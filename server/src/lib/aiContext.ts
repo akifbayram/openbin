@@ -102,7 +102,7 @@ function appendInClause(sql: string, column: string, startIndex: number, ids: st
   return { sql: `${sql} AND ${column} IN (${placeholders})`, params: ids };
 }
 
-/** Fetch bins, areas, trash, and custom field data for a location. */
+/** Fetch bins (location-visible + own private), areas, trash, and custom field data. */
 async function fetchLocationData(locationId: string, userId: string, binIds?: string[]) {
   let binsSql = `SELECT b.id, b.short_code, b.name,
         COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id AND bi.deleted_at IS NULL ORDER BY bi.position) bi), '[]') AS items,
@@ -113,7 +113,7 @@ async function fetchLocationData(locationId: string, userId: string, binIds?: st
        FROM bins b
        LEFT JOIN areas a ON a.id = b.area_id
        LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
-       WHERE b.location_id = $1 AND b.deleted_at IS NULL`;
+       WHERE b.location_id = $1 AND b.deleted_at IS NULL AND (b.visibility = 'location' OR b.created_by = $2)`;
   const binsParams: string[] = [locationId, userId];
   if (binIds?.length) {
     const inClause = appendInClause(binsSql, 'b.id', 3, binIds);
@@ -125,10 +125,10 @@ async function fetchLocationData(locationId: string, userId: string, binIds?: st
        FROM bin_custom_field_values v
        JOIN location_custom_fields f ON f.id = v.field_id
        JOIN bins b ON b.id = v.bin_id
-       WHERE f.location_id = $1 AND b.deleted_at IS NULL`;
-  const cfParams: string[] = [locationId];
+       WHERE f.location_id = $1 AND b.deleted_at IS NULL AND (b.visibility = 'location' OR b.created_by = $2)`;
+  const cfParams: string[] = [locationId, userId];
   if (binIds?.length) {
-    const inClause = appendInClause(cfSql, 'v.bin_id', 2, binIds);
+    const inClause = appendInClause(cfSql, 'v.bin_id', 3, binIds);
     cfSql = inClause.sql;
     cfParams.push(...inClause.params);
   }
@@ -151,8 +151,8 @@ async function fetchLocationData(locationId: string, userId: string, binIds?: st
       [locationId]
     ),
     query(
-      'SELECT id, short_code, name FROM bins WHERE location_id = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 20',
-      [locationId]
+      "SELECT id, short_code, name FROM bins WHERE location_id = $1 AND deleted_at IS NOT NULL AND (visibility = 'location' OR created_by = $2) ORDER BY deleted_at DESC LIMIT 20",
+      [locationId, userId]
     ),
     query<{ bin_id: string; field_name: string; value: string }>(cfSql, cfParams),
     query<{ item_id: string; checked_out_by_name: string }>(checkoutSql, checkoutParams),
@@ -178,11 +178,15 @@ function truncateNotes(notes: unknown): string {
   return (notes as string) || '';
 }
 
-/** Apply relevance filtering and token budget to a bins array. */
-function applyContextLimits<T extends { bin_code: string; name: string; items: Array<{ name: string } | string>; tags: string[]; area_name?: string }>(
+/**
+ * Apply relevance filtering and token budget. `complete` is true only when
+ * the result is the full input set AND the caller didn't pre-scope (`scoped`).
+ */
+export function applyContextLimits<T extends { bin_code: string; name: string; items: Array<{ name: string } | string>; tags: string[]; area_name?: string }>(
   allBins: T[],
   userText?: string,
-): { bins: T[]; other_bins: Array<{ bin_code: string; name: string }> } {
+  scoped = false,
+): { bins: T[]; other_bins: Array<{ bin_code: string; name: string }>; complete: boolean } {
   let bins = allBins;
   let other_bins: Array<{ bin_code: string; name: string }> = [];
   if (userText) {
@@ -190,7 +194,8 @@ function applyContextLimits<T extends { bin_code: string; name: string; items: A
     bins = filtered.relevant;
     other_bins = filtered.rest;
   }
-  return budgetContext(bins, other_bins);
+  const budgeted = budgetContext(bins, other_bins);
+  return { ...budgeted, complete: !scoped && budgeted.bins.length === allBins.length };
 }
 
 const REORDER_INTENT = /reorder|rearrange|sort|move.*(?:up|down|first|last|before|after)/i;
@@ -242,7 +247,7 @@ export async function buildCommandContext(locationId: string, userId: string, bi
     name: r.name as string,
   }));
 
-  const budgeted = applyContextLimits(allBins, userText);
+  const budgeted = applyContextLimits(allBins, userText, !!binIds?.length);
   return { ...budgeted, areas, trash_bins, availableColors: AVAILABLE_COLORS, availableIcons: AVAILABLE_ICONS };
 }
 
@@ -281,6 +286,6 @@ export async function buildInventoryContext(locationId: string, userId: string, 
     name: r.name as string,
   }));
 
-  const budgeted = applyContextLimits(allBins, userText);
+  const budgeted = applyContextLimits(allBins, userText, !!binIds?.length);
   return { ...budgeted, areas, trash_bins };
 }

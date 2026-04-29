@@ -21,7 +21,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent flush className="sm:max-w-lg max-h-[min(720px,85vh)]">
+      <DialogContent flush className="sm:max-w-lg h-[min(720px,85vh)]">
         <ConversationUI
           active={open}
           autoTriggerPhoto={autoTriggerPhoto}
