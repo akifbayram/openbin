@@ -1,6 +1,6 @@
-import { config } from './config.js';
-import type { PlanFeatures } from './planGate.js';
-import { getFeatureMap, Plan } from './planGate.js';
+import { config } from '../../lib/config.js';
+import type { PlanFeatures } from '../../lib/planGate.js';
+import { getFeatureMap, Plan } from '../../lib/planGate.js';
 
 export type CatalogPlanId = 'free' | 'plus' | 'pro';
 

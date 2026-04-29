@@ -6,6 +6,7 @@ import cors from 'cors';
 import express from 'express';
 import multer from 'multer';
 import { query } from './db.js';
+import { getPlanCatalog } from './ee/lib/planCatalog.js';
 import { config } from './lib/config.js';
 import { csrfProtect } from './lib/csrf.js';
 import {
@@ -17,7 +18,6 @@ import {
 } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
 import { createLogger } from './lib/logger.js';
-import { getPlanCatalog } from './lib/planCatalog.js';
 import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { isRestoreInProgress } from './lib/restore.js';
 import { tryAuthenticate } from './middleware/auth.js';
@@ -26,7 +26,6 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { requireActiveSubscription } from './middleware/requirePlan.js';
 import activityRoutes from './routes/activity.js';
 import { adminRoutes } from './routes/admin.js';
-import { adminOverridesRoutes } from './routes/adminOverrides.js';
 import { adminSecurityRoutes } from './routes/adminSecurity.js';
 import { adminSystemRoutes } from './routes/adminSystem.js';
 import aiRoutes from './routes/ai.js';
@@ -105,27 +104,31 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   // ACAO header wins over the single-origin default. config.corsOrigin is only
   // included when set explicitly to avoid leaking the localhost dev default
   // into production allow-lists; dev origin is added separately when not in prod.
-  const PLANS_CORS_ORIGINS = new Set<string>([
-    'https://openbin.app',
-    'https://cloud.openbin.app',
-    'https://billing.openbin.app',
-    ...(config.corsOriginExplicit ? [config.corsOrigin] : []),
-    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:5173'] : []),
-  ]);
-  app.get(
-    '/api/plans',
-    cors({
-      origin: (origin, cb) => {
-        if (!origin || PLANS_CORS_ORIGINS.has(origin)) cb(null, true);
-        else cb(null, false);
+  // Cloud-only: self-hosted instances have no billing surface and no need to
+  // expose a public catalog.
+  if (!config.selfHosted) {
+    const PLANS_CORS_ORIGINS = new Set<string>([
+      'https://openbin.app',
+      'https://cloud.openbin.app',
+      'https://billing.openbin.app',
+      ...(config.corsOriginExplicit ? [config.corsOrigin] : []),
+      ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:5173'] : []),
+    ]);
+    app.get(
+      '/api/plans',
+      cors({
+        origin: (origin, cb) => {
+          if (!origin || PLANS_CORS_ORIGINS.has(origin)) cb(null, true);
+          else cb(null, false);
+        },
+        methods: ['GET'],
+        credentials: false,
+      }),
+      (_req, res) => {
+        res.json(getPlanCatalog());
       },
-      methods: ['GET'],
-      credentials: false,
-    }),
-    (_req, res) => {
-      res.json(getPlanCatalog());
-    },
-  );
+    );
+  }
 
   app.use(cors({
     origin: config.corsOrigin,
@@ -216,7 +219,6 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api', batchRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/admin/security', adminSecurityRoutes);
-  app.use('/api/admin/overrides', adminOverridesRoutes);
   app.use('/api/admin/system', adminSystemRoutes);
 
   // Global error handler

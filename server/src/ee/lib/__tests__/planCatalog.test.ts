@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../config.js', () => ({
+vi.mock('../../../lib/config.js', () => ({
   config: {
     planLimits: {
       freeMaxBins: 10, freeMaxLocations: 1, freeMaxStorageMb: 0, freeMaxMembers: 1,

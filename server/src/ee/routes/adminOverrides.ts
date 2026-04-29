@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { d, generateUuid, query } from '../db.js';
-import { logAdminAction } from '../lib/adminAudit.js';
-import { assertUserExists } from '../lib/adminHelpers.js';
-import { asyncHandler } from '../lib/asyncHandler.js';
-import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
-import { getFeatureMap, invalidateOverLimitCache, Plan, type PlanTier, planLabel, SubStatus } from '../lib/planGate.js';
-import { authenticate } from '../middleware/auth.js';
-import { requireAdmin } from '../middleware/requireAdmin.js';
+import { d, generateUuid, query } from '../../db.js';
+import { logAdminAction } from '../../lib/adminAudit.js';
+import { assertUserExists } from '../../lib/adminHelpers.js';
+import { asyncHandler } from '../../lib/asyncHandler.js';
+import { NotFoundError, ValidationError } from '../../lib/httpErrors.js';
+import { getFeatureMap, invalidateOverLimitCache, Plan, type PlanTier, planLabel, SubStatus } from '../../lib/planGate.js';
+import { authenticate } from '../../middleware/auth.js';
+import { requireAdmin } from '../../middleware/requireAdmin.js';
 
 const router = Router();
 router.use(authenticate, requireAdmin);

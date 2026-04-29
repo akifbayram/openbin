@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { PlanFeatures } from '../../../lib/planGate.js';
 import { computeDowngradeImpact } from '../downgradeImpact.js';
-import type { PlanFeatures } from '../planGate.js';
 
 const PRO_FEATURES: PlanFeatures = {
   ai: true, apiKeys: true, customFields: true, fullExport: true,

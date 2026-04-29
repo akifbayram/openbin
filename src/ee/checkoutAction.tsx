@@ -1,27 +1,15 @@
-// CheckoutLink + submitCheckoutAction — render the structured CheckoutAction
-// returned by /api/plan as a button-shaped link that does the right thing
-// for the action's method.
-//
-// Why this exists: until the 2026-04-26 hardening pass on openbin-deploy,
-// the billing service accepted the user's session JWT only via `?token=`
-// in the URL. That landed in browser history, the Referer header, the
-// Umami analytics URL, and the access log. Billing now accepts the token
-// via POST body or `Authorization: Bearer`; this helper is the client side
-// of that migration. /plans is intentionally still GET (it's a static page
-// that needs the token client-side), but the rest of the surfaces are POST.
-//
-// The two entry points:
-//   <CheckoutLink action={planInfo.upgradeProAction}>Upgrade to Pro</CheckoutLink>
-//     — for inline buttons / CTAs in the React tree.
-//   submitCheckoutAction(action, { target: '_blank' })
-//     — for the rare imperative flow (window.open replacement). Builds a
-//     transient form, submits, removes it. Same security properties.
+// CheckoutLink + submitCheckoutAction render a CheckoutAction from /api/plan
+// as a form-POST (or anchor for GET) so the JWT rides the request body
+// instead of the URL — keeping it out of browser history, Referer, and
+// access logs. The URL/method allowlist guard is internal: callers only
+// need to null-check the action; <CheckoutLink> returns null and
+// submitCheckoutAction no-ops if the action is unsafe.
 
 import type React from 'react';
 import { cn, isSafeExternalUrl } from '@/lib/utils';
 import type { CheckoutAction } from '@/types';
 
-export function isSafeCheckoutAction(action: CheckoutAction | null): action is CheckoutAction {
+function isSafeCheckoutAction(action: CheckoutAction | null): action is CheckoutAction {
   if (!action) return false;
   if (!isSafeExternalUrl(action.url)) return false;
   // Defense-in-depth on the method: server only emits 'GET' or 'POST'
@@ -48,6 +36,8 @@ export function CheckoutLink({
   rel = 'noopener noreferrer',
   ...buttonProps
 }: CheckoutLinkProps) {
+  if (!isSafeCheckoutAction(action)) return null;
+
   if (action.method === 'GET') {
     // GET goes to /plans (static page) so the token has to ride the URL
     // anyway. Cache-Control: no-store on billing's /plans + Referrer-Policy

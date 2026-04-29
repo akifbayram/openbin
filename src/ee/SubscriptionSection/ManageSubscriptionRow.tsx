@@ -1,5 +1,5 @@
 import { ArrowUpRight } from 'lucide-react';
-import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
+import { CheckoutLink } from '@/ee/checkoutAction';
 import { cn, focusRing } from '@/lib/utils';
 import type { CheckoutAction } from '@/types';
 
@@ -9,7 +9,7 @@ interface ManageSubscriptionRowProps {
 }
 
 export function ManageSubscriptionRow({ action, isCancelPending }: ManageSubscriptionRowProps) {
-  if (!action || !isSafeCheckoutAction(action)) return null;
+  if (!action) return null;
   const label = isCancelPending ? 'Reactivate subscription' : 'Manage Subscription';
   return (
     <CheckoutLink

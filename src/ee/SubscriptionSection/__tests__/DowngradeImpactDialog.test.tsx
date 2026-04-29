@@ -5,7 +5,7 @@ import { FIXTURE_IMPACT_FREE } from './fixtures/downgradeImpact';
 
 const submitCheckoutAction = vi.fn();
 
-vi.mock('@/lib/checkoutAction', () => ({
+vi.mock('@/ee/checkoutAction', () => ({
   submitCheckoutAction: (...args: unknown[]) => submitCheckoutAction(...args),
 }));
 

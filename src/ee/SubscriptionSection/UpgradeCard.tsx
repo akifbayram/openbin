@@ -1,5 +1,5 @@
 import { ArrowUpRight } from 'lucide-react';
-import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
+import { CheckoutLink } from '@/ee/checkoutAction';
 import { cn, focusRing } from '@/lib/utils';
 import type { CatalogPlan, CheckoutAction } from '@/types';
 import { formatPriceCents } from './annualSavings';
@@ -24,7 +24,7 @@ export function UpgradeCard({ targetPlan, action }: UpgradeCardProps) {
           {monthly}/mo{annual && ` · ${annual}/yr`}
         </p>
       </div>
-      {action && isSafeCheckoutAction(action) && (
+      {action && (
         <CheckoutLink action={action} target="_blank" className={ctaClassName}>
           Upgrade to {targetPlan.name}
           <ArrowUpRight className="h-3.5 w-3.5" />

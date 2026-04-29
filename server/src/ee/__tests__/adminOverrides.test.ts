@@ -1,14 +1,15 @@
 import type { Express } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { getDb } from '../db.js';
-import { createApp } from '../index.js';
-import { Plan, SubStatus } from '../lib/planGate.js';
-import { createTestUser, makeAdmin } from './helpers.js';
+import { createTestUser, makeAdmin } from '../../__tests__/helpers.js';
+import { getDb } from '../../db.js';
+import { createApp } from '../../index.js';
+import { Plan, SubStatus } from '../../lib/planGate.js';
+import { initEeRoutes } from '../index.js';
 
 let app: Express;
 beforeEach(() => {
-  app = createApp();
+  app = createApp({ mountEeRoutes: initEeRoutes });
 });
 
 function setTrial(userId: string) {

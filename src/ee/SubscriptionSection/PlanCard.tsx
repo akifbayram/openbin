@@ -1,5 +1,5 @@
 import { ArrowUpRight } from 'lucide-react';
-import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
+import { CheckoutLink } from '@/ee/checkoutAction';
 import { cn, focusRing } from '@/lib/utils';
 import type { CatalogPlan, CheckoutAction } from '@/types';
 import { formatPriceCents } from './annualSavings';
@@ -41,7 +41,7 @@ export function PlanCard({ plan, billingPeriod, ctaLabel, action, isCurrentPlan 
         <button type="button" disabled className={cn(ctaClassName, 'opacity-50 cursor-not-allowed')}>
           Current plan
         </button>
-      ) : action && isSafeCheckoutAction(action) ? (
+      ) : action ? (
         <CheckoutLink action={action} target="_blank" className={ctaClassName}>
           {ctaLabel}
           <ArrowUpRight className="h-3.5 w-3.5" />

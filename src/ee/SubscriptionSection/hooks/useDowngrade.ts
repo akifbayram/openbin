@@ -1,6 +1,6 @@
 import { useState } from 'react';
+import { submitCheckoutAction } from '@/ee/checkoutAction';
 import { apiFetch } from '@/lib/api';
-import { submitCheckoutAction } from '@/lib/checkoutAction';
 import { Events, notify } from '@/lib/eventBus';
 import type { CheckoutAction } from '@/types';
 
