@@ -35,6 +35,14 @@ vi.mock('../useApiKeys', () => ({
   revokeApiKey: vi.fn(),
 }));
 
+vi.mock('@/lib/userPreferences', () => ({
+  useUserPreferences: vi.fn(() => ({
+    preferences: { dismissed_upgrade_prompts: [] as string[] },
+    isLoading: false,
+    updatePreferences: vi.fn(),
+  })),
+}));
+
 const baseUser = {
   id: '1',
   displayName: 'Test User',

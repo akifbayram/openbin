@@ -6,6 +6,7 @@ import { useAttachments } from '@/features/attachments/useAttachments';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { isAttachmentsEnabled } from '@/lib/qrConfig';
 import { usePlan } from '@/lib/usePlan';
+import { useUserPreferences } from '@/lib/userPreferences';
 import { sectionHeader } from '@/lib/utils';
 import type { Photo } from '@/types';
 
@@ -24,8 +25,13 @@ export function BinDetailFilesTab({ binId, photos, canEdit }: BinDetailFilesTabP
   const { planInfo, isGated } = usePlan();
   const attachmentsGated = isGated('attachments');
   const { attachments } = useAttachments(attachmentsOn ? binId : undefined);
+  const { preferences } = useUserPreferences();
+  const attachmentsDismissed = preferences.dismissed_upgrade_prompts.includes('attachments');
   const showPhotos = canEdit || photos.length > 0;
-  const showAttachments = attachmentsOn && (canEdit || attachments.length > 0);
+  const showAttachments = attachmentsOn && (
+    attachments.length > 0 ||
+    (canEdit && !(attachmentsGated && attachmentsDismissed))
+  );
   const showSectionLabels = showPhotos && showAttachments;
   const idPrefix = useId();
   const photosLabelId = `${idPrefix}-photos`;

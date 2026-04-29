@@ -22,6 +22,7 @@ import { useAuth } from '@/lib/auth';
 import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength';
 import { useAuthStatusConfig } from '@/lib/qrConfig';
 import { usePlan } from '@/lib/usePlan';
+import { useUserPreferences } from '@/lib/userPreferences';
 import { useWarnOnUnload } from '@/lib/useWarnOnUnload';
 import { EMAIL_REGEX, getErrorMessage } from '@/lib/utils';
 import type { User } from '@/types';
@@ -82,6 +83,8 @@ export function AccountSection() {
   // API keys
   const { isGated, isSelfHosted, planInfo } = usePlan();
   const apiKeysGated = !isSelfHosted && isGated('apiKeys');
+  const { preferences } = useUserPreferences();
+  const apiKeysDismissed = preferences.dismissed_upgrade_prompts.includes('apiKeys');
   const { keys, isLoading: keysLoading } = useApiKeys(!apiKeysGated);
   const [createOpen, setCreateOpen] = useState(false);
   const [keyName, setKeyName] = useState('');
@@ -499,7 +502,7 @@ export function AccountSection() {
       )}
 
       {apiKeysGated ? (
-        __EE__ && (
+        __EE__ && !apiKeysDismissed && (
           <SettingsSection label="API Keys" dividerAbove>
             <Suspense fallback={null}>
               <UpgradePrompt
