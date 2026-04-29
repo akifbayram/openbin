@@ -35,4 +35,15 @@ describe('UpgradePrompt', () => {
 
     expect(screen.getByRole('button', { name: /Dismiss/i })).toBeInTheDocument();
   });
+
+  it('does not render the X button when dismissKey is omitted', () => {
+    render(
+      <UpgradePrompt
+        feature="Document Attachments"
+        upgradeAction={null}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /Dismiss/i })).not.toBeInTheDocument();
+  });
 });
