@@ -23,6 +23,7 @@ export interface UserPreferences {
   usage_tracking_view: boolean;
   usage_tracking_modify: boolean;
   usage_granularity: 'daily' | 'weekly' | 'monthly';
+  dismissed_upgrade_prompts: string[];
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -47,6 +48,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   usage_tracking_view: false,
   usage_tracking_modify: true,
   usage_granularity: 'daily',
+  dismissed_upgrade_prompts: [],
 };
 
 const PREFERENCES_EVENT = 'user-preferences-changed';
