@@ -17,7 +17,7 @@ export function UpgradeCard({ targetPlan, action }: UpgradeCardProps) {
     focusRing,
   );
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--border-flat)] p-5 space-y-3 flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--border-flat)] p-4 space-y-3 flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-3">
       <div className="space-y-1">
         <h3 className="text-base font-semibold text-[var(--text-primary)]">Upgrade to {targetPlan.name}</h3>
         <p className="text-sm text-[var(--text-tertiary)]">
