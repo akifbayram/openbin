@@ -77,4 +77,22 @@ describe('UpgradePrompt', () => {
       dismissed_upgrade_prompts: ['attachments'],
     });
   });
+
+  it('returns null when dismissKey is already in dismissed_upgrade_prompts', () => {
+    (useUserPreferences as ReturnType<typeof vi.fn>).mockReturnValueOnce({
+      preferences: { dismissed_upgrade_prompts: ['attachments'] },
+      isLoading: false,
+      updatePreferences: vi.fn(),
+    });
+
+    const { container } = render(
+      <UpgradePrompt
+        feature="Document Attachments"
+        upgradeAction={null}
+        dismissKey="attachments"
+      />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
 });
