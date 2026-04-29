@@ -131,26 +131,6 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
 
         {/* Top: Home, Bins */}
         <div className="space-y-1">
-          {/* Location switcher */}
-          {collapsed ? (
-            locations.length > 1 && (
-              <button
-                type="button"
-                onClick={() => { navigate('/locations'); onItemClick?.(); }}
-                aria-label={t.Locations ?? 'Locations'}
-                className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full text-[var(--text-tertiary)]
-  hover:bg-[var(--bg-hover)]"
-              >
-                <MapPin className="h-5 w-5 shrink-0" />
-              </button>
-            )
-          ) : (
-            <LocationSwitcher
-              locations={locations}
-              activeLocationId={activeLocationId}
-              onLocationChange={(id) => { onLocationChange(id); onItemClick?.(); }}
-            />
-          )}
           {topItems.map((item) => (
             <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate}
               onClick={onItemClick} collapsed={collapsed} />
@@ -191,6 +171,24 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
 
       <div className="py-4 px-3">
         <div className="space-y-1">
+          {collapsed ? (
+            locations.length > 1 && (
+              <button
+                type="button"
+                onClick={() => { navigate('/locations'); onItemClick?.(); }}
+                aria-label={t.Locations ?? 'Locations'}
+                className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]"
+              >
+                <MapPin className="h-5 w-5 shrink-0" />
+              </button>
+            )
+          ) : (
+            <LocationSwitcher
+              locations={locations}
+              activeLocationId={activeLocationId}
+              onLocationChange={(id) => { onLocationChange(id); onItemClick?.(); }}
+            />
+          )}
           <NavButton path="/settings" label="Settings" icon={Settings} currentPath={location.pathname} navigate={navigate} onClick={onItemClick}
             collapsed={collapsed} />
           <button
