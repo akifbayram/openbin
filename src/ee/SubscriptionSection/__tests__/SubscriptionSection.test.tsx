@@ -11,10 +11,15 @@ vi.mock('@/lib/usePlan', () => ({
     if (prev === 'active') return 'Your subscription has expired. Resubscribe to continue using OpenBin.';
     return 'Your plan is inactive. Subscribe to continue using OpenBin.';
   },
-  getLockedCta: (prev: 'trial' | 'active' | null) => (prev === 'trial' ? 'Subscribe' : 'Resubscribe'),
+  getLockedCta: (prev: 'trial' | 'active' | null) =>
+    prev === 'trial' ? 'Subscribe' : 'Resubscribe',
 }));
 vi.mock('../hooks/usePlanCatalog', () => ({
-  usePlanCatalog: vi.fn(() => ({ plans: FIXTURE_CATALOG.plans, isLoading: false, error: null })),
+  usePlanCatalog: vi.fn(() => ({
+    plans: FIXTURE_CATALOG.plans,
+    isLoading: false,
+    error: null,
+  })),
 }));
 
 import { usePlan } from '@/lib/usePlan';
@@ -42,62 +47,125 @@ describe('SubscriptionSection orchestrator', () => {
   it('Free state: shows plan picker, no manage button', () => {
     setPlan(makePlanInfo({ plan: 'free' }));
     render(<SubscriptionSection />);
-    expect(screen.getByText('Free Plan')).toBeInTheDocument();
     expect(screen.getByText('Plus')).toBeInTheDocument();
     expect(screen.getByText('Pro')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Manage Subscription/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Manage Subscription/i })).toBeNull();
   });
 
-  it('Plus paid monthly: shows upsell banner + Pro upgrade card + manage', () => {
-    setPlan(makePlanInfo({
-      plan: 'plus',
-      status: 'active',
-      activeUntil: '2026-05-27T00:00:00Z',
-      billingPeriod: 'monthly',
-      portalAction: { url: 'https://billing.openbin.app/portal', method: 'POST', fields: { token: 't' } },
-      upgradeProAction: { url: 'https://billing.openbin.app/upgrade', method: 'POST', fields: { token: 't' } },
-    }));
+  it('Pro active monthly: renders new plan card with PRO eyebrow + Active + Renews + price', () => {
+    setPlan(
+      makePlanInfo({
+        plan: 'pro',
+        status: 'active',
+        activeUntil: '2026-05-27T00:00:00Z',
+        billingPeriod: 'monthly',
+        portalAction: { url: 'https://billing.openbin.app/portal', method: 'POST', fields: { token: 't' } },
+      }),
+    );
     render(<SubscriptionSection />);
-    expect(screen.getByText(/Save .* by switching to annual/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Upgrade to Pro/i })).toBeInTheDocument();
+    expect(screen.getByText('PRO')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText(/Renews May 27, 2026/)).toBeInTheDocument();
+  });
+
+  it('Pro active monthly: shows "Switch to annual" primary CTA + ghost Manage', () => {
+    setPlan(
+      makePlanInfo({
+        plan: 'pro',
+        status: 'active',
+        activeUntil: '2026-05-27T00:00:00Z',
+        billingPeriod: 'monthly',
+        portalAction: { url: 'https://billing.openbin.app/portal', method: 'POST', fields: { token: 't' } },
+      }),
+    );
+    render(<SubscriptionSection />);
+    expect(screen.getByText(/Switch to annual — save/)).toBeInTheDocument();
     expect(screen.getByText(/Manage Subscription/i)).toBeInTheDocument();
   });
 
-  it('Pro cancel-pending: shows Reactivate label instead of Manage', () => {
-    setPlan(makePlanInfo({
-      plan: 'pro',
-      status: 'active',
-      activeUntil: '2026-05-27T00:00:00Z',
-      cancelAtPeriodEnd: '2026-05-27T00:00:00Z',
-      portalAction: { url: 'https://billing.openbin.app/portal', method: 'POST', fields: { token: 't' } },
-    }));
+  it('Pro active annual: shows Saving line + ghost Manage + no primary annual CTA', () => {
+    setPlan(
+      makePlanInfo({
+        plan: 'pro',
+        status: 'active',
+        activeUntil: '2026-05-27T00:00:00Z',
+        billingPeriod: 'annual',
+        portalAction: { url: 'https://billing.openbin.app/portal', method: 'POST', fields: { token: 't' } },
+      }),
+    );
+    render(<SubscriptionSection />);
+    expect(screen.getByText(/Saving .* on annual billing/)).toBeInTheDocument();
+    expect(screen.queryByText(/Switch to annual/)).toBeNull();
+    expect(screen.getByText(/Manage Subscription/i)).toBeInTheDocument();
+  });
+
+  it('Plus paid monthly: shows Pro upsell card + annual switch primary + manage', () => {
+    setPlan(
+      makePlanInfo({
+        plan: 'plus',
+        status: 'active',
+        activeUntil: '2026-05-27T00:00:00Z',
+        billingPeriod: 'monthly',
+        portalAction: { url: 'https://billing.openbin.app/portal', method: 'POST', fields: { token: 't' } },
+        upgradeProAction: { url: 'https://billing.openbin.app/upgrade', method: 'POST', fields: { token: 't' } },
+      }),
+    );
+    render(<SubscriptionSection />);
+    expect(screen.getByRole('heading', { name: /Upgrade to Pro/i })).toBeInTheDocument();
+    expect(screen.getByText(/Switch to annual — save/)).toBeInTheDocument();
+    expect(screen.getByText(/Manage Subscription/i)).toBeInTheDocument();
+  });
+
+  it('Pro cancel-pending: shows Reactivate primary, hides Manage ghost + downgrade links', () => {
+    setPlan(
+      makePlanInfo({
+        plan: 'pro',
+        status: 'active',
+        activeUntil: '2026-05-27T00:00:00Z',
+        cancelAtPeriodEnd: '2026-05-27T00:00:00Z',
+        portalAction: { url: 'https://billing.openbin.app/portal', method: 'POST', fields: { token: 't' } },
+      }),
+    );
     render(<SubscriptionSection />);
     expect(screen.getByText(/Reactivate/i)).toBeInTheDocument();
     expect(screen.queryByText(/Manage Subscription/i)).toBeNull();
+    expect(screen.queryByText(/Downgrade to Plus/)).toBeNull();
+    expect(screen.queryByText(/Switch to Free/)).toBeNull();
   });
 
-  it('locked: shows resubscribe banner only', () => {
-    setPlan(makePlanInfo({
-      plan: 'plus',
-      status: 'inactive',
-      locked: true,
-      previousSubStatus: 'active',
-      subscribePlanAction: { url: 'https://billing.openbin.app/sub', method: 'POST', fields: { token: 't' } },
-    }));
+  it('locked: shows Expired + resubscribe', () => {
+    setPlan(
+      makePlanInfo({
+        plan: 'plus',
+        status: 'inactive',
+        locked: true,
+        previousSubStatus: 'active',
+        subscribePlanAction: {
+          url: 'https://billing.openbin.app/sub',
+          method: 'POST',
+          fields: { token: 't' },
+        },
+      }),
+    );
     render(<SubscriptionSection />);
+    expect(screen.getByText(/Expired/)).toBeInTheDocument();
     expect(screen.getAllByText(/Resubscribe/i).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Plus.*Active/i)).toBeNull();
   });
 
   it('locked from trial: shows trial-ended message + Subscribe CTA', () => {
-    setPlan(makePlanInfo({
-      plan: 'plus',
-      status: 'inactive',
-      locked: true,
-      previousSubStatus: 'trial',
-      subscribePlanAction: { url: 'https://billing.openbin.app/sub', method: 'POST', fields: { token: 't' } },
-    }));
+    setPlan(
+      makePlanInfo({
+        plan: 'plus',
+        status: 'inactive',
+        locked: true,
+        previousSubStatus: 'trial',
+        subscribePlanAction: {
+          url: 'https://billing.openbin.app/sub',
+          method: 'POST',
+          fields: { token: 't' },
+        },
+      }),
+    );
     render(<SubscriptionSection />);
     expect(screen.getByText(/trial has ended/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Subscribe/i).length).toBeGreaterThan(0);

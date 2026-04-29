@@ -3,17 +3,16 @@ import { useState } from 'react';
 import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
 import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
-import type { PlanTier, PlanUsage } from '@/types';
-import { AnnualUpsellBanner } from './SubscriptionSection/AnnualUpsellBanner';
-import { computeAnnualSavings } from './SubscriptionSection/annualSavings';
+import type { CatalogPlan, CheckoutAction, PlanTier, PlanUsage } from '@/types';
+import { computeAnnualSavings, formatPriceCents } from './SubscriptionSection/annualSavings';
+import { CurrentPlanCard } from './SubscriptionSection/CurrentPlanCard';
 import { DowngradeImpactDialog } from './SubscriptionSection/DowngradeImpactDialog';
+import { formatDate } from './SubscriptionSection/dateHelpers';
 import { usePlanCatalog } from './SubscriptionSection/hooks/usePlanCatalog';
 import { ManageSubscriptionRow } from './SubscriptionSection/ManageSubscriptionRow';
 import { PlanPicker } from './SubscriptionSection/PlanPicker';
-import { StatusHeader } from './SubscriptionSection/StatusHeader';
 import { SupportFooter } from './SubscriptionSection/SupportFooter';
 import { UpgradeCard } from './SubscriptionSection/UpgradeCard';
-import { UsageStrip } from './SubscriptionSection/UsageStrip';
 
 const ZERO_USAGE: PlanUsage = {
   binCount: 0, locationCount: 0, photoStorageMb: 0,
@@ -22,9 +21,32 @@ const ZERO_USAGE: PlanUsage = {
 };
 
 const downgradeLinkClass = cn(
-  'text-sm text-[var(--text-tertiary)] underline block hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]',
+  'text-sm text-[var(--text-tertiary)] underline hover:text-[var(--text-secondary)] rounded-[var(--radius-xs)]',
   focusRing,
 );
+
+const primaryCtaClass = cn(
+  'inline-flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] h-10 px-5 text-[14px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors',
+  focusRing,
+);
+
+interface PrimaryCta {
+  label: string;
+  action: CheckoutAction;
+}
+
+function findPlan(plans: CatalogPlan[], tier: PlanTier): CatalogPlan | undefined {
+  return plans.find((p) => p.id === tier);
+}
+
+function priceCentsFor(
+  plan: CatalogPlan | undefined,
+  period: 'monthly' | 'annual' | null,
+): number | null {
+  if (!plan || !period) return null;
+  if (period === 'annual') return plan.prices.annual;
+  return plan.prices.monthly;
+}
 
 export function SubscriptionSection() {
   const { planInfo, usage, refresh } = usePlan();
@@ -34,30 +56,30 @@ export function SubscriptionSection() {
   );
   const [downgradeTarget, setDowngradeTarget] = useState<'free' | 'plus' | null>(null);
 
-  // Self-hosted gate: page is cloud-only. Self-hosted users render nothing
-  // (the Settings route should already be hidden, but defense-in-depth here.)
   if (planInfo.selfHosted) return null;
 
+  // Locked branch: lapsed subscribers, layout unchanged in spirit (still
+  // header + message + CTA + support footer), just without StatusHeader.
   if (planInfo.locked) {
     const ctaLabel = getLockedCta(planInfo.previousSubStatus);
     const lockedMessage = getLockedMessage(planInfo.previousSubStatus);
-    const ctaClassName = cn(
-      'inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] h-10 px-5 text-[14px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors',
-      focusRing,
-    );
     return (
-      <div className="space-y-4">
-        <StatusHeader
-          plan={planInfo.plan}
-          status={planInfo.status}
-          activeUntil={planInfo.activeUntil}
-          cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
-          previousSubStatus={planInfo.previousSubStatus}
-          trialPeriodDays={planInfo.trialPeriodDays}
-        />
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Expired</h2>
+          {planInfo.activeUntil && (
+            <p className="text-sm text-[var(--text-tertiary)] mt-1">
+              since {formatDate(planInfo.activeUntil)}
+            </p>
+          )}
+        </div>
         <p className="text-sm text-[var(--text-secondary)]">{lockedMessage}</p>
         {planInfo.subscribePlanAction && isSafeCheckoutAction(planInfo.subscribePlanAction) && (
-          <CheckoutLink action={planInfo.subscribePlanAction} target="_blank" className={ctaClassName}>
+          <CheckoutLink
+            action={planInfo.subscribePlanAction}
+            target="_blank"
+            className={primaryCtaClass}
+          >
             {ctaLabel}
             <ArrowUpRight className="h-3.5 w-3.5" />
           </CheckoutLink>
@@ -67,97 +89,183 @@ export function SubscriptionSection() {
     );
   }
 
-  const isPaidActive = planInfo.status === 'active' && !!planInfo.activeUntil && (planInfo.plan === 'plus' || planInfo.plan === 'pro');
+  const plan = planInfo.plan;
+  const isPaidActive =
+    planInfo.status === 'active' &&
+    !!planInfo.activeUntil &&
+    (plan === 'plus' || plan === 'pro');
   const isMonthlyPaid = isPaidActive && planInfo.billingPeriod === 'monthly';
   const isCancelPending = !!planInfo.cancelAtPeriodEnd;
   const isTrial = planInfo.status === 'trial';
-  const showAnnualUpsell = isMonthlyPaid && !isCancelPending;
-  const showPicker = planInfo.plan === 'free' || isTrial;
-  const showProUpsell = planInfo.plan === 'plus' && isPaidActive;
-
-  const proPlan = plans.find(p => p.id === 'pro');
-  const plusPlan = plans.find(p => p.id === 'plus');
-  const currentSavings = isMonthlyPaid && planInfo.plan === 'plus' && plusPlan
-    ? computeAnnualSavings(plusPlan.prices)
-    : isMonthlyPaid && planInfo.plan === 'pro' && proPlan
-      ? computeAnnualSavings(proPlan.prices)
-      : 0;
-
+  const showPicker = plan === 'free' || isTrial;
+  const showProUpsell = plan === 'plus' && isPaidActive;
   const showDowngradeLinks = isPaidActive && !isCancelPending;
 
-  return (
-    <div className="space-y-6">
-      {/* Status + usage — tightly grouped */}
-      <div className="space-y-3">
-        <StatusHeader
-          plan={planInfo.plan}
-          status={planInfo.status}
-          activeUntil={planInfo.activeUntil}
-          cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
-          previousSubStatus={planInfo.previousSubStatus}
-          trialPeriodDays={planInfo.trialPeriodDays}
-        />
-        <UsageStrip usage={usage ?? ZERO_USAGE} features={planInfo.features} aiCredits={planInfo.aiCredits} />
+  const currentCatalogPlan = findPlan(plans, plan as PlanTier);
+  const priceCents = priceCentsFor(currentCatalogPlan, planInfo.billingPeriod);
+  const monthlyPriceCents = currentCatalogPlan?.prices.monthly ?? null;
+  const annualSavings = currentCatalogPlan ? computeAnnualSavings(currentCatalogPlan.prices) : 0;
+
+  // Primary CTA derivation. Trial users get their CTA from the PlanPicker
+  // below the card, so no primaryCta in that branch.
+  let primaryCta: PrimaryCta | null = null;
+  if (
+    !isTrial &&
+    isCancelPending &&
+    planInfo.portalAction &&
+    isSafeCheckoutAction(planInfo.portalAction)
+  ) {
+    primaryCta = { label: 'Reactivate subscription', action: planInfo.portalAction };
+  } else if (
+    !isTrial &&
+    isMonthlyPaid &&
+    annualSavings > 0 &&
+    planInfo.portalAction &&
+    isSafeCheckoutAction(planInfo.portalAction)
+  ) {
+    primaryCta = {
+      label: `Switch to annual — save ${formatPriceCents(annualSavings)}/yr`,
+      action: planInfo.portalAction,
+    };
+  }
+
+  // Free + Trial branch: PlanPicker is the primary surface. Trial gets a
+  // CurrentPlanCard above it for the countdown.
+  if (showPicker) {
+    return (
+      <div className="flex flex-col gap-4">
+        {isTrial && (
+          <CurrentPlanCard
+            plan={plan as PlanTier}
+            status={planInfo.status}
+            activeUntil={planInfo.activeUntil}
+            cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
+            billingPeriod={planInfo.billingPeriod}
+            trialPeriodDays={planInfo.trialPeriodDays}
+            priceCents={monthlyPriceCents}
+            annualSavingsCents={annualSavings}
+            usage={usage ?? ZERO_USAGE}
+            features={planInfo.features}
+            aiCredits={planInfo.aiCredits}
+          />
+        )}
+        {plans.length > 0 && (
+          <PlanPicker
+            catalog={{ plans }}
+            currentPlan={plan as PlanTier}
+            billingPeriod={billingPeriod}
+            onBillingPeriodChange={setBillingPeriod}
+            actions={{
+              plus: planInfo.upgradePlusAction,
+              pro: planInfo.upgradeProAction,
+            }}
+          />
+        )}
+        {isTrial && (
+          <p className="text-sm text-[var(--text-tertiary)] text-center">
+            Cancel anytime · No questions asked
+          </p>
+        )}
+        {isTrial && (
+          <button
+            type="button"
+            className={cn(downgradeLinkClass, 'block')}
+            onClick={() => setDowngradeTarget('free')}
+          >
+            Switch to Free Plan
+          </button>
+        )}
+        {downgradeTarget && (
+          <DowngradeImpactDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) setDowngradeTarget(null);
+            }}
+            targetPlan={downgradeTarget}
+            onConfirmed={() => {
+              refresh();
+            }}
+          />
+        )}
+        <SupportFooter />
       </div>
+    );
+  }
 
-      {showAnnualUpsell && (
-        <AnnualUpsellBanner savingsCents={currentSavings} switchAction={planInfo.portalAction} />
-      )}
+  // Subscribed (active Plus/Pro, possibly cancel-pending)
+  const proPlan = showProUpsell ? findPlan(plans, 'pro') : undefined;
 
-      {showPicker && plans.length > 0 && (
-        <PlanPicker
-          catalog={{ plans }}
-          currentPlan={planInfo.plan as PlanTier}
-          billingPeriod={billingPeriod}
-          onBillingPeriodChange={setBillingPeriod}
-          actions={{
-            plus: planInfo.upgradePlusAction,
-            pro: planInfo.upgradeProAction,
-          }}
-        />
-      )}
-
-      {isTrial && (
-        <p className="text-sm text-[var(--text-tertiary)] text-center">
-          Cancel anytime · No questions asked
-        </p>
-      )}
+  return (
+    <div className="flex flex-col gap-3">
+      <CurrentPlanCard
+        plan={plan as PlanTier}
+        status={planInfo.status}
+        activeUntil={planInfo.activeUntil}
+        cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
+        billingPeriod={planInfo.billingPeriod}
+        trialPeriodDays={planInfo.trialPeriodDays}
+        priceCents={priceCents}
+        annualSavingsCents={annualSavings}
+        usage={usage ?? ZERO_USAGE}
+        features={planInfo.features}
+        aiCredits={planInfo.aiCredits}
+      />
 
       {showProUpsell && proPlan && (
         <UpgradeCard targetPlan={proPlan} action={planInfo.upgradeProAction} />
       )}
 
-      {isPaidActive && (
-        <ManageSubscriptionRow action={planInfo.portalAction} isCancelPending={isCancelPending} />
+      {primaryCta && (
+        <CheckoutLink
+          action={primaryCta.action}
+          target="_blank"
+          className={primaryCtaClass}
+        >
+          {primaryCta.label}
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </CheckoutLink>
+      )}
+
+      {!isCancelPending && (
+        <ManageSubscriptionRow
+          action={planInfo.portalAction}
+          isCancelPending={isCancelPending}
+        />
       )}
 
       {showDowngradeLinks && (
-        <div className="space-y-2">
-          {planInfo.plan === 'pro' && (
-            <button type="button" className={downgradeLinkClass} onClick={() => setDowngradeTarget('plus')}>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 pl-1">
+          {plan === 'pro' && (
+            <button
+              type="button"
+              className={downgradeLinkClass}
+              onClick={() => setDowngradeTarget('plus')}
+            >
               Downgrade to Plus
             </button>
           )}
-          {(planInfo.plan === 'plus' || planInfo.plan === 'pro') && (
-            <button type="button" className={downgradeLinkClass} onClick={() => setDowngradeTarget('free')}>
-              Switch to Free Plan
+          {(plan === 'plus' || plan === 'pro') && (
+            <button
+              type="button"
+              className={downgradeLinkClass}
+              onClick={() => setDowngradeTarget('free')}
+            >
+              Switch to Free
             </button>
           )}
         </div>
       )}
 
-      {isTrial && (
-        <button type="button" className={downgradeLinkClass} onClick={() => setDowngradeTarget('free')}>
-          Switch to Free Plan
-        </button>
-      )}
-
       {downgradeTarget && (
         <DowngradeImpactDialog
-          open={true}
-          onOpenChange={open => { if (!open) setDowngradeTarget(null); }}
+          open
+          onOpenChange={(open) => {
+            if (!open) setDowngradeTarget(null);
+          }}
           targetPlan={downgradeTarget}
-          onConfirmed={() => { refresh(); }}
+          onConfirmed={() => {
+            refresh();
+          }}
         />
       )}
 
