@@ -506,6 +506,7 @@ export function AccountSection() {
                 feature="API Keys"
                 description="Create API keys to integrate with external tools."
                 upgradeAction={planInfo.upgradeAction}
+                dismissKey="apiKeys"
               />
             </Suspense>
           </SettingsSection>
