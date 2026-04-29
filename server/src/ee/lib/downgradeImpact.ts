@@ -1,4 +1,4 @@
-import type { PlanFeatures, UserUsage } from './planGate.js';
+import type { PlanFeatures, UserUsage } from '../../lib/planGate.js';
 
 export interface DowngradeWarning {
   kind: 'usage-exceeded' | 'feature-loss';

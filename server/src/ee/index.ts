@@ -3,6 +3,7 @@ import { registerEeHooks } from '../lib/eeHooks.js';
 import { startInactivityChecker, stopInactivityChecker } from './inactivityChecker.js';
 import { deleteUserData, notifyManagerNewUser, notifyManagerUserUpdate } from './managerWebhook.js';
 import { adminMetricsRoutes } from './routes/adminMetrics.js';
+import { adminOverridesRoutes } from './routes/adminOverrides.js';
 import { subscriptionsRoutes } from './routes/subscriptions.js';
 import { startTrialChecker, stopTrialChecker } from './trialChecker.js';
 import { startUserCleanupJob, stopUserCleanupJob } from './userCleanup.js';
@@ -19,6 +20,7 @@ export function registerHooks(): void {
 export function initEeRoutes(app: express.Express): void {
   app.use('/api/subscriptions', subscriptionsRoutes);
   app.use('/api/admin', adminMetricsRoutes);
+  app.use('/api/admin/overrides', adminOverridesRoutes);
 }
 
 export function startEeJobs(): void {

@@ -1,7 +1,7 @@
 import { ArrowUpRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
+import { CheckoutLink } from '@/ee/checkoutAction';
 import { usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
 
@@ -35,7 +35,7 @@ export function UpgradeDialog({ open, onOpenChange, feature, description }: Upgr
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Maybe later
           </Button>
-          {isSafeCheckoutAction(upgradeAction) && (
+          {upgradeAction && (
             <CheckoutLink
               action={upgradeAction}
               target="_blank"

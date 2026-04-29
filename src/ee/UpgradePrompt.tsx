@@ -1,5 +1,5 @@
 import { ArrowUpRight, X } from 'lucide-react';
-import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
+import { CheckoutLink } from '@/ee/checkoutAction';
 import { usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
 import { cn, focusRing } from '@/lib/utils';
@@ -65,7 +65,7 @@ export function UpgradePrompt({ feature, description, upgradeAction, className, 
           <p className="text-[13px] text-[var(--text-tertiary)] mt-1">{description}</p>
         )}
       </div>
-      {isSafeCheckoutAction(upgradeAction) && (
+      {upgradeAction && (
         <CheckoutLink
           action={upgradeAction}
           target="_blank"
