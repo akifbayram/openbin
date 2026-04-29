@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { d, query } from '../db.js';
+import { computeDowngradeImpact } from '../ee/lib/downgradeImpact.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
-import { computeDowngradeImpact } from '../lib/downgradeImpact.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { type CheckoutAction, computeOverLimits, generateDowngradeFlowAction, generatePortalAction, generateUpgradeAction, generateUpgradePlanAction, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, renderActionAsUrl, SELF_HOSTED_USAGE_STUB, SELF_HOSTED_USAGE_SUMMARY_STUB, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';

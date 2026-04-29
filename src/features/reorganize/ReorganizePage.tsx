@@ -26,7 +26,6 @@ import { BinSelectorCard } from '@/features/print/BinSelectorCard';
 import { useBinSelection } from '@/features/print/useBinSelection';
 import { TourLauncher } from '@/features/tour/TourLauncher';
 import { useAuth } from '@/lib/auth';
-import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
@@ -41,6 +40,10 @@ import { type TagSuggestOptions, type TagUserSelections, useReorganizeTags } fro
 
 const UpgradePrompt = __EE__
   ? lazy(() => import('@/ee/UpgradePrompt').then(m => ({ default: m.UpgradePrompt })))
+  : (() => null) as React.FC<Record<string, unknown>>;
+
+const CheckoutLink = __EE__
+  ? lazy(() => import('@/ee/checkoutAction').then(m => ({ default: m.CheckoutLink })))
   : (() => null) as React.FC<Record<string, unknown>>;
 
 interface OptionFieldConfig<K extends string> {
@@ -222,7 +225,7 @@ export function ReorganizePage() {
   const reorgBinCap = planInfo.features.reorganizeMaxBins;
   const overCap = reorgBinCap != null && selection.selectedIds.size > reorgBinCap;
   const canSubmit = selection.selectedIds.size >= 2 && !isStreaming && !hasValidationError && !overCap;
-  const canUpgradeFromCap = overCap && isPlus && isSafeCheckoutAction(planInfo.upgradeProAction);
+  const canUpgradeFromCap = overCap && isPlus && planInfo.upgradeProAction !== null;
   const capSuffix = canUpgradeFromCap ? ', or upgrade to Pro for a higher cap.' : '.';
 
   const handleAccept = useCallback(() => {
@@ -595,13 +598,15 @@ export function ReorganizePage() {
                       {isPlus ? 'Plus' : 'Pro'} allows up to {reorgBinCap} {reorgBinCap === 1 ? t.bin : t.bins} per reorganize run. Deselect {selection.selectedIds.size - reorgBinCap} to continue{capSuffix}
                     </p>
                     {canUpgradeFromCap && planInfo.upgradeProAction && (
-                      <CheckoutLink
-                        action={planInfo.upgradeProAction}
-                        target="_blank"
-                        className="inline-flex items-center text-[13px] font-medium text-[var(--text-primary)] underline underline-offset-2"
-                      >
-                        Upgrade to Pro
-                      </CheckoutLink>
+                      <Suspense fallback={null}>
+                        <CheckoutLink
+                          action={planInfo.upgradeProAction}
+                          target="_blank"
+                          className="inline-flex items-center text-[13px] font-medium text-[var(--text-primary)] underline underline-offset-2"
+                        >
+                          Upgrade to Pro
+                        </CheckoutLink>
+                      </Suspense>
                     )}
                   </div>
                 </div>

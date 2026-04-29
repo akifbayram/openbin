@@ -22,7 +22,6 @@ import type { TourContext } from '@/features/tour/tourSteps';
 import { useTour } from '@/features/tour/useTour';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
-import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
 import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTerminology } from '@/lib/terminology';
 import { useTheme } from '@/lib/theme';
@@ -43,6 +42,10 @@ const ScanDialog = React.lazy(() =>
 );
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
+
+const CheckoutLink = __EE__
+  ? lazy(() => import('@/ee/checkoutAction').then((m) => ({ default: m.CheckoutLink })))
+  : (() => null) as React.FC<Record<string, unknown>>;
 
 const HIGHLIGHTS_TOUR: TourId = 'highlights';
 
@@ -269,18 +272,20 @@ export function AppLayout() {
                 // is static). Over-limit banner uses upgradeProAction (POST,
                 // token in body, never in URL).
                 const action = showLockedBanner ? planInfo.upgradeAction : planInfo.upgradeProAction;
-                if (!isSafeCheckoutAction(action)) return null;
+                if (!action) return null;
                 return (
-                  <CheckoutLink
-                    action={action}
-                    target="_blank"
-                    className="inline-flex items-center gap-1 rounded-md bg-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/30 transition-colors shrink-0"
-                  >
-                    {showLockedBanner
-                      ? getLockedCta(planInfo.previousSubStatus)
-                      : 'Upgrade'}
-                    <ArrowUpRight className="h-3 w-3" />
-                  </CheckoutLink>
+                  <Suspense fallback={null}>
+                    <CheckoutLink
+                      action={action}
+                      target="_blank"
+                      className="inline-flex items-center gap-1 rounded-md bg-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/30 transition-colors shrink-0"
+                    >
+                      {showLockedBanner
+                        ? getLockedCta(planInfo.previousSubStatus)
+                        : 'Upgrade'}
+                      <ArrowUpRight className="h-3 w-3" />
+                    </CheckoutLink>
+                  </Suspense>
                 );
               })()}
             </div>

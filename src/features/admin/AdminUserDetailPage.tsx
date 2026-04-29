@@ -26,10 +26,11 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
+import { clearOverrides, fetchOverrides, grantAiCredits, resetAiCredits, type UserLimitOverrides, updateOverrides } from '@/ee/adminOverrides';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage, relativeTime } from '@/lib/utils';
-import { capitalize, clearOverrides, deleteUser, fetchOverrides, forcePasswordChange, grantAiCredits, reactivateUser, regenerateApiKey, resetAiCredits, revokeAllApiKeys, revokeSessions, sendPasswordReset, statusVariant, suspendUser, type UserLimitOverrides, updateOverrides, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
+import { capitalize, deleteUser, forcePasswordChange, reactivateUser, regenerateApiKey, revokeAllApiKeys, revokeSessions, sendPasswordReset, statusVariant, suspendUser, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
 
 // Mirror of server/src/lib/planGate.ts — client can't import server code.
 const PLAN_CODE = { free: 2, plus: 0, pro: 1 } as const;

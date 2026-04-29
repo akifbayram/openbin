@@ -1,7 +1,16 @@
 import type { Express } from 'express';
 import request from 'supertest';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../../index.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// /api/plans is gated by `if (!config.selfHosted)` in createApp(); the route is
+// cloud-only. Tests assert the cloud behavior, so override selfHosted before
+// the module graph captures the config value.
+vi.mock('../../lib/config.js', async () => {
+  const actual = await vi.importActual<typeof import('../../lib/config.js')>('../../lib/config.js');
+  return { ...actual, config: { ...actual.config, selfHosted: false } };
+});
+
+const { createApp } = await import('../../index.js');
 
 describe('GET /api/plans', () => {
   let app: Express;

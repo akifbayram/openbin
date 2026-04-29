@@ -1,6 +1,7 @@
 import { ArrowUpRight } from 'lucide-react';
 import { useState } from 'react';
-import { CheckoutLink, isSafeCheckoutAction } from '@/lib/checkoutAction';
+import { CheckoutLink } from '@/ee/checkoutAction';
+import { SettingsPageHeader } from '@/features/settings/SettingsPageHeader';
 import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
 import type { CatalogPlan, CheckoutAction, PlanTier, PlanUsage } from '@/types';
@@ -13,6 +14,9 @@ import { ManageSubscriptionRow } from './SubscriptionSection/ManageSubscriptionR
 import { PlanPicker } from './SubscriptionSection/PlanPicker';
 import { SupportFooter } from './SubscriptionSection/SupportFooter';
 import { UpgradeCard } from './SubscriptionSection/UpgradeCard';
+
+const PAGE_TITLE = 'Subscription';
+const PAGE_DESCRIPTION = 'Manage your plan and billing.';
 
 const ZERO_USAGE: PlanUsage = {
   binCount: 0, locationCount: 0, photoStorageMb: 0,
@@ -62,28 +66,31 @@ export function SubscriptionSection() {
     const ctaLabel = getLockedCta(planInfo.previousSubStatus);
     const lockedMessage = getLockedMessage(planInfo.previousSubStatus);
     return (
-      <div className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Expired</h2>
-          {planInfo.activeUntil && (
-            <p className="text-sm text-[var(--text-tertiary)] mt-1">
-              since {formatBillingDate(planInfo.activeUntil)}
-            </p>
+      <>
+        <SettingsPageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION} />
+        <div className="flex flex-col gap-4">
+          <div>
+            <h3 className="settings-section-label">Expired</h3>
+            {planInfo.activeUntil && (
+              <p className="settings-section-desc mt-1">
+                since {formatBillingDate(planInfo.activeUntil)}
+              </p>
+            )}
+          </div>
+          <p className="text-sm text-[var(--text-secondary)]">{lockedMessage}</p>
+          {planInfo.subscribePlanAction && (
+            <CheckoutLink
+              action={planInfo.subscribePlanAction}
+              target="_blank"
+              className={primaryCtaClass}
+            >
+              {ctaLabel}
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </CheckoutLink>
           )}
+          <SupportFooter />
         </div>
-        <p className="text-sm text-[var(--text-secondary)]">{lockedMessage}</p>
-        {planInfo.subscribePlanAction && isSafeCheckoutAction(planInfo.subscribePlanAction) && (
-          <CheckoutLink
-            action={planInfo.subscribePlanAction}
-            target="_blank"
-            className={primaryCtaClass}
-          >
-            {ctaLabel}
-            <ArrowUpRight className="h-3.5 w-3.5" />
-          </CheckoutLink>
-        )}
-        <SupportFooter />
-      </div>
+      </>
     );
   }
 
@@ -110,16 +117,14 @@ export function SubscriptionSection() {
   if (
     !isTrial &&
     isCancelPending &&
-    planInfo.portalAction &&
-    isSafeCheckoutAction(planInfo.portalAction)
+    planInfo.portalAction
   ) {
     primaryCta = { label: 'Reactivate subscription', action: planInfo.portalAction };
   } else if (
     !isTrial &&
     isMonthlyPaid &&
     annualSavings > 0 &&
-    planInfo.portalAction &&
-    isSafeCheckoutAction(planInfo.portalAction)
+    planInfo.portalAction
   ) {
     primaryCta = {
       label: `Switch to annual — save ${formatPriceCents(annualSavings)}/yr`,
@@ -131,48 +136,134 @@ export function SubscriptionSection() {
   // CurrentPlanCard above it for the countdown.
   if (showPicker) {
     return (
-      <div className="flex flex-col gap-4">
-        {isTrial && (
-          <CurrentPlanCard
-            plan={plan}
-            status={planInfo.status}
-            activeUntil={planInfo.activeUntil}
-            cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
-            billingPeriod={planInfo.billingPeriod}
-            trialPeriodDays={planInfo.trialPeriodDays}
-            priceCents={monthlyPriceCents}
-            annualSavingsCents={annualSavings}
-            usage={usage ?? ZERO_USAGE}
-            features={planInfo.features}
-            aiCredits={planInfo.aiCredits}
-          />
+      <>
+        <SettingsPageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION} />
+        <div className="flex flex-col gap-4">
+          {isTrial && (
+            <CurrentPlanCard
+              plan={plan}
+              status={planInfo.status}
+              activeUntil={planInfo.activeUntil}
+              cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
+              billingPeriod={planInfo.billingPeriod}
+              trialPeriodDays={planInfo.trialPeriodDays}
+              priceCents={monthlyPriceCents}
+              annualSavingsCents={annualSavings}
+              usage={usage ?? ZERO_USAGE}
+              features={planInfo.features}
+              aiCredits={planInfo.aiCredits}
+            />
+          )}
+          {plans.length > 0 && (
+            <PlanPicker
+              catalog={{ plans }}
+              currentPlan={plan}
+              billingPeriod={billingPeriod}
+              onBillingPeriodChange={setBillingPeriod}
+              actions={{
+                plus: planInfo.upgradePlusAction,
+                pro: planInfo.upgradeProAction,
+              }}
+            />
+          )}
+          {isTrial && (
+            <p className="text-sm text-[var(--text-tertiary)] text-center">
+              Cancel anytime · No questions asked
+            </p>
+          )}
+          {isTrial && (
+            <button
+              type="button"
+              className={cn(downgradeLinkClass, 'block')}
+              onClick={() => setDowngradeTarget('free')}
+            >
+              Switch to Free Plan
+            </button>
+          )}
+          {downgradeTarget && (
+            <DowngradeImpactDialog
+              open
+              onOpenChange={(open) => {
+                if (!open) setDowngradeTarget(null);
+              }}
+              targetPlan={downgradeTarget}
+              onConfirmed={() => {
+                refresh();
+              }}
+            />
+          )}
+          <SupportFooter />
+        </div>
+      </>
+    );
+  }
+
+  // Subscribed (active Plus/Pro, possibly cancel-pending)
+  const proPlan = showProUpsell ? findPlan(plans, 'pro') : undefined;
+
+  return (
+    <>
+      <SettingsPageHeader title={PAGE_TITLE} description={PAGE_DESCRIPTION} />
+      <div className="flex flex-col gap-3">
+        <CurrentPlanCard
+          plan={plan}
+          status={planInfo.status}
+          activeUntil={planInfo.activeUntil}
+          cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
+          billingPeriod={planInfo.billingPeriod}
+          trialPeriodDays={planInfo.trialPeriodDays}
+          priceCents={priceCents}
+          annualSavingsCents={annualSavings}
+          usage={usage ?? ZERO_USAGE}
+          features={planInfo.features}
+          aiCredits={planInfo.aiCredits}
+        />
+
+        {showProUpsell && proPlan && (
+          <UpgradeCard targetPlan={proPlan} action={planInfo.upgradeProAction} />
         )}
-        {plans.length > 0 && (
-          <PlanPicker
-            catalog={{ plans }}
-            currentPlan={plan}
-            billingPeriod={billingPeriod}
-            onBillingPeriodChange={setBillingPeriod}
-            actions={{
-              plus: planInfo.upgradePlusAction,
-              pro: planInfo.upgradeProAction,
-            }}
-          />
-        )}
-        {isTrial && (
-          <p className="text-sm text-[var(--text-tertiary)] text-center">
-            Cancel anytime · No questions asked
-          </p>
-        )}
-        {isTrial && (
-          <button
-            type="button"
-            className={cn(downgradeLinkClass, 'block')}
-            onClick={() => setDowngradeTarget('free')}
+
+        {primaryCta && (
+          <CheckoutLink
+            action={primaryCta.action}
+            target="_blank"
+            className={primaryCtaClass}
           >
-            Switch to Free Plan
-          </button>
+            {primaryCta.label}
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </CheckoutLink>
         )}
+
+        {!isCancelPending && (
+          <ManageSubscriptionRow
+            action={planInfo.portalAction}
+            isCancelPending={isCancelPending}
+          />
+        )}
+
+        {showDowngradeLinks && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 pl-1">
+            {plan === 'pro' && (
+              <button
+                type="button"
+                className={downgradeLinkClass}
+                onClick={() => setDowngradeTarget('plus')}
+              >
+                Downgrade to Plus
+              </button>
+            )}
+            {(plan === 'plus' || plan === 'pro') && (
+              <button
+                type="button"
+                className={downgradeLinkClass}
+                onClick={() => setDowngradeTarget('free')}
+              >
+                Switch to Free
+              </button>
+            )}
+          </div>
+        )}
+
         {downgradeTarget && (
           <DowngradeImpactDialog
             open
@@ -185,89 +276,9 @@ export function SubscriptionSection() {
             }}
           />
         )}
+
         <SupportFooter />
       </div>
-    );
-  }
-
-  // Subscribed (active Plus/Pro, possibly cancel-pending)
-  const proPlan = showProUpsell ? findPlan(plans, 'pro') : undefined;
-
-  return (
-    <div className="flex flex-col gap-3">
-      <CurrentPlanCard
-        plan={plan}
-        status={planInfo.status}
-        activeUntil={planInfo.activeUntil}
-        cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
-        billingPeriod={planInfo.billingPeriod}
-        trialPeriodDays={planInfo.trialPeriodDays}
-        priceCents={priceCents}
-        annualSavingsCents={annualSavings}
-        usage={usage ?? ZERO_USAGE}
-        features={planInfo.features}
-        aiCredits={planInfo.aiCredits}
-      />
-
-      {showProUpsell && proPlan && (
-        <UpgradeCard targetPlan={proPlan} action={planInfo.upgradeProAction} />
-      )}
-
-      {primaryCta && (
-        <CheckoutLink
-          action={primaryCta.action}
-          target="_blank"
-          className={primaryCtaClass}
-        >
-          {primaryCta.label}
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </CheckoutLink>
-      )}
-
-      {!isCancelPending && (
-        <ManageSubscriptionRow
-          action={planInfo.portalAction}
-          isCancelPending={isCancelPending}
-        />
-      )}
-
-      {showDowngradeLinks && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 pl-1">
-          {plan === 'pro' && (
-            <button
-              type="button"
-              className={downgradeLinkClass}
-              onClick={() => setDowngradeTarget('plus')}
-            >
-              Downgrade to Plus
-            </button>
-          )}
-          {(plan === 'plus' || plan === 'pro') && (
-            <button
-              type="button"
-              className={downgradeLinkClass}
-              onClick={() => setDowngradeTarget('free')}
-            >
-              Switch to Free
-            </button>
-          )}
-        </div>
-      )}
-
-      {downgradeTarget && (
-        <DowngradeImpactDialog
-          open
-          onOpenChange={(open) => {
-            if (!open) setDowngradeTarget(null);
-          }}
-          targetPlan={downgradeTarget}
-          onConfirmed={() => {
-            refresh();
-          }}
-        />
-      )}
-
-      <SupportFooter />
-    </div>
+    </>
   );
 }

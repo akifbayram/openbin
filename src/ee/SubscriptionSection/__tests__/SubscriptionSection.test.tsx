@@ -44,6 +44,28 @@ function setPlan(planInfo: ReturnType<typeof makePlanInfo>, usage = EMPTY_USAGE)
 }
 
 describe('SubscriptionSection orchestrator', () => {
+  it.each([
+    ['free', () => makePlanInfo({ plan: 'free' })],
+    ['pro active', () => makePlanInfo({
+      plan: 'pro',
+      status: 'active',
+      activeUntil: '2026-05-27T00:00:00Z',
+      billingPeriod: 'monthly',
+    })],
+    ['locked', () => makePlanInfo({
+      plan: 'plus',
+      status: 'inactive',
+      locked: true,
+      previousSubStatus: 'active',
+    })],
+  ])('renders the Subscription page header in %s branch', (_name, makeInfo) => {
+    setPlan(makeInfo());
+    render(<SubscriptionSection />);
+    const heading = screen.getByRole('heading', { level: 2, name: 'Subscription' });
+    expect(heading).toBeInTheDocument();
+    expect(screen.getByText('Manage your plan and billing.')).toBeInTheDocument();
+  });
+
   it('Free state: shows plan picker, no manage button', () => {
     setPlan(makePlanInfo({ plan: 'free' }));
     render(<SubscriptionSection />);
