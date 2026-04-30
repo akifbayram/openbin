@@ -6,6 +6,7 @@ import { config } from '../../lib/config.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../../lib/httpErrors.js';
 import { createLogger } from '../../lib/logger.js';
 import { invalidateOverLimitCache, Plan, type PlanTier, SubStatus, type SubStatusType, validatePlanTransition } from '../../lib/planGate.js';
+import { logOrphan } from '../subscriptionOrphans.js';
 
 const router = Router();
 
@@ -121,21 +122,36 @@ router.post('/callback', asyncHandler(async (req, res) => {
   );
 
   if (result.rowCount === 0) {
-    throw new NotFoundError('User not found');
+    // User has been hard-deleted (grace window expired). Log the orphan and
+    // return 200 so Stripe doesn't retry — the row is gone, retrying won't
+    // bring it back.
+    await logOrphan(userId, payload, 'user_not_found');
+    res.json({ ok: true, orphaned: true });
+    return;
   }
 
   invalidateOverLimitCache(userId);
 
   res.json({ ok: true });
 
-  // Fire-and-forget subscription lifecycle emails
-  const userRow = (await query('SELECT email, display_name FROM users WHERE id = $1', [userId])).rows[0];
-  if (userRow?.email) {
+  // Fire-and-forget subscription lifecycle emails. Skip soft-deleted users:
+  // they're in the recovery grace window, sending them subscription updates
+  // is confusing.
+  const userRow = (await query<{
+    email: string | null;
+    display_name: string;
+    deletion_requested_at: string | null;
+  }>(
+    'SELECT email, display_name, deletion_requested_at FROM users WHERE id = $1',
+    [userId],
+  )).rows[0];
+  if (userRow?.email && !userRow.deletion_requested_at) {
+    const userEmail = userRow.email;
     const { fireSubscriptionConfirmedEmail, fireSubscriptionExpiredEmail } = await import('../lifecycleEmails.js');
     if (status === SubStatus.ACTIVE) {
-      fireSubscriptionConfirmedEmail(userId, userRow.email, userRow.display_name, plan as import('../../lib/planGate.js').PlanTier, activeUntil);
+      fireSubscriptionConfirmedEmail(userId, userEmail, userRow.display_name, plan as import('../../lib/planGate.js').PlanTier, activeUntil);
     } else if (status === SubStatus.INACTIVE) {
-      fireSubscriptionExpiredEmail(userId, userRow.email, userRow.display_name);
+      fireSubscriptionExpiredEmail(userId, userEmail, userRow.display_name);
     }
     if (plan === Plan.PLUS && wasPro) {
       const { fireDowngradeImpactEmail } = await import('../lifecycleEmails.js');
@@ -161,7 +177,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
           .map(r => ({ locationName: r.name, memberCount: r.cnt })),
         maxMembersPerLocation: plusFeatures.maxMembersPerLocation ?? 1,
       };
-      fireDowngradeImpactEmail(userId, userRow.email, userRow.display_name, impact);
+      fireDowngradeImpactEmail(userId, userEmail, userRow.display_name, impact);
     }
   }
 }));
