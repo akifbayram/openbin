@@ -1,4 +1,5 @@
 import { d, query } from '../db.js';
+import { requestDeletion } from '../lib/accountDeletion.js';
 import { config } from '../lib/config.js';
 import { acquireJobLock, releaseJobLock } from '../lib/jobLock.js';
 import { createLogger } from '../lib/logger.js';
@@ -40,12 +41,23 @@ export async function checkInactiveUsers(): Promise<void> {
       const daysInactive = Math.floor((Date.now() - lastActive.getTime()) / (24 * 3600_000));
 
       if (daysInactive >= INACTIVITY_DAYS) {
-        // Soft-delete — userCleanup job handles hard deletion
-        await query(
-          `UPDATE users SET deleted_at = ${d.now()}, updated_at = ${d.now()} WHERE id = $1`,
-          [user.id],
-        );
-        log.info(`Soft-deleted inactive user ${user.id} (${daysInactive} days inactive)`);
+        try {
+          await requestDeletion({
+            userId: user.id,
+            refundPolicy: 'none',
+            initiatedByAdminId: 'system',
+            initiatedByAdminName: 'inactivity-checker',
+          });
+          log.info(`Soft-deleted inactive user ${user.id} (${daysInactive} days inactive)`);
+        } catch (err) {
+          // Possible failures: sole admin (excluded by SELECT but defensive),
+          // sole admin of a shared location, or subscription cancellation
+          // failure (rare since sub_status = INACTIVE). Log and skip — the
+          // next sweep will retry.
+          log.warn(
+            `Could not delete inactive user ${user.id}: ${err instanceof Error ? err.message : err}`,
+          );
+        }
       } else if (daysInactive >= WARNING_7D_DAYS && user.email) {
         fireInactivityWarning7d(user.id, user.email, user.display_name, daysInactive);
       } else if (daysInactive >= WARNING_30D_DAYS && user.email) {

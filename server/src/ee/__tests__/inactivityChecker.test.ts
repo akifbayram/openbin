@@ -5,7 +5,12 @@ import { SubStatus } from '../../lib/planGate.js';
 vi.mock('../../lib/logger.js', () => ({
   createLogger: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }),
 }));
-vi.mock('../../lib/config.js', () => ({ config: { selfHosted: false, emailEnabled: true, baseUrl: 'https://test.openbin.app' } }));
+vi.mock('../../lib/config.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../lib/config.js')>();
+  return {
+    config: { ...original.config, selfHosted: false, emailEnabled: true, baseUrl: 'https://test.openbin.app' },
+  };
+});
 
 const mockFireInactivityWarning30d = vi.fn();
 const mockFireInactivityWarning7d = vi.fn();
@@ -79,10 +84,42 @@ describe('inactivityChecker', () => {
 
   // --- Deletion ---
   it('soft-deletes user inactive 365+ days', async () => {
+    // logAdminAction's actor_id has a FK to users(id); seed a 'system' row so
+    // the fire-and-forget audit insert lands. Production should bootstrap the
+    // same row at boot for inactivity-driven deletions to be auditable.
+    await query(
+      `INSERT INTO users (id, email, display_name, password_hash, sub_status, created_at)
+       VALUES ('system', 'system@local', 'system', 'x', $1, $2)
+       ON CONFLICT (id) DO NOTHING`,
+      [SubStatus.INACTIVE, new Date().toISOString()],
+    );
     const id = await insertUser({ subStatus: SubStatus.INACTIVE, lastActiveAt: daysAgoIso(370) });
     await checkInactiveUsers();
-    const result = await query<{ deleted_at: string | null }>('SELECT deleted_at FROM users WHERE id = $1', [id]);
+    const result = await query<{
+      deletion_requested_at: string | null;
+      deletion_scheduled_at: string | null;
+      deleted_at: string | null;
+      deletion_reason: string | null;
+    }>(
+      'SELECT deletion_requested_at, deletion_scheduled_at, deleted_at, deletion_reason FROM users WHERE id = $1',
+      [id],
+    );
+    expect(result.rows[0].deletion_requested_at).not.toBeNull();
+    expect(result.rows[0].deletion_scheduled_at).not.toBeNull();
     expect(result.rows[0].deleted_at).not.toBeNull();
+    expect(result.rows[0].deletion_reason).toBe('admin_initiated');
+
+    // logAdminAction is fire-and-forget; poll briefly until the row appears.
+    let audit: { rows: Array<{ actor_name: string; action: string }> } = { rows: [] };
+    for (let i = 0; i < 20 && audit.rows.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 10));
+      audit = await query<{ actor_name: string; action: string }>(
+        'SELECT actor_name, action FROM admin_audit_log WHERE target_id = $1 ORDER BY created_at DESC LIMIT 1',
+        [id],
+      );
+    }
+    expect(audit.rows[0].action).toBe('request_account_deletion');
+    expect(audit.rows[0].actor_name).toBe('inactivity-checker');
   });
 
   // --- Deletion at 365+ days does not trigger warning emails ---
