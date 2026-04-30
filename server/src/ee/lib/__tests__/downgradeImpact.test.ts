@@ -94,4 +94,22 @@ describe('computeDowngradeImpact', () => {
     });
     expect(impact.warnings.some(w => w.title.includes('member'))).toBe(false);
   });
+
+  it('does NOT warn about members when only viewers exist on Pro→Free', () => {
+    const usage = {
+      binCount: 5,
+      locationCount: 1,
+      photoStorageMb: 0,
+      memberCounts: { 'loc-1': 1 }, // just the admin (Free cap = 1, fits)
+      viewerCounts: { 'loc-1': 9 }, // 9 free viewers
+      photoCount: 0,
+    };
+    const impact = computeDowngradeImpact({
+      currentFeatures: PRO_FEATURES,
+      targetFeatures: FREE_FEATURES,
+      targetPlan: 'free',
+      usage,
+    });
+    expect(impact.warnings.find((w) => w.title.includes('member'))).toBeUndefined();
+  });
 });
