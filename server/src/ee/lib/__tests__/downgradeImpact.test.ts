@@ -20,7 +20,7 @@ const FREE_FEATURES: PlanFeatures = {
 
 describe('computeDowngradeImpact', () => {
   it('reports bin overage with read-only count', () => {
-    const usage = { binCount: 47, locationCount: 1, photoStorageMb: 0, memberCounts: {}, photoCount: 0 };
+    const usage = { binCount: 47, locationCount: 1, photoStorageMb: 0, memberCounts: {}, viewerCounts: {}, photoCount: 0 };
     const impact = computeDowngradeImpact({ currentFeatures: PRO_FEATURES, targetFeatures: FREE_FEATURES, targetPlan: 'free', usage });
     const bins = impact.warnings.find(w => w.title.startsWith('47 bins'));
     expect(bins).toBeDefined();
@@ -29,7 +29,7 @@ describe('computeDowngradeImpact', () => {
   });
 
   it('reports location overage', () => {
-    const usage = { binCount: 5, locationCount: 3, photoStorageMb: 0, memberCounts: {}, photoCount: 0 };
+    const usage = { binCount: 5, locationCount: 3, photoStorageMb: 0, memberCounts: {}, viewerCounts: {}, photoCount: 0 };
     const impact = computeDowngradeImpact({ currentFeatures: PRO_FEATURES, targetFeatures: FREE_FEATURES, targetPlan: 'free', usage });
     expect(impact.warnings.some(w => w.title.includes('3 locations'))).toBe(true);
   });
@@ -37,7 +37,7 @@ describe('computeDowngradeImpact', () => {
   it('reports feature loss for ai/customFields/etc', () => {
     const impact = computeDowngradeImpact({
       currentFeatures: PRO_FEATURES, targetFeatures: FREE_FEATURES, targetPlan: 'free',
-      usage: { binCount: 0, locationCount: 1, photoStorageMb: 0, memberCounts: {}, photoCount: 0 },
+      usage: { binCount: 0, locationCount: 1, photoStorageMb: 0, memberCounts: {}, viewerCounts: {}, photoCount: 0 },
     });
     const featureWarnings = impact.warnings.filter(w => w.kind === 'feature-loss');
     expect(featureWarnings.map(w => w.title)).toContain('Custom fields');
@@ -45,7 +45,7 @@ describe('computeDowngradeImpact', () => {
   });
 
   it('does NOT warn when usage is exactly at target limit', () => {
-    const usage = { binCount: 10, locationCount: 1, photoStorageMb: 0, memberCounts: {}, photoCount: 0 };
+    const usage = { binCount: 10, locationCount: 1, photoStorageMb: 0, memberCounts: {}, viewerCounts: {}, photoCount: 0 };
     const impact = computeDowngradeImpact({ currentFeatures: PRO_FEATURES, targetFeatures: FREE_FEATURES, targetPlan: 'free', usage });
     expect(impact.warnings.some(w => w.title.startsWith('10 bins'))).toBe(false);
   });
@@ -61,7 +61,7 @@ describe('computeDowngradeImpact', () => {
     };
     const impact = computeDowngradeImpact({
       currentFeatures: PRO_FEATURES, targetFeatures: PLUS_LIKE, targetPlan: 'plus',
-      usage: { binCount: 5000, locationCount: 50, photoStorageMb: 9999, memberCounts: {}, photoCount: 0 },
+      usage: { binCount: 5000, locationCount: 50, photoStorageMb: 9999, memberCounts: {}, viewerCounts: {}, photoCount: 0 },
     });
     expect(impact.warnings.every(w => w.kind === 'feature-loss')).toBe(true);
   });
@@ -70,6 +70,7 @@ describe('computeDowngradeImpact', () => {
     const usage = {
       binCount: 5, locationCount: 2, photoStorageMb: 0, photoCount: 0,
       memberCounts: { 'loc-1': 5, 'loc-2': 3 },  // Pro allows 10/loc, Plus allows 1/loc
+      viewerCounts: {},
     };
     const PLUS_LIKE = { ...PRO_FEATURES, maxMembersPerLocation: 1 };
     const impact = computeDowngradeImpact({
@@ -85,6 +86,7 @@ describe('computeDowngradeImpact', () => {
     const usage = {
       binCount: 5, locationCount: 1, photoStorageMb: 0, photoCount: 0,
       memberCounts: { 'loc-1': 1 },  // exactly at limit
+      viewerCounts: {},
     };
     const PLUS_LIKE = { ...PRO_FEATURES, maxMembersPerLocation: 1 };
     const impact = computeDowngradeImpact({
