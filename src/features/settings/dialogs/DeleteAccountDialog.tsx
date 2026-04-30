@@ -137,7 +137,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
   }
 
   const planLabel = user.plan ? user.plan.charAt(0).toUpperCase() + user.plan.slice(1) : '';
-  const periodLabel = planInfo?.billingPeriod ?? 'monthly';
+  const periodLabel = planInfo?.billingPeriod ?? 'quarterly';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

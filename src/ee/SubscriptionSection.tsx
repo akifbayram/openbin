@@ -46,18 +46,18 @@ function findPlan(plans: CatalogPlan[], tier: PlanTier): CatalogPlan | undefined
 
 function priceCentsFor(
   plan: CatalogPlan | undefined,
-  period: 'monthly' | 'annual' | null,
+  period: 'quarterly' | 'annual' | null,
 ): number | null {
   if (!plan || !period) return null;
   if (period === 'annual') return plan.prices.annual;
-  return plan.prices.monthly;
+  return plan.prices.quarterly;
 }
 
 export function SubscriptionSection() {
   const { planInfo, usage, refresh } = usePlan();
   const { plans } = usePlanCatalog();
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>(
-    planInfo.billingPeriod === 'annual' ? 'annual' : 'monthly',
+  const [billingPeriod, setBillingPeriod] = useState<'quarterly' | 'annual'>(
+    planInfo.billingPeriod === 'annual' ? 'annual' : 'quarterly',
   );
   const [downgradeTarget, setDowngradeTarget] = useState<'free' | 'plus' | null>(null);
 
@@ -100,7 +100,7 @@ export function SubscriptionSection() {
     planInfo.status === 'active' &&
     !!planInfo.activeUntil &&
     (plan === 'plus' || plan === 'pro');
-  const isMonthlyPaid = isPaidActive && planInfo.billingPeriod === 'monthly';
+  const isQuarterlyPaid = isPaidActive && planInfo.billingPeriod === 'quarterly';
   const isCancelPending = !!planInfo.cancelAtPeriodEnd;
   const isTrial = planInfo.status === 'trial';
   const showPicker = plan === 'free' || isTrial;
@@ -109,7 +109,7 @@ export function SubscriptionSection() {
 
   const currentCatalogPlan = findPlan(plans, plan);
   const priceCents = priceCentsFor(currentCatalogPlan, planInfo.billingPeriod);
-  const monthlyPriceCents = currentCatalogPlan?.prices.monthly ?? null;
+  const quarterlyPriceCents = currentCatalogPlan?.prices.quarterly ?? null;
   const annualSavings = currentCatalogPlan ? computeAnnualSavings(currentCatalogPlan.prices) : 0;
 
   // Primary CTA derivation. Trial users get their CTA from the PlanPicker
@@ -123,7 +123,7 @@ export function SubscriptionSection() {
     primaryCta = { label: 'Reactivate subscription', action: planInfo.portalAction };
   } else if (
     !isTrial &&
-    isMonthlyPaid &&
+    isQuarterlyPaid &&
     annualSavings > 0 &&
     planInfo.portalAction
   ) {
@@ -148,7 +148,7 @@ export function SubscriptionSection() {
               cancelAtPeriodEnd={planInfo.cancelAtPeriodEnd}
               billingPeriod={planInfo.billingPeriod}
               trialPeriodDays={planInfo.trialPeriodDays}
-              priceCents={monthlyPriceCents}
+              priceCents={quarterlyPriceCents}
               annualSavingsCents={annualSavings}
               usage={usage ?? ZERO_USAGE}
               features={planInfo.features}

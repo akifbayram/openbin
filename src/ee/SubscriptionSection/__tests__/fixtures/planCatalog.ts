@@ -4,7 +4,7 @@ export const FIXTURE_CATALOG: PlanCatalog = {
   plans: [
     {
       id: 'free', name: 'Free',
-      prices: { monthly: 0, annual: null },
+      prices: { quarterly: 0, annual: null },
       features: {
         ai: true, apiKeys: false, customFields: false, fullExport: false,
         reorganize: false, binSharing: false, attachments: false,
@@ -15,7 +15,7 @@ export const FIXTURE_CATALOG: PlanCatalog = {
     },
     {
       id: 'plus', name: 'Plus',
-      prices: { monthly: 500, annual: 5000 },
+      prices: { quarterly: 1500, annual: 5000 },
       features: {
         ai: true, apiKeys: false, customFields: false, fullExport: true,
         reorganize: true, binSharing: false, attachments: false,
@@ -26,7 +26,7 @@ export const FIXTURE_CATALOG: PlanCatalog = {
     },
     {
       id: 'pro', name: 'Pro',
-      prices: { monthly: 1000, annual: 10000 },
+      prices: { quarterly: 3000, annual: 10000 },
       features: {
         ai: true, apiKeys: true, customFields: true, fullExport: true,
         reorganize: true, binSharing: true, attachments: true,

@@ -1,13 +1,13 @@
 import type { CatalogPlan, CheckoutAction, PlanCatalog, PlanTier } from '@/types';
-import { AnnualToggle } from './AnnualToggle';
 import { computeAnnualSavings } from './annualSavings';
+import { BillingPeriodToggle } from './BillingPeriodToggle';
 import { PlanCard } from './PlanCard';
 
 interface PlanPickerProps {
   catalog: PlanCatalog;
   currentPlan: PlanTier;
-  billingPeriod: 'monthly' | 'annual';
-  onBillingPeriodChange: (period: 'monthly' | 'annual') => void;
+  billingPeriod: 'quarterly' | 'annual';
+  onBillingPeriodChange: (period: 'quarterly' | 'annual') => void;
   actions: {
     plus: CheckoutAction | null;
     pro: CheckoutAction | null;
@@ -42,7 +42,7 @@ export function PlanPicker(props: PlanPickerProps) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <AnnualToggle
+        <BillingPeriodToggle
           value={billingPeriod}
           onChange={onBillingPeriodChange}
           maxSavingsCents={maxSavings}

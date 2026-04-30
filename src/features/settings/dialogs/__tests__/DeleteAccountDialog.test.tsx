@@ -49,13 +49,13 @@ function setupAuth(overrides: AuthOverrides = {}, deleteImpl?: ReturnType<typeof
   return { deleteAccount };
 }
 
-function setupPlan(opts: { selfHosted?: boolean; billingPeriod?: 'monthly' | 'annual' | null } = {}) {
+function setupPlan(opts: { selfHosted?: boolean; billingPeriod?: 'quarterly' | 'annual' | null } = {}) {
   vi.mocked(usePlan).mockReturnValue({
     isSelfHosted: opts.selfHosted ?? false,
     planInfo: {
       plan: 'pro',
       status: 'active',
-      billingPeriod: opts.billingPeriod ?? 'monthly',
+      billingPeriod: opts.billingPeriod ?? 'quarterly',
       portalAction: null,
     },
   } as unknown as ReturnType<typeof usePlan>);

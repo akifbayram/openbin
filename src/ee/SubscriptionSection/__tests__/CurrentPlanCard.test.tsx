@@ -19,11 +19,11 @@ const PRO_USAGE: PlanUsage = {
 };
 
 describe('CurrentPlanCard', () => {
-  it('Pro active monthly: shows PRO eyebrow, Active title, Renews + monthly price', () => {
+  it('Pro active quarterly: shows PRO eyebrow, Active title, Renews + quarterly price', () => {
     render(
       <CurrentPlanCard
         plan="pro" status="active" activeUntil="2026-05-27T00:00:00Z"
-        cancelAtPeriodEnd={null} billingPeriod="monthly" trialPeriodDays={7}
+        cancelAtPeriodEnd={null} billingPeriod="quarterly" trialPeriodDays={7}
         priceCents={1000} annualSavingsCents={2000}
         usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null}
       />,
@@ -31,7 +31,7 @@ describe('CurrentPlanCard', () => {
     expect(screen.getByText('PRO')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getByText(/Renews May 27, 2026/)).toBeInTheDocument();
-    expect(screen.getByText(/\$10 \/ month/)).toBeInTheDocument();
+    expect(screen.getByText(/\$10 \/ quarter/)).toBeInTheDocument();
     expect(screen.queryByText(/Saving/)).toBeNull();
   });
 
@@ -64,7 +64,7 @@ describe('CurrentPlanCard', () => {
     render(
       <CurrentPlanCard
         plan="pro" status="active" activeUntil="2026-05-27T00:00:00Z"
-        cancelAtPeriodEnd="2026-05-27T00:00:00Z" billingPeriod="monthly"
+        cancelAtPeriodEnd="2026-05-27T00:00:00Z" billingPeriod="quarterly"
         trialPeriodDays={7} priceCents={1000} annualSavingsCents={0}
         usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null}
       />,
@@ -74,7 +74,7 @@ describe('CurrentPlanCard', () => {
     expect(screen.queryByText(/Renews/)).toBeNull();
   });
 
-  it('Trial: shows TRIAL eyebrow, days remaining, "Then $X / month", trial bar', () => {
+  it('Trial: shows TRIAL eyebrow, days remaining, "Then $X / quarter", trial bar', () => {
     const future = new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString();
     render(
       <CurrentPlanCard
@@ -86,7 +86,7 @@ describe('CurrentPlanCard', () => {
     );
     expect(screen.getByText('PRO TRIAL')).toBeInTheDocument();
     expect(screen.getByText(/5 days remaining/)).toBeInTheDocument();
-    expect(screen.getByText(/Then \$10 \/ month/)).toBeInTheDocument();
+    expect(screen.getByText(/Then \$10 \/ quarter/)).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: /trial progress/i })).toBeInTheDocument();
   });
 
@@ -94,33 +94,33 @@ describe('CurrentPlanCard', () => {
     render(
       <CurrentPlanCard
         plan="pro" status="active" activeUntil={null}
-        cancelAtPeriodEnd={null} billingPeriod="monthly" trialPeriodDays={7}
+        cancelAtPeriodEnd={null} billingPeriod="quarterly" trialPeriodDays={7}
         priceCents={1000} annualSavingsCents={0}
         usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null}
       />,
     );
     expect(screen.queryByText(/Renews/)).toBeNull();
-    expect(screen.queryByText(/\/ month/)).toBeNull();
+    expect(screen.queryByText(/\/ quarter/)).toBeNull();
   });
 
   it('Active without priceCents: shows Renews date but no price suffix', () => {
     render(
       <CurrentPlanCard
         plan="pro" status="active" activeUntil="2026-05-27T00:00:00Z"
-        cancelAtPeriodEnd={null} billingPeriod="monthly" trialPeriodDays={7}
+        cancelAtPeriodEnd={null} billingPeriod="quarterly" trialPeriodDays={7}
         priceCents={null} annualSavingsCents={0}
         usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null}
       />,
     );
     expect(screen.getByText(/Renews May 27, 2026/)).toBeInTheDocument();
-    expect(screen.queryByText(/\/ month/)).toBeNull();
+    expect(screen.queryByText(/\/ quarter/)).toBeNull();
   });
 
   it('Renders the inline UsageRow inside the card', () => {
     render(
       <CurrentPlanCard
         plan="pro" status="active" activeUntil="2026-05-27T00:00:00Z"
-        cancelAtPeriodEnd={null} billingPeriod="monthly" trialPeriodDays={7}
+        cancelAtPeriodEnd={null} billingPeriod="quarterly" trialPeriodDays={7}
         priceCents={1000} annualSavingsCents={0}
         usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null}
       />,
@@ -154,11 +154,11 @@ describe('CurrentPlanCard', () => {
     expect(screen.queryByText(/null/)).toBeNull();
   });
 
-  it('Plus active monthly: eyebrow shows PLUS (not PRO)', () => {
+  it('Plus active quarterly: eyebrow shows PLUS (not PRO)', () => {
     render(
       <CurrentPlanCard
         plan="plus" status="active" activeUntil="2026-05-27T00:00:00Z"
-        cancelAtPeriodEnd={null} billingPeriod="monthly" trialPeriodDays={7}
+        cancelAtPeriodEnd={null} billingPeriod="quarterly" trialPeriodDays={7}
         priceCents={500} annualSavingsCents={1000}
         usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null}
       />,

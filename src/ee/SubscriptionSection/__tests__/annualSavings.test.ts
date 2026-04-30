@@ -3,15 +3,15 @@ import { computeAnnualSavings, formatPriceCents } from '../annualSavings';
 
 describe('computeAnnualSavings', () => {
   it('returns 0 when annual is null (free plan)', () => {
-    expect(computeAnnualSavings({ monthly: 0, annual: null })).toBe(0);
+    expect(computeAnnualSavings({ quarterly: 0, annual: null })).toBe(0);
   });
 
-  it('returns difference between 12*monthly and annual in cents', () => {
-    expect(computeAnnualSavings({ monthly: 500, annual: 5000 })).toBe(1000);
+  it('returns difference between 4*quarterly and annual in cents', () => {
+    expect(computeAnnualSavings({ quarterly: 1500, annual: 5000 })).toBe(1000);
   });
 
   it('returns 0 when annual is more expensive (no inverted savings)', () => {
-    expect(computeAnnualSavings({ monthly: 100, annual: 5000 })).toBe(0);
+    expect(computeAnnualSavings({ quarterly: 100, annual: 5000 })).toBe(0);
   });
 });
 

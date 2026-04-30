@@ -6,7 +6,7 @@ import { formatPriceCents } from './annualSavings';
 
 interface PlanCardProps {
   plan: CatalogPlan;
-  billingPeriod: 'monthly' | 'annual';
+  billingPeriod: 'quarterly' | 'annual';
   ctaLabel: string;
   action: CheckoutAction | null;
   isCurrentPlan?: boolean;
@@ -16,9 +16,9 @@ export function PlanCard({ plan, billingPeriod, ctaLabel, action, isCurrentPlan 
   const priceCents =
     billingPeriod === 'annual' && plan.prices.annual !== null
       ? Math.round(plan.prices.annual / 12)
-      : plan.prices.monthly;
+      : plan.prices.quarterly;
 
-  const periodLabel = billingPeriod === 'annual' ? '/ month, billed yearly' : '/ month';
+  const periodLabel = billingPeriod === 'annual' ? '/ month, billed yearly' : '/ quarter';
 
   const ctaClassName = cn(
     'inline-flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] h-10 px-5 text-[14px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors',

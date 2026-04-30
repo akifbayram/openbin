@@ -10,7 +10,7 @@ interface UpgradeCardProps {
 }
 
 export function UpgradeCard({ targetPlan, action }: UpgradeCardProps) {
-  const monthly = formatPriceCents(targetPlan.prices.monthly);
+  const quarterly = formatPriceCents(targetPlan.prices.quarterly);
   const annual = targetPlan.prices.annual !== null ? formatPriceCents(targetPlan.prices.annual) : null;
   const ctaClassName = cn(
     'inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] h-10 px-5 text-[14px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors',
@@ -21,7 +21,7 @@ export function UpgradeCard({ targetPlan, action }: UpgradeCardProps) {
       <div className="space-y-1">
         <h3 className="text-base font-semibold text-[var(--text-primary)]">Upgrade to {targetPlan.name}</h3>
         <p className="text-sm text-[var(--text-tertiary)]">
-          {monthly}/mo{annual && ` · ${annual}/yr`}
+          {quarterly}/qtr{annual && ` · ${annual}/yr`}
         </p>
       </div>
       {action && (
