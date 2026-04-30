@@ -14,6 +14,7 @@ const PRO_FEATURES: PlanFeatures = {
 const PRO_USAGE: PlanUsage = {
   binCount: 1, locationCount: 1, photoStorageMb: 0,
   memberCounts: { 'loc-1': 1 },
+  viewerCounts: {},
   overLimits: { locations: false, photos: false, members: [] },
 };
 

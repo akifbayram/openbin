@@ -328,6 +328,7 @@ export interface PlanUsage {
   locationCount: number;
   photoStorageMb: number;
   memberCounts: Record<string, number>;
+  viewerCounts: Record<string, number>;
   overLimits: OverLimits;
 }
 
