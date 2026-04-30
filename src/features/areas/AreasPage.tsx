@@ -1,5 +1,5 @@
-import { Box, Check, Copy, Download, Eye, FolderOpen, LogIn, MapPin, MapPinned, Plus, QrCode, Share2, Shield, User, Users } from 'lucide-react';
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Eye, FolderOpen, LogIn, MapPin, MapPinned, Plus, Shield, User, Users } from 'lucide-react';
+import { lazy, Suspense, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
@@ -17,12 +17,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { CustomFieldsDialog } from '@/features/bins/CustomFieldsDialog';
 import { LocationCreateDialog, LocationDeleteDialog, LocationJoinDialog, LocationRenameDialog } from '@/features/locations/LocationDialogs';
+import { LocationInviteShare } from '@/features/locations/LocationInviteShare';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
 import { LocationRetentionDialog } from '@/features/locations/LocationRetentionDialog';
 import { leaveLocation, useLocationList } from '@/features/locations/useLocations';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { generateQRDataURL } from '@/lib/qr';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
@@ -64,45 +64,12 @@ export function AreasPage() {
   // Delete area state
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; binCount: number; descendantAreaCount?: number; descendantBinCount?: number } | null>(null);
 
-  // Invite code copy state
-  const [copied, setCopied] = useState(false);
-  const [inviteQrOpen, setInviteQrOpen] = useState(false);
-  const [inviteQrUrl, setInviteQrUrl] = useState<string | null>(null);
-
   // Leave confirmation state
   const [leaveLocationId, setLeaveLocationId] = useState<string | null>(null);
 
   const activeLocation = locations.find((l) => l.id === activeLocationId);
 
-  const inviteLink = useMemo(() => {
-    if (!activeLocation?.invite_code) return '';
-    return `${window.location.origin}/register?invite=${encodeURIComponent(activeLocation.invite_code)}`;
-  }, [activeLocation?.invite_code]);
-
-  // Generate invite QR code data URL when toggled open (memoized by invite code)
-  useEffect(() => {
-    if (!inviteQrOpen || !inviteLink) {
-      setInviteQrUrl(null);
-      return;
-    }
-    let cancelled = false;
-    generateQRDataURL(inviteLink, 256).then((url) => {
-      if (!cancelled) setInviteQrUrl(url);
-    });
-    return () => { cancelled = true; };
-  }, [inviteQrOpen, inviteLink]);
   const { isAdmin, isViewer } = usePermissions();
-
-  async function handleCopyInvite() {
-    if (!activeLocation?.invite_code) return;
-    try {
-      await navigator.clipboard.writeText(activeLocation.invite_code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      showToast({ message: 'Failed to copy', variant: 'error' });
-    }
-  }
 
   function handleAreaClick(areaId: string) {
     navigate(`/bins?areas=${encodeURIComponent(areaId)}`);
@@ -140,30 +107,6 @@ export function AreasPage() {
       showToast({ message: getErrorMessage(err, 'Failed to leave'), variant: 'error' });
     }
   }
-
-  const handleDownloadQr = useCallback(() => {
-    if (!inviteQrUrl) return;
-    const a = document.createElement('a');
-    a.href = inviteQrUrl;
-    a.download = `invite-qr-${activeLocation?.name ?? 'code'}.png`;
-    a.click();
-  }, [inviteQrUrl, activeLocation?.name]);
-
-  const handleShareInvite = useCallback(async () => {
-    if (!inviteLink) return;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Join ${activeLocation?.name ?? 'location'}`, url: inviteLink });
-      } catch { /* cancelled by user */ }
-    } else {
-      try {
-        await navigator.clipboard.writeText(inviteLink);
-        showToast({ message: 'Invite link copied', variant: 'success' });
-      } catch {
-        showToast({ message: 'Failed to copy', variant: 'error' });
-      }
-    }
-  }, [inviteLink, activeLocation?.name, showToast]);
 
   const totalMemberCount = activeLocation?.member_count ?? 0;
   const viewerCount = activeLocation?.viewer_count ?? 0;
@@ -326,77 +269,9 @@ export function AreasPage() {
                   onLeave={() => setLeaveLocationId(activeLocation.id)}
                 />
               </div>
-              {/* Bottom row: invite code (admin only) */}
-              {activeLocation.invite_code && isAdmin && (
-                <div className="flex items-center gap-2 pt-2 border-t border-[var(--border-flat)]">
-                  <button
-                    type="button"
-                    onClick={handleCopyInvite}
-                    className="inline-flex items-center gap-1.5 text-[13px] font-mono text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer min-w-0"
-                    aria-label="Copy invite code"
-                  >
-                    {copied
-                      ? <Check className="h-3.5 w-3.5 shrink-0 text-[var(--color-success)]" />
-                      : <Copy className="h-3.5 w-3.5 shrink-0" />}
-                    <span className="truncate">{activeLocation.invite_code}</span>
-                  </button>
-                  <div className="flex-1" />
-                  <button
-                    type="button"
-                    onClick={() => setInviteQrOpen((o) => !o)}
-                    className="inline-flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
-                    aria-label={inviteQrOpen ? 'Hide invite QR code' : 'Show invite QR code'}
-                  >
-                    <QrCode className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">QR</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleShareInvite}
-                    className="inline-flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
-                    aria-label="Share invite link"
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Share</span>
-                  </button>
-                </div>
-              )}
+              {/* Invite share (admin only) */}
+              <LocationInviteShare location={activeLocation} variant="card" />
             </div>
-
-            {/* Invite QR code */}
-            {inviteQrOpen && activeLocation.invite_code && isAdmin && (
-              <div className="flat-card rounded-[var(--radius-lg)] p-4 flex flex-col items-center gap-3 animate-card-stagger">
-                <p className="text-[13px] font-medium text-[var(--text-secondary)]">
-                  Scan to join <span className="font-semibold">{activeLocation.name}</span>
-                </p>
-                {inviteQrUrl ? (
-                  <img src={inviteQrUrl} alt="Invite QR code" className="w-48 h-48 rounded-[var(--radius-md)]" />
-                ) : (
-                  <Skeleton className="w-48 h-48" />
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDownloadQr}
-                    disabled={!inviteQrUrl}
-                    className="text-[12px]"
-                  >
-                    <Download className="h-3.5 w-3.5 mr-1" />
-                    Download
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleShareInvite}
-                    className="text-[12px]"
-                  >
-                    <Share2 className="h-3.5 w-3.5 mr-1" />
-                    Share Link
-                  </Button>
-                </div>
-              </div>
-            )}
 
             {/* Area grid */}
             {areas.length === 0 && unassignedCount === 0 ? (

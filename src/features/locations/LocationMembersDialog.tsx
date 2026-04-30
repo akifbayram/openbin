@@ -1,4 +1,4 @@
-import { Check, Copy, EllipsisVertical, KeyRound, LogOut, RefreshCw, UserMinus } from 'lucide-react';
+import { Check, Copy, EllipsisVertical, KeyRound, LogOut, UserMinus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,8 @@ import { useAuth } from '@/lib/auth';
 import { usePopover } from '@/lib/usePopover';
 import { cn, getErrorMessage } from '@/lib/utils';
 import type { LocationMember } from '@/types';
-import { changeMemberRole, leaveLocation, regenerateInvite, removeMember, resetMemberPassword, useLocationList, useLocationMembers } from './useLocations';
+import { LocationInviteShare } from './LocationInviteShare';
+import { changeMemberRole, leaveLocation, removeMember, resetMemberPassword, useLocationList, useLocationMembers } from './useLocations';
 
 interface LocationMembersDialogProps {
   locationId: string;
@@ -35,8 +36,6 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   const { members, isLoading } = useLocationMembers(locationId);
   const { locations } = useLocationList();
   const { showToast } = useToast();
-  const [copied, setCopied] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
   const [resetToken, setResetToken] = useState<{ token: string; userId: string } | null>(null);
   const [resetCopied, setResetCopied] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
@@ -55,29 +54,6 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       (m.email || '').toLowerCase().includes(q),
     );
   }, [members, memberSearch]);
-
-  async function handleCopyInvite() {
-    if (!location?.invite_code) return;
-    try {
-      await navigator.clipboard.writeText(location.invite_code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      showToast({ message: 'Failed to copy', variant: 'error' });
-    }
-  }
-
-  async function handleRegenerate() {
-    setRegenerating(true);
-    try {
-      await regenerateInvite(locationId);
-      showToast({ message: 'Invite code regenerated', variant: 'success' });
-    } catch (err) {
-      showToast({ message: getErrorMessage(err, 'Failed to regenerate'), variant: 'error' });
-    } finally {
-      setRegenerating(false);
-    }
-  }
 
   async function handleRemoveConfirmed() {
     if (!memberToRemove) return;
@@ -156,39 +132,8 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
           </DialogDescription>
         </DialogHeader>
 
-        {/* Invite Code */}
-        {location?.invite_code && (
-          <div className="row p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
-            <span className="flex-1 min-w-0 text-[14px] font-mono text-[var(--text-primary)] tracking-wider truncate">
-              {location.invite_code}
-            </span>
-            <Tooltip content="Copy invite code" side="bottom">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={handleCopyInvite}
-                className="shrink-0"
-                aria-label="Copy invite code"
-              >
-                {copied ? <Check className="h-4 w-4 text-[var(--color-success)]" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </Tooltip>
-            {isAdmin && (
-              <Tooltip content="Regenerate invite code" side="bottom">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={handleRegenerate}
-                  disabled={regenerating}
-                  className="shrink-0"
-                  aria-label="Regenerate invite code"
-                >
-                  <RefreshCw className={cn('h-4 w-4', regenerating && 'animate-spin')} />
-                </Button>
-              </Tooltip>
-            )}
-          </div>
-        )}
+        {/* Invite share (admin only — component returns null otherwise) */}
+        {location && <LocationInviteShare location={location} variant="compact" />}
 
         {/* Members list */}
         {isLoading ? (
