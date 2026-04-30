@@ -5,6 +5,8 @@ import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import multer from 'multer';
 import { d, generateUuid, isUniqueViolation, query } from '../db.js';
+import { recoverDeletion, requestDeletion } from '../lib/accountDeletion.js';
+import { logAdminAction } from '../lib/adminAudit.js';
 import { getAdminCount } from '../lib/adminHelpers.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { runBackup } from '../lib/backup.js';
@@ -17,7 +19,7 @@ import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getFeatureMap, invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
 import { restoreBackup } from '../lib/restore.js';
 import { validateDisplayName, validateLoginEmail, validatePassword } from '../lib/validation.js';
-import { authenticate, invalidateUserStatusCache } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 
 const log = createLogger('admin');
@@ -402,7 +404,9 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   res.json({ message: 'User updated' });
 }));
 
-// DELETE /api/admin/users/:id — delete a user
+// DELETE /api/admin/users/:id — delete a user via the orchestrator. The
+// orchestrator handles subscription cancellation, lifecycle field writes,
+// admin_audit_log, status-cache invalidation, and the grace=0 fast path.
 router.delete('/users/:id', asyncHandler(async (req, res) => {
   const targetId = req.params.id;
 
@@ -415,25 +419,63 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
     [targetId],
   );
   const target = targetResult.rows[0];
-
   if (!target) throw new NotFoundError('User not found');
 
-  // Last-admin protection
+  // Last-admin protection — duplicates the orchestrator's guard, but giving
+  // the admin a clear "you can't kill the last admin" error here (instead of
+  // the orchestrator's generic "only admin" message) is worth the redundancy.
   if (target.is_admin && (await getAdminCount()) <= 1) {
     throw new ForbiddenError('Cannot delete the only admin');
   }
 
-  await query(
-    `UPDATE users SET deleted_at = ${d.now()}, updated_at = ${d.now()} WHERE id = $1`,
+  // Admin-initiated → use prorated refund as the friendly default. Admins
+  // can still explicitly pass refundPolicy in the request body to override.
+  const refundPolicy = req.body?.refundPolicy === 'none' ? 'none' : 'prorated';
+
+  const result = await requestDeletion({
+    userId: targetId,
+    refundPolicy,
+    initiatedByAdminId: req.user!.id,
+    initiatedByAdminName: req.user!.email,
+  });
+
+  log.info(
+    `User ${req.user!.email} requested deletion of ${target.email}; scheduledAt=${result.scheduledAt ?? 'immediate'}`,
+  );
+
+  res.json({
+    message: result.scheduledAt ? 'User scheduled for deletion' : 'User deleted',
+    scheduledAt: result.scheduledAt,
+  });
+}));
+
+// POST /api/admin/users/:id/recover-deletion — restore a soft-deleted user
+// during the grace window. Thin wrapper over recoverDeletion(); also writes
+// an admin_audit_log entry to mirror the request side.
+router.post('/users/:id/recover-deletion', asyncHandler(async (req, res) => {
+  const targetId = req.params.id;
+
+  const targetResult = await query<{ id: string; email: string }>(
+    'SELECT id, email FROM users WHERE id = $1',
     [targetId],
   );
-  invalidateUserStatusCache(targetId);
+  const target = targetResult.rows[0];
+  if (!target) throw new NotFoundError('User not found');
 
-  getEeHooks().onUserUpdate?.({ userId: targetId, action: 'delete_user' });
+  await recoverDeletion(targetId);
 
-  log.info(`User ${req.user!.email} soft-deleted user ${target.email}`);
+  logAdminAction({
+    actorId: req.user!.id,
+    actorName: req.user!.email,
+    action: 'recover_account_deletion',
+    targetType: 'user',
+    targetId,
+    targetName: target.email,
+  });
 
-  res.json({ message: 'User marked for deletion' });
+  log.info(`Admin ${req.user!.email} recovered pending-deletion account ${target.email}`);
+
+  res.json({ message: 'User recovered' });
 }));
 
 // POST /api/admin/users/:id/regenerate-api-key — revoke all keys and generate a new one
