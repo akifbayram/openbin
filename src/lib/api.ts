@@ -23,12 +23,14 @@ export class ApiError extends Error {
   code?: string;
   upgradeUrl?: string | null;
   upgradeAction?: CheckoutAction | null;
+  details?: Record<string, unknown>;
   constructor(
     status: number,
     message: string,
     code?: string,
     upgradeUrl?: string | null,
     upgradeAction?: CheckoutAction | null,
+    details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -36,6 +38,7 @@ export class ApiError extends Error {
     this.code = code;
     this.upgradeUrl = upgradeUrl;
     this.upgradeAction = upgradeAction ?? null;
+    this.details = details;
   }
 }
 
@@ -146,7 +149,15 @@ async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boole
       lastLocationRefresh = Date.now();
       notify(Events.LOCATIONS);
     }
-    throw new ApiError(res.status, data.message || data.error || res.statusText, code, upgradeUrl, upgradeAction);
+    const { error: _e, message: _m, upgrade_url: _u, upgrade_action: _ua, ...rest } = data;
+    throw new ApiError(
+      res.status,
+      data.message || data.error || res.statusText,
+      code,
+      upgradeUrl,
+      upgradeAction,
+      Object.keys(rest).length > 0 ? rest : undefined,
+    );
   }
 
   if (res.status === 204) return undefined as T;
