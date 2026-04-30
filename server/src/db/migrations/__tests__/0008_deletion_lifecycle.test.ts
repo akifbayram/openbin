@@ -1,8 +1,8 @@
 import Database from 'better-sqlite3';
 import { describe, expect, it } from 'vitest';
-import { deletionLifecycle } from '../0010_deletion_lifecycle.js';
+import { deletionLifecycle } from '../0008_deletion_lifecycle.js';
 
-describe('migration 0010_deletion_lifecycle', () => {
+describe('migration 0008_deletion_lifecycle', () => {
   it('adds 3 deletion columns + creates orphans table + index (sqlite)', () => {
     const db = new Database(':memory:');
     db.prepare('CREATE TABLE users (id TEXT PRIMARY KEY, plan INTEGER)').run();

@@ -56,7 +56,7 @@ function safeAlterSqlite(db: Database.Database, sql: string): void {
 }
 
 export const deletionLifecycle: Migration = {
-  name: '0010_deletion_lifecycle',
+  name: '0008_deletion_lifecycle',
   sqlite(db) {
     for (const sql of SQLITE_ALTER_STATEMENTS) safeAlterSqlite(db, sql);
     db.exec(SQLITE_CREATE_TABLE);
