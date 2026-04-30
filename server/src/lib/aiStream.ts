@@ -1,8 +1,30 @@
 import type { LanguageModel, ModelMessage, UserContent } from 'ai';
 import { Output, streamText } from 'ai';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { mapSdkError, toSafeAiMessage } from './aiCaller.js';
 import { createLogger } from './logger.js';
+
+/**
+ * Combine a client-disconnect listener with an optional base abort signal
+ * (typically a timeout). The returned signal aborts on whichever fires first.
+ *
+ * Used to cancel upstream provider streams when the client closes the SSE
+ * connection — without this, the server keeps generating tokens against a
+ * closed socket and the user is still billed for the credit.
+ */
+export function withClientDisconnect(req: Request, baseSignal?: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+
+  if (baseSignal?.aborted) {
+    controller.abort();
+    return controller.signal;
+  }
+
+  baseSignal?.addEventListener('abort', () => controller.abort(), { once: true });
+  req.once('close', () => controller.abort());
+
+  return controller.signal;
+}
 
 const log = createLogger('ai');
 

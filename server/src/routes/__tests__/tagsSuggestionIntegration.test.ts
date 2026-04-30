@@ -38,6 +38,7 @@ vi.mock('../../lib/routeHelpers.js', () => ({
 }));
 vi.mock('../../middleware/locationAccess.js', () => ({
   requireLocationMember: () => (req: any, res: any, next: any) => next(),
+  requireLocationMemberOrAbove: () => (req: any, res: any, next: any) => next(),
 }));
 vi.mock('../../middleware/requirePlan.js', () => ({
   requirePlusOrAbove: () => (req: any, res: any, next: any) => next(),

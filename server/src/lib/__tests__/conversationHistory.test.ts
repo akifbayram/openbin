@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   type ConversationTurn,
+  MAX_TOTAL_CHARS,
+  MAX_TURN_CHARS,
   MAX_TURNS,
   parseHistoryFromBody,
   toProviderMessages,
@@ -177,5 +179,60 @@ describe('parseHistoryFromBody', () => {
     });
     expect(msgs).toHaveLength(1);
     expect(msgs[0].content).toMatch(/Executed.*Create bin/);
+  });
+
+  it('drops turns whose textual content exceeds MAX_TURN_CHARS', () => {
+    const validUserContent = 'a'.repeat(100);
+    const oversizedContent = 'x'.repeat(MAX_TURN_CHARS + 1);
+    const body = {
+      history: [
+        { role: 'user', content: validUserContent },
+        { role: 'user', content: oversizedContent },
+        { role: 'assistant', kind: 'answer', content: oversizedContent },
+        {
+          role: 'assistant',
+          kind: 'command',
+          interpretation: oversizedContent,
+          actions: [],
+          executed: true,
+        },
+      ],
+    };
+
+    const result = parseHistoryFromBody(body);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ role: 'user', content: validUserContent });
+  });
+
+  it('trims oldest turns when total content chars exceed MAX_TOTAL_CHARS', () => {
+    const turnSize = 4000;
+    const filler = 'x'.repeat(turnSize - 4);
+    const history = Array.from({ length: 10 }, (_, i) => ({
+      role: 'user' as const,
+      content: `t${String(i).padStart(2, '0')}:${filler}`,
+    }));
+
+    const result = parseHistoryFromBody({ history });
+
+    expect(result).toHaveLength(8);
+    expect(result.length * turnSize).toBeLessThanOrEqual(MAX_TOTAL_CHARS);
+
+    const keptPrefixes = result.map((m) => (m.content as string).slice(0, 4));
+    expect(keptPrefixes).toEqual([
+      't02:',
+      't03:',
+      't04:',
+      't05:',
+      't06:',
+      't07:',
+      't08:',
+      't09:',
+    ]);
+
+    for (const msg of result) {
+      expect(msg.content as string).not.toMatch(/^t00:/);
+      expect(msg.content as string).not.toMatch(/^t01:/);
+    }
   });
 });

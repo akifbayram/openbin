@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
+import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 
 /**
  * Middleware factory to verify user is member of a location.
@@ -21,6 +21,39 @@ export function requireLocationMember(paramName = 'id') {
 
     if (!await verifyLocationMembership(locationId as string, userId)) {
       res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+      return;
+    }
+
+    next();
+  };
+}
+
+/**
+ * Middleware factory to verify user is a member or admin of a location.
+ * Viewers are rejected. Used to gate write-shaped operations like AI
+ * streaming endpoints that emit mutation suggestions or burn credits.
+ */
+export function requireLocationMemberOrAbove(paramName = 'id') {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Not authenticated' });
+      return;
+    }
+
+    const locationId = req.params[paramName] || req.body?.locationId || req.query.location_id;
+    if (!locationId) {
+      res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Location ID required' });
+      return;
+    }
+
+    const role = await getMemberRole(locationId as string, userId);
+    if (!role) {
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+      return;
+    }
+    if (role === 'viewer') {
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Viewers cannot use this feature' });
       return;
     }
 

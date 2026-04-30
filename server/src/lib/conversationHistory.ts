@@ -3,6 +3,12 @@ import type { ModelMessage } from 'ai';
 /** Maximum number of turns sent to the AI provider. Older turns are dropped. */
 export const MAX_TURNS = 10;
 
+/** Maximum textual content length for a single turn. Larger turns are dropped. */
+export const MAX_TURN_CHARS = 4096;
+
+/** Maximum cumulative textual content across all retained turns. Oldest turns are trimmed first. */
+export const MAX_TOTAL_CHARS = 32768;
+
 /** Wire format for a conversation turn from the client. */
 export type ConversationTurn =
   | { role: 'user'; content: string }
@@ -59,8 +65,31 @@ export function toProviderMessages(history: ConversationTurn[]): ModelMessage[] 
 export function parseHistoryFromBody(body: unknown): ModelMessage[] {
   const raw = (body as { history?: unknown } | null | undefined)?.history;
   if (!Array.isArray(raw)) return [];
-  const valid = raw.filter(isValidTurn);
-  return toProviderMessages(trimHistory(valid));
+  const valid = raw.filter(isValidTurn).filter(isWithinSizeLimit);
+  return toProviderMessages(trimToTotalCharBudget(trimHistory(valid)));
+}
+
+/** Drop oldest turns until cumulative textual content fits within MAX_TOTAL_CHARS. */
+function trimToTotalCharBudget(history: ConversationTurn[]): ConversationTurn[] {
+  let total = history.reduce((sum, t) => sum + turnContentLength(t), 0);
+  let i = 0;
+  while (total > MAX_TOTAL_CHARS && i < history.length) {
+    total -= turnContentLength(history[i]);
+    i++;
+  }
+  return i === 0 ? history : history.slice(i);
+}
+
+/** Length of the textual field that counts against the size budget. */
+function turnContentLength(t: ConversationTurn): number {
+  if (t.role === 'user') return t.content.length;
+  if (t.kind === 'answer') return t.content.length;
+  return t.interpretation.length;
+}
+
+/** Runtime guard: is this turn's textual content within MAX_TURN_CHARS? */
+function isWithinSizeLimit(t: ConversationTurn): boolean {
+  return turnContentLength(t) <= MAX_TURN_CHARS;
 }
 
 /** Runtime guard: does this value match the ConversationTurn discriminated union? */
