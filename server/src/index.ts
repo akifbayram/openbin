@@ -9,6 +9,7 @@ import { query } from './db.js';
 import { config } from './lib/config.js';
 import { csrfProtect } from './lib/csrf.js';
 import {
+  ConflictError,
   HttpError,
   OverLimitError,
   PlanRestrictedError,
@@ -42,6 +43,7 @@ import binsRoutes from './routes/bins.js';
 import binUsageRoutes from './routes/binUsage.js';
 import customFieldsRoutes from './routes/customFields.js';
 import exportRoutes from './routes/export.js';
+import { internalRoutes } from './routes/internal.js';
 import itemCheckoutsRoutes, { locationCheckoutsRouter as locationCheckoutsRoutes } from './routes/itemCheckouts.js';
 import itemsRoutes from './routes/items.js';
 import locationsRoutes from './routes/locations.js';
@@ -181,6 +183,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/auth/account', sensitiveAuthLimiter);
   app.use('/api/auth/forgot-password', sensitiveAuthLimiter);
   app.use('/api/auth/reset-password', sensitiveAuthLimiter);
+  app.use('/api/auth/recover-deletion', sensitiveAuthLimiter);
   app.use('/api/auth', authRoutes);
   app.use('/api/auth', avatarRoutes);
   app.use('/api/locations/join', joinLimiter);
@@ -217,6 +220,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/tags', tagsRoutes);
   app.use('/api/items', itemsRoutes);
   app.use('/api', batchRoutes);
+  app.use('/api/v1', internalRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/admin/security', adminSecurityRoutes);
   app.use('/api/admin/system', adminSystemRoutes);
@@ -256,6 +260,18 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
         message: err.message,
         max: err.max,
         requested: err.requested,
+      });
+      return;
+    }
+    if (err instanceof ConflictError && err.details) {
+      // Structured ConflictError carries an explicit error code (e.g.
+      // ACCOUNT_DELETION_PENDING) and arbitrary recovery hints. Spread the
+      // extra fields so the client can act on them (e.g. show a recovery UI
+      // with the scheduled-deletion timestamp).
+      res.status(err.statusCode).json({
+        error: err.code,
+        message: err.message,
+        ...err.details,
       });
       return;
     }

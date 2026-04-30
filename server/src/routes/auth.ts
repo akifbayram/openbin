@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
-import fs from 'node:fs';
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import * as jose from 'jose';
 import { d, generateUuid, isUniqueViolation, query } from '../db.js';
+import { recoverDeletion, requestDeletion } from '../lib/accountDeletion.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
@@ -24,7 +24,6 @@ import {
   validateState,
 } from '../lib/oauth.js';
 import { consumeResetToken, createPasswordResetToken } from '../lib/passwordReset.js';
-import { safePath } from '../lib/pathSafety.js';
 import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { queryMaybeOne, queryOne } from '../lib/queryHelpers.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
@@ -170,6 +169,22 @@ router.post('/register', asyncHandler(async (req, res) => {
   validatePassword(password);
   validateDisplayName(displayName);
 
+  // Block re-registration when an account with this email is soft-deleted
+  // during the grace window. Lets the user recover instead of orphaning the
+  // billing customer record. UNIQUE(email) would also fail this, but the
+  // dedicated error gives a recoverable code the client can act on.
+  const pending = await queryMaybeOne<{ deletion_scheduled_at: string | null }>(
+    'SELECT deletion_scheduled_at FROM users WHERE email = $1 AND deletion_scheduled_at IS NOT NULL',
+    [trimmedEmail],
+  );
+  if (pending?.deletion_scheduled_at && new Date(pending.deletion_scheduled_at).getTime() > Date.now()) {
+    throw new ConflictError({
+      code: 'EMAIL_PENDING_DELETION',
+      message: 'An account with this email is scheduled for deletion. Recover it or wait until the deletion completes.',
+      scheduledAt: pending.deletion_scheduled_at,
+    });
+  }
+
   const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   const userId = generateUuid();
   let result: import('../db.js').QueryResult<Record<string, unknown>>;
@@ -250,7 +265,7 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    'SELECT id, password_hash, display_name, email, avatar_path, active_location_id, deleted_at, suspended_at, token_version, force_password_change, is_admin FROM users WHERE email = $1',
+    'SELECT id, password_hash, display_name, email, avatar_path, active_location_id, deleted_at, deletion_scheduled_at, suspended_at, token_version, force_password_change, is_admin FROM users WHERE email = $1',
     [email.toLowerCase().trim()]
   );
 
@@ -284,6 +299,17 @@ router.post('/login', asyncHandler(async (req, res) => {
     throw new UnauthorizedError('Invalid email or password');
   }
   if (user.deleted_at) {
+    // Distinguish "soft-deleted, can be recovered" from "hard-deleted (gone)".
+    // We've already verified the password above, so it's safe to leak existence
+    // — the caller is the legitimate owner.
+    if (user.deletion_scheduled_at && new Date(user.deletion_scheduled_at).getTime() > Date.now()) {
+      log.info(`Login attempted on pending-deletion account "${email}"; offering recovery`);
+      throw new ConflictError({
+        code: 'ACCOUNT_DELETION_PENDING',
+        message: 'This account is scheduled for deletion. Recover it via the recovery flow.',
+        scheduledAt: user.deletion_scheduled_at,
+      });
+    }
     log.warn(`Login failed: deleted user "${email}"`);
     throw new UnauthorizedError('Invalid email or password');
   }
@@ -402,7 +428,7 @@ router.post('/logout-all', authenticate, asyncHandler(async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
   const user = await queryOne<Record<string, any>>(
-    'SELECT id, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin, password_hash FROM users WHERE id = $1',
+    'SELECT id, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin, password_hash, deletion_requested_at, deletion_scheduled_at FROM users WHERE id = $1',
     [req.user!.id],
     'User not found',
   );
@@ -428,6 +454,8 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
     activeUntil: user.active_until || null,
     isAdmin: !!user.is_admin,
     hasPassword: !!user.password_hash,
+    deletionRequestedAt: user.deletion_requested_at || null,
+    deletionScheduledAt: user.deletion_scheduled_at || null,
   });
 }));
 
@@ -565,18 +593,25 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
   res.json({ message: 'Password updated successfully' });
 }));
 
-// DELETE /api/auth/account — permanently delete account
+// DELETE /api/auth/account — request account deletion
+//
+// Verifies the user's password (when set), then routes through the
+// `requestDeletion` orchestrator. The orchestrator handles sole-admin guard,
+// subscription cancellation (cloud), refresh-token revocation, audit logging,
+// and either schedules a hard-delete after the grace period or hard-deletes
+// immediately when grace=0. The route stays thin on purpose.
 router.delete('/account', authenticate, asyncHandler(async (req, res) => {
-  const { password } = req.body;
+  const { password, refundPolicy } = req.body as { password?: string; refundPolicy?: 'none' | 'prorated' };
   const userId = req.user!.id;
 
-  const userRow = await queryOne<{ password_hash: string | null; avatar_path: string | null; is_admin: boolean | number }>(
-    'SELECT password_hash, avatar_path, is_admin FROM users WHERE id = $1',
+  // Verify password when the user has one. OAuth-only users skip this check
+  // (the orchestrator can't fall back to email magic-link recovery for them
+  // yet, so make sure the call site is otherwise authenticated).
+  const userRow = await queryOne<{ password_hash: string | null }>(
+    'SELECT password_hash FROM users WHERE id = $1',
     [userId],
     'User not found',
   );
-
-  // Verify password when user has one; OAuth-only users (no password_hash) skip this check
   if (userRow.password_hash) {
     if (!password) {
       throw new ValidationError('Password is required');
@@ -587,69 +622,26 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
     }
   }
 
-  const avatarPath = userRow.avatar_path;
-
-  if (userRow.is_admin) {
-    const adminCountResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM users WHERE is_admin = TRUE', []);
-    if (adminCountResult.rows[0].cnt <= 1) {
-      throw new ForbiddenError('Cannot delete the only admin account');
-    }
+  // Validate refundPolicy if provided; reject anything that isn't a known
+  // value so we don't silently coerce bad input.
+  if (refundPolicy !== undefined && refundPolicy !== 'none' && refundPolicy !== 'prorated') {
+    throw new ValidationError('refundPolicy must be "none" or "prorated"');
   }
 
-  // Find locations where user is a member
-  const locationsResult = await query(
-    `SELECT l.id FROM locations l JOIN location_members lm ON l.id = lm.location_id WHERE lm.user_id = $1`,
-    [userId]
-  );
-
-  const PHOTO_STORAGE = config.photoStoragePath;
-
-  for (const location of locationsResult.rows) {
-    const countResult = await query('SELECT COUNT(*) AS count FROM location_members WHERE location_id = $1', [location.id]);
-    const memberCount = parseInt(countResult.rows[0].count as string, 10);
-
-    if (memberCount === 1) {
-      // Sole member — delete photo files for all bins in this location
-      const photosResult = await query(
-        `SELECT p.storage_path FROM photos p JOIN bins b ON p.bin_id = b.id WHERE b.location_id = $1`,
-        [location.id]
-      );
-      for (const photo of photosResult.rows) {
-        const photoPath = safePath(PHOTO_STORAGE, photo.storage_path);
-        if (photoPath) {
-          try { fs.unlinkSync(photoPath); } catch { /* ignore */ }
-        }
-      }
-      // Delete bin directories
-      const binsResult = await query('SELECT id FROM bins WHERE location_id = $1', [location.id]);
-      for (const bin of binsResult.rows) {
-        const binDir = safePath(PHOTO_STORAGE, bin.id);
-        if (binDir) {
-          try { fs.rmSync(binDir, { recursive: true, force: true }); } catch { /* ignore */ }
-        }
-      }
-      // Cascade deletes bins, photos, tag_colors, location_members
-      await query('DELETE FROM locations WHERE id = $1', [location.id]);
-    }
-    // If count > 1, location_members row is removed by ON DELETE CASCADE on users
-  }
-
-  // Delete avatar file
-  if (avatarPath) {
-    try { fs.unlinkSync(avatarPath); } catch { /* ignore */ }
-  }
-
-  await getEeHooks().onDeleteUser?.(userId);
-
-  await query('DELETE FROM users WHERE id = $1', [userId]);
-
-  getEeHooks().onUserUpdate?.({ userId, action: 'delete_user' });
+  const result = await requestDeletion({
+    userId,
+    refundPolicy: refundPolicy ?? config.deletionRefundPolicy,
+  });
 
   clearAuthCookies(res);
 
-  log.info(`User ${req.user!.email} deleted their account`);
+  log.info(`User ${req.user!.email} initiated account deletion`);
 
-  res.json({ message: 'Account deleted' });
+  res.json({
+    message: result.scheduledAt ? 'Account scheduled for deletion' : 'Account deleted',
+    scheduledAt: result.scheduledAt,
+    cancellation: result.cancellation,
+  });
 }));
 
 // POST /api/auth/forgot-password — request a password reset email (no auth)
@@ -695,6 +687,50 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 
   log.info('Password reset completed via token');
   res.json({ message: 'Password has been reset successfully' });
+}));
+
+// POST /api/auth/recover-deletion — recover a soft-deleted account (no auth — by
+// design, the user can't log in while the account is in pending-deletion state).
+//
+// Anti-enumeration: equalize timing and use a generic 401 for all failure modes
+// (no user, OAuth-only user, account not pending, wrong password). The 409 from
+// `recoverDeletion` (grace expired) leaks existence — but only after the user
+// has proven they own the account, which is fine.
+router.post('/recover-deletion', asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+    throw new ValidationError('Email and password required');
+  }
+
+  const user = await queryMaybeOne<{
+    id: string;
+    email: string;
+    password_hash: string | null;
+    deletion_requested_at: string | null;
+    deletion_scheduled_at: string | null;
+  }>(
+    'SELECT id, email, password_hash, deletion_requested_at, deletion_scheduled_at FROM users WHERE email = $1',
+    [email.toLowerCase().trim()],
+  );
+
+  if (!user || !user.deletion_requested_at || !user.password_hash) {
+    // Constant-time rejection to avoid leaking which of the four conditions
+    // matched. The dummy bcrypt is the same one used elsewhere in this file.
+    await bcrypt.compare(password, '$2b$12$000000000000000000000uVjKPCGJcotDu8bMahKn7VoPxpL0Wi');
+    throw new UnauthorizedError('Invalid email or password');
+  }
+  const valid = await bcrypt.compare(password, user.password_hash);
+  if (!valid) {
+    throw new UnauthorizedError('Invalid email or password');
+  }
+
+  // recoverDeletion throws ConflictError if the grace window has already
+  // expired. Let the global error handler surface it — a 409 leak is fine
+  // here because the user has proven ownership above.
+  await recoverDeletion(user.id);
+
+  log.info(`Account deletion recovered for user ${user.email}`);
+  res.json({ message: 'Account recovered. Please log in.' });
 }));
 
 // -- OAuth: Google --

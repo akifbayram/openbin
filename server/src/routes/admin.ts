@@ -5,6 +5,8 @@ import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import multer from 'multer';
 import { d, generateUuid, isUniqueViolation, query } from '../db.js';
+import { recoverDeletion, requestDeletion } from '../lib/accountDeletion.js';
+import { logAdminAction } from '../lib/adminAudit.js';
 import { getAdminCount } from '../lib/adminHelpers.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { runBackup } from '../lib/backup.js';
@@ -17,7 +19,7 @@ import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getFeatureMap, invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
 import { restoreBackup } from '../lib/restore.js';
 import { validateDisplayName, validateLoginEmail, validatePassword } from '../lib/validation.js';
-import { authenticate, invalidateUserStatusCache } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 
 const log = createLogger('admin');
@@ -74,7 +76,7 @@ router.get('/users', asyncHandler(async (req, res) => {
 
   const usersResult = await query(
     `SELECT u.id, u.email, u.display_name, u.is_admin, u.plan, u.sub_status,
-       u.active_until, u.deleted_at, u.suspended_at, u.created_at, u.last_active_at,
+       u.active_until, u.deleted_at, u.deletion_scheduled_at, u.suspended_at, u.created_at, u.last_active_at,
        u.ai_credits_used, u.ai_credits_reset_at,
        (SELECT COUNT(*) FROM bins b JOIN location_members lm ON b.location_id = lm.location_id WHERE lm.user_id = u.id AND b.deleted_at IS NULL) AS bin_count,
        (SELECT COUNT(DISTINCT lm.location_id) FROM location_members lm WHERE lm.user_id = u.id) AS location_count,
@@ -102,6 +104,7 @@ router.get('/users', asyncHandler(async (req, res) => {
       status: subStatusLabel(u.sub_status),
       activeUntil: u.active_until || null,
       deletedAt: u.deleted_at || null,
+      deletionScheduledAt: u.deletion_scheduled_at || null,
       suspendedAt: u.suspended_at || null,
       createdAt: u.created_at,
       binCount: u.bin_count ?? 0,
@@ -185,11 +188,11 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
   const userResult = await query<{
     id: string; email: string; display_name: string;
     is_admin: number; plan: PlanTier; sub_status: SubStatusType;
-    active_until: string | null; deleted_at: string | null; suspended_at: string | null;
+    active_until: string | null; deleted_at: string | null; deletion_scheduled_at: string | null; suspended_at: string | null;
     created_at: string; updated_at: string;
     last_active_at: string | null; ai_credits_used: number | null; ai_credits_reset_at: string | null;
   }>(
-    'SELECT id, email, display_name, is_admin, plan, sub_status, active_until, deleted_at, suspended_at, force_password_change, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
+    'SELECT id, email, display_name, is_admin, plan, sub_status, active_until, deleted_at, deletion_scheduled_at, suspended_at, force_password_change, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
     [userId],
   );
 
@@ -220,6 +223,7 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
     status: subStatusLabel(row.sub_status),
     activeUntil: row.active_until || null,
     deletedAt: row.deleted_at || null,
+    deletionScheduledAt: row.deletion_scheduled_at || null,
     suspendedAt: row.suspended_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -402,7 +406,9 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   res.json({ message: 'User updated' });
 }));
 
-// DELETE /api/admin/users/:id — delete a user
+// DELETE /api/admin/users/:id — delete a user via the orchestrator. The
+// orchestrator handles subscription cancellation, lifecycle field writes,
+// admin_audit_log, status-cache invalidation, and the grace=0 fast path.
 router.delete('/users/:id', asyncHandler(async (req, res) => {
   const targetId = req.params.id;
 
@@ -415,25 +421,63 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
     [targetId],
   );
   const target = targetResult.rows[0];
-
   if (!target) throw new NotFoundError('User not found');
 
-  // Last-admin protection
+  // Last-admin protection — duplicates the orchestrator's guard, but giving
+  // the admin a clear "you can't kill the last admin" error here (instead of
+  // the orchestrator's generic "only admin" message) is worth the redundancy.
   if (target.is_admin && (await getAdminCount()) <= 1) {
     throw new ForbiddenError('Cannot delete the only admin');
   }
 
-  await query(
-    `UPDATE users SET deleted_at = ${d.now()}, updated_at = ${d.now()} WHERE id = $1`,
+  // Admin-initiated → use prorated refund as the friendly default. Admins
+  // can still explicitly pass refundPolicy in the request body to override.
+  const refundPolicy = req.body?.refundPolicy === 'none' ? 'none' : 'prorated';
+
+  const result = await requestDeletion({
+    userId: targetId,
+    refundPolicy,
+    initiatedByAdminId: req.user!.id,
+    initiatedByAdminName: req.user!.email,
+  });
+
+  log.info(
+    `User ${req.user!.email} requested deletion of ${target.email}; scheduledAt=${result.scheduledAt ?? 'immediate'}`,
+  );
+
+  res.json({
+    message: result.scheduledAt ? 'User scheduled for deletion' : 'User deleted',
+    scheduledAt: result.scheduledAt,
+  });
+}));
+
+// POST /api/admin/users/:id/recover-deletion — restore a soft-deleted user
+// during the grace window. Thin wrapper over recoverDeletion(); also writes
+// an admin_audit_log entry to mirror the request side.
+router.post('/users/:id/recover-deletion', asyncHandler(async (req, res) => {
+  const targetId = req.params.id;
+
+  const targetResult = await query<{ id: string; email: string }>(
+    'SELECT id, email FROM users WHERE id = $1',
     [targetId],
   );
-  invalidateUserStatusCache(targetId);
+  const target = targetResult.rows[0];
+  if (!target) throw new NotFoundError('User not found');
 
-  getEeHooks().onUserUpdate?.({ userId: targetId, action: 'delete_user' });
+  await recoverDeletion(targetId);
 
-  log.info(`User ${req.user!.email} soft-deleted user ${target.email}`);
+  logAdminAction({
+    actorId: req.user!.id,
+    actorName: req.user!.email,
+    action: 'recover_account_deletion',
+    targetType: 'user',
+    targetId,
+    targetName: target.email,
+  });
 
-  res.json({ message: 'User marked for deletion' });
+  log.info(`Admin ${req.user!.email} recovered pending-deletion account ${target.email}`);
+
+  res.json({ message: 'User recovered' });
 }));
 
 // POST /api/admin/users/:id/regenerate-api-key — revoke all keys and generate a new one
