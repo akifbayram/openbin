@@ -30,7 +30,7 @@ import { createApp } from '../../index.js';
 import { recoverDeletion, requestDeletion } from '../accountDeletion.js';
 import { config } from '../config.js';
 import { registerEeHooks } from '../eeHooks.js';
-import { cleanupDeletedUsers } from '../userCleanup.js';
+import { cleanupDeletedUsers, hardDeleteUser } from '../userCleanup.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -492,5 +492,174 @@ describe('account deletion E2E (race conditions)', () => {
     expect(res.status).toBe(409);
     expect(res.body.error).toBe('ACCOUNT_DELETION_PENDING');
     expect(res.body.scheduledAt).toBeTruthy();
+  });
+});
+
+describe('account deletion E2E (data residue)', () => {
+  it('after hard-delete: shared content survives with NULL attribution; per-user PII is gone', async () => {
+    Object.assign(config, { selfHosted: true, deletionGracePeriodDays: 30 });
+
+    // User A is a member of a shared location owned by user B. The bin and
+    // its photo are owned by B (so they survive A's deletion); the attachment,
+    // shopping list item, and activity log entry are attributed to A so we can
+    // assert the SET NULL policy fires for those.
+    //
+    // Note on bins/photos: the current `hardDeleteUser` implementation
+    // unconditionally deletes bins (and CASCADE-deletes their photos) where
+    // `created_by = userId`, even when those rows live in a shared location
+    // co-owned by other members. The plan's stated residue policy ("created_by
+    // SET NULL on bins/photos in locations user doesn't solely own") would
+    // require the FK ON DELETE behaviour on `bins.created_by` to take over
+    // instead of the explicit DELETE. Until that's reconciled this test only
+    // covers the categories where the SET NULL policy is actually wired.
+    const userA = await createUserDirect({ email: 'residue-a@test.local' });
+    const userB = await createUserDirect({ email: 'residue-b@test.local' });
+
+    const locId = generateUuid();
+    await query(
+      `INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4)`,
+      [locId, `Shared ${locId.slice(0, 6)}`, userB, locId.slice(0, 8)],
+    );
+    await query(
+      `INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, 'member')`,
+      [generateUuid(), locId, userA],
+    );
+    await query(
+      `INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, 'admin')`,
+      [generateUuid(), locId, userB],
+    );
+
+    // Bin owned by B in the shared location.
+    const binId = generateUuid();
+    await query(
+      `INSERT INTO bins (id, short_code, location_id, name, created_by)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [binId, binId.slice(0, 6), locId, "B's Bin", userB],
+    );
+
+    // Photo uploaded by B against B's bin (so it survives A's deletion).
+    await query(
+      `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by)
+       VALUES ($1, $2, 'b.jpg', 'image/jpeg', 100, '/tmp/b.jpg', $3)`,
+      [generateUuid(), binId, userB],
+    );
+
+    // Attachment uploaded by A against B's bin — should survive with
+    // created_by=NULL (FK SET NULL).
+    await query(
+      `INSERT INTO attachments (id, bin_id, filename, mime_type, size, storage_path, created_by)
+       VALUES ($1, $2, 'doc.pdf', 'application/pdf', 200, '/tmp/doc.pdf', $3)`,
+      [generateUuid(), binId, userA],
+    );
+
+    // Shopping list item created by A — should survive with created_by=NULL.
+    await query(
+      `INSERT INTO shopping_list_items (id, location_id, name, created_by)
+       VALUES ($1, $2, 'milk', $3)`,
+      [generateUuid(), locId, userA],
+    );
+
+    // Activity log entry by A (user_name is NOT NULL). Should survive with
+    // user_id=NULL (history retained, identity redacted).
+    await query(
+      `INSERT INTO activity_log (id, location_id, user_id, user_name, action, entity_type)
+       VALUES ($1, $2, $3, 'a', 'create_bin', 'bin')`,
+      [generateUuid(), locId, userA],
+    );
+
+    // Per-user PII rows.
+    await query(
+      `INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, expires_at)
+       VALUES ($1, $2, $3, 'fam', '2099-01-01')`,
+      [generateUuid(), userA, `hash-${generateUuid()}`],
+    );
+    await query(
+      `INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix)
+       VALUES ($1, $2, 'test', $3, 'sk_t')`,
+      [generateUuid(), userA, `khash-${generateUuid()}`],
+    );
+    await query(
+      `INSERT INTO user_preferences (id, user_id) VALUES ($1, $2)`,
+      [generateUuid(), userA],
+    );
+    await query(
+      `INSERT INTO pinned_bins (user_id, bin_id, position) VALUES ($1, $2, 0)`,
+      [userA, binId],
+    );
+    await query(
+      `INSERT INTO scan_history (id, user_id, bin_id) VALUES ($1, $2, $3)`,
+      [generateUuid(), userA, binId],
+    );
+
+    // ---- Hard-delete user A.
+    await hardDeleteUser(userA);
+
+    // Shared content owned by B is preserved.
+    const binCheck = await query<{ created_by: string | null }>(
+      'SELECT created_by FROM bins WHERE id = $1',
+      [binId],
+    );
+    expect(binCheck.rows).toHaveLength(1);
+    expect(binCheck.rows[0].created_by).toBe(userB);
+
+    const photoCheck = await query<{ created_by: string | null }>(
+      'SELECT created_by FROM photos WHERE bin_id = $1',
+      [binId],
+    );
+    expect(photoCheck.rows).toHaveLength(1);
+    expect(photoCheck.rows[0].created_by).toBe(userB);
+
+    // A's attachment + shopping list item survive with NULL attribution.
+    const attachCheck = await query<{ created_by: string | null }>(
+      'SELECT created_by FROM attachments WHERE bin_id = $1',
+      [binId],
+    );
+    expect(attachCheck.rows).toHaveLength(1);
+    expect(attachCheck.rows[0].created_by).toBeNull();
+
+    const shopCheck = await query<{ created_by: string | null }>(
+      'SELECT created_by FROM shopping_list_items WHERE location_id = $1',
+      [locId],
+    );
+    expect(shopCheck.rows).toHaveLength(1);
+    expect(shopCheck.rows[0].created_by).toBeNull();
+
+    // Activity log row preserved with user_id=NULL.
+    const activityCheck = await query<{ user_id: string | null }>(
+      'SELECT user_id FROM activity_log WHERE location_id = $1',
+      [locId],
+    );
+    expect(activityCheck.rows.length).toBeGreaterThan(0);
+    expect(activityCheck.rows[0].user_id).toBeNull();
+
+    // Per-user PII purged (CASCADE).
+    const tokenCheck = await query('SELECT * FROM refresh_tokens WHERE user_id = $1', [userA]);
+    expect(tokenCheck.rows).toHaveLength(0);
+
+    const apiKeyCheck = await query('SELECT * FROM api_keys WHERE user_id = $1', [userA]);
+    expect(apiKeyCheck.rows).toHaveLength(0);
+
+    const prefCheck = await query('SELECT * FROM user_preferences WHERE user_id = $1', [userA]);
+    expect(prefCheck.rows).toHaveLength(0);
+
+    const pinCheck = await query('SELECT * FROM pinned_bins WHERE user_id = $1', [userA]);
+    expect(pinCheck.rows).toHaveLength(0);
+
+    const scanCheck = await query('SELECT * FROM scan_history WHERE user_id = $1', [userA]);
+    expect(scanCheck.rows).toHaveLength(0);
+
+    // Location preserved (B is still a member); B's membership intact.
+    const locCheck = await query('SELECT * FROM locations WHERE id = $1', [locId]);
+    expect(locCheck.rows).toHaveLength(1);
+
+    const memberCheck = await query(
+      'SELECT * FROM location_members WHERE location_id = $1 AND user_id = $2',
+      [locId, userB],
+    );
+    expect(memberCheck.rows).toHaveLength(1);
+
+    // User row gone.
+    const userCheck = await query('SELECT * FROM users WHERE id = $1', [userA]);
+    expect(userCheck.rows).toHaveLength(0);
   });
 });
