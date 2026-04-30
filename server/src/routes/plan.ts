@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { d, query } from '../db.js';
-import { computeDowngradeImpact } from '../ee/lib/downgradeImpact.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
@@ -220,6 +219,7 @@ router.post('/downgrade-impact', authenticate, asyncHandler(async (req, res) => 
   }
 
   const usage = await getUserUsage(userId);
+  const { computeDowngradeImpact } = await import('../ee/lib/downgradeImpact.js');
   const impact = computeDowngradeImpact({
     currentFeatures: getFeatureMap(planInfo.plan),
     targetFeatures: getFeatureMap(planLabelToTier(targetPlan)),

@@ -6,7 +6,6 @@ import cors from 'cors';
 import express from 'express';
 import multer from 'multer';
 import { query } from './db.js';
-import { getPlanCatalog } from './ee/lib/planCatalog.js';
 import { config } from './lib/config.js';
 import { csrfProtect } from './lib/csrf.js';
 import {
@@ -124,7 +123,8 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
         methods: ['GET'],
         credentials: false,
       }),
-      (_req, res) => {
+      async (_req, res) => {
+        const { getPlanCatalog } = await import('./ee/lib/planCatalog.js');
         res.json(getPlanCatalog());
       },
     );
