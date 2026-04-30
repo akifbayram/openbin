@@ -63,6 +63,7 @@ function authWith(token: string | null, activeLocationId: string | null) {
     setActiveLocationId: vi.fn(),
     updateUser: vi.fn(),
     deleteAccount: vi.fn(),
+    recoverAccount: vi.fn(),
   } as ReturnType<typeof useAuth>);
 }
 

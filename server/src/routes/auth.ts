@@ -428,7 +428,7 @@ router.post('/logout-all', authenticate, asyncHandler(async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
   const user = await queryOne<Record<string, any>>(
-    'SELECT id, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin, password_hash FROM users WHERE id = $1',
+    'SELECT id, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin, password_hash, deletion_requested_at, deletion_scheduled_at FROM users WHERE id = $1',
     [req.user!.id],
     'User not found',
   );
@@ -454,6 +454,8 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
     activeUntil: user.active_until || null,
     isAdmin: !!user.is_admin,
     hasPassword: !!user.password_hash,
+    deletionRequestedAt: user.deletion_requested_at || null,
+    deletionScheduledAt: user.deletion_scheduled_at || null,
   });
 }));
 

@@ -14,6 +14,8 @@ export interface User {
   activeUntil?: string | null;
   isAdmin?: boolean;
   hasPassword?: boolean;
+  deletionRequestedAt?: string | null;
+  deletionScheduledAt?: string | null;
 }
 
 export interface Location {

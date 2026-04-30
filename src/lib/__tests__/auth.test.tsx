@@ -327,14 +327,41 @@ describe('useAuth', () => {
   });
 
   describe('deleteAccount', () => {
-    it('calls API and clears state', async () => {
+    it('calls API with refundPolicy and returns scheduledAt, clearing state', async () => {
       const user = makeUser({ id: 'user-42' });
       localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'loc-1');
 
       // First call: /me on mount, second call: DELETE /api/auth/account
       mockApiFetch
         .mockResolvedValueOnce(user)
-        .mockResolvedValueOnce(undefined);
+        .mockResolvedValueOnce({ scheduledAt: '2026-05-29T00:00:00Z' });
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.user).toEqual(user);
+      });
+
+      let returned: { scheduledAt: string | null } | undefined;
+      await act(async () => {
+        returned = await result.current.deleteAccount('mypassword', 'prorated');
+      });
+
+      expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/account', {
+        method: 'DELETE',
+        body: { password: 'mypassword', refundPolicy: 'prorated' },
+      });
+      expect(returned).toEqual({ scheduledAt: '2026-05-29T00:00:00Z' });
+      expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
+      expect(result.current.user).toBeNull();
+      expect(result.current.token).toBeNull();
+    });
+
+    it('defaults refundPolicy to "none" when omitted', async () => {
+      const user = makeUser({ id: 'user-42' });
+      mockApiFetch
+        .mockResolvedValueOnce(user)
+        .mockResolvedValueOnce({ scheduledAt: null });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -348,9 +375,48 @@ describe('useAuth', () => {
 
       expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/account', {
         method: 'DELETE',
-        body: { password: 'mypassword' },
+        body: { password: 'mypassword', refundPolicy: 'none' },
       });
-      expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
+    });
+  });
+
+  describe('recoverAccount', () => {
+    it('POSTs to /api/auth/recover-deletion with email and password', async () => {
+      mockApiFetch
+        .mockRejectedValueOnce(new Error('No session'))
+        .mockResolvedValueOnce(undefined);
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.recoverAccount('user@example.com', 'mypassword');
+      });
+
+      expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/recover-deletion', {
+        method: 'POST',
+        body: { email: 'user@example.com', password: 'mypassword' },
+      });
+    });
+
+    it('does not log the user in or change auth state', async () => {
+      mockApiFetch
+        .mockRejectedValueOnce(new Error('No session'))
+        .mockResolvedValueOnce(undefined);
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.recoverAccount('user@example.com', 'mypassword');
+      });
+
       expect(result.current.user).toBeNull();
       expect(result.current.token).toBeNull();
     });

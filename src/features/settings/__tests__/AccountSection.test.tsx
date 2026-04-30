@@ -56,6 +56,7 @@ function mockAuth(overrides: Record<string, unknown> = {}) {
     user: { ...baseUser, hasPassword: false, ...overrides },
     updateUser: vi.fn(),
     deleteAccount: vi.fn(),
+    recoverAccount: vi.fn(),
   } as unknown as ReturnType<typeof useAuth>);
 }
 
