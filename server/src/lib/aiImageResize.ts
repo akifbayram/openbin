@@ -7,10 +7,15 @@ export async function resizeImageForAi(
   buffer: Buffer,
   mimeType: string,
 ): Promise<{ buffer: Buffer; mimeType: string }> {
-  // All formats including GIF are resized — sending an unbounded GIF straight
-  // through to the provider lets a small upload (under multer's 5MB cap) cost
-  // an outsized number of tokens. sharp picks the first frame for animated GIFs.
   try {
+    // GIFs always go through to flatten animated frames; non-GIFs already
+    // within budget skip the re-encode round-trip.
+    if (mimeType !== 'image/gif') {
+      const meta = await sharp(buffer).metadata();
+      if (meta.width && meta.height && meta.width <= 1024 && meta.height <= 1024) {
+        return { buffer, mimeType };
+      }
+    }
     const output = await sharp(buffer, { animated: false })
       .resize(1024, 1024, { fit: 'inside' })
       .webp({ quality: 80 })

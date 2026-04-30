@@ -29,9 +29,10 @@ export function requireLocationMember(paramName = 'id') {
 }
 
 /**
- * Middleware factory to verify user is a member or admin of a location.
- * Viewers are rejected. Used to gate write-shaped operations like AI
- * streaming endpoints that emit mutation suggestions or burn credits.
+ * Member-or-admin check. Intentionally simpler than `requireMemberOrAbove`
+ * in lib/binAccess (no plan-writability or effective-role transfer logic) —
+ * AI streams don't write to location-scoped storage, so plan-driven
+ * read-only state shouldn't gate them.
  */
 export function requireLocationMemberOrAbove(paramName = 'id') {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {

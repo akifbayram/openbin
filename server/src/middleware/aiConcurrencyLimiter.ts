@@ -1,19 +1,12 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
-/** In-flight request count per authenticated user id. */
-const inFlight = new Map<string, number>();
-
 /**
- * Per-user concurrency cap for AI streaming endpoints. Counts in-flight requests
- * by `req.user.id`; rejects with 429 when the user already holds `cap` slots.
- * Slots are released when the response emits `'close'` (normal end OR client
- * disconnect both fire it).
- *
- * Unauthenticated requests pass through without consuming a slot — auth
- * middleware should reject earlier; this guard exists only so the limiter
- * cannot crash when ordering is changed.
+ * Per-user in-flight cap for AI streaming endpoints. The slot is released on
+ * `res.on('close')` — fires for both normal end and client disconnect.
  */
 export function createAiConcurrencyLimiter(cap: number): RequestHandler {
+  const inFlight = new Map<string, number>();
+
   return (req: Request, res: Response, next: NextFunction): void => {
     const userId = req.user?.id;
     if (!userId) {
@@ -33,7 +26,7 @@ export function createAiConcurrencyLimiter(cap: number): RequestHandler {
     inFlight.set(userId, current + 1);
 
     let released = false;
-    const release = (): void => {
+    res.on('close', () => {
       if (released) return;
       released = true;
       const count = inFlight.get(userId) ?? 0;
@@ -42,14 +35,8 @@ export function createAiConcurrencyLimiter(cap: number): RequestHandler {
       } else {
         inFlight.set(userId, count - 1);
       }
-    };
+    });
 
-    res.on('close', release);
     next();
   };
-}
-
-/** Test-only: clear the in-flight counter map between test cases. */
-export function __resetAiConcurrencyForTest(): void {
-  inFlight.clear();
 }

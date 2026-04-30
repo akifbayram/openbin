@@ -73,7 +73,7 @@ describe('runAnalysisStream', () => {
       return 'mock-content' as unknown as import('ai').UserContent;
     });
 
-    const mockReq = { user: { id: 'user-1' }, once: () => mockReq } as unknown as Request;
+    const mockReq = { user: { id: 'user-1' }, once: vi.fn().mockReturnThis() } as unknown as Request;
     const mockRes = {} as Response;
 
     await runAnalysisStream({
