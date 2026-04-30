@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { generateUuid, getDb, query } from '../../db.js';
+import { generateUuid, query } from '../../db.js';
 import { countNonViewerMembers } from '../memberCounts.js';
 
 describe('countNonViewerMembers', () => {
