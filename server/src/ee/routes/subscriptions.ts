@@ -162,6 +162,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
           `SELECT lm.location_id, l.name, COUNT(*) as cnt
            FROM location_members lm JOIN locations l ON l.id = lm.location_id
            WHERE lm.location_id IN (SELECT id FROM locations WHERE created_by = $1)
+             AND lm.role != 'viewer'
            GROUP BY lm.location_id, l.name`,
           [userId],
         ),
