@@ -7,6 +7,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // ---- Module-level mocks (hoisted before imports) ----
 // Use vi.mock before other imports so it's hoisted correctly.
 // We set subscriptionJwtSecret to a known value so the route can verify tokens.
+vi.mock('../ee/lifecycleEmails.js', () => ({
+  fireSubscriptionConfirmedEmail: vi.fn(),
+  fireSubscriptionExpiredEmail: vi.fn(),
+  fireDowngradeImpactEmail: vi.fn(),
+}));
+
 vi.mock('../lib/config.js', () => ({
   config: {
     port: 1453,
@@ -220,7 +226,10 @@ describe('POST /api/subscriptions/callback', () => {
     expect(res.body.message).toBe('Invalid callback payload');
   });
 
-  it('returns 404 for unknown userId', async () => {
+  it('logs orphan and returns 200 for unknown userId (hard-deleted)', async () => {
+    // A deleted-then-recreated user (different userId, same email) is
+    // covered by this same path: the new user has a different id, so any
+    // pending webhook bound to the old id still lands here as orphaned.
     const token = await makeSubToken({ userId: 'nonexistent-user-id', plan: 1, status: 1, activeUntil: null });
 
     const res = await request(app)
@@ -228,9 +237,20 @@ describe('POST /api/subscriptions/callback', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({});
 
-    expect(res.status).toBe(404);
-    expect(res.body.error).toBe('NOT_FOUND');
-    expect(res.body.message).toBe('User not found');
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.orphaned).toBe(true);
+
+    const orphans = await query<{ user_id_attempted: string; reason: string; payload_json: string }>(
+      'SELECT user_id_attempted, reason, payload_json FROM subscription_orphans WHERE user_id_attempted = $1',
+      ['nonexistent-user-id'],
+    );
+    expect(orphans.rows.length).toBe(1);
+    expect(orphans.rows[0].reason).toBe('user_not_found');
+    const parsed = JSON.parse(orphans.rows[0].payload_json);
+    expect(parsed.userId).toBe('nonexistent-user-id');
+    expect(parsed.plan).toBe(1);
+    expect(parsed.status).toBe(1);
   });
 
   it('updates user plan to PRO with active status', async () => {
@@ -380,6 +400,59 @@ describe('POST /api/subscriptions/callback', () => {
     const res = await request(app).post('/api/subscriptions/callback').set('Authorization', `Bearer ${token}`).send({});
     expect(res.status).toBe(422);  // ValidationError
     expect(res.body.error).toBe('VALIDATION_ERROR');
+  });
+
+  describe('lifecycle email gating', () => {
+    it('skips lifecycle emails for soft-deleted users', async () => {
+      const { user } = await createTestUser(app);
+      // Mark the user as soft-deleted (in recovery grace window).
+      await query(
+        `UPDATE users SET deletion_requested_at = ${"'2026-04-01T00:00:00Z'"} WHERE id = $1`,
+        [user.id],
+      );
+
+      const lifecycleEmails = await import('../ee/lifecycleEmails.js');
+      const confirmedSpy = vi.mocked(lifecycleEmails.fireSubscriptionConfirmedEmail);
+      const expiredSpy = vi.mocked(lifecycleEmails.fireSubscriptionExpiredEmail);
+      confirmedSpy.mockClear();
+      expiredSpy.mockClear();
+
+      const token = await makeSubToken({ userId: user.id, plan: 1, status: 1, activeUntil: '2027-01-01T00:00:00Z' });
+      const res = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+      expect(res.status).toBe(200);
+
+      // UPDATE still succeeded
+      const dbResult = await query<{ plan: number; sub_status: number }>(
+        'SELECT plan, sub_status FROM users WHERE id = $1',
+        [user.id],
+      );
+      expect(dbResult.rows[0].plan).toBe(1);
+      expect(dbResult.rows[0].sub_status).toBe(1);
+
+      // No emails fired
+      expect(confirmedSpy).not.toHaveBeenCalled();
+      expect(expiredSpy).not.toHaveBeenCalled();
+    });
+
+    it('fires lifecycle emails for normal users (sanity check)', async () => {
+      const { user } = await createTestUser(app);
+
+      const lifecycleEmails = await import('../ee/lifecycleEmails.js');
+      const confirmedSpy = vi.mocked(lifecycleEmails.fireSubscriptionConfirmedEmail);
+      confirmedSpy.mockClear();
+
+      const token = await makeSubToken({ userId: user.id, plan: 1, status: 1, activeUntil: '2027-01-01T00:00:00Z' });
+      const res = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+      expect(res.status).toBe(200);
+
+      expect(confirmedSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('replay & claim validation', () => {
