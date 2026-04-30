@@ -1,3 +1,5 @@
+import type { TxQueryFn } from '../db/types.js';
+
 export interface NewUserPayload {
   userId: string;
   email: string | null;
@@ -13,10 +15,31 @@ export interface UserUpdatePayload {
   activeUntil?: string | null;
 }
 
+export interface DeletionContext {
+  userId: string;
+  refundPolicy: 'none' | 'prorated';
+}
+
+export interface CancellationResult {
+  cancelled: boolean;
+  hadActiveSubscription: boolean;
+  refundAmountCents?: number;
+  reason?: string;
+}
+
 interface EeHooks {
   onNewUser?: (user: NewUserPayload) => void;
   onUserUpdate?: (payload: UserUpdatePayload) => void;
   onDeleteUser?: (userId: string) => Promise<void>;
+  cancelSubscription?: (ctx: DeletionContext) => Promise<CancellationResult>;
+  deleteBillingCustomer?: (userId: string) => Promise<void>;
+  notifyDeletionScheduled?: (
+    userId: string,
+    scheduledAt: string,
+    hadActiveSubscription: boolean,
+    refundAmountCents?: number,
+  ) => void;
+  onHardDeleteUser?: (tx: TxQueryFn, userId: string) => Promise<void>;
 }
 
 const hooks: EeHooks = {};
