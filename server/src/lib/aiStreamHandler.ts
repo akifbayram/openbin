@@ -6,7 +6,7 @@ import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, IMAGE_
 import { AiSuggestionsSchema } from './aiSchemas.js';
 import type { TaskType, UserAiSettings } from './aiSettings.js';
 import { getConfigForTask, getUserAiSettings } from './aiSettings.js';
-import { pipeAiStreamToResponse } from './aiStream.js';
+import { pipeAiStreamToResponse, withClientDisconnect } from './aiStream.js';
 import { verifyOptionalLocationMembership } from './binAccess.js';
 import { isDemoUser } from './config.js';
 import { ForbiddenError } from './httpErrors.js';
@@ -34,13 +34,15 @@ export async function resolveUserModel(userId: string, task: TaskType, demo = fa
 /** Compose common stream options from user settings with optional per-route overrides. */
 export function streamOpts(
   settings: UserAiSettings,
+  req: Request,
   overrides?: { maxTokens?: number; temperature?: number },
 ): { maxTokens: number; temperature: number; topP: number | undefined; abortSignal: AbortSignal } {
+  const timeoutSignal = AbortSignal.timeout((settings.request_timeout ?? 300) * 1000);
   return {
     maxTokens: overrides?.maxTokens ?? settings.max_tokens ?? 4096,
     temperature: overrides?.temperature ?? settings.temperature ?? 0.3,
     topP: settings.top_p ?? undefined,
-    abortSignal: AbortSignal.timeout((settings.request_timeout ?? 300) * 1000),
+    abortSignal: withClientDisconnect(req, timeoutSignal),
   };
 }
 
@@ -91,7 +93,7 @@ export async function runAnalysisStream(args: AnalysisStreamArgs): Promise<void>
     system: buildSystem(settings),
     userContent: buildUserContent({ imageParts, imageCount: images.length }),
     schema: AiSuggestionsSchema,
-    ...streamOpts(settings, {
+    ...streamOpts(settings, req, {
       maxTokens: maxTokens ?? (images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE),
     }),
   });

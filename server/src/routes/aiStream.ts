@@ -27,7 +27,7 @@ import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../l
 import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 import { demoConnectionLimiter, isDemoUser as isDemoConn } from '../middleware/demoConnectionLimiter.js';
-import { requireLocationMember } from '../middleware/locationAccess.js';
+import { requireLocationMemberOrAbove } from '../middleware/locationAccess.js';
 import { checkAiCredits, requireAiAccess, requirePlusOrAbove } from '../middleware/requirePlan.js';
 
 const streamRouter = Router();
@@ -135,7 +135,7 @@ function validateBinIds(binIds: unknown): string[] | undefined {
 }
 
 // POST /api/ai/query/stream
-streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream query', async (req, res) => {
+streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMemberOrAbove(), aiRouteHandler('stream query', async (req, res) => {
   const question = validateTextInput(req.body.question, 'question');
   const { locationId } = req.body;
   const priorMessages = parseHistoryFromBody(req.body);
@@ -149,13 +149,13 @@ streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAi
     system: buildQuerySysPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
     userContent: buildQueryUserMsg(question, context),
     priorMessages,
-    ...streamOpts(settings, { maxTokens: 4096, temperature: 0.2 }),
+    ...streamOpts(settings, req, { maxTokens: 4096, temperature: 0.2 }),
     enrichResult: makeQueryEnrichResult(locationId, req.user!.id),
   });
 }));
 
 // POST /api/ai/command/stream
-streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream command', async (req, res) => {
+streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMemberOrAbove(), aiRouteHandler('stream command', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId } = req.body;
   const priorMessages = parseHistoryFromBody(req.body);
@@ -172,13 +172,13 @@ streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), check
     system: buildCommandSysPrompt(context.availableColors, context.availableIcons, settings.command_prompt ?? undefined, isDemoUser(req)),
     userContent: buildCommandUserMsg(request),
     priorMessages,
-    ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
+    ...streamOpts(settings, req, { maxTokens: 2500, temperature: 0.2 }),
     enrichResult: makeCommandEnrichResult(locationId, req.user!.id),
   });
 }));
 
 // POST /api/ai/ask/stream — unified command+query endpoint
-streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream ask', async (req, res) => {
+streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMemberOrAbove(), aiRouteHandler('stream ask', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId, binIds: rawBinIds } = req.body;
   const binIds = validateBinIds(rawBinIds);
@@ -202,7 +202,7 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
       system: buildQuerySysPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
       userContent: buildQueryUserMsg(`${scopeNote}${text}`, queryContext),
       priorMessages,
-      ...streamOpts(settings, { maxTokens: 4096, temperature: 0.2 }),
+      ...streamOpts(settings, req, { maxTokens: 4096, temperature: 0.2 }),
       enrichResult: makeQueryEnrichResult(locationId, req.user!.id),
     });
   } else {
@@ -220,7 +220,7 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
       system,
       userContent: buildCommandUserMsg(request),
       priorMessages,
-      ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
+      ...streamOpts(settings, req, { maxTokens: 2500, temperature: 0.2 }),
       enrichResult: makeCommandEnrichResult(locationId, req.user!.id),
     });
   }
@@ -235,7 +235,7 @@ streamRouter.post('/structure-text/stream', ...aiRateLimiters, requireAiAccess()
   await pipeAiStreamToResponse(res, model, {
     system: buildStructurePrompt({ text, mode: 'items', context }, settings.structure_prompt ?? undefined, isDemoUser(req)),
     userContent: text,
-    ...streamOpts(settings, { maxTokens: STRUCTURE_TEXT_TOKENS, temperature: 0.2 }),
+    ...streamOpts(settings, req, { maxTokens: STRUCTURE_TEXT_TOKENS, temperature: 0.2 }),
   });
 }));
 
@@ -346,7 +346,7 @@ streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), check
     system: buildCorrectionPrompt(),
     userContent: userMessage,
     schema: AiSuggestionsSchema,
-    ...streamOpts(settings, { maxTokens: 2500 }),
+    ...streamOpts(settings, req, { maxTokens: 2500 }),
   });
 }));
 
@@ -380,7 +380,7 @@ streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
 }));
 
 // POST /api/ai/reorganize/stream
-streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
+streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, requireLocationMemberOrAbove(), aiRouteHandler('stream reorganization', async (req, res) => {
   const { bins: inputBins, maxBins, areaName, userNotes, strictness, granularity,
     ambiguousPolicy, duplicates, outliers, minItemsPerBin, maxItemsPerBin } = req.body;
 
@@ -411,7 +411,7 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
   // Retry up to 3 times if the AI drops or invents items (per-item identity, not just totals)
   const MAX_ATTEMPTS = 3;
   const writeEvent = initSseResponse(res);
-  const sOpts = streamOpts(settings, { temperature: 0.2, maxTokens: 16000 });
+  const sOpts = streamOpts(settings, req, { temperature: 0.2, maxTokens: 16000 });
   const allowDupes = ambiguousPolicy === 'multi-bin' || duplicates === 'allow';
   const inputItemNames = inputBins.flatMap((b: { items?: string[] }) => b.items ?? []);
   let finalText: string | null = null;
@@ -462,7 +462,7 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
 }));
 
 // POST /api/ai/reorganize-tags/stream
-streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream tag suggestions', async (req, res) => {
+streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, requireLocationMemberOrAbove(), aiRouteHandler('stream tag suggestions', async (req, res) => {
   const { bins: inputBins, locationId, changeLevel, granularity, maxTagsPerBin, userNotes } = req.body ?? {};
 
   if (!Array.isArray(inputBins) || inputBins.length === 0) throw new ValidationError('bins array is required');
@@ -513,7 +513,7 @@ streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbo
 
   const MAX_ATTEMPTS = 3;
   const writeEvent = initSseResponse(res);
-  const sOpts = streamOpts(settings, { temperature: 0.2, maxTokens: 8000 });
+  const sOpts = streamOpts(settings, req, { temperature: 0.2, maxTokens: 8000 });
   let finalText: string | null = null;
   let hardFailure = false;
 

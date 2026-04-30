@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { d, generateUuid, query } from '../db.js';
-import { testProviderConnection } from '../lib/aiCaller.js';
+import { AiAnalysisError, testProviderConnection, validateEndpointUrl } from '../lib/aiCaller.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, getEnvGroupOverride, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
@@ -206,6 +206,17 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     throw new ValidationError('requestTimeout must be between 10 and 300 seconds');
   }
 
+  if (endpointUrl) {
+    try {
+      await validateEndpointUrl(endpointUrl, isDemoUser(req));
+    } catch (err) {
+      if (err instanceof AiAnalysisError) {
+        throw new ValidationError(err.message);
+      }
+      throw err;
+    }
+  }
+
   const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
   const encryptedKey = encryptApiKey(finalApiKey);
   const finalCustomPrompt = (customPrompt && typeof customPrompt === 'string' && customPrompt.trim()) ? customPrompt.trim() : null;
@@ -302,8 +313,10 @@ router.post('/structure-text', ...aiRateLimiters, requireAiAccess(), checkAiCred
   res.json(result);
 }));
 
-// POST /api/ai/test — test connection with provided credentials
-router.post('/test', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('test connection', async (req, res) => {
+// POST /api/ai/test — test connection with provided credentials.
+// Intentionally does NOT consume an AI credit: this is a UX action to verify
+// a key/endpoint, and burning a credit per click punishes users for trying.
+router.post('/test', ...aiRateLimiters, requireAiAccess(), aiRouteHandler('test connection', async (req, res) => {
   if (isDemoUser(req)) {
     throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot configure API keys. Use server-configured keys or mock mode.');
   }
@@ -346,6 +359,17 @@ router.put('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('save
   const { provider, model, endpointUrl } = req.body;
   if (provider && !(VALID_PROVIDERS as readonly string[]).includes(provider)) {
     throw new ValidationError('Invalid provider');
+  }
+
+  if (endpointUrl) {
+    try {
+      await validateEndpointUrl(endpointUrl, isDemoUser(req));
+    } catch (err) {
+      if (err instanceof AiAnalysisError) {
+        throw new ValidationError(err.message);
+      }
+      throw err;
+    }
   }
 
   const id = generateUuid();
