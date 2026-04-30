@@ -10,6 +10,7 @@ import { createLogger } from './lib/logger.js';
 import { cleanupOrphanPhotos } from './lib/photoCleanup.js';
 import { purgeExpiredRefreshTokens } from './lib/refreshTokens.js';
 import { closeThumbnailPool } from './lib/thumbnailPool.js';
+import { startUserCleanupJob, stopUserCleanupJob } from './lib/userCleanup.js';
 
 const log = createLogger('startup');
 
@@ -69,6 +70,10 @@ const server = app.listen(config.port, () => {
     setInterval(() => purgeExpiredRefreshTokens().catch((err) => log.error('Token purge failed:', err instanceof Error ? err.message : err)), 24 * 60 * 60 * 1000),
   );
 
+  // Hard-delete users whose grace window has elapsed. Runs in BOTH editions —
+  // self-host needs it too so requested deletions actually take effect.
+  startUserCleanupJob();
+
   eeModule?.startEeJobs();
 
   // Orphan photo cleanup — 30s after startup, then every 6 hours
@@ -89,6 +94,7 @@ const shutdown = () => {
   server.close(() => {
     // Stop all scheduled jobs
     stopBackupScheduler();
+    stopUserCleanupJob();
     eeModule?.stopEeJobs();
     for (const id of timers.timeouts) clearTimeout(id);
     for (const id of timers.intervals) clearInterval(id);
