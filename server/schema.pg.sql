@@ -343,6 +343,8 @@ CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id
 CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
 CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status);
 CREATE INDEX IF NOT EXISTS idx_users_trial ON users(sub_status, created_at);
+CREATE INDEX IF NOT EXISTS idx_users_deletion_scheduled
+  ON users(deletion_scheduled_at) WHERE deletion_scheduled_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_locations_created_by ON locations(created_by);
 CREATE INDEX IF NOT EXISTS idx_photos_created_by ON photos(created_by);
 

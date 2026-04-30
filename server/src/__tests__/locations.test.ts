@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../index.js';
-import { createTestLocation, createTestUser } from './helpers.js';
+import { createTestLocation, createTestUser, joinTestLocation } from './helpers.js';
 
 let app: Express;
 
@@ -345,5 +345,36 @@ describe('default_join_role', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ role: 'viewer' });
     expect(res.status).toBe(200);
+  });
+});
+
+describe('Location.viewer_count', () => {
+  it('returns 0 when no viewers exist', async () => {
+    const { token } = await createTestUser(app);
+    await createTestLocation(app, token);
+    const res = await request(app)
+      .get('/api/locations')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.body.results[0].viewer_count).toBe(0);
+    expect(res.body.results[0].member_count).toBe(1);
+  });
+
+  it('counts viewers separately from member_count total', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    await request(app)
+      .put(`/api/locations/${location.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ default_join_role: 'viewer' });
+    for (let i = 0; i < 3; i++) {
+      const { token: vToken } = await createTestUser(app);
+      await joinTestLocation(app, vToken, location.invite_code);
+    }
+    const res = await request(app)
+      .get('/api/locations')
+      .set('Authorization', `Bearer ${adminToken}`);
+    const loc = res.body.results.find((l: { id: string }) => l.id === location.id);
+    expect(loc.member_count).toBe(4); // admin + 3 viewers (total)
+    expect(loc.viewer_count).toBe(3);
   });
 });

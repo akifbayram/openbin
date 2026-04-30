@@ -73,6 +73,7 @@ function mockProUserWithUsage(usage: Partial<Awaited<ReturnType<typeof getUserUs
     locationCount: 3,
     photoStorageMb: 0,
     memberCounts: {},
+    viewerCounts: {},
     photoCount: 0,
     ...usage,
   });
@@ -91,7 +92,7 @@ function mockFreeUser() {
     billingPeriod: null,
   });
   vi.mocked(getUserUsage).mockResolvedValue({
-    binCount: 0, locationCount: 1, photoStorageMb: 0, memberCounts: {}, photoCount: 0,
+    binCount: 0, locationCount: 1, photoStorageMb: 0, memberCounts: {}, viewerCounts: {}, photoCount: 0,
   });
 }
 

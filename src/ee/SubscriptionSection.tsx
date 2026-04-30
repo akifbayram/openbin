@@ -21,6 +21,7 @@ const PAGE_DESCRIPTION = 'Manage your plan and billing.';
 const ZERO_USAGE: PlanUsage = {
   binCount: 0, locationCount: 0, photoStorageMb: 0,
   memberCounts: {},
+  viewerCounts: {},
   overLimits: { locations: false, photos: false, members: [] },
 };
 

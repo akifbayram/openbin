@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../index.js';
-import { createTestLocation, createTestUser } from './helpers.js';
+import { createTestLocation, createTestUser, joinTestLocation } from './helpers.js';
 
 let app: Express;
 beforeEach(() => { app = createApp(); });
@@ -190,5 +190,58 @@ describe('AI streaming routes', () => {
         .send({ locationId: otherLocationId, bins: [{ name: 'A', items: ['x'] }] });
       expect(res.status).toBe(403);
     });
+  });
+});
+
+describe('viewers cannot use AI streaming endpoints', () => {
+  it('rejects viewer on /ai/ask/stream with 403', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    await request(app)
+      .put(`/api/locations/${location.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ default_join_role: 'viewer' });
+    const { token: viewerToken } = await createTestUser(app);
+    await joinTestLocation(app, viewerToken, location.invite_code);
+
+    const res = await request(app)
+      .post('/api/ai/ask/stream')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ text: 'where is the screwdriver?', locationId: location.id });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects viewer on /ai/query/stream with 403', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    await request(app)
+      .put(`/api/locations/${location.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ default_join_role: 'viewer' });
+    const { token: viewerToken } = await createTestUser(app);
+    await joinTestLocation(app, viewerToken, location.invite_code);
+
+    const res = await request(app)
+      .post('/api/ai/query/stream')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ question: 'q', locationId: location.id });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects viewer on /ai/command/stream with 403', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    await request(app)
+      .put(`/api/locations/${location.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ default_join_role: 'viewer' });
+    const { token: viewerToken } = await createTestUser(app);
+    await joinTestLocation(app, viewerToken, location.invite_code);
+
+    const res = await request(app)
+      .post('/api/ai/command/stream')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ text: 'do thing', locationId: location.id });
+    expect(res.status).toBe(403);
   });
 });

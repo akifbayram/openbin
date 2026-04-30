@@ -165,7 +165,9 @@ export function AreasPage() {
     }
   }, [inviteLink, activeLocation?.name, showToast]);
 
-  const memberCount = activeLocation?.member_count ?? 0;
+  const totalMemberCount = activeLocation?.member_count ?? 0;
+  const viewerCount = activeLocation?.viewer_count ?? 0;
+  const memberCount = totalMemberCount - viewerCount;
   const deleteTargetLocation = locations.find((l) => l.id === deleteLocationId);
   const leaveTargetLocation = locations.find((l) => l.id === leaveLocationId);
 
@@ -281,11 +283,23 @@ export function AreasPage() {
                     type="button"
                     className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
                     onClick={() => setMembersLocationId(activeLocation.id)}
-                    aria-label={`View ${memberCount} ${memberCount !== 1 ? 'members' : 'member'}`}
+                    aria-label={
+                      viewerCount > 0
+                        ? `View ${memberCount} ${memberCount !== 1 ? 'members' : 'member'} and ${viewerCount} ${viewerCount !== 1 ? 'viewers' : 'viewer'}`
+                        : `View ${memberCount} ${memberCount !== 1 ? 'members' : 'member'}`
+                    }
                   >
                     <Users className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{memberCount} {memberCount !== 1 ? 'members' : 'member'}</span>
-                    <span className="sm:hidden">{memberCount}</span>
+                    <span className="hidden sm:inline">
+                      {memberCount} {memberCount !== 1 ? 'members' : 'member'}
+                      {viewerCount > 0 && (
+                        <>, {viewerCount} {viewerCount !== 1 ? 'viewers' : 'viewer'}</>
+                      )}
+                    </span>
+                    <span className="sm:hidden">
+                      {memberCount}
+                      {viewerCount > 0 && <>+{viewerCount}</>}
+                    </span>
                   </button>
                   {(activeLocation.bin_count != null || activeLocation.area_count != null) && (
                     <>

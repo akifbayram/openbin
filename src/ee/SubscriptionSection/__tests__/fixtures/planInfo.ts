@@ -33,5 +33,6 @@ export function makePlanInfo(overrides: Partial<PlanInfo> = {}): PlanInfo {
 export const EMPTY_USAGE: PlanUsage = {
   binCount: 0, locationCount: 1, photoStorageMb: 0,
   memberCounts: {},
+  viewerCounts: {},
   overLimits: { locations: false, photos: false, members: [] },
 };

@@ -463,7 +463,10 @@ export interface UserUsage {
   locationCount: number;
   photoCount: number;
   photoStorageMb: number;
+  /** Counts of admins+members (non-viewers) per location. Used for plan-cap checks. */
   memberCounts: Record<string, number>;
+  /** Counts of viewers per location. Surfaced to UI/emails; never gates limits. */
+  viewerCounts: Record<string, number>;
 }
 
 export async function getUserUsage(userId: string): Promise<UserUsage> {
@@ -471,16 +474,24 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM bins WHERE created_by = $1 AND deleted_at IS NULL', [userId]),
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1', [userId]),
     query<{ cnt: number; total: number }>('SELECT COUNT(*) as cnt, COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]),
-    query<{ location_id: string; cnt: number }>(
-      `SELECT location_id, COUNT(*) as cnt FROM location_members
+    query<{ location_id: string; role: string; cnt: number }>(
+      `SELECT location_id, role, COUNT(*) as cnt FROM location_members
        WHERE location_id IN (SELECT id FROM locations WHERE created_by = $1)
-       GROUP BY location_id`,
+       GROUP BY location_id, role`,
       [userId],
     ),
   ]);
 
   const memberCounts: Record<string, number> = {};
-  for (const row of memberResult.rows) memberCounts[row.location_id] = row.cnt;
+  const viewerCounts: Record<string, number> = {};
+  for (const row of memberResult.rows) {
+    const cnt = Number(row.cnt);
+    if (row.role === 'viewer') {
+      viewerCounts[row.location_id] = (viewerCounts[row.location_id] ?? 0) + cnt;
+    } else {
+      memberCounts[row.location_id] = (memberCounts[row.location_id] ?? 0) + cnt;
+    }
+  }
 
   return {
     binCount: binResult.rows[0].cnt,
@@ -488,6 +499,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
     photoCount: photoResult.rows[0].cnt,
     photoStorageMb: Math.round((photoResult.rows[0].total / (1024 * 1024)) * 100) / 100,
     memberCounts,
+    viewerCounts,
   };
 }
 
@@ -645,6 +657,7 @@ export const SELF_HOSTED_USAGE_STUB = {
   photoCount: 0,
   photoStorageMb: 0,
   memberCounts: {} as Record<string, number>,
+  viewerCounts: {} as Record<string, number>,
   overLimits: EMPTY_OVER_LIMITS,
 };
 

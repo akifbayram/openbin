@@ -33,6 +33,7 @@ const MOCK_USAGE = {
   locationCount: 1,
   photoStorageMb: 10,
   memberCounts: {},
+  viewerCounts: {},
   overLimits: { locations: false, photos: false, members: [] },
 };
 

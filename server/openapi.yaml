@@ -335,6 +335,10 @@ components:
           format: date-time
         member_count:
           type: integer
+          description: Total members in this location (admins + members + viewers).
+        viewer_count:
+          type: integer
+          description: Subset of member_count whose role is 'viewer'. Viewers don't consume paid member slots.
         area_count:
           type: integer
         bin_count:
