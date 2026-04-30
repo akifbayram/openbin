@@ -9,7 +9,7 @@ export interface NewUserPayload {
 
 export interface UserUpdatePayload {
   userId: string;
-  action: 'update_subscription' | 'delete_user';
+  action: 'update_subscription';
   plan?: number;
   status?: number;
   activeUntil?: string | null;

@@ -6,6 +6,7 @@ import { binItemSoftDelete } from './0005_bin_item_soft_delete.js';
 import { webhookJtiSeen } from './0006_webhook_jti_seen.js';
 import { subscriptionState } from './0007_subscription_state.js';
 import { deletionLifecycle } from './0008_deletion_lifecycle.js';
+import { drainDeleteUserOutbox } from './0009_drain_delete_user_outbox.js';
 import type { Migration } from './types.js';
 
 /**
@@ -21,4 +22,5 @@ export const migrations: Migration[] = [
   webhookJtiSeen,
   subscriptionState,
   deletionLifecycle,
+  drainDeleteUserOutbox,
 ];
