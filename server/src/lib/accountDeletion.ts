@@ -133,21 +133,19 @@ export async function requestDeletion(req: DeletionRequest): Promise<DeletionRes
   if (grace === 0) {
     await hardDeleteUser(userId);
     if (initiatedByAdminId) {
-      if (initiatedByAdminId !== 'system') {
-        logAdminAction({
-          actorId: initiatedByAdminId,
-          actorName: initiatedByAdminName ?? 'admin',
-          action: 'hard_delete_account',
-          targetType: 'user',
-          targetId: userId,
-          targetName: userEmail,
-          details: {
-            refundPolicy,
-            hadActiveSubscription: !!cancellation?.hadActiveSubscription,
-            refundAmountCents: cancellation?.refundAmountCents,
-          },
-        });
-      }
+      logAdminAction({
+        actorId: initiatedByAdminId,
+        actorName: initiatedByAdminName ?? 'admin',
+        action: 'hard_delete_account',
+        targetType: 'user',
+        targetId: userId,
+        targetName: userEmail,
+        details: {
+          refundPolicy,
+          hadActiveSubscription: !!cancellation?.hadActiveSubscription,
+          refundAmountCents: cancellation?.refundAmountCents,
+        },
+      });
       log.info(
         `Hard-deleted account by ${initiatedByAdminId} (${initiatedByAdminName ?? 'admin'}) for user ${userId} (${userEmail})`,
       );
@@ -180,27 +178,23 @@ export async function requestDeletion(req: DeletionRequest): Promise<DeletionRes
 
   // 9. Audit logging
   if (initiatedByAdminId) {
-    // Skip admin_audit_log for synthetic system actors (e.g. inactivityChecker
-    // passes 'system'). admin_audit_log.actor_id has a NOT NULL FK to users(id)
-    // and logAdminAction silently swallows insert failures, so synthetic IDs
-    // would just disappear into the .catch. The regular log line below covers
-    // the audit need for system-initiated deletions.
-    if (initiatedByAdminId !== 'system') {
-      logAdminAction({
-        actorId: initiatedByAdminId,
-        actorName: initiatedByAdminName ?? 'admin',
-        action: 'request_account_deletion',
-        targetType: 'user',
-        targetId: userId,
-        targetName: userEmail,
-        details: {
-          refundPolicy,
-          scheduledAt,
-          hadActiveSubscription: !!cancellation?.hadActiveSubscription,
-          refundAmountCents: cancellation?.refundAmountCents,
-        },
-      });
-    }
+    // The 'system' actor id refers to the bootstrapped system user row
+    // (seedSystemUser in db/init.ts), so the actor_id FK is satisfied for
+    // both real admins and system-initiated deletions.
+    logAdminAction({
+      actorId: initiatedByAdminId,
+      actorName: initiatedByAdminName ?? 'admin',
+      action: 'request_account_deletion',
+      targetType: 'user',
+      targetId: userId,
+      targetName: userEmail,
+      details: {
+        refundPolicy,
+        scheduledAt,
+        hadActiveSubscription: !!cancellation?.hadActiveSubscription,
+        refundAmountCents: cancellation?.refundAmountCents,
+      },
+    });
     log.info(
       `Account deletion requested by ${initiatedByAdminId} (${initiatedByAdminName ?? 'admin'}) for user ${userId} (${userEmail}); scheduledAt=${scheduledAt}`,
     );

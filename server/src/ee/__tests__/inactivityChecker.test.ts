@@ -84,14 +84,15 @@ describe('inactivityChecker', () => {
 
   // --- Deletion ---
   it('soft-deletes user inactive 365+ days', async () => {
-    // logAdminAction's actor_id has a FK to users(id); seed a 'system' row so
-    // the fire-and-forget audit insert lands. Production should bootstrap the
-    // same row at boot for inactivity-driven deletions to be auditable.
+    // logAdminAction's actor_id has a FK to users(id). Production bootstraps
+    // a 'system' user row at startup (seedSystemUser in db/init.ts) so this
+    // FK is satisfied for inactivity-driven deletions. The test setup wipes
+    // the users table between tests, so re-seed the row here for this test.
     await query(
-      `INSERT INTO users (id, email, display_name, password_hash, sub_status, created_at)
-       VALUES ('system', 'system@local', 'system', 'x', $1, $2)
+      `INSERT INTO users (id, email, display_name, password_hash, sub_status, suspended_at, created_at)
+       VALUES ('system', 'system@openbin.local', 'System', NULL, $1, $2, $3)
        ON CONFLICT (id) DO NOTHING`,
-      [SubStatus.INACTIVE, new Date().toISOString()],
+      [SubStatus.INACTIVE, new Date().toISOString(), new Date().toISOString()],
     );
     const id = await insertUser({ subStatus: SubStatus.INACTIVE, lastActiveAt: daysAgoIso(370) });
     await checkInactiveUsers();
@@ -109,14 +110,17 @@ describe('inactivityChecker', () => {
     expect(result.rows[0].deleted_at).not.toBeNull();
     expect(result.rows[0].deletion_reason).toBe('admin_initiated');
 
-    // System-initiated deletions skip admin_audit_log (the actor_id FK won't
-    // accept a synthetic 'system' value). Audit happens via the regular log
-    // stream instead — verified separately in the route-level admin tests.
-    const audit = await query<{ cnt: number }>(
-      'SELECT COUNT(*) as cnt FROM admin_audit_log WHERE target_id = $1',
+    // The audit row should be persisted now that the 'system' user row
+    // satisfies admin_audit_log.actor_id's FK. logAdminAction is
+    // fire-and-forget, so wait a tick for its async insert to land.
+    await new Promise((resolve) => setImmediate(resolve));
+    const audit = await query<{ cnt: number; action: string; actor_name: string }>(
+      'SELECT COUNT(*) as cnt, MAX(action) as action, MAX(actor_name) as actor_name FROM admin_audit_log WHERE target_id = $1',
       [id],
     );
-    expect(Number(audit.rows[0].cnt)).toBe(0);
+    expect(Number(audit.rows[0].cnt)).toBe(1);
+    expect(audit.rows[0].action).toBe('request_account_deletion');
+    expect(audit.rows[0].actor_name).toBe('inactivity-checker');
   });
 
   // --- Deletion at 365+ days does not trigger warning emails ---

@@ -42,6 +42,7 @@ import {
   useAdminLocations,
   useAnnouncements,
   useAuditLog,
+  useDeletionDiagnostics,
 } from './useAdminSystem';
 
 type Tab = 'system' | 'audit' | 'locations';
@@ -57,11 +58,17 @@ function formatUptime(seconds: number): string {
   return `${m}m`;
 }
 
-function HealthCard({ label, value }: { label: string; value: string | number }) {
+function HealthCard({ label, value, tone, subtitle }: { label: string; value: string | number; tone?: 'default' | 'warning'; subtitle?: string }) {
+  const valueColor = tone === 'warning'
+    ? 'text-[var(--color-warning)]'
+    : 'text-[var(--text-primary)]';
   return (
     <div className="flex flex-col gap-0.5 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
       <span className="ui-col-header">{label}</span>
-      <span className="text-[20px] font-bold text-[var(--text-primary)] leading-tight tabular-nums">{value}</span>
+      <span className={`text-[20px] font-bold ${valueColor} leading-tight tabular-nums`}>{value}</span>
+      {subtitle && (
+        <span className="text-[11px] text-[var(--text-tertiary)]">{subtitle}</span>
+      )}
     </div>
   );
 }
@@ -75,6 +82,7 @@ function SystemTab() {
   const [maintenanceMsg, setMaintenanceMsg] = useState('');
   const [loadingHealth, setLoadingHealth] = useState(true);
 
+  const { diagnostics, isLoading: diagnosticsLoading } = useDeletionDiagnostics();
   const { announcements, isLoading: announcementsLoading, createAnnouncement, deleteAnnouncement } = useAnnouncements();
   const [newBannerOpen, setNewBannerOpen] = useState(false);
   const [bannerForm, setBannerForm] = useState({ text: '', type: 'info' as 'info' | 'warning' | 'critical' });
@@ -165,6 +173,45 @@ function SystemTab() {
           </CardContent>
         </Card>
       )}
+
+      {/* Account deletion lifecycle */}
+      <Card>
+        <CardHeader><CardTitle>Account deletion lifecycle</CardTitle></CardHeader>
+        <CardContent>
+          {diagnosticsLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {Array.from({ length: 3 }, (_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+                <div key={i} className="flex flex-col gap-1.5 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-5 w-10" />
+                </div>
+              ))}
+            </div>
+          ) : diagnostics ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <HealthCard
+                label="Pending"
+                value={diagnostics.pendingDeletionCount}
+                subtitle="in grace window"
+              />
+              <HealthCard
+                label="Expired"
+                value={diagnostics.expiredPendingCount}
+                subtitle="awaiting cleanup"
+                tone={diagnostics.expiredPendingCount > 0 ? 'warning' : 'default'}
+              />
+              <HealthCard
+                label="Orphan callbacks"
+                value={diagnostics.subscriptionOrphanCount30d}
+                subtitle="last 30 days"
+              />
+            </div>
+          ) : (
+            <p className="text-[14px] text-[var(--text-tertiary)] py-2">Failed to load diagnostics.</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Maintenance */}
       <Card>

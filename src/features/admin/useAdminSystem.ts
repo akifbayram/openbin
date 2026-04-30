@@ -111,6 +111,37 @@ export async function fetchSystemHealth(): Promise<SystemHealth> {
   return apiFetch<SystemHealth>('/api/admin/system/health');
 }
 
+export interface DeletionDiagnostics {
+  pendingDeletionCount: number;
+  expiredPendingCount: number;
+  subscriptionOrphanCount30d: number;
+}
+
+export async function fetchDeletionDiagnostics(): Promise<DeletionDiagnostics> {
+  return apiFetch<DeletionDiagnostics>('/api/admin/system/deletion-diagnostics');
+}
+
+export function useDeletionDiagnostics() {
+  const [diagnostics, setDiagnostics] = useState<DeletionDiagnostics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await fetchDeletionDiagnostics();
+      setDiagnostics(result);
+    } catch {
+      setDiagnostics(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { diagnostics, isLoading, refresh };
+}
+
 export async function fetchMaintenanceStatus(): Promise<MaintenanceStatus> {
   return apiFetch<MaintenanceStatus>('/api/admin/system/maintenance');
 }
