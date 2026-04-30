@@ -109,17 +109,14 @@ describe('inactivityChecker', () => {
     expect(result.rows[0].deleted_at).not.toBeNull();
     expect(result.rows[0].deletion_reason).toBe('admin_initiated');
 
-    // logAdminAction is fire-and-forget; poll briefly until the row appears.
-    let audit: { rows: Array<{ actor_name: string; action: string }> } = { rows: [] };
-    for (let i = 0; i < 20 && audit.rows.length === 0; i++) {
-      await new Promise((r) => setTimeout(r, 10));
-      audit = await query<{ actor_name: string; action: string }>(
-        'SELECT actor_name, action FROM admin_audit_log WHERE target_id = $1 ORDER BY created_at DESC LIMIT 1',
-        [id],
-      );
-    }
-    expect(audit.rows[0].action).toBe('request_account_deletion');
-    expect(audit.rows[0].actor_name).toBe('inactivity-checker');
+    // System-initiated deletions skip admin_audit_log (the actor_id FK won't
+    // accept a synthetic 'system' value). Audit happens via the regular log
+    // stream instead — verified separately in the route-level admin tests.
+    const audit = await query<{ cnt: number }>(
+      'SELECT COUNT(*) as cnt FROM admin_audit_log WHERE target_id = $1',
+      [id],
+    );
+    expect(Number(audit.rows[0].cnt)).toBe(0);
   });
 
   // --- Deletion at 365+ days does not trigger warning emails ---
