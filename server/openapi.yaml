@@ -223,10 +223,18 @@ components:
 
     DeleteAccountRequest:
       type: object
-      required: [password]
       properties:
         password:
           type: string
+          description: Required for password users; OAuth-only users may omit.
+        refundPolicy:
+          type: string
+          enum: [none, prorated]
+          default: none
+          description: |
+            Cloud only. Whether to refund the unused portion of an active
+            subscription. Defaults to the server's `DELETION_REFUND_POLICY` env
+            (typically `none`). Self-host installs ignore this field.
 
     # ── Location ───────────────────────────────────────────
     Location:
@@ -2036,20 +2044,29 @@ paths:
   /auth/account:
     delete:
       tags: [Auth]
-      summary: Permanently delete account
+      summary: Schedule account deletion
       description: |
-        Deletes the user, their avatar, and any locations where they are the sole member
-        (cascading bins, photos, tag colors). Shared locations are preserved.
-        Requires password confirmation.
+        Schedules the account for deletion after the configured grace period
+        (`DELETION_GRACE_PERIOD_DAYS`, default 30). The user is soft-deleted
+        immediately, all refresh tokens revoked, and the user can recover
+        within the grace window via `POST /auth/recover-deletion`. After the
+        grace expires, a background job hard-deletes all owned data.
+
+        Cloud only: any active Stripe subscription is cancelled BEFORE the
+        soft-delete commits. If cancellation fails, the deletion aborts and
+        the user remains active.
+
+        Set `DELETION_GRACE_PERIOD_DAYS=0` (self-host only) to skip the grace
+        window and hard-delete immediately.
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/DeleteAccountRequest'
       responses:
         '200':
-          description: Account deleted
+          description: Account scheduled for deletion (or hard-deleted when grace=0)
           content:
             application/json:
               schema:
@@ -2057,9 +2074,112 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Account deleted
+                    example: Account scheduled for deletion
+                  scheduledAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: ISO timestamp when the account will be hard-deleted, or null when grace=0
+                  cancellation:
+                    type: object
+                    nullable: true
+                    description: Present only in cloud mode; details of the Stripe subscription cancellation
+                    properties:
+                      cancelled:
+                        type: boolean
+                      hadActiveSubscription:
+                        type: boolean
+                      refundAmountCents:
+                        type: integer
+                        nullable: true
         '401':
           description: Password incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: |
+            Conflict — one of:
+              - `ACCOUNT_DELETION_PENDING` — already scheduled for deletion
+              - `SOLE_ADMIN_OF_SHARED_LOCATIONS` — sole admin of locations with other members; transfer admin role first
+              - Subscription cancellation failed (cloud)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      scheduledAt:
+                        type: string
+                        format: date-time
+                      locations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+        '422':
+          description: Missing password (for password users) or invalid `refundPolicy`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/recover-deletion:
+    post:
+      tags: [Auth]
+      summary: Recover a soft-deleted account during the grace window
+      description: |
+        Anonymous endpoint (no auth) that restores an account scheduled for
+        deletion. Requires the account's email and password. Returns a generic
+        401 for all enumeration vectors (unknown email, wrong password, OAuth-
+        only account, account not pending deletion). Returns 409 if the grace
+        window has already expired. Rate-limited like `/forgot-password` and
+        `/reset-password`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Account recovered; user must log in fresh.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Account recovered. Please log in.
+        '401':
+          description: Generic credentials-failure (anti-enumeration; covers all rejection cases)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Grace period expired; account cannot be recovered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Missing email or password
           content:
             application/json:
               schema:
