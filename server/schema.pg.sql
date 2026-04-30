@@ -19,6 +19,9 @@ CREATE TABLE IF NOT EXISTS users (
   token_version      INTEGER NOT NULL DEFAULT 0,
   force_password_change BOOLEAN NOT NULL DEFAULT FALSE,
   deleted_at         TEXT,
+  deletion_requested_at TEXT,
+  deletion_scheduled_at TEXT,
+  deletion_reason    TEXT,
   created_at         TEXT NOT NULL DEFAULT (NOW()),
   updated_at         TEXT NOT NULL DEFAULT (NOW())
 );
@@ -124,7 +127,7 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
   location_id     TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
   name            TEXT NOT NULL,
   origin_bin_id   TEXT REFERENCES bins(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
-  created_by      TEXT NOT NULL REFERENCES users(id),
+  created_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at      TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_shopping_list_items_location
@@ -151,7 +154,7 @@ CREATE TABLE IF NOT EXISTS attachments (
   mime_type     TEXT NOT NULL,
   size          INTEGER NOT NULL,
   storage_path  TEXT NOT NULL,
-  created_by    TEXT NOT NULL REFERENCES users(id),
+  created_by    TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at    TEXT NOT NULL DEFAULT (NOW())
 );
 
@@ -340,6 +343,8 @@ CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id
 CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
 CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status);
 CREATE INDEX IF NOT EXISTS idx_users_trial ON users(sub_status, created_at);
+CREATE INDEX IF NOT EXISTS idx_users_deletion_scheduled
+  ON users(deletion_scheduled_at) WHERE deletion_scheduled_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_locations_created_by ON locations(created_by);
 CREATE INDEX IF NOT EXISTS idx_photos_created_by ON photos(created_by);
 
@@ -427,6 +432,16 @@ CREATE TABLE IF NOT EXISTS webhook_jti_seen (
   seen_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_webhook_jti_seen_at ON webhook_jti_seen(seen_at);
+
+-- Subscription webhooks for users we cannot resolve (deleted, never existed) — quarantine
+-- here for manual triage instead of silently dropping the event.
+CREATE TABLE IF NOT EXISTS subscription_orphans (
+  id                TEXT PRIMARY KEY,
+  user_id_attempted TEXT NOT NULL,
+  payload_json      TEXT NOT NULL,
+  received_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reason            TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS job_locks (
   job_name   TEXT PRIMARY KEY,
