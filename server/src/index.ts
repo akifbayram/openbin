@@ -43,6 +43,7 @@ import binsRoutes from './routes/bins.js';
 import binUsageRoutes from './routes/binUsage.js';
 import customFieldsRoutes from './routes/customFields.js';
 import exportRoutes from './routes/export.js';
+import { internalRoutes } from './routes/internal.js';
 import itemCheckoutsRoutes, { locationCheckoutsRouter as locationCheckoutsRoutes } from './routes/itemCheckouts.js';
 import itemsRoutes from './routes/items.js';
 import locationsRoutes from './routes/locations.js';
@@ -219,6 +220,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/tags', tagsRoutes);
   app.use('/api/items', itemsRoutes);
   app.use('/api', batchRoutes);
+  app.use('/api/v1', internalRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/admin/security', adminSecurityRoutes);
   app.use('/api/admin/system', adminSystemRoutes);
