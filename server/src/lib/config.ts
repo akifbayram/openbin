@@ -101,6 +101,15 @@ export const config = Object.freeze({
   subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
 
+  // Account deletion lifecycle
+  // Grace period before scheduled accounts are hard-deleted. Self-host admins
+  // can set 0 for immediate hard-delete; cloud should keep >=1 to absorb
+  // Stripe webhook race conditions on subscription cancellation.
+  deletionGracePeriodDays: clamp(parseInt(process.env.DELETION_GRACE_PERIOD_DAYS || '30', 10), 0, 90, 30),
+  // Refund behavior when a paid user deletes their account. Anything other
+  // than 'prorated' resolves to 'none'.
+  deletionRefundPolicy: (process.env.DELETION_REFUND_POLICY === 'prorated' ? 'prorated' : 'none') as 'none' | 'prorated',
+
   // OAuth (cloud only)
   googleClientId: process.env.GOOGLE_CLIENT_ID || null,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
