@@ -12,6 +12,11 @@ vi.mock('@/lib/usePlan', () => ({
   usePlan: vi.fn(),
 }));
 
+const exportZipMock = vi.fn();
+vi.mock('../../exportImport', () => ({
+  exportZip: (...args: unknown[]) => exportZipMock(...args),
+}));
+
 const showToast = vi.fn();
 vi.mock('@/components/ui/toast', () => ({
   useToast: () => ({ showToast }),
@@ -39,6 +44,7 @@ function setupAuth(overrides: AuthOverrides = {}, deleteImpl?: ReturnType<typeof
       subscriptionStatus: overrides.subscriptionStatus ?? 'inactive',
     },
     deleteAccount,
+    activeLocationId: 'loc-1',
   } as unknown as ReturnType<typeof useAuth>);
   return { deleteAccount };
 }
@@ -64,6 +70,8 @@ function renderDialog() {
 describe('DeleteAccountDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    exportZipMock.mockReset();
+    exportZipMock.mockResolvedValue(undefined);
   });
 
   it('Step A renders user email and 30 days copy', () => {
@@ -184,5 +192,54 @@ describe('DeleteAccountDialog', () => {
       expect(screen.getByRole('alert')).toBeTruthy();
     });
     expect(screen.getByRole('alert').textContent).toContain('sole admin');
+  });
+
+  it('shows Download my data button on Step A', () => {
+    setupAuth({ plan: 'free' });
+    setupPlan();
+    renderDialog();
+    expect(screen.getByRole('button', { name: /Download my data first/ })).toBeTruthy();
+  });
+
+  it('clicking Download my data calls exportZip with active location', async () => {
+    setupAuth({ plan: 'free' });
+    setupPlan();
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: /Download my data first/ }));
+    await waitFor(() => {
+      expect(exportZipMock).toHaveBeenCalledWith('loc-1');
+    });
+  });
+
+  it('shows loading state during export', async () => {
+    let resolveExport: () => void = () => {};
+    exportZipMock.mockImplementation(
+      () => new Promise<void>((resolve) => {
+        resolveExport = resolve;
+      }),
+    );
+    setupAuth({ plan: 'free' });
+    setupPlan();
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: /Download my data first/ }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Downloading/ })).toBeTruthy();
+    });
+    resolveExport();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Download my data first/ })).toBeTruthy();
+    });
+  });
+
+  it('hides Download my data button on Steps B and C', () => {
+    setupAuth({ plan: 'pro', subscriptionStatus: 'active' });
+    setupPlan();
+    renderDialog();
+    // Step A -> B (subscription)
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.queryByRole('button', { name: /Download my data first/ })).toBeNull();
+    // Step B -> C (confirm)
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.queryByRole('button', { name: /Download my data first/ })).toBeNull();
   });
 });

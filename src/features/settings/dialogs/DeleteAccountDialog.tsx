@@ -16,6 +16,7 @@ import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage } from '@/lib/utils';
 import type { CheckoutAction } from '@/types';
+import { exportZip } from '../exportImport';
 
 const DELETION_GRACE_PERIOD_DAYS = 30;
 const CONFIRM_PHRASE = 'delete my account';
@@ -33,7 +34,7 @@ interface DeleteAccountDialogProps {
 }
 
 export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogProps) {
-  const { user, deleteAccount } = useAuth();
+  const { user, deleteAccount, activeLocationId } = useAuth();
   const { planInfo, isSelfHosted } = usePlan();
   const { showToast } = useToast();
 
@@ -51,6 +52,23 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExportData() {
+    if (!activeLocationId || exporting) return;
+    setExporting(true);
+    try {
+      await exportZip(activeLocationId);
+      showToast({ message: 'Backup downloaded', variant: 'success' });
+    } catch (err) {
+      showToast({
+        message: getErrorMessage(err, 'Failed to download backup'),
+        variant: 'error',
+      });
+    } finally {
+      setExporting(false);
+    }
+  }
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -178,6 +196,20 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                 <li>Your API keys and personal settings</li>
                 <li>Locations shared with others will be preserved</li>
               </ul>
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleExportData}
+                  disabled={exporting || !activeLocationId}
+                  className="text-sm"
+                >
+                  {exporting ? 'Downloading…' : '↓ Download my data first'}
+                </Button>
+                <p className="text-xs text-[var(--text-tertiary)] mt-1">
+                  Get a copy of your bins, items, photos, and tags before deleting.
+                </p>
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
