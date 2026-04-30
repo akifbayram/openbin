@@ -1,3 +1,7 @@
+import crypto from 'node:crypto';
+import type { Express } from 'express';
+import * as jose from 'jose';
+import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { generateUuid, query } from '../../db.js';
 
@@ -11,6 +15,17 @@ vi.mock('../config.js', async (importOriginal) => {
   };
 });
 
+// Stub lifecycle email senders so the subscription callback's fire-and-forget
+// imports don't try to do real work. We assert via the EE hook spies instead.
+vi.mock('../../ee/lifecycleEmails.js', () => ({
+  fireSubscriptionConfirmedEmail: vi.fn(),
+  fireSubscriptionExpiredEmail: vi.fn(),
+  fireDowngradeImpactEmail: vi.fn(),
+}));
+
+// HTTP-level imports for race-condition scenarios.
+import { subscriptionsRoutes } from '../../ee/routes/subscriptions.js';
+import { createApp } from '../../index.js';
 // Subjects under test
 import { recoverDeletion, requestDeletion } from '../accountDeletion.js';
 import { config } from '../config.js';
@@ -231,5 +246,251 @@ describe('account deletion E2E (cloud)', () => {
 
     await new Promise((r) => setTimeout(r, 10));
     expect(notifyCompletedSpy).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Race condition scenarios
+//
+// These cover the "two systems out of sync" gaps that unit tests miss:
+//   - Stripe webhook arriving while a user is mid-deletion
+//   - Stripe webhook arriving for a user that has already been hard-deleted
+//   - Two concurrent deletion requests for the same user
+//   - Re-registration with an email currently in the grace window
+//   - Login with the correct password during the grace window
+// ---------------------------------------------------------------------------
+
+const SUBSCRIPTION_SECRET = 'test-subscription-webhook-secret';
+const SUBSCRIPTION_ISSUER = 'openbin-manager';
+const SUBSCRIPTION_AUDIENCE = 'openbin-backend';
+
+async function makeSubToken(payload: Record<string, unknown>): Promise<string> {
+  return new jose.SignJWT(payload as jose.JWTPayload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setIssuer(SUBSCRIPTION_ISSUER)
+    .setAudience(SUBSCRIPTION_AUDIENCE)
+    .setJti(crypto.randomUUID())
+    .setExpirationTime('5m')
+    .sign(new TextEncoder().encode(SUBSCRIPTION_SECRET));
+}
+
+describe('account deletion E2E (race conditions)', () => {
+  let app: Express;
+  const originalSubSecret = config.subscriptionWebhookSecret;
+  const originalSubJwtSecret = config.subscriptionJwtSecret;
+
+  beforeEach(() => {
+    Object.assign(config, {
+      selfHosted: false,
+      deletionGracePeriodDays: 30,
+      subscriptionWebhookSecret: SUBSCRIPTION_SECRET,
+      subscriptionJwtSecret: SUBSCRIPTION_SECRET,
+    });
+    app = createApp({
+      mountEeRoutes: (a) => a.use('/api/subscriptions', subscriptionsRoutes),
+    });
+  });
+
+  afterEach(() => {
+    Object.assign(config, {
+      subscriptionWebhookSecret: originalSubSecret,
+      subscriptionJwtSecret: originalSubJwtSecret,
+    });
+  });
+
+  it('Stripe webhook during grace period: state updates, soft-delete row preserved', async () => {
+    const cancelSpy = vi.fn(async () => ({
+      cancelled: true,
+      hadActiveSubscription: true,
+      refundAmountCents: 0,
+    }));
+    const notifyScheduledSpy = vi.fn(async () => undefined);
+    const notifyCompletedSpy = vi.fn(async () => undefined);
+
+    registerEeHooks({
+      cancelSubscription: cancelSpy,
+      notifyDeletionScheduled: notifyScheduledSpy,
+      notifyDeletionCompleted: notifyCompletedSpy,
+    });
+
+    // Set up an active PRO subscription so the webhook has something to flip.
+    const userId = await createUserDirect({ email: 'race1@test.local' });
+    await query(
+      `UPDATE users SET plan = 1, sub_status = 1, active_until = $1 WHERE id = $2`,
+      ['2027-01-01T00:00:00.000Z', userId],
+    );
+
+    // 1. requestDeletion -> soft-deletes + cancels subscription.
+    const result = await requestDeletion({ userId, refundPolicy: 'prorated' });
+    expect(result.scheduledAt).toBeTruthy();
+    const beforeWebhook = await queryOne<{
+      deletion_requested_at: string | null;
+      deletion_scheduled_at: string | null;
+    }>(
+      'SELECT deletion_requested_at, deletion_scheduled_at FROM users WHERE id = $1',
+      [userId],
+    );
+    expect(beforeWebhook.deletion_requested_at).not.toBeNull();
+    expect(beforeWebhook.deletion_scheduled_at).not.toBeNull();
+    const scheduledAtSnapshot = beforeWebhook.deletion_scheduled_at;
+
+    // 2. Late Stripe webhook says "subscription is now Inactive".
+    const token = await makeSubToken({
+      userId,
+      plan: 1,
+      status: 0, // Inactive
+      activeUntil: null,
+    });
+    const res = await request(app)
+      .post('/api/subscriptions/callback')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.orphaned).toBeUndefined();
+
+    // 3. Row still present, deletion fields intact, sub_status flipped.
+    const afterWebhook = await queryOne<{
+      deletion_requested_at: string | null;
+      deletion_scheduled_at: string | null;
+      sub_status: number;
+    }>(
+      'SELECT deletion_requested_at, deletion_scheduled_at, sub_status FROM users WHERE id = $1',
+      [userId],
+    );
+    expect(afterWebhook.deletion_requested_at).not.toBeNull();
+    expect(afterWebhook.deletion_scheduled_at).toBe(scheduledAtSnapshot);
+    expect(afterWebhook.sub_status).toBe(0);
+
+    // 4. No orphan row created — the user was found.
+    const orphans = await query<{ user_id_attempted: string }>(
+      'SELECT user_id_attempted FROM subscription_orphans WHERE user_id_attempted = $1',
+      [userId],
+    );
+    expect(orphans.rows).toHaveLength(0);
+
+    // 5. No lifecycle email fired (user is in grace; suppressed by the
+    //    deletion_requested_at gate in the callback handler).
+    await new Promise((r) => setTimeout(r, 10));
+    const lifecycleEmails = await import('../../ee/lifecycleEmails.js');
+    expect(vi.mocked(lifecycleEmails.fireSubscriptionConfirmedEmail)).not.toHaveBeenCalled();
+    expect(vi.mocked(lifecycleEmails.fireSubscriptionExpiredEmail)).not.toHaveBeenCalled();
+  });
+
+  it('Stripe webhook after hard-delete: orphan logged, returns 200', async () => {
+    const cancelSpy = vi.fn(async () => ({
+      cancelled: true,
+      hadActiveSubscription: false,
+      refundAmountCents: 0,
+    }));
+    registerEeHooks({ cancelSubscription: cancelSpy });
+
+    const userId = await createUserDirect({ email: 'race2@test.local' });
+
+    await requestDeletion({ userId, refundPolicy: 'none' });
+    // Fast-forward past grace and run cleanup -> hard delete.
+    await query(`UPDATE users SET deletion_scheduled_at = $1 WHERE id = $2`, [
+      new Date(Date.now() - 1000).toISOString(),
+      userId,
+    ]);
+    await cleanupDeletedUsers();
+    const gone = await query('SELECT id FROM users WHERE id = $1', [userId]);
+    expect(gone.rows).toHaveLength(0);
+
+    // Webhook arrives for a user that no longer exists.
+    const token = await makeSubToken({
+      userId,
+      plan: 1,
+      status: 1,
+      activeUntil: '2027-01-01T00:00:00.000Z',
+    });
+    const res = await request(app)
+      .post('/api/subscriptions/callback')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.orphaned).toBe(true);
+
+    const orphans = await query<{ user_id_attempted: string; reason: string }>(
+      'SELECT user_id_attempted, reason FROM subscription_orphans WHERE user_id_attempted = $1',
+      [userId],
+    );
+    expect(orphans.rows).toHaveLength(1);
+    expect(orphans.rows[0].reason).toBe('user_not_found');
+  });
+
+  it('two concurrent deletion requests: second one fails with ConflictError', async () => {
+    // SQLite serializes writes, so this isn't a true race in tests. The
+    // second call still hits the duplicate-deletion guard after the first
+    // commits and must throw.
+    const cancelSpy = vi.fn(async () => ({
+      cancelled: true,
+      hadActiveSubscription: false,
+      refundAmountCents: 0,
+    }));
+    registerEeHooks({ cancelSubscription: cancelSpy });
+
+    const userId = await createUserDirect({ email: 'race3@test.local' });
+
+    // First call commits (SQLite serializes writes via a single connection),
+    // then the second call hits the duplicate-deletion guard.
+    const first = await requestDeletion({ userId, refundPolicy: 'none' });
+    expect(first.scheduledAt).toBeTruthy();
+
+    await expect(
+      requestDeletion({ userId, refundPolicy: 'none' }),
+    ).rejects.toThrow(/already pending/i);
+  });
+
+  it('re-registration with pending-deletion email returns EMAIL_PENDING_DELETION', async () => {
+    const cancelSpy = vi.fn(async () => ({
+      cancelled: true,
+      hadActiveSubscription: false,
+      refundAmountCents: 0,
+    }));
+    registerEeHooks({ cancelSubscription: cancelSpy });
+
+    const email = 'race4@test.local';
+    const userId = await createUserDirect({ email });
+    await requestDeletion({ userId, refundPolicy: 'none' });
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email, password: 'StrongPass1!', displayName: 'Re-register' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('EMAIL_PENDING_DELETION');
+    expect(res.body.scheduledAt).toBeTruthy();
+  });
+
+  it('login during grace with correct password offers ACCOUNT_DELETION_PENDING', async () => {
+    // Register through the HTTP layer so the password hash is real.
+    const email = 'race5@test.local';
+    const password = 'StrongPass1!';
+    const reg = await request(app)
+      .post('/api/auth/register')
+      .send({ email, password, displayName: 'Race Five' });
+    expect(reg.status).toBe(201);
+    const userId = reg.body.user.id as string;
+
+    const cancelSpy = vi.fn(async () => ({
+      cancelled: true,
+      hadActiveSubscription: false,
+      refundAmountCents: 0,
+    }));
+    registerEeHooks({ cancelSubscription: cancelSpy });
+
+    await requestDeletion({ userId, refundPolicy: 'none' });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('ACCOUNT_DELETION_PENDING');
+    expect(res.body.scheduledAt).toBeTruthy();
   });
 });
