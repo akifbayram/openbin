@@ -1,5 +1,6 @@
 import type express from 'express';
 import { registerEeHooks } from '../lib/eeHooks.js';
+import { cancelSubscription, deleteBillingCustomer } from './billingClient.js';
 import { startInactivityChecker, stopInactivityChecker } from './inactivityChecker.js';
 import { deleteUserData, notifyManagerNewUser, notifyManagerUserUpdate } from './managerWebhook.js';
 import { adminMetricsRoutes } from './routes/adminMetrics.js';
@@ -21,6 +22,8 @@ export function registerHooks(): void {
       await tx('DELETE FROM ai_usage WHERE user_id = $1', [userId]);
       await tx('DELETE FROM bin_shares WHERE created_by = $1', [userId]);
     },
+    cancelSubscription,
+    deleteBillingCustomer,
   });
 }
 
