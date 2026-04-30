@@ -312,7 +312,7 @@ export function DashboardPage() {
                 Get started with {t.Bins}
               </h3>
               <p className="text-[14px] text-[var(--text-tertiary)] max-w-xs mx-auto">
-                Create your first {t.bin}, print a QR label, and scan it to find what's inside.
+                Create your first {t.bin} and print a QR label — next time, just scan to see what's inside.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">

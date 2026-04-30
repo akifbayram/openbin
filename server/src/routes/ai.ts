@@ -37,6 +37,16 @@ const MOCK_AI_SETTINGS = {
 
 const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini', 'openai-compatible'] as const;
 
+async function assertValidEndpointUrl(endpointUrl: unknown, isDemo: boolean): Promise<void> {
+  if (!endpointUrl || typeof endpointUrl !== 'string') return;
+  try {
+    await validateEndpointUrl(endpointUrl, isDemo);
+  } catch (err) {
+    if (err instanceof AiAnalysisError) throw new ValidationError(err.message);
+    throw err;
+  }
+}
+
 const router = Router();
 
 // GET /api/ai/default-prompts — public (no auth), returns default prompt strings
@@ -206,16 +216,7 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     throw new ValidationError('requestTimeout must be between 10 and 300 seconds');
   }
 
-  if (endpointUrl) {
-    try {
-      await validateEndpointUrl(endpointUrl, isDemoUser(req));
-    } catch (err) {
-      if (err instanceof AiAnalysisError) {
-        throw new ValidationError(err.message);
-      }
-      throw err;
-    }
-  }
+  await assertValidEndpointUrl(endpointUrl, isDemoUser(req));
 
   const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
   const encryptedKey = encryptApiKey(finalApiKey);
@@ -361,16 +362,7 @@ router.put('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('save
     throw new ValidationError('Invalid provider');
   }
 
-  if (endpointUrl) {
-    try {
-      await validateEndpointUrl(endpointUrl, isDemoUser(req));
-    } catch (err) {
-      if (err instanceof AiAnalysisError) {
-        throw new ValidationError(err.message);
-      }
-      throw err;
-    }
-  }
+  await assertValidEndpointUrl(endpointUrl, isDemoUser(req));
 
   const id = generateUuid();
   await query(
