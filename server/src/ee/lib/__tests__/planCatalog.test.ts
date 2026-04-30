@@ -15,8 +15,8 @@ vi.mock('../../../lib/config.js', () => ({
       proActivityRetentionDays: 90, proAiCreditsPerMonth: 250, proReorganizeMaxBins: 40,
     },
     planPrices: {
-      plusMonthlyCents: 500, plusAnnualCents: 5000,
-      proMonthlyCents: 1000, proAnnualCents: 10000,
+      plusQuarterlyCents: 1500, plusAnnualCents: 5000,
+      proQuarterlyCents: 3000, proAnnualCents: 10000,
     },
   },
 }));
@@ -32,13 +32,13 @@ describe('getPlanCatalog', () => {
   it('free plan has zero prices', () => {
     const { plans } = getPlanCatalog();
     const free = plans.find(p => p.id === 'free')!;
-    expect(free.prices).toEqual({ monthly: 0, annual: null });
+    expect(free.prices).toEqual({ quarterly: 0, annual: null });
   });
 
-  it('plus plan has monthly + annual prices in cents', () => {
+  it('plus plan has quarterly + annual prices in cents', () => {
     const { plans } = getPlanCatalog();
     const plus = plans.find(p => p.id === 'plus')!;
-    expect(plus.prices).toEqual({ monthly: 500, annual: 5000 });
+    expect(plus.prices).toEqual({ quarterly: 1500, annual: 5000 });
   });
 
   it('pro plan exposes its feature limits', () => {

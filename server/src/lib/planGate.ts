@@ -31,7 +31,7 @@ export interface UserPlanInfo {
   cancelAtPeriodEnd: string | null;
   // Current billing cadence on the subscription. null on free/inactive
   // plans or when not yet set by the webhook.
-  billingPeriod: 'monthly' | 'annual' | null;
+  billingPeriod: 'quarterly' | 'annual' | null;
 }
 
 export interface PlanFeatures {
@@ -105,7 +105,7 @@ export async function getUserPlanInfo(userId: string): Promise<UserPlanInfo | nu
     email: row.email,
     previousSubStatus: row.previous_sub_status as SubStatusType | null,
     cancelAtPeriodEnd: row.cancel_at_period_end,
-    billingPeriod: row.billing_period as 'monthly' | 'annual' | null,
+    billingPeriod: row.billing_period as 'quarterly' | 'annual' | null,
   };
 }
 

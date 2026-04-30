@@ -8,7 +8,7 @@ export interface CatalogPlan {
   id: CatalogPlanId;
   name: string;
   prices: {
-    monthly: number;
+    quarterly: number;
     annual: number | null;
   };
   features: PlanFeatures;
@@ -22,9 +22,9 @@ export function getPlanCatalog(): PlanCatalog {
   const { planPrices } = config;
   return {
     plans: [
-      { id: 'free', name: 'Free', prices: { monthly: 0, annual: null }, features: getFeatureMap(Plan.FREE) },
-      { id: 'plus', name: 'Plus', prices: { monthly: planPrices.plusMonthlyCents, annual: planPrices.plusAnnualCents }, features: getFeatureMap(Plan.PLUS) },
-      { id: 'pro',  name: 'Pro',  prices: { monthly: planPrices.proMonthlyCents,  annual: planPrices.proAnnualCents  }, features: getFeatureMap(Plan.PRO)  },
+      { id: 'free', name: 'Free', prices: { quarterly: 0, annual: null }, features: getFeatureMap(Plan.FREE) },
+      { id: 'plus', name: 'Plus', prices: { quarterly: planPrices.plusQuarterlyCents, annual: planPrices.plusAnnualCents }, features: getFeatureMap(Plan.PLUS) },
+      { id: 'pro',  name: 'Pro',  prices: { quarterly: planPrices.proQuarterlyCents,  annual: planPrices.proAnnualCents  }, features: getFeatureMap(Plan.PRO)  },
     ],
   };
 }
