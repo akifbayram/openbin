@@ -9,6 +9,7 @@ import { query } from './db.js';
 import { config } from './lib/config.js';
 import { csrfProtect } from './lib/csrf.js';
 import {
+  ConflictError,
   HttpError,
   OverLimitError,
   PlanRestrictedError,
@@ -256,6 +257,18 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
         message: err.message,
         max: err.max,
         requested: err.requested,
+      });
+      return;
+    }
+    if (err instanceof ConflictError && err.details) {
+      // Structured ConflictError carries an explicit error code (e.g.
+      // ACCOUNT_DELETION_PENDING) and arbitrary recovery hints. Spread the
+      // extra fields so the client can act on them (e.g. show a recovery UI
+      // with the scheduled-deletion timestamp).
+      res.status(err.statusCode).json({
+        error: err.code,
+        message: err.message,
+        ...err.details,
       });
       return;
     }

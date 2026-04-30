@@ -155,10 +155,16 @@ describe('OAuth routes', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({});
     expect(res.status).toBe(200);
-    expect(res.body.message).toBe('Account deleted');
-    // Verify user is gone
-    const check = await query('SELECT id FROM users WHERE id = $1', [user.id]);
-    expect(check.rows).toHaveLength(0);
+    // Default grace = 30 days → soft-delete with a scheduled hard-delete.
+    expect(res.body.message).toBe('Account scheduled for deletion');
+    expect(res.body.scheduledAt).toBeTruthy();
+    // User row remains during the grace window with deletion fields set.
+    const check = await query<{ deleted_at: string | null }>(
+      'SELECT deleted_at FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(check.rows).toHaveLength(1);
+    expect(check.rows[0].deleted_at).not.toBeNull();
   });
 
   it('OAuth-only user can delete account with no request body', async () => {
@@ -174,7 +180,7 @@ describe('OAuth routes', () => {
       .delete('/api/auth/account')
       .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
-    expect(res.body.message).toBe('Account deleted');
+    expect(res.body.message).toBe('Account scheduled for deletion');
   });
 
   it('OAuth-only user hasPassword is false on /me', async () => {
@@ -217,8 +223,14 @@ describe('OAuth routes', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ password });
     expect(res.status).toBe(200);
-    expect(res.body.message).toBe('Account deleted');
-    const check = await query('SELECT id FROM users WHERE id = $1', [user.id]);
-    expect(check.rows).toHaveLength(0);
+    // Default grace = 30 days → soft-delete with a scheduled hard-delete.
+    expect(res.body.message).toBe('Account scheduled for deletion');
+    expect(res.body.scheduledAt).toBeTruthy();
+    const check = await query<{ deleted_at: string | null }>(
+      'SELECT deleted_at FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(check.rows).toHaveLength(1);
+    expect(check.rows[0].deleted_at).not.toBeNull();
   });
 });

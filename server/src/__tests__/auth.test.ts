@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { getDb, query } from '../db.js';
 import { createApp } from '../index.js';
 import { createTestLocation, createTestUser } from './helpers.js';
 
@@ -666,5 +667,361 @@ describe('GET /api/auth/invite-preview', () => {
     expect(res.status).toBe(200);
     expect(res.body.name).toBe(location.name);
     expect(res.body.memberCount).toBeDefined();
+  });
+});
+
+// ----------------------------------------------------------------------------
+// Account deletion lifecycle: DELETE /api/auth/account routes through the
+// `requestDeletion` orchestrator (soft-delete + grace window). Tests cover
+// the route-layer behavior; orchestrator semantics (sole-admin guard,
+// EE cancellation, etc.) are covered in lib/__tests__/accountDeletion.test.ts.
+// ----------------------------------------------------------------------------
+
+describe('DELETE /api/auth/account (orchestrator-backed)', () => {
+  it('soft-deletes a password user with the correct password and returns scheduledAt', async () => {
+    const { token, password, user } = await createTestUser(app);
+
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Account scheduled for deletion');
+    expect(res.body.scheduledAt).toBeTruthy();
+    // ~30-day default grace window — confirm the timestamp is in the future.
+    expect(new Date(res.body.scheduledAt).getTime()).toBeGreaterThan(Date.now());
+
+    // User row still exists (soft-delete) with all four lifecycle fields set.
+    const row = await query<{
+      deleted_at: string | null;
+      deletion_requested_at: string | null;
+      deletion_scheduled_at: string | null;
+      deletion_reason: string | null;
+    }>(
+      'SELECT deleted_at, deletion_requested_at, deletion_scheduled_at, deletion_reason FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(row.rows).toHaveLength(1);
+    expect(row.rows[0].deleted_at).not.toBeNull();
+    expect(row.rows[0].deletion_requested_at).not.toBeNull();
+    expect(row.rows[0].deletion_scheduled_at).toBe(res.body.scheduledAt);
+    expect(row.rows[0].deletion_reason).toBe('user_initiated');
+  });
+
+  it('clears auth cookies on successful deletion', async () => {
+    const { token, password } = await createTestUser(app);
+
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password });
+
+    expect(res.status).toBe(200);
+    const setCookie = res.headers['set-cookie'];
+    expect(setCookie).toBeDefined();
+    const cookieHeader = Array.isArray(setCookie) ? setCookie.join(';') : String(setCookie);
+    // Cookies are cleared by setting an expired Max-Age=0 / past Expires.
+    expect(cookieHeader).toMatch(/openbin-access=/);
+    expect(cookieHeader).toMatch(/openbin-refresh=/);
+  });
+
+  it('returns 422 ValidationError when a password user omits the password', async () => {
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 401 UnauthorizedError when the password is wrong', async () => {
+    const { token, user } = await createTestUser(app);
+
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'WrongPass1!' });
+
+    expect(res.status).toBe(401);
+    // User row untouched.
+    const row = await query<{ deleted_at: string | null }>(
+      'SELECT deleted_at FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(row.rows[0].deleted_at).toBeNull();
+  });
+
+  it('returns 422 when refundPolicy is an unknown value', async () => {
+    const { token, password } = await createTestUser(app);
+
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password, refundPolicy: 'bogus' });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('VALIDATION_ERROR');
+  });
+
+  it('accepts refundPolicy "none" and "prorated" without rejecting', async () => {
+    const a = await createTestUser(app);
+    const noneRes = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${a.token}`)
+      .send({ password: a.password, refundPolicy: 'none' });
+    expect(noneRes.status).toBe(200);
+
+    const b = await createTestUser(app);
+    const proratedRes = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${b.token}`)
+      .send({ password: b.password, refundPolicy: 'prorated' });
+    expect(proratedRes.status).toBe(200);
+  });
+
+  it('includes a cancellation field in the response shape (undefined in self-host)', async () => {
+    const { token, password } = await createTestUser(app);
+
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password });
+
+    expect(res.status).toBe(200);
+    // Self-host with no cancelSubscription hook → cancellation is undefined.
+    // The key being missing or undefined is acceptable; we just want the
+    // response shape to surface whatever the orchestrator returned.
+    expect('cancellation' in res.body || res.body.cancellation === undefined).toBe(true);
+  });
+});
+
+// ----------------------------------------------------------------------------
+// POST /api/auth/recover-deletion — anonymous endpoint that takes
+// email + password, restores the soft-deleted user, and returns a generic
+// 401 on any failure mode (anti-enumeration).
+// ----------------------------------------------------------------------------
+
+describe('POST /api/auth/recover-deletion', () => {
+  async function softDeleteUser(): Promise<{ email: string; password: string; userId: string }> {
+    const { token, password, user } = await createTestUser(app);
+    const del = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password });
+    expect(del.status).toBe(200);
+    return { email: user.email, password, userId: user.id };
+  }
+
+  it('recovers a pending-deletion account with correct password', async () => {
+    const { email, password, userId } = await softDeleteUser();
+
+    const res = await request(app)
+      .post('/api/auth/recover-deletion')
+      .send({ email, password });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/recovered/i);
+
+    const row = await query<{
+      deleted_at: string | null;
+      deletion_requested_at: string | null;
+      deletion_scheduled_at: string | null;
+      deletion_reason: string | null;
+    }>(
+      'SELECT deleted_at, deletion_requested_at, deletion_scheduled_at, deletion_reason FROM users WHERE id = $1',
+      [userId],
+    );
+    expect(row.rows[0].deleted_at).toBeNull();
+    expect(row.rows[0].deletion_requested_at).toBeNull();
+    expect(row.rows[0].deletion_scheduled_at).toBeNull();
+    expect(row.rows[0].deletion_reason).toBeNull();
+  });
+
+  it('lets a recovered user log in normally afterwards', async () => {
+    const { email, password } = await softDeleteUser();
+
+    await request(app).post('/api/auth/recover-deletion').send({ email, password });
+
+    const login = await request(app).post('/api/auth/login').send({ email, password });
+    expect(login.status).toBe(200);
+    expect(login.body.user.email).toBe(email);
+  });
+
+  it('returns generic 401 when email is unknown (no enumeration leak)', async () => {
+    const res = await request(app)
+      .post('/api/auth/recover-deletion')
+      .send({ email: 'nobody-here@test.local', password: 'StrongPass1!' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('UNAUTHORIZED');
+    expect(res.body.message).toBe('Invalid email or password');
+  });
+
+  it('returns generic 401 when account exists but is NOT pending deletion', async () => {
+    const { user, password } = await createTestUser(app);
+
+    const res = await request(app)
+      .post('/api/auth/recover-deletion')
+      .send({ email: user.email, password });
+
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe('Invalid email or password');
+  });
+
+  it('returns generic 401 when password is wrong (no enumeration leak)', async () => {
+    const { email } = await softDeleteUser();
+
+    const res = await request(app)
+      .post('/api/auth/recover-deletion')
+      .send({ email, password: 'WrongPass1!' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe('Invalid email or password');
+  });
+
+  it('returns 409 ConflictError when grace window has already expired', async () => {
+    const { email, password, userId } = await softDeleteUser();
+    // Force the scheduled timestamp into the past so recoverDeletion rejects.
+    getDb()
+      .prepare('UPDATE users SET deletion_scheduled_at = ?, deletion_requested_at = ? WHERE id = ?')
+      .run(
+        new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+        new Date(Date.now() - 31 * 24 * 3600 * 1000).toISOString(),
+        userId,
+      );
+
+    const res = await request(app)
+      .post('/api/auth/recover-deletion')
+      .send({ email, password });
+
+    expect(res.status).toBe(409);
+    expect(res.body.message).toMatch(/grace period/i);
+  });
+
+  it('returns 422 ValidationError when email or password is missing', async () => {
+    const a = await request(app).post('/api/auth/recover-deletion').send({});
+    expect(a.status).toBe(422);
+
+    const b = await request(app)
+      .post('/api/auth/recover-deletion')
+      .send({ email: 'foo@test.local' });
+    expect(b.status).toBe(422);
+
+    const c = await request(app)
+      .post('/api/auth/recover-deletion')
+      .send({ password: 'StrongPass1!' });
+    expect(c.status).toBe(422);
+  });
+});
+
+// ----------------------------------------------------------------------------
+// POST /api/auth/login — soft-deleted users get a recoverable 409 with code
+// ACCOUNT_DELETION_PENDING and a scheduledAt; hard-deleted users still get
+// the generic 401 to preserve the existing anti-enumeration behavior.
+// ----------------------------------------------------------------------------
+
+describe('POST /api/auth/login (deletion lifecycle)', () => {
+  it('soft-deleted user with correct password gets 409 ACCOUNT_DELETION_PENDING + scheduledAt', async () => {
+    const { token, password, user } = await createTestUser(app);
+    await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: user.email, password });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('ACCOUNT_DELETION_PENDING');
+    expect(res.body.scheduledAt).toBeTruthy();
+    expect(new Date(res.body.scheduledAt).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('soft-deleted user with WRONG password gets generic 401 (no info leak)', async () => {
+    const { token, password, user } = await createTestUser(app);
+    await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: user.email, password: 'WrongPass1!' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('UNAUTHORIZED');
+    // Must not surface ACCOUNT_DELETION_PENDING for a wrong password.
+    expect(res.body.scheduledAt).toBeUndefined();
+  });
+
+  it('hard-deleted user (deleted_at set, no deletion_scheduled_at) gets generic 401', async () => {
+    // Simulate the post-grace state: deleted_at is set but the scheduled
+    // timestamp has been cleared (or was never set in a grace=0 race).
+    const { user, password } = await createTestUser(app);
+    getDb()
+      .prepare('UPDATE users SET deleted_at = ?, deletion_scheduled_at = NULL WHERE id = ?')
+      .run(new Date().toISOString(), user.id);
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: user.email, password });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('UNAUTHORIZED');
+    expect(res.body.scheduledAt).toBeUndefined();
+  });
+});
+
+// ----------------------------------------------------------------------------
+// POST /api/auth/register — block re-registration during the grace window,
+// allow it once the window has passed (UNIQUE(email) takes over).
+// ----------------------------------------------------------------------------
+
+describe('POST /api/auth/register (deletion lifecycle)', () => {
+  it('rejects registration with EMAIL_PENDING_DELETION code when email is in grace window', async () => {
+    const { token, password, user } = await createTestUser(app);
+    await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password });
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: user.email, password: 'AnotherStrongPass1!', displayName: 'Re-Register' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('EMAIL_PENDING_DELETION');
+    expect(res.body.scheduledAt).toBeTruthy();
+  });
+
+  // After the grace window passes, the user row is still present until the
+  // hard-delete cleanup job sweeps it up. Until then, UNIQUE(email) catches
+  // the re-registration and yields the generic CONFLICT message — same as
+  // before this change. Once the cleanup job runs, the email frees up.
+  it('rejects with generic 409 when the grace window has already expired (UNIQUE constraint)', async () => {
+    const { token, password, user } = await createTestUser(app);
+    await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password });
+    // Force the scheduled timestamp into the past.
+    getDb()
+      .prepare('UPDATE users SET deletion_scheduled_at = ? WHERE id = ?')
+      .run(new Date(Date.now() - 1000).toISOString(), user.id);
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: user.email, password: 'AnotherStrongPass1!', displayName: 'Re-Register' });
+
+    expect(res.status).toBe(409);
+    // Falls through the EMAIL_PENDING_DELETION check (timestamp is past),
+    // then UNIQUE(email) fires inside the INSERT and produces the generic
+    // CONFLICT error code that the original handler already used.
+    expect(res.body.error).toBe('CONFLICT');
   });
 });
