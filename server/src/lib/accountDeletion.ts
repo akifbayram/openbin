@@ -235,4 +235,19 @@ export async function recoverDeletion(userId: string): Promise<void> {
 
   invalidateUserStatusCache(userId);
   log.info(`Account deletion recovered for user ${userId}`);
+
+  // Fire-and-forget recovery email (cloud only — needs EE hook registration).
+  // Look up email + displayName since the hook signature doesn't carry them.
+  const userRow = await query<{ email: string | null; display_name: string | null }>(
+    'SELECT email, display_name FROM users WHERE id = $1',
+    [userId],
+  );
+  const u = userRow.rows[0];
+  if (u?.email) {
+    void getEeHooks()
+      .notifyDeletionRecovered?.(userId, u.email, u.display_name ?? u.email)
+      ?.catch((err) =>
+        log.warn(`notifyDeletionRecovered hook threw for user ${userId}`, err),
+      );
+  }
 }

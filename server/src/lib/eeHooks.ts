@@ -39,6 +39,8 @@ interface EeHooks {
     hadActiveSubscription: boolean,
     refundAmountCents?: number,
   ) => Promise<void>;
+  notifyDeletionRecovered?: (userId: string, email: string, displayName: string) => Promise<void>;
+  notifyDeletionCompleted?: (userId: string, email: string, displayName: string) => Promise<void>;
   onHardDeleteUser?: (tx: TxQueryFn, userId: string) => Promise<void>;
 }
 

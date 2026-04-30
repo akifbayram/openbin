@@ -104,6 +104,7 @@ beforeEach(() => {
   registerEeHooks({
     onHardDeleteUser: undefined as never,
     deleteBillingCustomer: undefined as never,
+    notifyDeletionCompleted: undefined as never,
   });
 });
 
@@ -111,6 +112,7 @@ afterEach(() => {
   registerEeHooks({
     onHardDeleteUser: undefined as never,
     deleteBillingCustomer: undefined as never,
+    notifyDeletionCompleted: undefined as never,
   });
   vi.restoreAllMocks();
 });
@@ -219,5 +221,25 @@ describe('cleanupDeletedUsers (sweep)', () => {
     await cleanupDeletedUsers();
 
     expect(await userExists(userId)).toBe(true);
+  });
+
+  it('fires notifyDeletionCompleted hook with email captured before delete', async () => {
+    const past = new Date(Date.now() - 60 * 1000).toISOString();
+    const userId = await createUserDirect({
+      email: 'gone@test.local',
+      deletionScheduledAt: past,
+    });
+
+    const notifyHook = vi.fn(async () => undefined);
+    registerEeHooks({ notifyDeletionCompleted: notifyHook });
+
+    const { cleanupDeletedUsers } = await import('../userCleanup.js');
+    await cleanupDeletedUsers();
+
+    expect(await userExists(userId)).toBe(false);
+    // Fire-and-forget; let it settle.
+    await new Promise((r) => setTimeout(r, 10));
+    expect(notifyHook).toHaveBeenCalledTimes(1);
+    expect(notifyHook).toHaveBeenCalledWith(userId, 'gone@test.local', 'Test User');
   });
 });

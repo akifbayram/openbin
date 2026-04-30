@@ -18,8 +18,8 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 export async function cleanupDeletedUsers(): Promise<void> {
   if (!(await acquireJobLock('user_cleanup', 7200))) return;
   try {
-    const users = await query<{ id: string }>(
-      `SELECT id FROM users
+    const users = await query<{ id: string; email: string | null; display_name: string | null }>(
+      `SELECT id, email, display_name FROM users
        WHERE deletion_scheduled_at IS NOT NULL
          AND ${d.tsCompareNow('deletion_scheduled_at', '<=')}`,
     );
@@ -28,6 +28,17 @@ export async function cleanupDeletedUsers(): Promise<void> {
       try {
         await hardDeleteUser(user.id);
         log.info(`Hard-deleted user ${user.id}`);
+
+        // Fire completion email AFTER the user row is gone — we captured the
+        // email above before the delete. EE hook handles the actual sending;
+        // self-host with no email config is a no-op.
+        if (user.email) {
+          void getEeHooks()
+            .notifyDeletionCompleted?.(user.id, user.email, user.display_name ?? user.email)
+            ?.catch((err) =>
+              log.warn(`notifyDeletionCompleted hook threw for user ${user.id}`, err),
+            );
+        }
       } catch (err) {
         log.error(`Failed to hard-delete user ${user.id}:`, err instanceof Error ? err.message : err);
       }

@@ -94,6 +94,7 @@ beforeEach(() => {
   registerEeHooks({
     cancelSubscription: undefined as never,
     notifyDeletionScheduled: undefined as never,
+    notifyDeletionRecovered: undefined as never,
   });
   // Restore baseline config
   Object.assign(config, {
@@ -106,6 +107,7 @@ afterEach(() => {
   registerEeHooks({
     cancelSubscription: undefined as never,
     notifyDeletionScheduled: undefined as never,
+    notifyDeletionRecovered: undefined as never,
   });
   Object.assign(config, {
     selfHosted: originalSelfHosted,
@@ -275,6 +277,27 @@ describe('requestDeletion (cloud / EE hooks)', () => {
     expect(row?.deleted_at).not.toBeNull();
   });
 
+  it('fires notifyDeletionScheduled hook with scheduledAt + hadActiveSubscription + refundAmountCents', async () => {
+    const userId = await createUserDirect();
+
+    registerEeHooks({
+      cancelSubscription: vi.fn(async () => ({
+        cancelled: true,
+        hadActiveSubscription: true,
+        refundAmountCents: 4321,
+      })),
+    });
+    const notifyHook = vi.fn(async () => undefined);
+    registerEeHooks({ notifyDeletionScheduled: notifyHook });
+
+    const result = await requestDeletion({ userId, refundPolicy: 'prorated' });
+
+    // Allow fire-and-forget hook to settle.
+    await new Promise((r) => setTimeout(r, 10));
+    expect(notifyHook).toHaveBeenCalledTimes(1);
+    expect(notifyHook).toHaveBeenCalledWith(userId, result.scheduledAt, true, 4321);
+  });
+
   it('proceeds (idempotent) when cancelSubscription returns cancelled=true with no active subscription', async () => {
     const userId = await createUserDirect();
 
@@ -345,5 +368,20 @@ describe('recoverDeletion', () => {
 
   it('throws NotFoundError when the user does not exist', async () => {
     await expect(recoverDeletion('nonexistent')).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('fires notifyDeletionRecovered hook with userId + email + displayName', async () => {
+    const userId = await createUserDirect({ email: 'recover@test.local' });
+    await requestDeletion({ userId, refundPolicy: 'none' });
+
+    const notifyHook = vi.fn(async () => undefined);
+    registerEeHooks({ notifyDeletionRecovered: notifyHook });
+
+    await recoverDeletion(userId);
+
+    // Fire-and-forget; let it settle.
+    await new Promise((r) => setTimeout(r, 10));
+    expect(notifyHook).toHaveBeenCalledTimes(1);
+    expect(notifyHook).toHaveBeenCalledWith(userId, 'recover@test.local', 'Test User');
   });
 });
