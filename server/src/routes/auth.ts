@@ -126,9 +126,10 @@ router.get('/invite-preview', authenticate, asyncHandler(async (req, res) => {
     throw new ValidationError('Invite code is required');
   }
 
-  const row = await queryOne<{ name: string; member_count: number | string }>(
+  const row = await queryOne<{ name: string; member_count: number | string; viewer_count: number | string }>(
     `SELECT l.name,
-            (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count
+            (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count,
+            (SELECT COUNT(*) FROM location_members WHERE location_id = l.id AND role = 'viewer') AS viewer_count
      FROM locations l
      WHERE l.invite_code = $1`,
     [code.trim()],
@@ -138,6 +139,7 @@ router.get('/invite-preview', authenticate, asyncHandler(async (req, res) => {
   res.json({
     name: row.name,
     memberCount: Number(row.member_count),
+    viewerCount: Number(row.viewer_count),
   });
 }));
 

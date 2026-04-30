@@ -32,6 +32,7 @@ export interface Location {
   default_join_role: 'member' | 'viewer';
   role?: 'admin' | 'member' | 'viewer';
   member_count?: number;
+  viewer_count?: number;
   area_count?: number;
   bin_count?: number;
   created_at: string;

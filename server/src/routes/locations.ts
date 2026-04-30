@@ -26,6 +26,7 @@ router.get('/', asyncHandler(async (req, res) => {
     `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.app_name, l.term_bin, l.term_location, l.term_area, l.default_join_role, l.created_at, l.updated_at,
             lm.role,
             (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count,
+            (SELECT COUNT(*) FROM location_members WHERE location_id = l.id AND role = 'viewer') AS viewer_count,
             (SELECT COUNT(*) FROM areas WHERE location_id = l.id) AS area_count,
             (SELECT COUNT(*) FROM bins WHERE location_id = l.id AND deleted_at IS NULL) AS bin_count
      FROM locations l
@@ -53,7 +54,8 @@ router.get('/', asyncHandler(async (req, res) => {
         row.role as 'admin' | 'member' | 'viewer',
         row.created_by,
       ),
-      member_count: row.member_count,
+      member_count: Number(row.member_count),
+      viewer_count: Number(row.viewer_count),
       area_count: row.area_count,
       bin_count: row.bin_count,
       created_at: row.created_at,
@@ -137,6 +139,7 @@ router.post('/', asyncHandler(async (req, res) => {
     default_join_role: location.default_join_role,
     role: 'admin',
     member_count: 1,
+    viewer_count: 0,
     area_count: 0,
     created_at: location.created_at,
     updated_at: location.updated_at,
@@ -366,6 +369,10 @@ router.post('/join', asyncHandler(async (req, res) => {
     'SELECT COUNT(*) AS member_count FROM location_members WHERE location_id = $1',
     [location.id]
   );
+  const viewerCountResult = await query(
+    "SELECT COUNT(*) AS viewer_count FROM location_members WHERE location_id = $1 AND role = 'viewer'",
+    [location.id]
+  );
 
   res.status(201).json({
     id: location.id,
@@ -379,7 +386,8 @@ router.post('/join', asyncHandler(async (req, res) => {
     term_location: location.term_location,
     term_area: location.term_area,
     role: location.default_join_role,
-    member_count: memberCountResult.rows[0]?.member_count ?? 0,
+    member_count: Number(memberCountResult.rows[0]?.member_count ?? 0),
+    viewer_count: Number(viewerCountResult.rows[0]?.viewer_count ?? 0),
     area_count: areaCountResult.rows[0]?.area_count ?? 0,
     created_at: location.created_at,
     updated_at: location.updated_at,
