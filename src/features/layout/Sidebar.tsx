@@ -173,14 +173,8 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
         <div className="space-y-1">
           {collapsed ? (
             locations.length > 1 && (
-              <button
-                type="button"
-                onClick={() => { navigate('/locations'); onItemClick?.(); }}
-                aria-label={t.Locations ?? 'Locations'}
-                className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]"
-              >
-                <MapPin className="h-5 w-5 shrink-0" />
-              </button>
+              <NavButton path="/locations" label={t.Locations ?? 'Locations'} icon={MapPin} currentPath={location.pathname}
+                navigate={navigate} onClick={onItemClick} collapsed />
             )
           ) : (
             <LocationSwitcher
