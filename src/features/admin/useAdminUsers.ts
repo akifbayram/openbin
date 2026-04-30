@@ -11,6 +11,7 @@ export interface AdminUser {
   activeUntil: string | null;
   suspendedAt: string | null;
   deletedAt: string | null;
+  deletionScheduledAt?: string | null;
   createdAt: string;
   binCount: number;
   locationCount: number;
@@ -106,6 +107,7 @@ export interface AdminUserDetail {
   activeUntil: string | null;
   suspendedAt: string | null;
   deletedAt: string | null;
+  deletionScheduledAt?: string | null;
   createdAt: string;
   updatedAt: string;
   lastActiveAt: string | null;
@@ -139,6 +141,10 @@ export async function updateUser(id: string, updates: { isAdmin?: boolean; subSt
 
 export async function deleteUser(id: string) {
   await apiFetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+}
+
+export async function recoverUser(id: string) {
+  await apiFetch(`/api/admin/users/${id}/recover-deletion`, { method: 'POST' });
 }
 
 export async function regenerateApiKey(id: string) {

@@ -3,6 +3,7 @@ import {
   LogOut,
   Mail,
   Pencil,
+  RotateCcw,
   ShieldOff,
   Trash2,
 } from 'lucide-react';
@@ -30,7 +31,7 @@ import { clearOverrides, fetchOverrides, grantAiCredits, resetAiCredits, type Us
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage, relativeTime } from '@/lib/utils';
-import { capitalize, deleteUser, forcePasswordChange, reactivateUser, regenerateApiKey, revokeAllApiKeys, revokeSessions, sendPasswordReset, statusVariant, suspendUser, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
+import { capitalize, deleteUser, forcePasswordChange, reactivateUser, recoverUser, regenerateApiKey, revokeAllApiKeys, revokeSessions, sendPasswordReset, statusVariant, suspendUser, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
 
 // Mirror of server/src/lib/planGate.ts — client can't import server code.
 const PLAN_CODE = { free: 2, plus: 0, pro: 1 } as const;
@@ -267,6 +268,17 @@ export function AdminUserDetailPage() {
     }
   }, [detail, showToast, refresh]);
 
+  const handleRecoverDeletion = useCallback(async () => {
+    if (!detail) return;
+    try {
+      await recoverUser(detail.id);
+      showToast({ message: 'User recovered', variant: 'success' });
+      refresh();
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to recover user'), variant: 'error' });
+    }
+  }, [detail, showToast, refresh]);
+
   const handleReactivate = useCallback(async () => {
     if (!detail) return;
     try {
@@ -420,7 +432,11 @@ export function AdminUserDetailPage() {
         <CardHeader>
           <CardTitle>Identity</CardTitle>
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            {detail.deletedAt && <Badge variant="destructive">Deleted</Badge>}
+            {detail.deletionScheduledAt && new Date(detail.deletionScheduledAt).getTime() > Date.now() ? (
+              <Badge className="bg-[var(--color-warning-soft)] text-[var(--color-warning)]">Deletion pending</Badge>
+            ) : detail.deletedAt ? (
+              <Badge variant="destructive">Deleted</Badge>
+            ) : null}
             {detail.suspendedAt && <Badge variant="destructive">Suspended</Badge>}
             {detail.isAdmin && <Badge variant="default">Admin</Badge>}
             <Badge variant="secondary">{capitalize(detail.plan)}</Badge>
@@ -574,6 +590,21 @@ export function AdminUserDetailPage() {
                 Send Reset
               </Button>
             </div>
+
+            {detail.deletionScheduledAt && new Date(detail.deletionScheduledAt).getTime() > Date.now() && (
+              <div className="row-spread py-3">
+                <div>
+                  <span className="text-[14px] text-[var(--text-secondary)]">Recover account</span>
+                  <p className="text-[12px] text-[var(--text-tertiary)]">
+                    Scheduled for deletion on {new Date(detail.deletionScheduledAt).toLocaleString()}
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleRecoverDeletion}>
+                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                  Recover
+                </Button>
+              </div>
+            )}
 
             <div className="row-spread py-3 last:pb-0">
               <span className="text-[14px] text-[var(--text-secondary)]">Delete user</span>

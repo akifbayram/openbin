@@ -142,6 +142,7 @@ vi.mock('@/lib/auth', () => ({
     setActiveLocationId: vi.fn(),
     updateUser: vi.fn(),
     deleteAccount: vi.fn(),
+    recoverAccount: vi.fn(),
   }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

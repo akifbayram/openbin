@@ -18,7 +18,11 @@ interface AuthContextValue extends AuthState {
   refreshSession: () => Promise<void>;
   setActiveLocationId: (id: string | null) => void;
   updateUser: (user: User) => void;
-  deleteAccount: (password?: string) => Promise<void>;
+  deleteAccount: (
+    password: string | undefined,
+    refundPolicy?: 'none' | 'prorated',
+  ) => Promise<{ scheduledAt: string | null }>;
+  recoverAccount: (email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -202,10 +206,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, user }));
   }, []);
 
-  const deleteAccount = useCallback(async (password?: string) => {
-    await apiFetch('/api/auth/account', { method: 'DELETE', body: password ? { password } : undefined });
-    localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
-    setState({ user: null, token: null, activeLocationId: null, demoMode: false, loading: false });
+  const deleteAccount = useCallback(
+    async (
+      password: string | undefined,
+      refundPolicy: 'none' | 'prorated' = 'none',
+    ): Promise<{ scheduledAt: string | null }> => {
+      const result = await apiFetch<{ scheduledAt: string | null }>('/api/auth/account', {
+        method: 'DELETE',
+        body: { password, refundPolicy },
+      });
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
+      setState({ user: null, token: null, activeLocationId: null, demoMode: false, loading: false });
+      return result;
+    },
+    [],
+  );
+
+  const recoverAccount = useCallback(async (email: string, password: string) => {
+    await apiFetch('/api/auth/recover-deletion', {
+      method: 'POST',
+      body: { email, password },
+    });
   }, []);
 
   return (
@@ -219,6 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setActiveLocationId,
         updateUser,
         deleteAccount,
+        recoverAccount,
       }}
     >
       {children}

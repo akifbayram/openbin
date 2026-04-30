@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { PasswordChecklist } from '@/components/ui/password-checklist';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -26,6 +25,7 @@ import { useUserPreferences } from '@/lib/userPreferences';
 import { useWarnOnUnload } from '@/lib/useWarnOnUnload';
 import { EMAIL_REGEX, getErrorMessage } from '@/lib/utils';
 import type { User } from '@/types';
+import { DeleteAccountDialog, DeletionPendingBanner } from '../dialogs/DeleteAccountDialog';
 import { SettingsListRow } from '../SettingsListRow';
 import { SettingsPageHeader } from '../SettingsPageHeader';
 import { SettingsProfileHeader } from '../SettingsProfileHeader';
@@ -51,7 +51,7 @@ function validateDisplayName(value: string): string | undefined {
 }
 
 export function AccountSection() {
-  const { user, updateUser, deleteAccount } = useAuth();
+  const { user, updateUser } = useAuth();
   const { showToast } = useToast();
   const { locations } = useLocationList();
 
@@ -96,8 +96,6 @@ export function AccountSection() {
 
   // Delete account
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
-  const [deleting, setDeleting] = useState(false);
 
   // Dirty state + beforeunload guard
   const profileDirty = user
@@ -222,18 +220,6 @@ export function AccountSection() {
       showToast({ message: getErrorMessage(err, 'Failed to remove avatar'), variant: 'error' });
     } finally {
       setUploadingAvatar(false);
-    }
-  }
-
-  async function handleDeleteAccount(e: React.FormEvent) {
-    e.preventDefault();
-    if (hasPassword && !deletePassword) return;
-    setDeleting(true);
-    try {
-      await deleteAccount(hasPassword ? deletePassword : undefined);
-    } catch (err) {
-      showToast({ message: getErrorMessage(err, 'Failed to delete account'), variant: 'error' });
-      setDeleting(false);
     }
   }
 
@@ -573,55 +559,22 @@ export function AccountSection() {
         tintLabel
         statusMessage="Deleting your account removes all locations where you are the only member. Shared locations are preserved. This action cannot be undone."
       >
+        {user.deletionRequestedAt && user.deletionScheduledAt && (
+          <DeletionPendingBanner scheduledAt={user.deletionScheduledAt} />
+        )}
         <div className="pt-1">
-          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+          <Button
+            variant="destructive"
+            onClick={() => setDeleteOpen(true)}
+            disabled={!!user.deletionRequestedAt}
+          >
             <Trash2 className="h-4 w-4 mr-2.5" />
             Delete Account
           </Button>
         </div>
       </SettingsSection>
 
-      <Dialog
-        open={deleteOpen}
-        onOpenChange={(open) => {
-          setDeleteOpen(open);
-          if (!open) { setDeletePassword(''); setDeleting(false); }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Account</DialogTitle>
-            <DialogDescription>
-              This will permanently delete your account and all data in locations where you are the only member. Locations shared with others will be preserved. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleDeleteAccount} className="space-y-5">
-            {hasPassword ? (
-              <div className="space-y-2">
-                <Label htmlFor="delete-password">Enter your password to confirm</Label>
-                <Input
-                  id="delete-password"
-                  type="password"
-                  value={deletePassword}
-                  onChange={(e) => setDeletePassword(e.target.value)}
-                  placeholder="Password"
-                  required
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-[var(--text-secondary)]">
-                Are you sure you want to continue?
-              </p>
-            )}
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => { setDeleteOpen(false); setDeletePassword(''); }}>Cancel</Button>
-              <Button type="submit" variant="destructive" disabled={(hasPassword && !deletePassword) || deleting}>
-                {deleting ? 'Deleting...' : 'Delete Account'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <DeleteAccountDialog open={deleteOpen} onOpenChange={setDeleteOpen} />
 
       <Dialog open={createOpen} onOpenChange={(open) => !open && setCreateOpen(false)}>
         <DialogContent>

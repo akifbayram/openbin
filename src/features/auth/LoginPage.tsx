@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
 import { useToast } from '@/components/ui/toast';
-import { apiFetch } from '@/lib/api';
+import { RecoverAccountDialog } from '@/features/settings/dialogs/RecoverAccountDialog';
+import { ApiError, apiFetch } from '@/lib/api';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { useAuthStatusConfig } from '@/lib/qrConfig';
@@ -30,6 +31,8 @@ export function LoginPage() {
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoFailed, setDemoFailed] = useState(false);
   const [formError, setFormError] = useState('');
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryScheduledAt, setRecoveryScheduledAt] = useState<string>('');
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +82,15 @@ export function LoginPage() {
       await login(email.trim(), password);
       navigate('/');
     } catch (err) {
+      if (
+        err instanceof ApiError &&
+        err.code === 'ACCOUNT_DELETION_PENDING' &&
+        typeof err.details?.scheduledAt === 'string'
+      ) {
+        setRecoveryScheduledAt(err.details.scheduledAt);
+        setRecoveryOpen(true);
+        return;
+      }
       setFormError(getErrorMessage(err, 'Invalid email or password'));
       emailRef.current?.focus();
     } finally {
@@ -183,6 +195,21 @@ export function LoginPage() {
           </>
         )}
       </div>
+      <RecoverAccountDialog
+        open={recoveryOpen}
+        onOpenChange={setRecoveryOpen}
+        email={email.trim()}
+        password={password}
+        scheduledAt={recoveryScheduledAt}
+        onRecovered={async () => {
+          try {
+            await login(email.trim(), password);
+            navigate('/');
+          } catch (err) {
+            setFormError(getErrorMessage(err, 'Login failed after recovery'));
+          }
+        }}
+      />
     </div>
   );
 }
