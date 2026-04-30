@@ -169,7 +169,11 @@ export function AdminUsersTable({
             </div>
             <div className="w-24 text-[14px]">
               <span className="flex items-center gap-1.5">
-                {u.deletedAt && <Badge variant="destructive" className="text-[11px]">Deleted</Badge>}
+                {u.deletionScheduledAt && new Date(u.deletionScheduledAt).getTime() > Date.now() ? (
+                  <Badge className="text-[11px] bg-[var(--color-warning-soft)] text-[var(--color-warning)]">Deletion pending</Badge>
+                ) : u.deletedAt ? (
+                  <Badge variant="destructive" className="text-[11px]">Deleted</Badge>
+                ) : null}
                 {u.suspendedAt && <Badge variant="destructive" className="text-[11px]">Suspended</Badge>}
                 <Badge variant={statusVariant(u.status)} className="text-[11px]">{capitalize(u.status)}</Badge>
               </span>

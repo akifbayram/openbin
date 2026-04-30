@@ -76,7 +76,7 @@ router.get('/users', asyncHandler(async (req, res) => {
 
   const usersResult = await query(
     `SELECT u.id, u.email, u.display_name, u.is_admin, u.plan, u.sub_status,
-       u.active_until, u.deleted_at, u.suspended_at, u.created_at, u.last_active_at,
+       u.active_until, u.deleted_at, u.deletion_scheduled_at, u.suspended_at, u.created_at, u.last_active_at,
        u.ai_credits_used, u.ai_credits_reset_at,
        (SELECT COUNT(*) FROM bins b JOIN location_members lm ON b.location_id = lm.location_id WHERE lm.user_id = u.id AND b.deleted_at IS NULL) AS bin_count,
        (SELECT COUNT(DISTINCT lm.location_id) FROM location_members lm WHERE lm.user_id = u.id) AS location_count,
@@ -104,6 +104,7 @@ router.get('/users', asyncHandler(async (req, res) => {
       status: subStatusLabel(u.sub_status),
       activeUntil: u.active_until || null,
       deletedAt: u.deleted_at || null,
+      deletionScheduledAt: u.deletion_scheduled_at || null,
       suspendedAt: u.suspended_at || null,
       createdAt: u.created_at,
       binCount: u.bin_count ?? 0,
@@ -187,11 +188,11 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
   const userResult = await query<{
     id: string; email: string; display_name: string;
     is_admin: number; plan: PlanTier; sub_status: SubStatusType;
-    active_until: string | null; deleted_at: string | null; suspended_at: string | null;
+    active_until: string | null; deleted_at: string | null; deletion_scheduled_at: string | null; suspended_at: string | null;
     created_at: string; updated_at: string;
     last_active_at: string | null; ai_credits_used: number | null; ai_credits_reset_at: string | null;
   }>(
-    'SELECT id, email, display_name, is_admin, plan, sub_status, active_until, deleted_at, suspended_at, force_password_change, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
+    'SELECT id, email, display_name, is_admin, plan, sub_status, active_until, deleted_at, deletion_scheduled_at, suspended_at, force_password_change, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
     [userId],
   );
 
@@ -222,6 +223,7 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
     status: subStatusLabel(row.sub_status),
     activeUntil: row.active_until || null,
     deletedAt: row.deleted_at || null,
+    deletionScheduledAt: row.deletion_scheduled_at || null,
     suspendedAt: row.suspended_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
