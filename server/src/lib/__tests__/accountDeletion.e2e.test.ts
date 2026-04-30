@@ -500,18 +500,10 @@ describe('account deletion E2E (data residue)', () => {
     Object.assign(config, { selfHosted: true, deletionGracePeriodDays: 30 });
 
     // User A is a member of a shared location owned by user B. The bin and
-    // its photo are owned by B (so they survive A's deletion); the attachment,
-    // shopping list item, and activity log entry are attributed to A so we can
-    // assert the SET NULL policy fires for those.
-    //
-    // Note on bins/photos: the current `hardDeleteUser` implementation
-    // unconditionally deletes bins (and CASCADE-deletes their photos) where
-    // `created_by = userId`, even when those rows live in a shared location
-    // co-owned by other members. The plan's stated residue policy ("created_by
-    // SET NULL on bins/photos in locations user doesn't solely own") would
-    // require the FK ON DELETE behaviour on `bins.created_by` to take over
-    // instead of the explicit DELETE. Until that's reconciled this test only
-    // covers the categories where the SET NULL policy is actually wired.
+    // its photo are attributed to A — they live in a SHARED location so they
+    // must survive A's deletion with `created_by` cleared to NULL via the FK
+    // SET NULL policy. Attachment, shopping list item, and activity log
+    // entries are also attributed to A and follow the same SET NULL policy.
     const userA = await createUserDirect({ email: 'residue-a@test.local' });
     const userB = await createUserDirect({ email: 'residue-b@test.local' });
 
@@ -529,19 +521,20 @@ describe('account deletion E2E (data residue)', () => {
       [generateUuid(), locId, userB],
     );
 
-    // Bin owned by B in the shared location.
+    // Bin created by A in the shared location — must survive with
+    // created_by=NULL after A is hard-deleted.
     const binId = generateUuid();
     await query(
       `INSERT INTO bins (id, short_code, location_id, name, created_by)
        VALUES ($1, $2, $3, $4, $5)`,
-      [binId, binId.slice(0, 6), locId, "B's Bin", userB],
+      [binId, binId.slice(0, 6), locId, "A's Bin", userA],
     );
 
-    // Photo uploaded by B against B's bin (so it survives A's deletion).
+    // Photo uploaded by A against A's bin — must survive with created_by=NULL.
     await query(
       `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by)
-       VALUES ($1, $2, 'b.jpg', 'image/jpeg', 100, '/tmp/b.jpg', $3)`,
-      [generateUuid(), binId, userB],
+       VALUES ($1, $2, 'a.jpg', 'image/jpeg', 100, '/tmp/a.jpg', $3)`,
+      [generateUuid(), binId, userA],
     );
 
     // Attachment uploaded by A against B's bin — should survive with
@@ -594,20 +587,23 @@ describe('account deletion E2E (data residue)', () => {
     // ---- Hard-delete user A.
     await hardDeleteUser(userA);
 
-    // Shared content owned by B is preserved.
+    // Shared-location bin/photo created by A survive with NULL attribution
+    // (FK SET NULL on bins.created_by / photos.created_by). This is the
+    // core of the data-loss bug fix: the previous implementation deleted
+    // these rows outright and took other members' content with them.
     const binCheck = await query<{ created_by: string | null }>(
       'SELECT created_by FROM bins WHERE id = $1',
       [binId],
     );
     expect(binCheck.rows).toHaveLength(1);
-    expect(binCheck.rows[0].created_by).toBe(userB);
+    expect(binCheck.rows[0].created_by).toBeNull();
 
     const photoCheck = await query<{ created_by: string | null }>(
       'SELECT created_by FROM photos WHERE bin_id = $1',
       [binId],
     );
     expect(photoCheck.rows).toHaveLength(1);
-    expect(photoCheck.rows[0].created_by).toBe(userB);
+    expect(photoCheck.rows[0].created_by).toBeNull();
 
     // A's attachment + shopping list item survive with NULL attribution.
     const attachCheck = await query<{ created_by: string | null }>(

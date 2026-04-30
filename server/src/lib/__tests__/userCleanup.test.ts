@@ -122,7 +122,9 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('hardDeleteUser', () => {
-  it('removes the user, their photos, bins, location_members, and orphan-owned locations', async () => {
+  it('removes the user and cascades sole-member locations down to bins/photos', async () => {
+    // Sole-member location: deleting the user cascade-deletes the location,
+    // which in turn cascade-deletes the bin and its photo.
     const userId = await createUserDirect();
     const locId = await createLocationDirect(userId, 'Solo');
     await addMemberDirect(locId, userId);
@@ -144,12 +146,18 @@ describe('hardDeleteUser', () => {
     expect(await memberCountFor(userId)).toBe(0);
   });
 
-  it('preserves owned locations that still have other members', async () => {
+  it('preserves shared-location bins/photos with NULL attribution after delete', async () => {
+    // Shared location: friend is also a member, so the location survives.
+    // Bin + photo are created_by the deleted user — they must SURVIVE with
+    // created_by cleared to NULL via FK SET NULL (NOT be deleted, which is
+    // the bug we're fixing).
     const owner = await createUserDirect({ email: 'owner@test.local' });
     const friend = await createUserDirect({ email: 'friend@test.local' });
     const locId = await createLocationDirect(owner, 'Shared');
     await addMemberDirect(locId, owner);
     await addMemberDirect(locId, friend);
+    const binId = await createBinDirect(locId, owner);
+    await createPhotoDirect(binId, owner);
 
     await hardDeleteUser(owner);
 
@@ -171,6 +179,23 @@ describe('hardDeleteUser', () => {
       [locId],
     );
     expect(loc.rows[0].created_by).toBeNull();
+
+    // Bin survives in the shared location with created_by=NULL — this is
+    // the core data-loss bug fix: previously the bin was deleted outright.
+    const binCheck = await query<{ created_by: string | null }>(
+      'SELECT created_by FROM bins WHERE id = $1',
+      [binId],
+    );
+    expect(binCheck.rows).toHaveLength(1);
+    expect(binCheck.rows[0].created_by).toBeNull();
+
+    // Photo survives via the same SET NULL mechanism.
+    const photoCheck = await query<{ created_by: string | null }>(
+      'SELECT created_by FROM photos WHERE bin_id = $1',
+      [binId],
+    );
+    expect(photoCheck.rows).toHaveLength(1);
+    expect(photoCheck.rows[0].created_by).toBeNull();
   });
 
   it('hard-deletes user even when they have attachments and shopping list items', async () => {

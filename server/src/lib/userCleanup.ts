@@ -69,19 +69,39 @@ export async function cleanupDeletedUsers(): Promise<void> {
  * user row goes, so co-members keep using the location.
  */
 export async function hardDeleteUser(userId: string): Promise<void> {
-  // Delete photo files first (before DB rows are removed)
-  const photos = await query<{ id: string; storage_path: string; thumb_path: string | null }>(
-    'SELECT id, storage_path, thumb_path FROM photos WHERE created_by = $1',
+  // Identify which photo files to delete from storage. We can ONLY delete
+  // files for photos whose bin will go away — i.e., bins in sole-member
+  // locations that we'll cascade-delete below. Photos in shared bins must
+  // keep their files (other members are viewing them); the FK SET NULL on
+  // photos.created_by handles attribution.
+  //
+  // A bin is "going away" if its location has the deleting user as the
+  // sole member. The location's bin cascade then takes the photo rows;
+  // we just need to clean their files from disk first.
+  const filesToDelete = await query<{ storage_path: string; thumb_path: string | null }>(
+    `SELECT p.storage_path, p.thumb_path
+     FROM photos p
+     JOIN bins b ON b.id = p.bin_id
+     WHERE b.location_id IN (
+       SELECT lm.location_id FROM location_members lm
+       WHERE lm.user_id = $1
+       GROUP BY lm.location_id HAVING COUNT(*) = 1
+     )`,
     [userId],
   );
-  for (const photo of photos.rows) {
+  for (const photo of filesToDelete.rows) {
     try {
       await storage.delete(photo.storage_path);
       if (photo.thumb_path) await storage.delete(photo.thumb_path);
     } catch { /* ignore file cleanup errors */ }
   }
 
-  // Delete all user data in a transaction
+  // Delete all user data in a transaction. The FK constraints handle the
+  // rest:
+  //   - bins/photos/locations/areas in shared contexts: created_by SET NULL
+  //   - sole-member locations: deleted explicitly below; their bins/photos
+  //     cascade automatically
+  //   - per-user PII (api_keys, refresh_tokens, etc.): ON DELETE CASCADE
   await withTransaction(async (tx) => {
     await tx('DELETE FROM api_key_daily_usage WHERE api_key_id IN (SELECT id FROM api_keys WHERE user_id = $1)', [userId]);
     await tx('DELETE FROM api_keys WHERE user_id = $1', [userId]);
@@ -92,21 +112,25 @@ export async function hardDeleteUser(userId: string): Promise<void> {
     // the transaction so any failure rolls back the rest of the user data.
     await getEeHooks().onHardDeleteUser?.(tx, userId);
 
-    await tx('DELETE FROM photos WHERE created_by = $1', [userId]);
-    await tx('DELETE FROM bins WHERE created_by = $1', [userId]);
-    await tx('DELETE FROM location_members WHERE user_id = $1', [userId]);
-
-    // Delete locations owned by this user with no remaining members.
-    // Locations with remaining members are preserved; their created_by
-    // resets to NULL via ON DELETE SET NULL when the user row goes below.
-    const ownedLocations = await tx<{ id: string }>('SELECT id FROM locations WHERE created_by = $1', [userId]);
-    for (const loc of ownedLocations.rows) {
-      const memberCount = await tx<{ cnt: number }>('SELECT COUNT(*) as cnt FROM location_members WHERE location_id = $1', [loc.id]);
-      if (memberCount.rows[0].cnt === 0) {
-        await tx('DELETE FROM locations WHERE id = $1', [loc.id]);
-      }
+    // Delete sole-member locations first — their bins, photos, attachments,
+    // location_members rows cascade. Multi-member locations are preserved;
+    // when the user row is deleted below, their location_members entry goes
+    // via CASCADE and `bins.created_by` / `photos.created_by` /
+    // `attachments.created_by` SET NULL takes care of attribution.
+    const soleMemberLocations = await tx<{ location_id: string }>(
+      `SELECT location_id FROM location_members
+       WHERE user_id = $1
+       AND location_id IN (
+         SELECT location_id FROM location_members
+         GROUP BY location_id HAVING COUNT(*) = 1
+       )`,
+      [userId],
+    );
+    for (const row of soleMemberLocations.rows) {
+      await tx('DELETE FROM locations WHERE id = $1', [row.location_id]);
     }
 
+    // Now delete the user. FK CASCADE/SET NULL takes care of the rest.
     await tx('DELETE FROM users WHERE id = $1', [userId]);
   });
 
