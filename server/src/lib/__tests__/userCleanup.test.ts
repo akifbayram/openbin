@@ -173,6 +173,53 @@ describe('hardDeleteUser', () => {
     expect(loc.rows[0].created_by).toBeNull();
   });
 
+  it('hard-deletes user even when they have attachments and shopping list items', async () => {
+    // The owner is who we delete. The friend owns the bin so it (and its
+    // attachment) survive — letting us assert that the FK SET NULL clauses
+    // on attachments.created_by / shopping_list_items.created_by both fired.
+    const friend = await createUserDirect({ email: 'friend-owner@test.local' });
+    const userId = await createUserDirect();
+    const locId = await createLocationDirect(friend, 'Loc');
+    await addMemberDirect(locId, friend);
+    await addMemberDirect(locId, userId, 'member');
+    const binId = await createBinDirect(locId, friend);
+
+    // Attachment uploaded by the user-being-deleted, against friend's bin.
+    await query(
+      `INSERT INTO attachments (id, bin_id, filename, mime_type, size, storage_path, created_by)
+       VALUES ($1, $2, 'a.pdf', 'application/pdf', 100, '/tmp/a.pdf', $3)`,
+      [generateUuid(), binId, userId],
+    );
+
+    // Shopping list entry created by the user-being-deleted.
+    await query(
+      `INSERT INTO shopping_list_items (id, location_id, name, created_by)
+       VALUES ($1, $2, 'milk', $3)`,
+      [generateUuid(), locId, userId],
+    );
+
+    await hardDeleteUser(userId);
+
+    // User row gone — the FK no longer blocks the delete.
+    expect(await userExists(userId)).toBe(false);
+
+    // Attachment preserved with NULL created_by (SET NULL on FK).
+    const attachCheck = await query<{ created_by: string | null }>(
+      'SELECT created_by FROM attachments WHERE bin_id = $1',
+      [binId],
+    );
+    expect(attachCheck.rows).toHaveLength(1);
+    expect(attachCheck.rows[0].created_by).toBeNull();
+
+    // Shopping list item preserved with NULL created_by.
+    const shopCheck = await query<{ created_by: string | null }>(
+      'SELECT created_by FROM shopping_list_items WHERE location_id = $1',
+      [locId],
+    );
+    expect(shopCheck.rows).toHaveLength(1);
+    expect(shopCheck.rows[0].created_by).toBeNull();
+  });
+
   it('invokes the onHardDeleteUser hook inside the transaction with the right userId', async () => {
     const userId = await createUserDirect();
 

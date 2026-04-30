@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
   location_id     TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
   name            TEXT NOT NULL,
   origin_bin_id   TEXT REFERENCES bins(id) ON DELETE SET NULL,
-  created_by      TEXT NOT NULL REFERENCES users(id),
+  created_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_shopping_list_items_location
@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS attachments (
   mime_type     TEXT NOT NULL,
   size          INTEGER NOT NULL,
   storage_path  TEXT NOT NULL,
-  created_by    TEXT NOT NULL REFERENCES users(id),
+  created_by    TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
