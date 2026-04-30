@@ -182,6 +182,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/auth/account', sensitiveAuthLimiter);
   app.use('/api/auth/forgot-password', sensitiveAuthLimiter);
   app.use('/api/auth/reset-password', sensitiveAuthLimiter);
+  app.use('/api/auth/recover-deletion', sensitiveAuthLimiter);
   app.use('/api/auth', authRoutes);
   app.use('/api/auth', avatarRoutes);
   app.use('/api/locations/join', joinLimiter);
