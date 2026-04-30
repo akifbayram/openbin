@@ -5,6 +5,7 @@ import { computeChanges } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ConflictError, ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
+import { countNonViewerMembers } from '../lib/memberCounts.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getEffectiveMemberRole, getFeatureMap, invalidateOverLimitCache, isSelfHosted, type PlanTier } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
@@ -332,12 +333,11 @@ router.post('/join', asyncHandler(async (req, res) => {
       ? getFeatureMap(planRow.rows[0].plan as PlanTier)
       : getFeatureMap(1 as PlanTier); // PRO default
 
-    if (ownerFeatures.maxMembersPerLocation !== null) {
-      const countResult = await tx<{ cnt: number }>(
-        'SELECT COUNT(*) as cnt FROM location_members WHERE location_id = $1',
-        [location.id],
-      );
-      if (countResult.rows[0].cnt >= ownerFeatures.maxMembersPerLocation) {
+    // Viewers don't consume paid member slots (free-viewers model).
+    const joiningAsViewer = location.default_join_role === 'viewer';
+    if (!joiningAsViewer && ownerFeatures.maxMembersPerLocation !== null) {
+      const nonViewerCount = await countNonViewerMembers(location.id, tx);
+      if (nonViewerCount >= ownerFeatures.maxMembersPerLocation) {
         throw new PlanRestrictedError('This location has reached its member limit');
       }
     }
