@@ -4,9 +4,10 @@ import { logAdminAction } from './adminAudit.js';
 import { config } from './config.js';
 import type { CancellationResult } from './eeHooks.js';
 import { getEeHooks } from './eeHooks.js';
-import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError } from './httpErrors.js';
+import { ConflictError, ForbiddenError, NotFoundError } from './httpErrors.js';
 import { createLogger } from './logger.js';
 import { revokeAllUserTokens } from './refreshTokens.js';
+import { hardDeleteUser } from './userCleanup.js';
 
 const log = createLogger('accountDeletion');
 
@@ -31,22 +32,22 @@ interface UserRow {
 }
 
 /**
- * Soft-delete a user with a configurable grace period for recovery.
+ * Request account deletion with a configurable grace period for recovery.
  *
  * Steps:
  *   1. Validate the user exists and isn't already pending deletion.
  *   2. If user is admin, ensure at least one OTHER non-pending admin remains.
- *   3. If grace=0, abort with NotImplementedError BEFORE any side effect.
- *      Task 1.2 will wire up `hardDeleteUser`; until then, refusing here keeps
- *      the account in a consistent pre-deletion state.
- *   4. Cloud only: cancel the Stripe subscription FIRST. If billing reports an
+ *   3. Cloud only: cancel the Stripe subscription FIRST. If billing reports an
  *      active subscription that failed to cancel, abort with ConflictError so
  *      the user is never deleted while still being charged.
- *   5. Inside a transaction, set deletion_requested_at, deletion_scheduled_at,
- *      deleted_at, deletion_reason.
- *   6. Revoke refresh tokens and bust the user-status cache.
- *   7. Record admin_audit_log when admin-initiated, plus a regular log line.
- *   8. Fire-and-forget `notifyDeletionScheduled` for cloud emails.
+ *   4. If `config.deletionGracePeriodDays === 0`: skip soft-delete entirely;
+ *      call `hardDeleteUser` directly AFTER cancellation has succeeded, then
+ *      audit + return. The user row goes away in one shot rather than
+ *      transitioning through a recoverable middle state.
+ *   5. Otherwise: inside a transaction, set deletion_requested_at,
+ *      deletion_scheduled_at, deleted_at, deletion_reason. Revoke refresh
+ *      tokens, bust the user-status cache, write the admin audit log, and
+ *      fire-and-forget `notifyDeletionScheduled` for cloud emails.
  */
 export async function requestDeletion(req: DeletionRequest): Promise<DeletionResult> {
   const { userId, refundPolicy, initiatedByAdminId, initiatedByAdminName } = req;
@@ -81,19 +82,10 @@ export async function requestDeletion(req: DeletionRequest): Promise<DeletionRes
     }
   }
 
-  // 4. Grace=0 guard: bail BEFORE any side effect. Task 1.2 will wire up
-  // hardDeleteUser(); until then, refusing here keeps the account in a
-  // consistent pre-deletion state instead of half-deleting it.
-  const grace = config.deletionGracePeriodDays;
-  if (grace === 0) {
-    throw new NotImplementedError(
-      'Immediate hard-delete (grace period = 0) is not yet implemented (Task 1.2)',
-    );
-  }
-
-  // 5. Cloud only: cancel subscription FIRST so we never soft-delete a user
-  // who is still being billed. If billing reports an active sub that failed
-  // to cancel, fail closed.
+  // 4. Cloud only: cancel subscription FIRST so we never delete a user who
+  // is still being billed. If billing reports an active sub that failed to
+  // cancel, fail closed. Done BEFORE the grace=0 hard-delete branch so the
+  // immediate path also gets cancellation-before-mutation safety.
   let cancellation: CancellationResult | undefined;
   if (!config.selfHosted) {
     const hooks = getEeHooks();
@@ -107,9 +99,40 @@ export async function requestDeletion(req: DeletionRequest): Promise<DeletionRes
     }
   }
 
-  // 6. Compute scheduledAt (grace > 0 is guaranteed here by the guard above)
-  const scheduledAt = new Date(Date.now() + grace * 24 * 3600 * 1000).toISOString();
+  // 5. Compute grace + deletion reason
+  const grace = config.deletionGracePeriodDays;
   const deletionReason = initiatedByAdminId ? 'admin_initiated' : 'user_initiated';
+
+  // 6. Grace=0 fast path: hard-delete immediately, skipping the soft-delete
+  // window entirely. Cancellation already ran above so this is the same
+  // shape as the regular path minus the recoverable middle state.
+  if (grace === 0) {
+    await hardDeleteUser(userId);
+    if (initiatedByAdminId) {
+      logAdminAction({
+        actorId: initiatedByAdminId,
+        actorName: initiatedByAdminName ?? 'admin',
+        action: 'hard_delete_account',
+        targetType: 'user',
+        targetId: userId,
+        targetName: userEmail,
+        details: {
+          refundPolicy,
+          hadActiveSubscription: !!cancellation?.hadActiveSubscription,
+          refundAmountCents: cancellation?.refundAmountCents,
+        },
+      });
+      log.info(
+        `Hard-deleted account by admin ${initiatedByAdminId} (${initiatedByAdminName ?? 'admin'}) for user ${userId} (${userEmail})`,
+      );
+    } else {
+      log.info(`Hard-deleted account self-initiated for user ${userId} (${userEmail})`);
+    }
+    return { scheduledAt: null, cancellation };
+  }
+
+  // grace > 0 from here on — non-null scheduledAt narrowed for the hooks below.
+  const scheduledAt = new Date(Date.now() + grace * 24 * 3600 * 1000).toISOString();
 
   // 7. Soft-delete in a transaction
   await withTransaction(async (tx) => {

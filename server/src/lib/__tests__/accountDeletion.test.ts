@@ -17,7 +17,6 @@ vi.mock('../config.js', async (importOriginal) => {
 import { recoverDeletion, requestDeletion } from '../accountDeletion.js';
 import { config } from '../config.js';
 import { registerEeHooks } from '../eeHooks.js';
-import { NotImplementedError } from '../httpErrors.js';
 import { hashToken } from '../refreshTokens.js';
 
 // ---------------------------------------------------------------------------
@@ -203,25 +202,24 @@ describe('requestDeletion (self-hosted)', () => {
       .rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it('grace=0 throws NotImplementedError before any side effect (Task 1.2)', async () => {
+  it('grace=0 hard-deletes the user immediately (no soft-delete state)', async () => {
     Object.assign(config, { deletionGracePeriodDays: 0 });
 
     const userId = await createUserDirect();
     const tokenId = await insertRefreshToken(userId);
 
-    await expect(requestDeletion({ userId, refundPolicy: 'none' }))
-      .rejects.toBeInstanceOf(NotImplementedError);
+    const result = await requestDeletion({ userId, refundPolicy: 'none' });
 
-    // Verify the user row was not mutated.
+    // No grace window scheduled — the user is gone, not pending.
+    expect(result.scheduledAt).toBeNull();
+
+    // User row removed entirely.
     const row = await getUserRow(userId);
-    expect(row).not.toBeNull();
-    expect(row?.deletion_requested_at).toBeNull();
-    expect(row?.deletion_scheduled_at).toBeNull();
-    expect(row?.deleted_at).toBeNull();
-    expect(row?.deletion_reason).toBeNull();
+    expect(row).toBeNull();
 
-    // Verify refresh tokens were not revoked.
-    expect(await getRefreshTokenRevokedAt(tokenId)).toBeNull();
+    // Refresh tokens reaped along with the user (FK cascade).
+    const tokenRow = await query('SELECT id FROM refresh_tokens WHERE id = $1', [tokenId]);
+    expect(tokenRow.rows).toHaveLength(0);
   });
 });
 
