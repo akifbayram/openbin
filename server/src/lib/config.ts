@@ -160,9 +160,9 @@ export const config = Object.freeze({
     trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '25', 10), 1, 1000, 25),
   }),
   planPrices: Object.freeze({
-    plusMonthlyCents: parseStrictInt(process.env.PLAN_PRICE_PLUS_MONTHLY, 500),
+    plusQuarterlyCents: parseStrictInt(process.env.PLAN_PRICE_PLUS_QUARTERLY, 1500),
     plusAnnualCents: parseStrictInt(process.env.PLAN_PRICE_PLUS_ANNUAL, 5000),
-    proMonthlyCents: parseStrictInt(process.env.PLAN_PRICE_PRO_MONTHLY, 1000),
+    proQuarterlyCents: parseStrictInt(process.env.PLAN_PRICE_PRO_QUARTERLY, 3000),
     proAnnualCents: parseStrictInt(process.env.PLAN_PRICE_PRO_ANNUAL, 10000),
   }),
   // Email (Resend)

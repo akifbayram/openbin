@@ -9,7 +9,7 @@ interface CurrentPlanCardProps {
   status: SubscriptionStatus;
   activeUntil: string | null;
   cancelAtPeriodEnd: string | null;
-  billingPeriod: 'monthly' | 'annual' | null;
+  billingPeriod: 'quarterly' | 'annual' | null;
   trialPeriodDays: number;
   priceCents: number | null;
   annualSavingsCents: number;
@@ -55,14 +55,14 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
       trialDaysLeft === null || trialDaysLeft === 0
         ? 'Trial ended'
         : `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining`;
-    metaLine = priceCents !== null ? `Then ${formatPriceCents(priceCents)} / month` : null;
+    metaLine = priceCents !== null ? `Then ${formatPriceCents(priceCents)} / quarter` : null;
   } else {
     title = 'Active';
     if (activeUntil) {
       const datePart = `Renews ${formatBillingDate(activeUntil)}`;
       const pricePart =
         priceCents !== null && billingPeriod
-          ? ` · ${formatPriceCents(priceCents)} / ${billingPeriod === 'annual' ? 'year' : 'month'}`
+          ? ` · ${formatPriceCents(priceCents)} / ${billingPeriod === 'annual' ? 'year' : 'quarter'}`
           : '';
       metaLine = datePart + pricePart;
     }

@@ -384,7 +384,7 @@ export interface PlanInfo {
   cancelAtPeriodEnd: string | null;
   // Current billing cadence on the subscription. null on free / inactive
   // plans or when the value has not yet been set by the billing webhook.
-  billingPeriod: 'monthly' | 'annual' | null;
+  billingPeriod: 'quarterly' | 'annual' | null;
   // Trial total length in days, sourced from `config.trialPeriodDays` on the
   // server. Surfaces here so the client trial bar uses the same denominator
   // as billing instead of hardcoding 7.
@@ -395,7 +395,7 @@ export interface CatalogPlan {
   id: 'free' | 'plus' | 'pro';
   name: string;
   prices: {
-    monthly: number;          // cents; 0 for free
+    quarterly: number;        // cents; 0 for free
     annual: number | null;    // cents/year; null for free
   };
   features: PlanFeatures;

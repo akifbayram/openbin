@@ -50,7 +50,7 @@ describe('SubscriptionSection orchestrator', () => {
       plan: 'pro',
       status: 'active',
       activeUntil: '2026-05-27T00:00:00Z',
-      billingPeriod: 'monthly',
+      billingPeriod: 'quarterly',
     })],
     ['locked', () => makePlanInfo({
       plan: 'plus',
@@ -74,13 +74,13 @@ describe('SubscriptionSection orchestrator', () => {
     expect(screen.queryByRole('link', { name: /Manage Subscription/i })).toBeNull();
   });
 
-  it('Pro active monthly: renders new plan card with PRO eyebrow + Active + Renews + price', () => {
+  it('Pro active quarterly: renders new plan card with PRO eyebrow + Active + Renews + price', () => {
     setPlan(
       makePlanInfo({
         plan: 'pro',
         status: 'active',
         activeUntil: '2026-05-27T00:00:00Z',
-        billingPeriod: 'monthly',
+        billingPeriod: 'quarterly',
         portalAction: { url: 'https://billing.openbin.app/portal', method: 'POST', fields: { token: 't' } },
       }),
     );
@@ -90,13 +90,13 @@ describe('SubscriptionSection orchestrator', () => {
     expect(screen.getByText(/Renews May 27, 2026/)).toBeInTheDocument();
   });
 
-  it('Pro active monthly: shows "Switch to annual" primary CTA + ghost Manage', () => {
+  it('Pro active quarterly: shows "Switch to annual" primary CTA + ghost Manage', () => {
     setPlan(
       makePlanInfo({
         plan: 'pro',
         status: 'active',
         activeUntil: '2026-05-27T00:00:00Z',
-        billingPeriod: 'monthly',
+        billingPeriod: 'quarterly',
         portalAction: { url: 'https://billing.openbin.app/portal', method: 'POST', fields: { token: 't' } },
       }),
     );
@@ -121,13 +121,13 @@ describe('SubscriptionSection orchestrator', () => {
     expect(screen.getByText(/Manage Subscription/i)).toBeInTheDocument();
   });
 
-  it('Plus paid monthly: shows Pro upsell card + annual switch primary + manage', () => {
+  it('Plus paid quarterly: shows Pro upsell card + annual switch primary + manage', () => {
     setPlan(
       makePlanInfo({
         plan: 'plus',
         status: 'active',
         activeUntil: '2026-05-27T00:00:00Z',
-        billingPeriod: 'monthly',
+        billingPeriod: 'quarterly',
         portalAction: { url: 'https://billing.openbin.app/portal', method: 'POST', fields: { token: 't' } },
         upgradeProAction: { url: 'https://billing.openbin.app/upgrade', method: 'POST', fields: { token: 't' } },
       }),

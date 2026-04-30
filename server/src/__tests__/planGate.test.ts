@@ -399,7 +399,7 @@ describe('getUserPlanInfo()', () => {
   it('maps snake_case DB columns to camelCase', async () => {
     const activeUntil = '2027-01-01T00:00:00.000Z';
     vi.mocked(query).mockResolvedValue({
-      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.TRIAL, active_until: activeUntil, email: null, previous_sub_status: SubStatus.ACTIVE, cancel_at_period_end: '2027-02-01T00:00:00.000Z', billing_period: 'monthly' }],
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.TRIAL, active_until: activeUntil, email: null, previous_sub_status: SubStatus.ACTIVE, cancel_at_period_end: '2027-02-01T00:00:00.000Z', billing_period: 'quarterly' }],
       rowCount: 1,
     });
     const result = await getUserPlanInfo('user-id');
@@ -409,7 +409,7 @@ describe('getUserPlanInfo()', () => {
     expect(result?.email).toBeNull();
     expect(result?.previousSubStatus).toBe(SubStatus.ACTIVE);
     expect(result?.cancelAtPeriodEnd).toBe('2027-02-01T00:00:00.000Z');
-    expect(result?.billingPeriod).toBe('monthly');
+    expect(result?.billingPeriod).toBe('quarterly');
   });
 
   it('queries with the correct SQL and userId', async () => {

@@ -1,13 +1,13 @@
 export interface PriceShape {
-  monthly: number;
+  quarterly: number;
   annual: number | null;
 }
 
 /** Returns savings in cents (positive). Zero when no annual price or no savings. */
 export function computeAnnualSavings(price: PriceShape): number {
   if (price.annual === null) return 0;
-  const monthlyTotal = price.monthly * 12;
-  return Math.max(0, monthlyTotal - price.annual);
+  const quarterlyTotal = price.quarterly * 4;
+  return Math.max(0, quarterlyTotal - price.annual);
 }
 
 /** Renders a USD cents value as a dollar string. Whole dollars get no decimals. */

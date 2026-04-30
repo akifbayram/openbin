@@ -346,7 +346,7 @@ describe('POST /api/subscriptions/callback', () => {
       status: 1,  // SubStatus.ACTIVE
       activeUntil: '2026-05-27T00:00:00Z',
       cancelAtPeriodEnd: '2026-05-27T00:00:00Z',
-      billingPeriod: 'monthly',
+      billingPeriod: 'quarterly',
     });
 
     const res = await request(app)
@@ -360,7 +360,7 @@ describe('POST /api/subscriptions/callback', () => {
       [user.id],
     );
     expect(row.rows[0].cancel_at_period_end).toBe('2026-05-27T00:00:00Z');
-    expect(row.rows[0].billing_period).toBe('monthly');
+    expect(row.rows[0].billing_period).toBe('quarterly');
   });
 
   it('clears cancelAtPeriodEnd when payload omits it (subscription resumed)', async () => {
@@ -370,7 +370,7 @@ describe('POST /api/subscriptions/callback', () => {
       userId: user.id, plan: 0, status: 1,
       activeUntil: '2026-05-27T00:00:00Z',
       cancelAtPeriodEnd: '2026-05-27T00:00:00Z',
-      billingPeriod: 'monthly',
+      billingPeriod: 'quarterly',
     });
     await request(app).post('/api/subscriptions/callback').set('Authorization', `Bearer ${token1}`).send({});
 
@@ -378,7 +378,7 @@ describe('POST /api/subscriptions/callback', () => {
     const token2 = await makeSubToken({
       userId: user.id, plan: 0, status: 1,
       activeUntil: '2026-06-27T00:00:00Z',
-      billingPeriod: 'monthly',
+      billingPeriod: 'quarterly',
       // no cancelAtPeriodEnd
     });
     const res = await request(app).post('/api/subscriptions/callback').set('Authorization', `Bearer ${token2}`).send({});
@@ -395,7 +395,7 @@ describe('POST /api/subscriptions/callback', () => {
     const { user } = await createTestUser(app);
     const token = await makeSubToken({
       userId: user.id, plan: 0, status: 1, activeUntil: '2026-05-27T00:00:00Z',
-      billingPeriod: 'quarterly',
+      billingPeriod: 'monthly',
     });
     const res = await request(app).post('/api/subscriptions/callback').set('Authorization', `Bearer ${token}`).send({});
     expect(res.status).toBe(422);  // ValidationError

@@ -28,7 +28,7 @@ function mockActivePlusPaidUser() {
     email: 'plus@example.com',
     previousSubStatus: null,
     cancelAtPeriodEnd: null,
-    billingPeriod: 'monthly',
+    billingPeriod: 'quarterly',
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
 }
@@ -42,7 +42,7 @@ function mockActiveProPaidUser() {
     email: 'pro@example.com',
     previousSubStatus: null,
     cancelAtPeriodEnd: null,
-    billingPeriod: 'monthly',
+    billingPeriod: 'quarterly',
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
 }

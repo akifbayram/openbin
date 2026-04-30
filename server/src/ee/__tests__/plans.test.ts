@@ -40,10 +40,10 @@ describe('GET /api/plans', () => {
     }
   });
 
-  it('plus plan has monthly + annual prices', async () => {
+  it('plus plan has quarterly + annual prices', async () => {
     const res = await request(app).get('/api/plans');
     const plus = res.body.plans.find((p: any) => p.id === 'plus');
-    expect(plus.prices.monthly).toBeGreaterThan(0);
+    expect(plus.prices.quarterly).toBeGreaterThan(0);
     expect(plus.prices.annual).toBeGreaterThan(0);
   });
 });

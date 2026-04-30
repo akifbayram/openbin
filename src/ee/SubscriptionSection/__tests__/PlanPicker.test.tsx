@@ -11,7 +11,7 @@ describe('PlanPicker', () => {
       <PlanPicker
         catalog={FIXTURE_CATALOG}
         currentPlan="free"
-        billingPeriod="monthly"
+        billingPeriod="quarterly"
         onBillingPeriodChange={() => {}}
         actions={{ plus: POST_ACTION, pro: POST_ACTION }}
       />,
@@ -27,7 +27,7 @@ describe('PlanPicker', () => {
       <PlanPicker
         catalog={FIXTURE_CATALOG}
         currentPlan="free"
-        billingPeriod="monthly"
+        billingPeriod="quarterly"
         onBillingPeriodChange={() => {}}
         actions={{ plus: POST_ACTION, pro: POST_ACTION }}
       />,
@@ -35,13 +35,13 @@ describe('PlanPicker', () => {
     expect(screen.queryByRole('heading', { name: 'Free' })).toBeNull();
   });
 
-  it('switches monthly/annual via toggle', () => {
+  it('switches quarterly/annual via toggle', () => {
     const onChange = vi.fn();
     render(
       <PlanPicker
         catalog={FIXTURE_CATALOG}
         currentPlan="free"
-        billingPeriod="monthly"
+        billingPeriod="quarterly"
         onBillingPeriodChange={onChange}
         actions={{ plus: POST_ACTION, pro: POST_ACTION }}
       />,
