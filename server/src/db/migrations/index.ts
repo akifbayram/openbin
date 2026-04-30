@@ -5,6 +5,7 @@ import { tagSuggestionPrompt } from './0004_tag_suggestion_prompt.js';
 import { binItemSoftDelete } from './0005_bin_item_soft_delete.js';
 import { webhookJtiSeen } from './0006_webhook_jti_seen.js';
 import { subscriptionState } from './0007_subscription_state.js';
+import { deletionLifecycle } from './0010_deletion_lifecycle.js';
 import type { Migration } from './types.js';
 
 /**
@@ -19,4 +20,5 @@ export const migrations: Migration[] = [
   binItemSoftDelete,
   webhookJtiSeen,
   subscriptionState,
+  deletionLifecycle,
 ];
