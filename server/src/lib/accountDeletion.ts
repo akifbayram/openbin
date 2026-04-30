@@ -4,7 +4,7 @@ import { logAdminAction } from './adminAudit.js';
 import { config } from './config.js';
 import type { CancellationResult } from './eeHooks.js';
 import { getEeHooks } from './eeHooks.js';
-import { ConflictError, ForbiddenError, NotFoundError } from './httpErrors.js';
+import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError } from './httpErrors.js';
 import { createLogger } from './logger.js';
 import { revokeAllUserTokens } from './refreshTokens.js';
 
@@ -36,15 +36,17 @@ interface UserRow {
  * Steps:
  *   1. Validate the user exists and isn't already pending deletion.
  *   2. If user is admin, ensure at least one OTHER non-pending admin remains.
- *   3. Cloud only: cancel the Stripe subscription FIRST. If billing reports an
+ *   3. If grace=0, abort with NotImplementedError BEFORE any side effect.
+ *      Task 1.2 will wire up `hardDeleteUser`; until then, refusing here keeps
+ *      the account in a consistent pre-deletion state.
+ *   4. Cloud only: cancel the Stripe subscription FIRST. If billing reports an
  *      active subscription that failed to cancel, abort with ConflictError so
  *      the user is never deleted while still being charged.
- *   4. Inside a transaction, set deletion_requested_at, deletion_scheduled_at,
+ *   5. Inside a transaction, set deletion_requested_at, deletion_scheduled_at,
  *      deleted_at, deletion_reason.
- *   5. Revoke refresh tokens and bust the user-status cache.
- *   6. Record admin_audit_log when admin-initiated, plus a regular log line.
- *   7. If grace=0 jump straight to hard delete (TODO: requires Task 1.2).
- *      Otherwise fire-and-forget `notifyDeletionScheduled` for cloud emails.
+ *   6. Revoke refresh tokens and bust the user-status cache.
+ *   7. Record admin_audit_log when admin-initiated, plus a regular log line.
+ *   8. Fire-and-forget `notifyDeletionScheduled` for cloud emails.
  */
 export async function requestDeletion(req: DeletionRequest): Promise<DeletionResult> {
   const { userId, refundPolicy, initiatedByAdminId, initiatedByAdminName } = req;
@@ -59,7 +61,7 @@ export async function requestDeletion(req: DeletionRequest): Promise<DeletionRes
   }
   const user = userResult.rows[0];
   const userEmail = user.email;
-  const isAdmin = user.is_admin === true || user.is_admin === 1;
+  const isAdmin = !!user.is_admin;
 
   // 2. Already pending?
   if (user.deletion_requested_at) {
@@ -79,7 +81,17 @@ export async function requestDeletion(req: DeletionRequest): Promise<DeletionRes
     }
   }
 
-  // 4. Cloud only: cancel subscription FIRST so we never soft-delete a user
+  // 4. Grace=0 guard: bail BEFORE any side effect. Task 1.2 will wire up
+  // hardDeleteUser(); until then, refusing here keeps the account in a
+  // consistent pre-deletion state instead of half-deleting it.
+  const grace = config.deletionGracePeriodDays;
+  if (grace === 0) {
+    throw new NotImplementedError(
+      'Immediate hard-delete (grace period = 0) is not yet implemented (Task 1.2)',
+    );
+  }
+
+  // 5. Cloud only: cancel subscription FIRST so we never soft-delete a user
   // who is still being billed. If billing reports an active sub that failed
   // to cancel, fail closed.
   let cancellation: CancellationResult | undefined;
@@ -95,13 +107,11 @@ export async function requestDeletion(req: DeletionRequest): Promise<DeletionRes
     }
   }
 
-  // 5. Compute scheduledAt
-  const grace = config.deletionGracePeriodDays;
-  const scheduledAt =
-    grace > 0 ? new Date(Date.now() + grace * 24 * 3600 * 1000).toISOString() : null;
+  // 6. Compute scheduledAt (grace > 0 is guaranteed here by the guard above)
+  const scheduledAt = new Date(Date.now() + grace * 24 * 3600 * 1000).toISOString();
   const deletionReason = initiatedByAdminId ? 'admin_initiated' : 'user_initiated';
 
-  // 6. Soft-delete in a transaction
+  // 7. Soft-delete in a transaction
   await withTransaction(async (tx) => {
     await tx(
       `UPDATE users SET
@@ -115,11 +125,11 @@ export async function requestDeletion(req: DeletionRequest): Promise<DeletionRes
     );
   });
 
-  // 7. Revoke tokens and bust cache after the txn commits
+  // 8. Revoke tokens and bust cache after the txn commits
   await revokeAllUserTokens(userId);
   invalidateUserStatusCache(userId);
 
-  // 8. Audit logging
+  // 9. Audit logging
   if (initiatedByAdminId) {
     logAdminAction({
       actorId: initiatedByAdminId,
@@ -136,33 +146,27 @@ export async function requestDeletion(req: DeletionRequest): Promise<DeletionRes
       },
     });
     log.info(
-      `Account deletion requested by admin ${initiatedByAdminId} (${initiatedByAdminName ?? 'admin'}) for user ${userId} (${userEmail}); scheduledAt=${scheduledAt ?? 'immediate'}`,
+      `Account deletion requested by admin ${initiatedByAdminId} (${initiatedByAdminName ?? 'admin'}) for user ${userId} (${userEmail}); scheduledAt=${scheduledAt}`,
     );
   } else {
     log.info(
-      `Account deletion self-initiated for user ${userId} (${userEmail}); scheduledAt=${scheduledAt ?? 'immediate'}`,
+      `Account deletion self-initiated for user ${userId} (${userEmail}); scheduledAt=${scheduledAt}`,
     );
   }
 
-  // 9. Grace=0: immediately hard-delete. Task 1.2 will create userCleanup.ts
-  // with hardDeleteUser(); for now we fail loudly so callers can't accidentally
-  // rely on this code path.
-  if (grace === 0) {
-    // TODO(Task 1.2): import { hardDeleteUser } from './userCleanup.js' and call it here.
-    throw new Error('grace=0 immediate hard-delete not yet implemented (Task 1.2)');
-  }
-
-  // 10. Fire-and-forget cloud notification (non-zero grace path)
-  try {
-    getEeHooks().notifyDeletionScheduled?.(
+  // 10. Fire-and-forget cloud notification. The hook may not be installed
+  // (`?.notifyDeletionScheduled`) and may return either a Promise or undefined;
+  // the optional-chained `.catch` swallows the absent-promise case safely.
+  void getEeHooks()
+    .notifyDeletionScheduled?.(
       userId,
-      scheduledAt!,
+      scheduledAt,
       !!cancellation?.hadActiveSubscription,
       cancellation?.refundAmountCents,
+    )
+    ?.catch((err) =>
+      log.warn(`notifyDeletionScheduled hook threw for user ${userId}`, err),
     );
-  } catch (err) {
-    log.warn(`notifyDeletionScheduled hook threw for user ${userId}`, err);
-  }
 
   return { scheduledAt, cancellation };
 }

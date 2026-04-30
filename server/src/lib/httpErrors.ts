@@ -120,6 +120,13 @@ export class ReorganizeBinLimitError extends HttpError {
   }
 }
 
+export class NotImplementedError extends HttpError {
+  constructor(message: string) {
+    super(501, 'NOT_IMPLEMENTED', message);
+    this.name = 'NotImplementedError';
+  }
+}
+
 export class SelectionTooLargeError extends HttpError {
   public readonly max: number;
   public readonly requested: number;

@@ -38,7 +38,7 @@ interface EeHooks {
     scheduledAt: string,
     hadActiveSubscription: boolean,
     refundAmountCents?: number,
-  ) => void;
+  ) => Promise<void>;
   onHardDeleteUser?: (tx: TxQueryFn, userId: string) => Promise<void>;
 }
 
