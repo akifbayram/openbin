@@ -552,10 +552,40 @@ router.put('/:id/members/:userId/role', asyncHandler(async (req, res) => {
     }
   }
 
-  await query(
-    'UPDATE location_members SET role = $1 WHERE location_id = $2 AND user_id = $3',
-    [role, id, userId]
-  );
+  // Elevating a viewer consumes a paid slot — run the same cap check the join path uses.
+  // Wrap in a transaction so the count + UPDATE are serialized against concurrent joins.
+  const isElevatingViewer = targetRole === 'viewer' && role !== 'viewer';
+  await withTransaction(async (tx) => {
+    if (isElevatingViewer) {
+      const locResult = await tx<{ created_by: string }>(
+        `SELECT created_by FROM locations WHERE id = $1`,
+        [id],
+      );
+      const ownerId = locResult.rows[0]?.created_by;
+      if (ownerId) {
+        const planRow = await tx<{ plan: number }>(
+          `SELECT plan FROM users WHERE id = $1 ${d.forUpdate()}`,
+          [ownerId],
+        );
+        const ownerFeatures = planRow.rows.length > 0
+          ? getFeatureMap(planRow.rows[0].plan as PlanTier)
+          : getFeatureMap(1 as PlanTier);
+        if (ownerFeatures.maxMembersPerLocation !== null) {
+          const nonViewerCount = await countNonViewerMembers(id, tx);
+          if (nonViewerCount >= ownerFeatures.maxMembersPerLocation) {
+            throw new PlanRestrictedError(
+              `Cannot promote viewer: this location has reached its ${ownerFeatures.maxMembersPerLocation}-member limit. Upgrade or remove an existing member first.`,
+            );
+          }
+        }
+      }
+    }
+
+    await tx(
+      'UPDATE location_members SET role = $1 WHERE location_id = $2 AND user_id = $3',
+      [role, id, userId],
+    );
+  });
 
   // Get email for activity log
   const userResult = await query('SELECT email FROM users WHERE id = $1', [userId]);
