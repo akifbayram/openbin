@@ -82,6 +82,30 @@ export async function requestDeletion(req: DeletionRequest): Promise<DeletionRes
     }
   }
 
+  // 3b. Sole admin of a shared location → must transfer ownership first.
+  // Only blocks when (a) user has admin role on the location AND (b) the
+  // location has other members AND (c) no other admin remains. Sole-member
+  // locations are fine — they get cleaned up alongside the user.
+  const orphanedLocations = await query<{ id: string; name: string }>(
+    `SELECT l.id, l.name FROM locations l
+     WHERE l.id IN (
+       SELECT location_id FROM location_members
+       WHERE user_id = $1 AND role = 'admin'
+     )
+     AND (SELECT COUNT(*) FROM location_members lm2 WHERE lm2.location_id = l.id) > 1
+     AND (SELECT COUNT(*) FROM location_members lm3 WHERE lm3.location_id = l.id AND lm3.role = 'admin' AND lm3.user_id != $1) = 0`,
+    [userId],
+  );
+
+  if (orphanedLocations.rows.length > 0) {
+    throw new ConflictError({
+      code: 'SOLE_ADMIN_OF_SHARED_LOCATIONS',
+      message:
+        'You are the sole admin of locations shared with others. Promote another member to admin or remove the other members before deleting your account.',
+      locations: orphanedLocations.rows.map((l) => ({ id: l.id, name: l.name })),
+    });
+  }
+
   // 4. Cloud only: cancel subscription FIRST so we never delete a user who
   // is still being billed. If billing reports an active sub that failed to
   // cancel, fail closed. Done BEFORE the grace=0 hard-delete branch so the

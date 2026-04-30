@@ -51,6 +51,15 @@ async function createUserDirect(opts: CreateUserOpts = {}): Promise<string> {
   return id;
 }
 
+async function createTestLocationDirect(opts: { createdBy: string; name?: string }): Promise<string> {
+  const id = generateUuid();
+  await query(
+    `INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4)`,
+    [id, opts.name ?? `Loc ${id.slice(0, 6)}`, opts.createdBy, id.slice(0, 8)],
+  );
+  return id;
+}
+
 async function getUserRow(userId: string): Promise<Record<string, unknown> | null> {
   const result = await query(
     `SELECT id, email, deleted_at, deletion_requested_at, deletion_scheduled_at, deletion_reason
@@ -222,6 +231,89 @@ describe('requestDeletion (self-hosted)', () => {
     // Refresh tokens reaped along with the user (FK cascade).
     const tokenRow = await query('SELECT id FROM refresh_tokens WHERE id = $1', [tokenId]);
     expect(tokenRow.rows).toHaveLength(0);
+  });
+});
+
+describe('requestDeletion sole admin of shared location guard', () => {
+  beforeEach(() => {
+    Object.assign(config, { selfHosted: true, deletionGracePeriodDays: 30 });
+  });
+
+  it('blocks deletion when user is sole admin of a multi-member location', async () => {
+    const userId = await createUserDirect({ email: 'admin@test.local' });
+    const otherUserId = await createUserDirect({ email: 'member@test.local' });
+    const locId = await createTestLocationDirect({ createdBy: userId });
+    await query(
+      `INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, 'admin')`,
+      [generateUuid(), locId, userId],
+    );
+    await query(
+      `INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, 'member')`,
+      [generateUuid(), locId, otherUserId],
+    );
+
+    await expect(requestDeletion({ userId, refundPolicy: 'none' })).rejects.toMatchObject({
+      code: 'SOLE_ADMIN_OF_SHARED_LOCATIONS',
+    });
+
+    // Verify no state change
+    const after = await getUserRow(userId);
+    expect(after?.deletion_requested_at).toBeNull();
+    expect(after?.deleted_at).toBeNull();
+  });
+
+  it('allows deletion when there is another admin on the shared location', async () => {
+    const userId = await createUserDirect();
+    const otherAdminId = await createUserDirect();
+    const locId = await createTestLocationDirect({ createdBy: userId });
+    await query(
+      `INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, 'admin')`,
+      [generateUuid(), locId, userId],
+    );
+    await query(
+      `INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, 'admin')`,
+      [generateUuid(), locId, otherAdminId],
+    );
+
+    await expect(requestDeletion({ userId, refundPolicy: 'none' })).resolves.toBeDefined();
+  });
+
+  it('allows deletion when sole admin of a SOLE-member location (no other members)', async () => {
+    const userId = await createUserDirect();
+    const locId = await createTestLocationDirect({ createdBy: userId });
+    await query(
+      `INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, 'admin')`,
+      [generateUuid(), locId, userId],
+    );
+
+    await expect(requestDeletion({ userId, refundPolicy: 'none' })).resolves.toBeDefined();
+  });
+
+  it('lists all orphaned locations in the error payload', async () => {
+    const userId = await createUserDirect();
+    const otherUserId = await createUserDirect();
+    const locA = await createTestLocationDirect({ createdBy: userId, name: 'Loc A' });
+    const locB = await createTestLocationDirect({ createdBy: userId, name: 'Loc B' });
+    for (const locId of [locA, locB]) {
+      await query(
+        `INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, 'admin')`,
+        [generateUuid(), locId, userId],
+      );
+      await query(
+        `INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, 'member')`,
+        [generateUuid(), locId, otherUserId],
+      );
+    }
+
+    try {
+      await requestDeletion({ userId, refundPolicy: 'none' });
+      throw new Error('should have thrown');
+    } catch (err) {
+      const details = (err as ConflictError).details as { locations: Array<{ id: string; name: string }> };
+      expect(details.locations).toHaveLength(2);
+      const names = details.locations.map((l) => l.name).sort();
+      expect(names).toEqual(['Loc A', 'Loc B']);
+    }
   });
 });
 
