@@ -34,6 +34,13 @@ function isApiKeyAuth(req: Request): boolean {
   return typeof h === 'string' && h.startsWith('Bearer ');
 }
 
+// OAuth callback endpoints are exempt — they carry their own CSRF defense via
+// the oauth_state cookie + PKCE / nonce, and Apple's POST callback is a
+// cross-site form post that cannot carry our X-CSRF-Token header. Without
+// this exemption, the link-from-settings flow is blocked for Apple whenever
+// the user is already authenticated.
+const CSRF_EXEMPT_PREFIXES = ['/api/auth/oauth/'];
+
 /**
  * Double-submit CSRF protection for cookie-authenticated state-changing requests.
  *
@@ -54,6 +61,12 @@ export function csrfProtect(req: Request, res: Response, next: NextFunction): vo
   }
 
   if (isApiKeyAuth(req) || !hasAuthCookie(req)) {
+    next();
+    return;
+  }
+
+  const path = req.path;
+  if (CSRF_EXEMPT_PREFIXES.some((p) => path.startsWith(p))) {
     next();
     return;
   }

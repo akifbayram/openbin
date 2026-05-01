@@ -11,6 +11,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   callback_failed: 'Authentication failed — please try again',
   no_email: 'An email address is required to sign in',
   invalid_flow: 'Invalid authentication flow',
+  email_in_use: 'An account with this email already exists. Sign in with your password, then link from settings.',
+  link_conflict: 'This account is already linked to a different OpenBin user.',
+  invalid_state: 'Sign-in expired — please try again',
+  token_invalid: 'Authentication failed — please try again',
+  forbidden: 'Sign-in not permitted for this account',
 };
 
 export function useOAuthReturn() {
@@ -23,6 +28,9 @@ export function useOAuthReturn() {
     if (!oauth) return;
 
     if (oauth === 'success') {
+      refreshSession();
+    } else if (oauth === 'linked') {
+      showToast({ message: 'Account linked successfully', variant: 'success' });
       refreshSession();
     } else if (oauth === 'error') {
       const reason = searchParams.get('reason') || 'callback_failed';

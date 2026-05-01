@@ -6,6 +6,7 @@ import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
 import { useToast } from '@/components/ui/toast';
 import { useAiSettings } from '@/features/ai/useAiSettings';
+import { useOAuthReturn } from '@/features/auth/OAuthReturn';
 import { useFirstBinIds } from '@/features/bins/useBins';
 import { useAutoOpenOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useLocationList } from '@/features/locations/useLocations';
@@ -56,6 +57,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function AppLayout() {
   useTheme();
+  useOAuthReturn();
   const { isCollapsed: sidebarCollapsed } = useSidebarCollapsed();
   const { settings } = useAppSettings();
   const { activeLocationId, setActiveLocationId, demoMode } = useAuth();

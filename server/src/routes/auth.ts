@@ -21,6 +21,8 @@ import {
   getCodeVerifier,
   getOAuthProviders,
   googleJwks,
+  linkOAuthIdentity,
+  oauthErrorReason,
   validateState,
 } from '../lib/oauth.js';
 import { consumeResetToken, createPasswordResetToken } from '../lib/passwordReset.js';
@@ -814,6 +816,24 @@ router.get('/oauth/google/callback', asyncHandler(async (req, res) => {
 
     clearOAuthCookies(res);
 
+    // If the user is already authenticated, this is a link attempt from
+    // settings — don't try to create a new account, attach the identity
+    // to the current user instead.
+    if (req.user) {
+      const result = await linkOAuthIdentity({
+        userId: req.user.id,
+        provider: 'google',
+        providerUserId: sub,
+        email,
+      });
+      if (result === 'conflict') {
+        res.redirect('/?oauth=error&reason=link_conflict');
+        return;
+      }
+      res.redirect('/?oauth=linked');
+      return;
+    }
+
     const { user } = await findOrCreateOAuthUser({
       provider: 'google',
       providerUserId: sub,
@@ -825,7 +845,7 @@ router.get('/oauth/google/callback', asyncHandler(async (req, res) => {
   } catch (err) {
     clearOAuthCookies(res);
     log.error('Google OAuth callback error:', err);
-    res.redirect('/?oauth=error&reason=callback_failed');
+    res.redirect(`/?oauth=error&reason=${oauthErrorReason(err)}`);
   }
 }));
 
@@ -899,6 +919,21 @@ router.post('/oauth/apple/callback', asyncHandler(async (req, res) => {
       return;
     }
 
+    if (req.user) {
+      const result = await linkOAuthIdentity({
+        userId: req.user.id,
+        provider: 'apple',
+        providerUserId: sub,
+        email,
+      });
+      if (result === 'conflict') {
+        res.redirect('/?oauth=error&reason=link_conflict');
+        return;
+      }
+      res.redirect('/?oauth=linked');
+      return;
+    }
+
     const { user } = await findOrCreateOAuthUser({
       provider: 'apple',
       providerUserId: sub,
@@ -910,7 +945,7 @@ router.post('/oauth/apple/callback', asyncHandler(async (req, res) => {
   } catch (err) {
     clearOAuthCookies(res);
     log.error('Apple OAuth callback error:', err);
-    res.redirect('/?oauth=error&reason=callback_failed');
+    res.redirect(`/?oauth=error&reason=${oauthErrorReason(err)}`);
   }
 }));
 

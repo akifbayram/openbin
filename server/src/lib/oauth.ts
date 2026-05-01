@@ -186,6 +186,86 @@ export async function finalizeOAuthLogin(
   res.redirect('/?oauth=success');
 }
 
+// -- Link OAuth identity to an already-authenticated user --
+
+export type LinkResult = 'created' | 'already_linked' | 'conflict';
+
+export interface LinkOAuthInput {
+  userId: string;
+  provider: string;
+  providerUserId: string;
+  email: string;
+}
+
+/**
+ * Attaches an OAuth identity to an existing authenticated user.
+ *
+ * Email-based auto-linking on the login path was removed in 6e0d8202 to close
+ * an account-takeover vector — anyone holding a Google identity with a
+ * victim's email could otherwise claim the account. The intended path for
+ * users who already have a password account is to log in and explicitly
+ * link from settings; this helper backs that flow.
+ *
+ * Conflict semantics:
+ *   - same user already linked → 'already_linked' (no-op)
+ *   - different user already linked → 'conflict' (refuse — the OAuth identity
+ *     belongs to someone else)
+ *   - same user has a different sub for this provider → replaced (UPSERT)
+ */
+export async function linkOAuthIdentity(input: LinkOAuthInput): Promise<LinkResult> {
+  const { userId, provider, providerUserId, email } = input;
+
+  const existing = await query<{ user_id: string }>(
+    'SELECT user_id FROM user_oauth_links WHERE provider = $1 AND provider_user_id = $2',
+    [provider, providerUserId],
+  );
+  if (existing.rows.length > 0) {
+    if (existing.rows[0].user_id === userId) return 'already_linked';
+    log.warn(`Link refused: ${provider} identity already linked to a different user`);
+    return 'conflict';
+  }
+
+  // Replace any existing link for the same (user, provider). Most recent
+  // OAuth login wins, so an old sub for this provider gets cleared instead
+  // of accumulating dead rows. There's no UNIQUE(user_id, provider) on the
+  // table — only UNIQUE(provider, provider_user_id) — so we can't ON CONFLICT
+  // cleanly across both engines; the explicit DELETE+INSERT works on both.
+  await withTransaction(async (txQuery) => {
+    await txQuery(
+      'DELETE FROM user_oauth_links WHERE user_id = $1 AND provider = $2',
+      [userId, provider],
+    );
+    await txQuery(
+      `INSERT INTO user_oauth_links (id, user_id, provider, provider_user_id, email)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [generateUuid(), userId, provider, providerUserId, email],
+    );
+  });
+  log.info(`Linked ${provider} identity to user ${userId}`);
+  return 'created';
+}
+
+// -- Map a thrown callback error to a specific URL reason --
+
+/**
+ * Translates an unhandled OAuth callback exception into the `reason` query
+ * parameter we redirect with. Adds context the user (and ops) can act on
+ * instead of the previous catch-all `callback_failed`. Reasons consumed by
+ * `OAuthReturn.tsx` to render specific toasts.
+ */
+export function oauthErrorReason(err: unknown): string {
+  if (err instanceof ForbiddenError) {
+    if (/already exists/i.test(err.message)) return 'email_in_use';
+    return 'forbidden';
+  }
+  if (err instanceof UnauthorizedError) return 'invalid_state';
+  if (err && typeof err === 'object' && 'code' in err) {
+    const code = (err as { code?: unknown }).code;
+    if (typeof code === 'string' && code.startsWith('ERR_JW')) return 'token_invalid';
+  }
+  return 'callback_failed';
+}
+
 // -- Available providers --
 
 export function getOAuthProviders(): string[] {

@@ -144,4 +144,19 @@ describe('CSRF protection', () => {
       .set('Cookie', [`openbin-access=${access}`, `openbin-refresh=${refresh}`]);
     expect(res.status).toBe(200);
   });
+
+  it('exempts /api/auth/oauth/ POSTs from CSRF (state cookie covers it)', async () => {
+    // Apple's POST callback to /api/auth/oauth/apple/callback cannot carry our
+    // X-CSRF-Token header — the OAuth state cookie + nonce already provide
+    // the CSRF defense for these paths. Without the exemption, the link flow
+    // is blocked when a logged-in user clicks "Connect Apple".
+    const { access, refresh, csrf } = await loginViaCookie();
+    const res = await request(app)
+      .post('/api/auth/oauth/apple/callback')
+      .set('Cookie', [`openbin-access=${access}`, `openbin-refresh=${refresh}`, `openbin-csrf=${csrf}`])
+      .send({ id_token: 'invalid', state: 'whatever' });
+    // Should not be blocked by CSRF — the route handler runs and rejects on
+    // missing state cookie / invalid token, but with a non-CSRF error.
+    expect(res.body.error).not.toBe('CSRF_INVALID');
+  });
 });
