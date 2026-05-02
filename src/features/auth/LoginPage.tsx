@@ -154,13 +154,8 @@ export function LoginPage() {
                       enterKeyHint="next"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="login-password">Password</Label>
-                      <Link to="/forgot-password" className="text-[13px] text-[var(--accent)] hover:underline focus-visible:underline focus-visible:outline-none shrink-0">
-                        Forgot password?
-                      </Link>
-                    </div>
+                  <div className="relative space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
                     <PasswordInput
                       ref={passwordRef}
                       id="login-password"
@@ -171,6 +166,9 @@ export function LoginPage() {
                       required
                       enterKeyHint="done"
                     />
+                    <Link to="/forgot-password" className="absolute right-0 top-0 text-[13px] text-[var(--accent)] hover:underline focus-visible:underline focus-visible:outline-none shrink-0">
+                      Forgot password?
+                    </Link>
                   </div>
                   <Button
                     type="submit"
