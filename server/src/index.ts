@@ -63,6 +63,32 @@ import userPreferencesRoutes from './routes/userPreferences.js';
 
 const STATIC_DIR = path.join(import.meta.dirname, '..', 'public');
 
+// CSP hashes pin the inline scripts in index.html — update when those scripts change.
+// CF beacon allowances cover the Web Analytics RUM script Cloudflare auto-injects at
+// the proxy layer; harmless on self-hosted (no CF proxy in the request path).
+const CSP_INLINE_SCRIPT_HASHES = [
+  "'sha256-7KadoKzu1sd1+0LivMFrmxISBXbhj6nm/vOZqEaVC5I='",
+  "'sha256-4kldY8Nv9iluY61Doo0WCNi1p1qCWgXWfSgXIX8g3g0='",
+];
+const CF_BEACON_SCRIPT_SRC = 'https://static.cloudflareinsights.com';
+const CF_BEACON_CONNECT_SRC = 'https://cloudflareinsights.com';
+
+function buildCspHeader(): string {
+  const frameAncestors = config.frameAncestors
+    ? `frame-ancestors 'self' ${config.frameAncestors};`
+    : "frame-ancestors 'none';";
+  const scriptSrc = ["'self'", ...CSP_INLINE_SCRIPT_HASHES, CF_BEACON_SCRIPT_SRC].join(' ');
+  return [
+    "default-src 'self';",
+    frameAncestors,
+    "img-src 'self' data: blob:;",
+    `script-src ${scriptSrc};`,
+    "style-src 'self' 'unsafe-inline';",
+    `connect-src 'self' ${CF_BEACON_CONNECT_SRC};`,
+    "worker-src 'self' blob:;",
+  ].join(' ');
+}
+
 export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => void }): express.Express {
   const app = express();
   if (config.trustProxy) app.set('trust proxy', 1);
@@ -76,27 +102,20 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
     },
   }));
 
-  // Security headers
+  // Security headers — header strings depend only on config, so build them once.
+  const cspHeader = buildCspHeader();
+  const xFrameOptions = config.frameAncestors
+    ? `ALLOW-FROM ${config.frameAncestors.split(' ')[0]}`
+    : 'DENY';
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
-    if (config.frameAncestors) {
-      res.setHeader('X-Frame-Options', `ALLOW-FROM ${config.frameAncestors.split(' ')[0]}`);
-    } else {
-      res.setHeader('X-Frame-Options', 'DENY');
-    }
+    res.setHeader('X-Frame-Options', xFrameOptions);
     if (config.trustProxy) {
       res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
     }
-    // CSP hashes must match the inline scripts in index.html — update if those scripts change
-    const frameAncestorsCsp = config.frameAncestors
-      ? `frame-ancestors 'self' ${config.frameAncestors};`
-      : "frame-ancestors 'none';";
-    res.setHeader(
-      'Content-Security-Policy',
-      `default-src 'self'; ${frameAncestorsCsp} img-src 'self' data: blob:; script-src 'self' 'sha256-7KadoKzu1sd1+0LivMFrmxISBXbhj6nm/vOZqEaVC5I=' 'sha256-4kldY8Nv9iluY61Doo0WCNi1p1qCWgXWfSgXIX8g3g0='; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self' blob:;`,
-    );
+    res.setHeader('Content-Security-Policy', cspHeader);
     next();
   });
 

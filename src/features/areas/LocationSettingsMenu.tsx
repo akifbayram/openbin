@@ -87,7 +87,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
             onClick={() => handleItem(onRetention)}
           >
             <Clock className="h-4 w-4 text-[var(--text-tertiary)]" />
-            Data Retention
+            Retention & Roles
           </button>
           <button
             type="button"
