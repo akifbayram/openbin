@@ -297,7 +297,7 @@ function PlanErrorNotifier() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const { code, message: serverMessage, upgradeUrl } = (e as CustomEvent).detail ?? {};
+      const { code, message: serverMessage, upgradeUrl, upgradeAction } = (e as CustomEvent).detail ?? {};
       let message: string;
       let actionLabel: string;
       if (code === 'SUBSCRIPTION_EXPIRED') {
@@ -310,11 +310,38 @@ function PlanErrorNotifier() {
         message = 'This feature requires a Pro plan';
         actionLabel = 'Upgrade';
       }
+
+      let onClick: (() => void) | undefined;
+      if (upgradeAction && isSafeExternalUrl(upgradeAction.url) && (upgradeAction.method === 'GET' || upgradeAction.method === 'POST')) {
+        onClick = () => {
+          if (upgradeAction.method === 'POST') {
+            // POST: JWT rides the form body, never the URL
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = upgradeAction.url;
+            form.target = '_blank';
+            form.style.display = 'none';
+            for (const [k, v] of Object.entries(upgradeAction.fields as Record<string, string>)) {
+              const inp = document.createElement('input');
+              inp.type = 'hidden'; inp.name = k; inp.value = v;
+              form.appendChild(inp);
+            }
+            document.body.appendChild(form);
+            try { form.submit(); } finally { document.body.removeChild(form); }
+          } else {
+            const params = new URLSearchParams(upgradeAction.fields as Record<string, string>).toString();
+            window.open(params ? `${upgradeAction.url}?${params}` : upgradeAction.url, '_blank', 'noopener,noreferrer');
+          }
+        };
+      } else if (upgradeUrl && isSafeExternalUrl(upgradeUrl)) {
+        onClick = () => window.open(upgradeUrl, '_blank');
+      }
+
       showToast({
         message,
         variant: 'warning',
         duration: 6000,
-        ...(upgradeUrl && isSafeExternalUrl(upgradeUrl) ? { action: { label: actionLabel, onClick: () => window.open(upgradeUrl, '_blank') } } : {}),
+        ...(onClick ? { action: { label: actionLabel, onClick } } : {}),
       });
     };
     window.addEventListener('openbin-plan-restricted', handler);

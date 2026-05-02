@@ -109,7 +109,7 @@ router.get('/attachments/:id/file', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const access = await verifyBinAttachmentAccess(req.user!.id, id, 'attachment');
 
-  const safeName = access.filename.replace(/[\r\n"\\]/g, '_') || 'attachment';
+  const safeName = access.filename.replace(/[\r\n"\\;]/g, '_') || 'attachment';
   res.setHeader('Content-Type', access.mimeType || 'application/octet-stream');
   res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
   res.setHeader('Cache-Control', 'private, no-store');

@@ -30,8 +30,13 @@ export function generateState(res: Response): string {
 }
 
 export function validateState(cookieState: string | undefined, queryState: string | undefined): void {
-  if (!cookieState || !queryState || cookieState !== queryState) {
-    log.warn(`State mismatch — cookie: ${cookieState ? 'present' : 'missing'}, query: ${queryState ? 'present' : 'missing'}, match: ${cookieState === queryState}`);
+  const valid =
+    !!cookieState &&
+    !!queryState &&
+    cookieState.length === queryState.length &&
+    crypto.timingSafeEqual(Buffer.from(cookieState), Buffer.from(queryState));
+  if (!valid) {
+    log.warn(`State mismatch — cookie: ${cookieState ? 'present' : 'missing'}, query: ${queryState ? 'present' : 'missing'}`);
     throw new UnauthorizedError('Invalid OAuth state');
   }
 }

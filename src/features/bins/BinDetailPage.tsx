@@ -104,7 +104,7 @@ export function BinDetailPage() {
   const HeaderIcon = resolveIcon(bin.icon);
 
   function handleClose() {
-    if (backState?.backPath) navigate(backState.backPath);
+    if (backState?.backPath && backState.backPath.startsWith('/')) navigate(backState.backPath);
     else if (window.history.length > 1) navigate(-1);
     else navigate('/bins');
   }

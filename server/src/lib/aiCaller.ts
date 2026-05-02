@@ -37,6 +37,8 @@ function isPrivateIp(ip: string): boolean {
     if (parts[0] === 127) return true;                                     // 127.0.0.0/8
     if (parts[0] === 169 && parts[1] === 254) return true;                // 169.254.0.0/16 (link-local/cloud metadata)
     if (parts[0] === 0) return true;                                       // 0.0.0.0/8
+    if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return true; // 100.64.0.0/10 CGNAT (cloud inter-VM)
+    if (parts[0] >= 224) return true;                                      // 224.0.0.0/4 multicast + 240.0.0.0/4 reserved
     return false;
   }
   // IPv6 private/reserved
