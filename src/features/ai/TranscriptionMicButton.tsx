@@ -1,5 +1,6 @@
 import { Loader2, Mic, Square } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useCreditCostLabel } from '@/lib/aiCreditCost';
 import type { useTranscription } from '@/lib/useTranscription';
 import { cn, formatElapsed } from '@/lib/utils';
 
@@ -11,6 +12,7 @@ interface TranscriptionMicButtonProps {
 export function TranscriptionMicButton({ transcription, className }: TranscriptionMicButtonProps) {
   const { state, duration, start, stop } = transcription;
   const elapsed = formatElapsed(duration);
+  const { label: voiceInputLabel } = useCreditCostLabel('Voice input', 1);
 
   if (state === 'recording') {
     return (
@@ -43,7 +45,7 @@ export function TranscriptionMicButton({ transcription, className }: Transcripti
   }
 
   return (
-    <Tooltip content="Voice input">
+    <Tooltip content={voiceInputLabel}>
       <button
         type="button"
         onClick={start}
@@ -51,7 +53,7 @@ export function TranscriptionMicButton({ transcription, className }: Transcripti
           'p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors',
           className,
         )}
-        aria-label="Voice input"
+        aria-label={voiceInputLabel}
         data-tour="voice-input"
       >
         <Mic className="h-5 w-5" />

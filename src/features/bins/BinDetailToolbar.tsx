@@ -3,12 +3,12 @@ import { ArrowRightLeft, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHor
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
-import { visionWeight } from '@/lib/aiCreditCost';
+import { useCreditCostLabel, visionWeight } from '@/lib/aiCreditCost';
 import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { useMenuKeyboard } from '@/lib/useMenuKeyboard';
 import { usePopover } from '@/lib/usePopover';
-import { cn, focusRing, pluralize } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
 import type { Bin, Location } from '@/types';
 
 interface BinDetailToolbarProps {
@@ -74,7 +74,7 @@ export function BinDetailToolbar({
   const { menuRef, onKeyDown: menuKeyDown } = useMenuKeyboard(visible, close);
   const aiCost = visionWeight(analyzePhotoCount);
   const aiBaseLabel = isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI';
-  const aiTipLabel = `${aiBaseLabel} · ${pluralize(aiCost, 'credit')}`;
+  const { label: aiTipLabel, compactSuffix: aiMobileSuffix } = useCreditCostLabel(aiBaseLabel, aiCost);
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(bin.name);
@@ -223,7 +223,7 @@ export function BinDetailToolbar({
                     {isAnalyzing ? <Loader2 className="h-4 w-4 text-[var(--text-tertiary)] animate-spin" /> : <Sparkles className="h-4 w-4 text-[var(--text-tertiary)]" />}
                     {aiBaseLabel}
                   </span>
-                  <span className="text-xs text-[var(--text-tertiary)]">{aiCost}c</span>
+                  <span className="text-xs text-[var(--text-tertiary)]">{aiCost}c{aiMobileSuffix}</span>
                 </button>
               )}
               {canPin && (

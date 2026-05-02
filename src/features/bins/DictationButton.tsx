@@ -4,8 +4,13 @@ import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
 import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useCreditCostLabel } from '@/lib/aiCreditCost';
 import type { useDictation } from '@/lib/useDictation';
 import { cn, formatElapsed } from '@/lib/utils';
+
+// Dictation chains transcribe (1 credit) + structure-text (1 credit) per
+// gesture, so the entry-point tooltip surfaces 2.
+const DICTATION_COST = 2;
 
 const TRANSCRIBE_LABELS: LabelThreshold[] = [
   [0, 'Sending audio...'],
@@ -71,15 +76,16 @@ export function DictationButton({ dictation }: DictationButtonProps) {
   }
 
   const elapsed = formatElapsed(duration);
+  const { label: dictateLabel } = useCreditCostLabel('Dictate items', DICTATION_COST);
 
   if (state === 'idle') {
     return (
-      <Tooltip content="Dictate items">
+      <Tooltip content={dictateLabel}>
         <button
           type="button"
           onClick={start}
           className="shrink-0 flex items-center justify-center size-11 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
-          aria-label="Dictate items"
+          aria-label={dictateLabel}
         >
           <Mic className="h-4 w-4" />
         </button>

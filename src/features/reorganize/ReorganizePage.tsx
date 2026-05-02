@@ -588,7 +588,7 @@ export function ReorganizePage() {
               Suggest tags for {selection.selectedIds.size} {selection.selectedIds.size === 1 ? t.bin : t.bins}
             </Button>
           )}
-          {selection.selectedIds.size >= 2 && !overCap && (
+          {selection.selectedIds.size >= (mode === 'bins' ? 2 : 1) && !overCap && (
             <div className="text-[12px] text-[var(--text-tertiary)] text-center -mt-2 flex flex-col items-center gap-0.5">
               <span>
                 {itemCount} item{itemCount !== 1 ? 's' : ''} across {selection.selectedIds.size} {t.bins}
