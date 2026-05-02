@@ -40,6 +40,6 @@ export const KEY_PLACEHOLDERS: Record<AiProvider, string> = {
 
 export const TASK_GROUP_META: { key: AiTaskGroup; label: string; description: string }[] = [
   { key: 'vision', label: 'Vision', description: 'Photo Scan' },
-  { key: 'quickText', label: 'Quick Text', description: 'Commands, Text Extraction' },
-  { key: 'deepText', label: 'Deep Text', description: 'Queries, Reorganize' },
+  { key: 'quickText', label: 'Quick Text', description: 'Commands, Queries, Text Extraction' },
+  { key: 'deepText', label: 'Deep Text', description: 'Reorganize, Tag Suggestions' },
 ];

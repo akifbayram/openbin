@@ -13,7 +13,7 @@ export const TASK_GROUP_MAP: Record<string, AiTaskGroup> = {
   'execute': 'quickText',
   'structure': 'quickText',
   'structure-text': 'quickText',
-  'query': 'deepText',
+  'query': 'quickText',
   'reorganization': 'deepText',
   'tagSuggestion': 'deepText',
 };

@@ -71,7 +71,7 @@ describe('TASK_GROUP_MAP', () => {
     expect(TASK_GROUP_MAP.execute).toBe('quickText');
     expect(TASK_GROUP_MAP.structure).toBe('quickText');
     expect(TASK_GROUP_MAP['structure-text']).toBe('quickText');
-    expect(TASK_GROUP_MAP.query).toBe('deepText');
+    expect(TASK_GROUP_MAP.query).toBe('quickText');
     expect(TASK_GROUP_MAP.reorganization).toBe('deepText');
     expect(TASK_GROUP_MAP.tagSuggestion).toBe('deepText');
   });
