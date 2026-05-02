@@ -96,15 +96,19 @@ To find the actual validation limits, read `server/src/lib/binValidation.ts` and
 
 ### 3. Rate limiter enforcement — `server/src/__tests__/rateLimiter.test.ts`
 
-IMPORTANT: The default test setup has `DISABLE_RATE_LIMIT=true`. For rate limiter tests, set `process.env.DISABLE_RATE_LIMIT = 'false'` before calling `createApp()`.
+IMPORTANT: The OpenBin config object is frozen at module import time. Setting `process.env.DISABLE_RATE_LIMIT = 'false'` at test runtime will NOT work — the rate limiters are already initialized as no-ops.
 
-Read `server/src/lib/config.ts` to find the actual limits for `authRateLimit` and `registerRateLimit`.
+Rate limiter tests require one of these approaches:
+a) Use `vi.mock('../lib/rateLimiters.js', ...)` to replace the no-op limiters with real express-rate-limit instances
+b) OR note in the output summary that rate limiter tests cannot be written without a dedicated test environment and skip this section
 
-Write tests that:
-- Hit the auth endpoint (`POST /api/auth/login`) N+1 times with wrong credentials and assert the N+1th response is 429
-- Hit the register endpoint N+1 times and assert 429
+If you choose approach (a):
+- Read `server/src/lib/rateLimiters.ts` to understand the limiter factory
+- Mock the module to return real express-rate-limit instances with low limits (e.g., `max: 2`)
+- Hit the auth endpoint 3 times and assert the 3rd response is 429
+- Hit the register endpoint 3 times and assert the 3rd response is 429
 
-Reset `process.env.DISABLE_RATE_LIMIT` in `afterEach`.
+If you cannot implement (a) cleanly, note in your output summary: "Rate limiter tests skipped — config is frozen at import time; requires vi.mock of rateLimiters module."
 
 ### 4. API key scope — `server/src/__tests__/apiKeyScope.test.ts`
 

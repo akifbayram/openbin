@@ -66,9 +66,9 @@ Read `server/src/__tests__/hierarchicalAreas.test.ts` first. Write for uncovered
 
 Read `server/src/__tests__/export.test.ts` first. Write a round-trip test:
 - Create a location with bins, items, tags, custom fields, and areas
-- Export via `GET /api/export?locationId=...` and capture the JSON
+- Export via `GET /api/locations/${location.id}/export` and capture the JSON
 - Create a new location
-- Import the captured JSON via `POST /api/import`
+- Import the captured JSON via `POST /api/locations/${newLocation.id}/import`
 - Assert: bin count matches, item names match, tags match, areas match
 
 ### 4. Bulk operation edge cases — create `server/src/__tests__/bulkEdgeCases.test.ts`
