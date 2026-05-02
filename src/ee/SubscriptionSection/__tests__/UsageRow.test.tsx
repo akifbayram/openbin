@@ -32,7 +32,7 @@ describe('UsageRow', () => {
     expect(screen.getByText(/locations/)).toBeInTheDocument();
     expect(screen.getByText(/members/)).toBeInTheDocument();
     expect(screen.getByText(/MB/)).toBeInTheDocument();
-    expect(screen.getByText(/AI/)).toBeInTheDocument();
+    expect(screen.getByText(/\/250 AI/)).toBeInTheDocument();
   });
 
   it('hides metrics with limit 1 (single-slot)', () => {
@@ -67,5 +67,32 @@ describe('UsageRow', () => {
       />,
     );
     expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('shows a variable-cost hint when AI credits are surfaced', () => {
+    render(
+      <UsageRow
+        usage={PRO_USAGE}
+        features={PRO_FEATURES}
+        aiCredits={{ used: 4, limit: 250, resetsAt: null }}
+      />,
+    );
+    expect(screen.getByText(/cost varies by request/i)).toBeInTheDocument();
+  });
+
+  it('omits the variable-cost hint when aiCredits is null', () => {
+    render(<UsageRow usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null} />);
+    expect(screen.queryByText(/cost varies by request/i)).toBeNull();
+  });
+
+  it('omits the variable-cost hint when aiCredits.limit is 0', () => {
+    render(
+      <UsageRow
+        usage={PRO_USAGE}
+        features={PRO_FEATURES}
+        aiCredits={{ used: 0, limit: 0, resetsAt: null }}
+      />,
+    );
+    expect(screen.queryByText(/cost varies by request/i)).toBeNull();
   });
 });

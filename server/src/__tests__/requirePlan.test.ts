@@ -13,21 +13,25 @@ vi.mock('../lib/planGate.js', () => ({
   // The action mock returns a POST shape; renderActionAsUrl is mocked to
   // echo the URL field so existing assertions on `upgradeUrl` keep working.
   generateUpgradeAction: vi.fn(),
+  generateUpgradePlanAction: vi.fn(),
   renderActionAsUrl: vi.fn((action: { url: string } | null) => action?.url ?? null),
+  checkAndIncrementAiCredits: vi.fn(),
 }));
 
 // ---- Imports (after mocks) ----
 
 import { PlanRestrictedError } from '../lib/httpErrors.js';
 import {
+  checkAndIncrementAiCredits,
   generateUpgradeAction,
+  generateUpgradePlanAction,
   generateUpgradeUrl,
   getUserPlanInfo,
   isProUser,
   isSelfHosted,
   isSubscriptionActive,
 } from '../lib/planGate.js';
-import { requirePro } from '../middleware/requirePlan.js';
+import { checkAiCredits, requirePro } from '../middleware/requirePlan.js';
 
 // ---- Helpers ----
 
@@ -203,5 +207,95 @@ describe('requirePro()', () => {
 
     expect(error).toBeInstanceOf(PlanRestrictedError);
     expect((error as PlanRestrictedError).upgradeUrl).toBe(upgradeUrl);
+  });
+});
+
+// ---- Tests: checkAiCredits factory ----
+
+describe('checkAiCredits() factory', () => {
+  function makeAiReq(extra: Partial<Request> = {}, userId = 'user-aic'): Partial<Request> {
+    return { user: { id: userId, email: 'aic@test.local' }, body: {}, ...extra };
+  }
+
+  function runAiMiddleware(
+    handler: ReturnType<typeof checkAiCredits>,
+    req: Partial<Request> = makeAiReq(),
+  ): Promise<{ nextErr: unknown; status?: number; body?: unknown }> {
+    return new Promise((resolve) => {
+      let status: number | undefined;
+      let resolved = false;
+      const finalize = (nextErr: unknown, body?: unknown) => {
+        if (!resolved) {
+          resolved = true;
+          resolve({ nextErr, status, body });
+        }
+      };
+      const res = {
+        locals: {},
+        status(code: number) { status = code; return this; },
+        json(payload: unknown) { finalize(undefined, payload); return this; },
+      } as unknown as Response;
+      const next = ((err?: unknown) => finalize(err)) as NextFunction;
+      handler(req as Request, res as Response, next);
+    });
+  }
+
+  beforeEach(() => {
+    vi.mocked(checkAndIncrementAiCredits).mockReset();
+    vi.mocked(generateUpgradePlanAction).mockReset();
+    vi.mocked(getUserPlanInfo).mockReset();
+    vi.mocked(checkAndIncrementAiCredits).mockResolvedValue({ allowed: true, used: 1, limit: 100, resetsAt: null });
+  });
+
+  it('passes weight=1 when called with no arguments', async () => {
+    const result = await runAiMiddleware(checkAiCredits());
+    expect(result.nextErr).toBeUndefined();
+    expect(checkAndIncrementAiCredits).toHaveBeenCalledWith('user-aic', 1);
+  });
+
+  it('passes a fixed numeric weight when provided', async () => {
+    const result = await runAiMiddleware(checkAiCredits(5));
+    expect(result.nextErr).toBeUndefined();
+    expect(checkAndIncrementAiCredits).toHaveBeenCalledWith('user-aic', 5);
+  });
+
+  it('invokes a resolver function with the request to compute the weight', async () => {
+    const resolver = vi.fn((req: Request) => (req.body as { binIds: string[] }).binIds.length * 2 + 5);
+    const req = makeAiReq({ body: { binIds: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] } });
+    await runAiMiddleware(checkAiCredits(resolver), req);
+    expect(resolver).toHaveBeenCalledWith(req);
+    expect(checkAndIncrementAiCredits).toHaveBeenCalledWith('user-aic', 19);
+  });
+
+  it('exposes the resolved weight on res.locals so refunds can match it', async () => {
+    const handler = checkAiCredits(9);
+    const res = {
+      locals: {} as Record<string, unknown>,
+      status() { return this; },
+      json() { return this; },
+    } as unknown as Response;
+    await new Promise<void>((resolve) => {
+      const next = (() => resolve()) as NextFunction;
+      handler(makeAiReq() as Request, res, next);
+    });
+    expect((res.locals as { aiCreditWeight?: number }).aiCreditWeight).toBe(9);
+  });
+
+  it('returns 403 with AI_CREDITS_EXHAUSTED when the gate denies', async () => {
+    vi.mocked(checkAndIncrementAiCredits).mockResolvedValue({ allowed: false, used: 100, limit: 100, resetsAt: '2026-06-01T00:00:00Z' });
+    vi.mocked(getUserPlanInfo).mockResolvedValue({
+      plan: 0,
+      subStatus: 1,
+      activeUntil: null,
+      email: 'aic@test.local',
+      previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
+    });
+    vi.mocked(generateUpgradePlanAction).mockResolvedValue(null);
+
+    const result = await runAiMiddleware(checkAiCredits(5));
+    expect(result.status).toBe(403);
+    expect((result.body as { error: string }).error).toBe('AI_CREDITS_EXHAUSTED');
   });
 });

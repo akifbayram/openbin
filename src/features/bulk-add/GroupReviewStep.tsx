@@ -23,6 +23,7 @@ import { type AiFillField, useAiFillState } from '@/features/bins/useAiFillState
 import { useAllTags } from '@/features/bins/useBins';
 import { useItemEntry } from '@/features/bins/useItemEntry';
 import { compressImageForAi } from '@/features/photos/compressImageForAi';
+import { CreditCost, visionWeight } from '@/lib/aiCreditCost';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { aiItemsToBinItems } from '@/lib/itemQuantities';
@@ -495,6 +496,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
                 <Sparkles className="h-4 w-4 mr-1.5" />
                 Scan with AI
               </Button>
+              <CreditCost cost={visionWeight(group.photos.length)} className="self-center" />
               <button
                 type="button"
                 onClick={() => setRetryBandDismissed(true)}

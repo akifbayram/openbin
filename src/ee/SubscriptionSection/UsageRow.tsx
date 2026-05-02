@@ -41,22 +41,34 @@ export function UsageRow({ usage, features, aiCredits }: UsageRowProps) {
 
   if (visible.length === 0) return null;
 
+  // Surface the variable-cost note only when an AI credit row is being
+  // shown — Free with 0 credits and self-hosted (null) skip it because
+  // the hint would be misleading or irrelevant.
+  const showVariableCostHint = aiCredits != null && aiCredits.limit > 0;
+
   return (
-    <div className="mt-3 pt-3 border-t border-[var(--border)] flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--text-tertiary)]">
-      {visible.map((m) => (
-        <span key={m.label}>
-          {m.formatValue ? (
-            m.formatValue(m.used, m.limit)
-          ) : (
-            <>
-              <strong className="font-semibold text-[var(--text-secondary)]">
-                {formatNumber(m.used)}
-              </strong>
-              {`/${formatNumber(m.limit)} ${m.label}`}
-            </>
-          )}
-        </span>
-      ))}
+    <div className="mt-3 pt-3 border-t border-[var(--border)] text-xs text-[var(--text-tertiary)]">
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {visible.map((m) => (
+          <span key={m.label}>
+            {m.formatValue ? (
+              m.formatValue(m.used, m.limit)
+            ) : (
+              <>
+                <strong className="font-semibold text-[var(--text-secondary)]">
+                  {formatNumber(m.used)}
+                </strong>
+                {`/${formatNumber(m.limit)} ${m.label}`}
+              </>
+            )}
+          </span>
+        ))}
+      </div>
+      {showVariableCostHint && (
+        <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">
+          AI cost varies by request — chat &amp; commands cost 1, photo analysis 5+ per image, reorganize 5+ per bin.
+        </p>
+      )}
     </div>
   );
 }

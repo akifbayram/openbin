@@ -126,6 +126,7 @@ export function BinDetailPage() {
             showAiButton={actions.showAiButton}
             isAnalyzing={actions.isAnalyzing}
             isReanalysis={actions.isReanalysis}
+            analyzePhotoCount={actions.photos.length}
             otherLocations={actions.otherLocations}
             onClose={handleClose}
             onPrev={prevBinId ? () => navigate(`/bin/${prevBinId}`, { state: { ...backState } }) : null}

@@ -1,6 +1,7 @@
 import { Camera, Image as ImageIcon, Plus, Send, Square } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
+import { CreditCost } from '@/lib/aiCreditCost';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import type { useTranscription } from '@/lib/useTranscription';
@@ -174,6 +175,9 @@ export function ConversationComposer({
             <Send className="h-4 w-4" />
           </button>
         )}
+      </div>
+      <div className="mt-1 flex justify-end">
+        <CreditCost cost={1} />
       </div>
     </div>
   );

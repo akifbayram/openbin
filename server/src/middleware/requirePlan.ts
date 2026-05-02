@@ -1,4 +1,4 @@
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { PlanRestrictedError } from '../lib/httpErrors.js';
@@ -143,22 +143,34 @@ export function requireAiAccess(): RequestHandler {
   });
 }
 
-export const checkAiCredits: RequestHandler = asyncHandler(async (req, res, next) => {
-  const result = await checkAndIncrementAiCredits(req.user!.id);
-  if (!result.allowed) {
-    const planInfo = res.locals.planInfo ?? await getUserPlanInfo(req.user!.id);
-    const u = actionAndUrl(planInfo ? await generateUpgradePlanAction(req.user!.id, planInfo.email, 'pro') : null);
-    const message = result.resetsAt
-      ? `You've used all ${result.limit} AI credits for this billing period.`
-      : `You've used all ${result.limit} AI credits included in your trial. Upgrade to Pro for unlimited AI.`;
-    res.status(403).json({
-      error: 'AI_CREDITS_EXHAUSTED',
-      message,
-      aiCredits: { used: result.used, limit: result.limit, resetsAt: result.resetsAt },
-      upgrade_url: u.url,
-      upgrade_action: u.action,
-    });
-    return;
-  }
-  next();
-});
+/**
+ * Debit AI credits before serving the request. Pass a fixed weight or a
+ * resolver that derives the cost from the request body — useful for
+ * variable-cost classes like vision (image count) or reorganize (bin
+ * count). Defaults to 1 for the quickText baseline. The resolved weight is
+ * stashed on `res.locals.aiCreditWeight` so the route's refund path can
+ * decrement by the same amount on failure.
+ */
+export function checkAiCredits(weightOrResolver: number | ((req: Request) => number) = 1): RequestHandler {
+  return asyncHandler(async (req, res, next) => {
+    const weight = typeof weightOrResolver === 'function' ? weightOrResolver(req) : weightOrResolver;
+    res.locals.aiCreditWeight = weight;
+    const result = await checkAndIncrementAiCredits(req.user!.id, weight);
+    if (!result.allowed) {
+      const planInfo = res.locals.planInfo ?? await getUserPlanInfo(req.user!.id);
+      const u = actionAndUrl(planInfo ? await generateUpgradePlanAction(req.user!.id, planInfo.email, 'pro') : null);
+      const message = result.resetsAt
+        ? `You've used all ${result.limit} AI credits for this billing period.`
+        : `You've used all ${result.limit} AI credits included in your trial. Upgrade to Pro for unlimited AI.`;
+      res.status(403).json({
+        error: 'AI_CREDITS_EXHAUSTED',
+        message,
+        aiCredits: { used: result.used, limit: result.limit, resetsAt: result.resetsAt },
+        upgrade_url: u.url,
+        upgrade_action: u.action,
+      });
+      return;
+    }
+    next();
+  });
+}

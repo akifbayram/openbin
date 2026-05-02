@@ -25,6 +25,7 @@ import { useBinList } from '@/features/bins/useBins';
 import { BinSelectorCard } from '@/features/print/BinSelectorCard';
 import { useBinSelection } from '@/features/print/useBinSelection';
 import { TourLauncher } from '@/features/tour/TourLauncher';
+import { CreditCost, reorganizeWeight } from '@/lib/aiCreditCost';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
@@ -584,9 +585,12 @@ export function ReorganizePage() {
             </Button>
           )}
           {selection.selectedIds.size >= 2 && !overCap && (
-            <p className="text-[12px] text-[var(--text-tertiary)] text-center -mt-2">
-              {itemCount} item{itemCount !== 1 ? 's' : ''} across {selection.selectedIds.size} {t.bins}
-            </p>
+            <div className="text-[12px] text-[var(--text-tertiary)] text-center -mt-2 flex flex-col items-center gap-0.5">
+              <span>
+                {itemCount} item{itemCount !== 1 ? 's' : ''} across {selection.selectedIds.size} {t.bins}
+              </span>
+              <CreditCost cost={reorganizeWeight(selection.selectedIds.size)} />
+            </div>
           )}
           {overCap && reorgBinCap != null && (
             <Card className="border-t-2 border-t-[var(--destructive)]">

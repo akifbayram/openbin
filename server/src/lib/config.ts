@@ -29,6 +29,12 @@ function clamp(value: number, min: number, max: number, fallback: number): numbe
   return Math.min(Math.max(value, min), max);
 }
 
+export type GeminiThinkingLevel = 'minimal' | 'low' | 'medium' | 'high';
+function parseGeminiThinkingLevel(value: string | undefined): GeminiThinkingLevel {
+  if (value === 'minimal' || value === 'low' || value === 'medium' || value === 'high') return value;
+  return 'minimal';
+}
+
 const photoStoragePath = process.env.PHOTO_STORAGE_PATH || './uploads';
 
 function readSecretFile(envPath: string | undefined): string | null {
@@ -146,7 +152,7 @@ export const config = Object.freeze({
     plusMaxStorageMb: parseNullableInt(process.env.PLAN_PLUS_MAX_STORAGE_MB, 100),
     plusMaxMembers: parseNullableInt(process.env.PLAN_PLUS_MAX_MEMBERS, 1),
     plusActivityRetentionDays: parseNullableInt(process.env.PLAN_PLUS_ACTIVITY_RETENTION_DAYS, 30),
-    plusAiCreditsPerMonth: parseStrictInt(process.env.PLAN_PLUS_AI_CREDITS_PER_MONTH, 25),
+    plusAiCreditsPerMonth: parseStrictInt(process.env.PLAN_PLUS_AI_CREDITS_PER_MONTH, 100),
     plusReorganizeMaxBins: parseNullableInt(process.env.PLAN_PLUS_REORG_MAX_BINS, 10),
     // Pro tier
     proMaxBins: parseNullableInt(process.env.PLAN_PRO_MAX_BINS, 1000),
@@ -154,10 +160,10 @@ export const config = Object.freeze({
     proMaxMembers: parseNullableInt(process.env.PLAN_PRO_MAX_MEMBERS, 10),
     proMaxStorageMb: parseNullableInt(process.env.PLAN_PRO_MAX_STORAGE_MB, 1024),
     proActivityRetentionDays: parseNullableInt(process.env.PLAN_PRO_ACTIVITY_RETENTION_DAYS, 90),
-    proAiCreditsPerMonth: parseNullableInt(process.env.PLAN_PRO_AI_CREDITS_PER_MONTH, 250),
+    proAiCreditsPerMonth: parseNullableInt(process.env.PLAN_PRO_AI_CREDITS_PER_MONTH, 700),
     proReorganizeMaxBins: parseNullableInt(process.env.PLAN_PRO_REORG_MAX_BINS, 40),
-    freeAiCreditsPerMonth: 10,
-    trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '25', 10), 1, 1000, 25),
+    freeAiCreditsPerMonth: parseStrictInt(process.env.PLAN_FREE_AI_CREDITS_PER_MONTH, 30),
+    trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '75', 10), 1, 1000, 75),
   }),
   planPrices: Object.freeze({
     plusQuarterlyCents: parseStrictInt(process.env.PLAN_PRICE_PLUS_QUARTERLY, 1500),
@@ -214,6 +220,12 @@ export const config = Object.freeze({
   aiDeepTextApiKey: process.env.AI_DEEP_TEXT_API_KEY || null,
   aiDeepTextModel: process.env.AI_DEEP_TEXT_MODEL || null,
   aiDeepTextEndpointUrl: process.env.AI_DEEP_TEXT_ENDPOINT_URL || null,
+
+  // Gemini 3 thinking depth: 'minimal' | 'low' | 'medium' | 'high'. Caps thinking-token
+  // spend on photo analysis and reorganize. Default 'minimal' is cheapest; structured-
+  // extraction tasks (vision, JSON output) need almost no reasoning. Bump to 'low' or
+  // higher if reorganize quality regresses.
+  geminiThinkingLevel: parseGeminiThinkingLevel(process.env.GEMINI_THINKING_LEVEL),
 
   // Backup
   backupEnabled: parseBool(process.env.BACKUP_ENABLED, false),

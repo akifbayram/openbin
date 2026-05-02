@@ -288,7 +288,7 @@ router.delete('/settings', requireAiAccess(), aiRouteHandler('delete AI settings
 }));
 
 // POST /api/ai/structure-text — structure dictated/typed text into items
-router.post('/structure-text', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('structure text', async (req, res) => {
+router.post('/structure-text', ...aiRateLimiters, requireAiAccess(), checkAiCredits(), aiRouteHandler('structure text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { context } = req.body;
 
@@ -389,7 +389,7 @@ router.delete('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('d
 }));
 
 // POST /api/ai/transcribe — transcribe audio to text
-router.post('/transcribe', memoryAudioUpload.single('audio'), ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('transcribe audio', async (req, res) => {
+router.post('/transcribe', memoryAudioUpload.single('audio'), ...aiRateLimiters, requireAiAccess(), checkAiCredits(), aiRouteHandler('transcribe audio', async (req, res) => {
   const file = req.file;
   if (!file || !file.buffer || file.buffer.length === 0) {
     throw new ValidationError('No audio file provided');
