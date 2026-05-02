@@ -7,7 +7,7 @@ import {
   checkAndIncrementAiCredits,
   generateUpgradeAction,
   generateUpgradePlanAction,
-  getUserFeatures,
+  getFeatureMap,
   getUserPlanInfo,
   hasAiAccess,
   isPlusOrAbove,
@@ -15,6 +15,7 @@ import {
   isSelfHosted,
   isSubscriptionActive,
   renderActionAsUrl,
+  SubStatus,
 } from '../lib/planGate.js';
 
 // Helper: derive the legacy URL form from an action so we don't sign the
@@ -103,17 +104,24 @@ export function requirePlusOrAbove(): RequestHandler {
   return requirePlanAccess('This feature requires a Plus or Pro plan', isPlusOrAbove);
 }
 
-/** Checks the fullExport feature flag — respects per-plan config and PLAN_FREE_FULL_EXPORT env. */
+/** Checks the fullExport feature flag and blocks trial users — respects per-plan config and PLAN_FREE_FULL_EXPORT env. */
 export function requireExportAccess(): RequestHandler {
-  return asyncHandler(async (req, _res, next) => {
+  return asyncHandler(async (req, res, next) => {
     if (isSelfHosted()) { next(); return; }
 
     const userId = req.user!.id;
-    const features = await getUserFeatures(userId);
-    if (features.fullExport) { next(); return; }
+    const planInfo = res.locals.planInfo ?? await getUserPlanInfo(userId);
+    if (!planInfo) { next(); return; }
+    res.locals.planInfo = planInfo;
 
-    const planInfo = await getUserPlanInfo(userId);
-    const u = actionAndUrl(planInfo ? await generateUpgradeAction(userId, planInfo.email) : null);
+    if (planInfo.subStatus === SubStatus.TRIAL) {
+      const u = actionAndUrl(await generateUpgradePlanAction(userId, planInfo.email, 'plus'));
+      throw new PlanRestrictedError('Export is not available during your trial. Subscribe to export your data.', u.url, u.action);
+    }
+
+    if (getFeatureMap(planInfo.plan).fullExport) { next(); return; }
+
+    const u = actionAndUrl(await generateUpgradeAction(userId, planInfo.email));
     throw new PlanRestrictedError('Export requires a Plus or Pro plan', u.url, u.action);
   });
 }

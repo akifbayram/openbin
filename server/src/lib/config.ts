@@ -163,7 +163,7 @@ export const config = Object.freeze({
     proAiCreditsPerMonth: parseNullableInt(process.env.PLAN_PRO_AI_CREDITS_PER_MONTH, 700),
     proReorganizeMaxBins: parseNullableInt(process.env.PLAN_PRO_REORG_MAX_BINS, 40),
     freeAiCreditsPerMonth: parseStrictInt(process.env.PLAN_FREE_AI_CREDITS_PER_MONTH, 30),
-    trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '75', 10), 1, 1000, 75),
+    trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '30', 10), 1, 1000, 30),
   }),
   planPrices: Object.freeze({
     plusQuarterlyCents: parseStrictInt(process.env.PLAN_PRICE_PLUS_QUARTERLY, 1500),
@@ -226,6 +226,30 @@ export const config = Object.freeze({
   // extraction tasks (vision, JSON output) need almost no reasoning. Bump to 'low' or
   // higher if reorganize quality regresses.
   geminiThinkingLevel: parseGeminiThinkingLevel(process.env.GEMINI_THINKING_LEVEL),
+
+  // ── AI cost & sizing knobs ──
+  // Per-call credit weights: charged against the user's plan AI credit cap.
+  // quickText is the baseline (chat/command/query). vision multiplies by image
+  // count; deepText multiplies by bin count (used by reorganize). Defaults are
+  // calibrated to Gemini 3 Flash Preview spend with thinkingLevel='minimal'.
+  aiWeightQuickText: clamp(parseInt(process.env.AI_WEIGHT_QUICKTEXT || '1', 10), 0, 1000, 1),
+  aiWeightVision: clamp(parseInt(process.env.AI_WEIGHT_VISION || '5', 10), 0, 1000, 5),
+  aiWeightDeepText: clamp(parseInt(process.env.AI_WEIGHT_DEEPTEXT || '2', 10), 0, 1000, 2),
+  // Hard cap on photos accepted in a single AI request. Bounds worst-case
+  // per-call provider cost and credit charge (cost = AI_WEIGHT_VISION × N).
+  aiMaxPhotosPerRequest: clamp(parseInt(process.env.AI_MAX_PHOTOS_PER_REQUEST || '5', 10), 1, 50, 5),
+  // Estimated input-token budget for chat/command/query context. Trims bin
+  // records before they reach the LLM so per-call input spend stays predictable.
+  aiContextTokenBudget: clamp(parseInt(process.env.AI_CONTEXT_TOKEN_BUDGET || '6000', 10), 100, 100000, 6000),
+  // Vision input downscale: photos larger than this on either axis are
+  // re-encoded to fit. Smaller = cheaper vision tokens; 1024 is calibrated
+  // to Gemini Flash's pricing tile boundary.
+  aiImageMaxDim: clamp(parseInt(process.env.AI_IMAGE_MAX_DIM || '1024', 10), 256, 4096, 1024),
+  aiImageWebpQuality: clamp(parseInt(process.env.AI_IMAGE_WEBP_QUALITY || '80', 10), 1, 100, 80),
+  // Conversation history caps shipped with each Ask AI / command turn.
+  aiHistoryMaxTurns: clamp(parseInt(process.env.AI_HISTORY_MAX_TURNS || '10', 10), 1, 100, 10),
+  aiHistoryMaxTurnChars: clamp(parseInt(process.env.AI_HISTORY_MAX_TURN_CHARS || '4096', 10), 100, 100000, 4096),
+  aiHistoryMaxTotalChars: clamp(parseInt(process.env.AI_HISTORY_MAX_TOTAL_CHARS || '32768', 10), 100, 1_000_000, 32768),
 
   // Backup
   backupEnabled: parseBool(process.env.BACKUP_ENABLED, false),

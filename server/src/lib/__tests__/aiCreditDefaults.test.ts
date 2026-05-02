@@ -17,7 +17,7 @@ describe('AI credit defaults — weighted credit system', () => {
     expect(config.planLimits.proAiCreditsPerMonth).toBe(700);
   });
 
-  it('Trial defaults to 75 lifetime credits', () => {
-    expect(config.planLimits.trialAiCredits).toBe(75);
+  it('Trial defaults to 30 lifetime credits (matching free tier)', () => {
+    expect(config.planLimits.trialAiCredits).toBe(30);
   });
 });
