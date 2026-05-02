@@ -1,9 +1,11 @@
 import type { Request } from 'express';
+import { config } from './config.js';
 import { ValidationError } from './httpErrors.js';
 
 /** Hard cap shared by file uploads, photoId arrays, and the credit-cost
- *  resolver — keep these aligned or the charge desyncs from the work. */
-export const MAX_PHOTOS_PER_REQUEST = 5;
+ *  resolver — keep these aligned or the charge desyncs from the work.
+ *  Override via AI_MAX_PHOTOS_PER_REQUEST env var. */
+export const MAX_PHOTOS_PER_REQUEST = config.aiMaxPhotosPerRequest;
 
 // ── Uploaded-file extraction ───────────────────────────────────────
 

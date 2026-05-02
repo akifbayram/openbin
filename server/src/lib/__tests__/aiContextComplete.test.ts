@@ -57,4 +57,20 @@ describe('applyContextLimits — complete flag', () => {
     expect(out.complete).toBe(false);
     expect(out.bins.length + out.other_bins.length).toBe(5);
   });
+
+  it('handles bins missing the tags property (compactBin strips empty arrays)', () => {
+    // compactBin omits tags when [], so filterRelevantBins receives bins
+    // with no `tags` property at all. Spreading must not throw.
+    const bins: Array<Partial<TestBin> & { bin_code: string; name: string; items: string[] }> = [
+      { bin_code: 'A1B2C3', name: 'Tools', items: ['screwdriver'] },
+      ...Array.from({ length: 33 }, (_, i) => ({
+        bin_code: `X${String(i).padStart(5, '0')}`,
+        name: `Random ${i}`,
+        items: ['unrelated'],
+      })),
+    ];
+    expect(() =>
+      applyContextLimits(bins as unknown as TestBin[], 'find me a screwdriver please'),
+    ).not.toThrow();
+  });
 });

@@ -166,7 +166,7 @@ ${CRITICAL_RULES}`;
 export function buildUserMessage(request: CommandRequest): string {
   const { bins, other_bins, areas, trash_bins, complete } = request.context;
 
-  const existingTags = [...new Set(bins.flatMap((b) => b.tags))].sort();
+  const existingTags = [...new Set(bins.flatMap((b) => b.tags ?? []))].sort();
   const tagBlock = buildTagBlock(existingTags);
   const tagSection = tagBlock ? `\n${tagBlock}\n` : '';
 

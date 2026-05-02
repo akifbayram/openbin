@@ -47,6 +47,10 @@ const CheckoutLink = __EE__
   ? lazy(() => import('@/ee/checkoutAction').then(m => ({ default: m.CheckoutLink })))
   : (() => null) as React.FC<Record<string, unknown>>;
 
+const AiCreditEstimate = __EE__
+  ? lazy(() => import('@/ee/AiCreditEstimate').then(m => ({ default: m.AiCreditEstimate })))
+  : (() => null) as React.FC<{ cost: number; className?: string }>;
+
 interface OptionFieldConfig<K extends string> {
   legend: string;
   options: OptionGroupOption<K>[];
@@ -589,7 +593,13 @@ export function ReorganizePage() {
               <span>
                 {itemCount} item{itemCount !== 1 ? 's' : ''} across {selection.selectedIds.size} {t.bins}
               </span>
-              <CreditCost cost={reorganizeWeight(selection.selectedIds.size)} />
+              {__EE__ ? (
+                <Suspense fallback={<CreditCost cost={reorganizeWeight(selection.selectedIds.size)} />}>
+                  <AiCreditEstimate cost={reorganizeWeight(selection.selectedIds.size)} />
+                </Suspense>
+              ) : (
+                <CreditCost cost={reorganizeWeight(selection.selectedIds.size)} />
+              )}
             </div>
           )}
           {overCap && reorgBinCap != null && (

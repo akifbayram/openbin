@@ -12,9 +12,10 @@ router.use(authenticate);
 
 // GET /api/bins/pinned — list pinned bins for current user
 router.get('/pinned', asyncHandler(async (req, res) => {
-  const locationId = req.query.location_id as string | undefined;
+  // Accept both camelCase (canonical) and snake_case (legacy) for backward compatibility.
+  const locationId = (req.query.locationId ?? req.query.location_id) as string | undefined;
   if (!locationId) {
-    throw new ValidationError('location_id query parameter is required');
+    throw new ValidationError('locationId query parameter is required');
   }
   if (!await verifyLocationMembership(locationId, req.user!.id)) {
     throw new ForbiddenError('Not a member of this location');
@@ -33,15 +34,16 @@ router.get('/pinned', asyncHandler(async (req, res) => {
 
 // PUT /api/bins/pinned/reorder — update pin positions
 router.put('/pinned/reorder', asyncHandler(async (req, res) => {
-  const { bin_ids } = req.body;
-  if (!Array.isArray(bin_ids) || bin_ids.length === 0) {
-    throw new ValidationError('bin_ids array is required');
+  // Accept both camelCase (canonical) and snake_case (legacy) for backward compatibility.
+  const binIds = req.body.binIds ?? req.body.bin_ids;
+  if (!Array.isArray(binIds) || binIds.length === 0) {
+    throw new ValidationError('binIds array is required');
   }
   await withTransaction(async (tx) => {
-    for (let i = 0; i < bin_ids.length; i++) {
+    for (let i = 0; i < binIds.length; i++) {
       await tx(
         'UPDATE pinned_bins SET position = $1 WHERE user_id = $2 AND bin_id = $3',
-        [i, req.user!.id, bin_ids[i]],
+        [i, req.user!.id, binIds[i]],
       );
     }
   });

@@ -108,10 +108,11 @@ router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
 // PUT /api/bins/:id/items/reorder — reorder items
 router.put('/:id/items/reorder', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { item_ids } = req.body;
+  // Accept both camelCase (canonical) and snake_case (legacy) for backward compatibility.
+  const itemIds = req.body.itemIds ?? req.body.item_ids;
 
-  if (!Array.isArray(item_ids) || item_ids.length === 0) {
-    throw new ValidationError('item_ids array is required');
+  if (!Array.isArray(itemIds) || itemIds.length === 0) {
+    throw new ValidationError('itemIds array is required');
   }
 
   const _access = await verifyBinEditAccess(id, req.user!.id);
@@ -122,16 +123,16 @@ router.put('/:id/items/reorder', asyncHandler(async (req, res) => {
     [id]
   );
   const binItemIds = new Set(existing.rows.map((r) => r.id));
-  for (const itemId of item_ids) {
+  for (const itemId of itemIds) {
     if (!binItemIds.has(itemId)) {
       throw new ValidationError('One or more item IDs do not belong to this bin');
     }
   }
 
-  for (let i = 0; i < item_ids.length; i++) {
+  for (let i = 0; i < itemIds.length; i++) {
     await query(
       'UPDATE bin_items SET position = $1 WHERE id = $2 AND bin_id = $3',
-      [i, item_ids[i], id]
+      [i, itemIds[i], id]
     );
   }
 

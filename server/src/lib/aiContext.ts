@@ -1,6 +1,7 @@
 import { d, query } from '../db.js';
 import { sanitizeBinForContext } from './aiSanitize.js';
 import type { CommandRequest } from './commandParser.js';
+import { config } from './config.js';
 import type { InventoryContext } from './inventoryQuery.js';
 
 const AVAILABLE_COLORS = ['red', 'orange', 'amber', 'lime', 'green', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'purple', 'rose', 'pink', 'gray'];
@@ -48,8 +49,8 @@ export function filterRelevantBins<T extends { bin_code: string; name: string; i
   }
 
   const scored = bins.map(bin => {
-    const itemNames = bin.items.map(i => typeof i === 'string' ? i : i.name);
-    const searchText = [bin.name, ...itemNames, ...bin.tags, bin.area_name ?? ''].join(' ').toLowerCase();
+    const itemNames = (bin.items ?? []).map(i => typeof i === 'string' ? i : i.name);
+    const searchText = [bin.name, ...itemNames, ...(bin.tags ?? []), bin.area_name ?? ''].join(' ').toLowerCase();
     const score = keywords.reduce((s, kw) => s + (searchText.includes(kw) ? 1 : 0), 0);
     return { bin, score };
   });
@@ -65,9 +66,7 @@ export function filterRelevantBins<T extends { bin_code: string; name: string; i
   return { relevant: [...relevant, ...filler], rest };
 }
 
-/** ~4 chars per token. */
-const CONTEXT_TOKEN_BUDGET = 6000;
-
+/** ~4 chars per token. Override via AI_CONTEXT_TOKEN_BUDGET env var. */
 function estimateTokens(obj: unknown): number {
   return Math.ceil(JSON.stringify(obj).length / 4);
 }
@@ -75,7 +74,7 @@ function estimateTokens(obj: unknown): number {
 export function budgetContext<T extends { bin_code: string; name: string }>(
   bins: T[],
   existingOtherBins: Array<{ bin_code: string; name: string }>,
-  budget = CONTEXT_TOKEN_BUDGET,
+  budget: number = config.aiContextTokenBudget,
 ): { bins: T[]; other_bins: Array<{ bin_code: string; name: string }> } {
   let used = 0;
   const full: T[] = [];

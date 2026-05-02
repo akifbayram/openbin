@@ -1,10 +1,14 @@
 import type { ModelMessage } from 'ai';
+import { config } from './config.js';
 
-/** Maximum number of turns sent to the AI provider. Older turns are dropped. */
-export const MAX_TURNS = 10;
+/** Maximum number of turns sent to the AI provider. Older turns are dropped.
+ *  Override via AI_HISTORY_MAX_TURNS env var. */
+export const MAX_TURNS = config.aiHistoryMaxTurns;
 
-export const MAX_TURN_CHARS = 4096;
-export const MAX_TOTAL_CHARS = 32768;
+/** Per-turn char cap. Override via AI_HISTORY_MAX_TURN_CHARS env var. */
+export const MAX_TURN_CHARS = config.aiHistoryMaxTurnChars;
+/** Total history char cap across all turns. Override via AI_HISTORY_MAX_TOTAL_CHARS env var. */
+export const MAX_TOTAL_CHARS = config.aiHistoryMaxTotalChars;
 
 /** Wire format for a conversation turn from the client. */
 export type ConversationTurn =

@@ -3064,9 +3064,12 @@ paths:
     get:
       tags: [Bins]
       summary: List soft-deleted bins
-      description: Returns bins with non-null deleted_at. Auto-purges after the location's configured trash_retention_days (default 30).
+      description: |
+        Returns bins with non-null deleted_at. Auto-purges after the location's configured
+        trash_retention_days (default 30). The `location_id` snake_case alias is also
+        accepted for backward compatibility.
       parameters:
-        - name: location_id
+        - name: locationId
           in: query
           required: true
           schema:
@@ -3120,8 +3123,10 @@ paths:
     get:
       tags: [Bins]
       summary: List pinned bins for current user
+      description: |
+        The `location_id` snake_case alias is also accepted for backward compatibility.
       parameters:
-        - name: location_id
+        - name: locationId
           in: query
           required: true
           schema:
@@ -3152,15 +3157,17 @@ paths:
     put:
       tags: [Bins]
       summary: Reorder pinned bins
+      description: |
+        The `bin_ids` snake_case alias is also accepted for backward compatibility.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [bin_ids]
+              required: [binIds]
               properties:
-                bin_ids:
+                binIds:
                   type: array
                   items:
                     type: string
@@ -3737,6 +3744,8 @@ paths:
     put:
       tags: [Bins]
       summary: Reorder items in a bin
+      description: |
+        The `item_ids` snake_case alias is also accepted for backward compatibility.
       parameters:
         - name: id
           in: path
@@ -3750,9 +3759,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [item_ids]
+              required: [itemIds]
               properties:
-                item_ids:
+                itemIds:
                   type: array
                   items:
                     type: string
@@ -4458,8 +4467,10 @@ paths:
     get:
       tags: [TagColors]
       summary: List tag colors for a location
+      description: |
+        The `location_id` snake_case alias is also accepted for backward compatibility.
       parameters:
-        - name: location_id
+        - name: locationId
           in: query
           required: true
           schema:
@@ -5445,7 +5456,9 @@ paths:
     post:
       tags: [SavedViews]
       summary: Create a saved view
-      description: Creates a new saved view. Maximum 10 per user.
+      description: |
+        Creates a new saved view. Maximum 10 per user. The `search_query` snake_case
+        alias is also accepted for backward compatibility on the `searchQuery` field.
       requestBody:
         required: true
         content:

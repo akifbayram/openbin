@@ -1,4 +1,4 @@
-import type { AiTaskGroup } from './config.js';
+import { type AiTaskGroup, config } from './config.js';
 
 /**
  * Per-call credit cost for each AI task class. Flat per-unit pricing,
@@ -12,12 +12,15 @@ import type { AiTaskGroup } from './config.js';
  * Mental model: "1 per chat, 5 per photo, 2 per bin." Both helpers floor
  * their inputs at 1 (vision) / 0 (reorganize) so a malformed request
  * still produces a positive charge instead of a free call.
+ *
+ * Defaults are overridable via `AI_WEIGHT_QUICKTEXT`, `AI_WEIGHT_VISION`,
+ * and `AI_WEIGHT_DEEPTEXT` env vars (see config.ts).
  */
-export const AI_CREDIT_WEIGHTS = {
-  quickText: 1,
-  vision: 5,
-  deepText: 2,
-} as const satisfies Record<AiTaskGroup, number>;
+export const AI_CREDIT_WEIGHTS: Record<AiTaskGroup, number> = {
+  quickText: config.aiWeightQuickText,
+  vision: config.aiWeightVision,
+  deepText: config.aiWeightDeepText,
+};
 
 export function visionWeight(imageCount: number): number {
   const n = Math.max(1, Math.ceil(imageCount));

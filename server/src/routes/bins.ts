@@ -134,10 +134,11 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // GET /api/bins/trash — list soft-deleted bins for a location
 router.get('/trash', asyncHandler(async (req, res) => {
-  const locationId = req.query.location_id as string | undefined;
+  // Accept both camelCase (canonical) and snake_case (legacy) for backward compatibility.
+  const locationId = (req.query.locationId ?? req.query.location_id) as string | undefined;
 
   if (!locationId) {
-    throw new ValidationError('location_id query parameter is required');
+    throw new ValidationError('locationId query parameter is required');
   }
 
   if (!await verifyLocationMembership(locationId, req.user!.id)) {
