@@ -172,7 +172,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
 
   const canEdit = bin ? canWrite : false;
   const canDelete = bin ? canDeleteBin(bin.created_by) : false;
-  const showAiButton = (aiEnabled || aiGated) && photos.length > 0;
+  const showAiButton = canWrite && (aiEnabled || aiGated) && photos.length > 0;
   const isReanalysis = !!(lastSuggestions || (bin && (bin.name || bin.items.length > 0)));
 
   return {
