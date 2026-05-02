@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 import request from 'supertest';
-import { getDb } from '../db.js';
+import { getDb, query } from '../db.js';
 
 /** Minimal 1x1 PNG for upload tests. */
 export const TEST_PNG = Buffer.from(
@@ -104,6 +104,14 @@ export async function joinTestLocation(app: Express, token: string, inviteCode: 
     .set('Authorization', `Bearer ${token}`)
     .send({ inviteCode });
   if (res.status >= 400) throw new Error(`join failed: ${res.status} ${JSON.stringify(res.body)}`);
+}
+
+export async function getMemberRoleByDb(locationId: string, userId: string): Promise<string | undefined> {
+  const result = await query<{ role: string }>(
+    'SELECT role FROM location_members WHERE location_id = $1 AND user_id = $2',
+    [locationId, userId],
+  );
+  return result.rows[0]?.role;
 }
 
 export async function createTestArea(app: Express, token: string, locationId: string, name?: string) {

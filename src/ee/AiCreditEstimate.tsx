@@ -1,3 +1,4 @@
+import { computeCreditEstimate } from '@/lib/aiCreditCost';
 import { usePlan } from '@/lib/usePlan';
 import { cn, pluralize } from '@/lib/utils';
 
@@ -6,17 +7,22 @@ interface AiCreditEstimateProps {
   className?: string;
 }
 
+const TONE_CLASSES = {
+  neutral: 'text-zinc-500 dark:text-zinc-400',
+  amber: 'text-amber-600 dark:text-amber-400',
+  red: 'text-red-600 dark:text-red-400',
+} as const;
+
 export function AiCreditEstimate({ cost, className }: AiCreditEstimateProps) {
   const { planInfo } = usePlan();
-  const { aiCredits, status } = planInfo;
+  const estimate = computeCreditEstimate(cost, planInfo.aiCredits, planInfo.status);
 
   if (cost <= 0) return null;
 
-  // Self-host (aiCredits === null), Pro/unlimited or Free-with-no-AI
-  // (limit === 0): the percent framing is meaningless, fall back to the
-  // raw "Uses N credits" copy so this component is a drop-in for
-  // <CreditCost>.
-  if (!aiCredits || aiCredits.limit <= 0) {
+  // No meaningful limit (self-host, Pro/unlimited, Free with no AI):
+  // act as a drop-in for <CreditCost> so cloud builds always render
+  // the raw cost even when the percent framing would be vacuous.
+  if (!estimate) {
     return (
       <span className={cn('text-xs text-zinc-500 dark:text-zinc-400', className)}>
         Uses {pluralize(cost, 'credit')}
@@ -24,26 +30,10 @@ export function AiCreditEstimate({ cost, className }: AiCreditEstimateProps) {
     );
   }
 
-  const { used, limit } = aiCredits;
-  const projected = used + cost;
-  const percent = Math.min(100, Math.round((cost / limit) * 100));
-  // Trial (Plus only): no monthly reset — `resetsAt` is null even though
-  // limit > 0. Use that to switch the copy from "monthly limit" to
-  // "trial credits" so the user isn't promised a reset that never comes.
-  const isTrial = status === 'trial' || aiCredits.resetsAt === null;
-  const limitLabel = isTrial ? 'trial credits' : 'monthly limit';
-
-  const overLimit = projected > limit;
-  const nearLimit = !overLimit && projected > limit * 0.8;
-  const colorClass = overLimit
-    ? 'text-red-600 dark:text-red-400'
-    : nearLimit
-      ? 'text-amber-600 dark:text-amber-400'
-      : 'text-zinc-500 dark:text-zinc-400';
-
-  const summary = overLimit
+  const limitLabel = estimate.isTrial ? 'trial credits' : 'monthly limit';
+  const summary = estimate.overLimit
     ? `Uses ${pluralize(cost, 'credit')} · would exceed your ${limitLabel}`
-    : `Uses ${pluralize(cost, 'credit')} · ${percent}% of ${limitLabel}`;
+    : `Uses ${pluralize(cost, 'credit')} · ${estimate.percent}% of ${limitLabel}`;
 
-  return <span className={cn('text-xs', colorClass, className)}>{summary}</span>;
+  return <span className={cn('text-xs', TONE_CLASSES[estimate.tone], className)}>{summary}</span>;
 }

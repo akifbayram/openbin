@@ -3,7 +3,7 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getDb, query } from '../db.js';
 import { createApp } from '../index.js';
-import { createTestLocation, createTestUser } from './helpers.js';
+import { createTestLocation, createTestUser, getMemberRoleByDb } from './helpers.js';
 
 let app: Express;
 
@@ -490,6 +490,42 @@ describe('POST /api/auth/register — invite code', () => {
       });
 
     expect(res.status).toBe(404);
+  });
+
+  it('register-with-invite assigns the location\'s default_join_role (member by default)', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: `joinrole_${Date.now()}@test.local`,
+        password: 'TestPass123!',
+        displayName: 'Join Role',
+        inviteCode: location.invite_code,
+      });
+    expect(res.status).toBe(201);
+    expect(await getMemberRoleByDb(location.id, res.body.user.id)).toBe('member');
+  });
+
+  it('register-with-invite assigns viewer when location.default_join_role = "viewer"', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    await query(
+      "UPDATE locations SET default_join_role = 'viewer' WHERE id = $1",
+      [location.id],
+    );
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: `joinviewer_${Date.now()}@test.local`,
+        password: 'TestPass123!',
+        displayName: 'Join Viewer',
+        inviteCode: location.invite_code,
+      });
+    expect(res.status).toBe(201);
+    expect(await getMemberRoleByDb(location.id, res.body.user.id)).toBe('viewer');
   });
 });
 

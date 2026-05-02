@@ -1,5 +1,5 @@
 import { Check, RefreshCw, Sparkles, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -16,6 +16,7 @@ import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
 import { setCapturedPhotos, setCapturedReturnTarget } from '@/features/capture/capturedPhotos';
 import { getCommandInputRef } from '@/features/tour/TourProvider';
+import { CreditCost, visionWeight } from '@/lib/aiCreditCost';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
@@ -40,6 +41,10 @@ import { useCustomFields } from './useCustomFields';
 import { useItemEntry } from './useItemEntry';
 import { usePhotoAnalysis } from './usePhotoAnalysis';
 import { VisibilityPicker } from './VisibilityPicker';
+
+const AiCreditEstimate = __EE__
+  ? lazy(() => import('@/ee/AiCreditEstimate').then(m => ({ default: m.AiCreditEstimate })))
+  : (() => null) as React.FC<{ cost: number; className?: string }>;
 
 export interface BinCreateFormData {
   name: string;
@@ -367,19 +372,31 @@ export function BinCreateForm({
                   />
                 );
               }
+              const aiFillCost = visionWeight(photos.length);
               return (
-                <Button
-                  variant="ai"
-                  type="button"
-                  onClick={handleAnalyze}
-                  disabled={photos.length === 0}
-                  className="w-full gap-1.5 min-h-[44px]"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  {photos.length > 0
-                    ? `AI Fill from ${photos.length} ${plural(photos.length, 'photo')}`
-                    : 'AI Fill'}
-                </Button>
+                <div className="flex flex-col items-center gap-1.5 w-full">
+                  <Button
+                    variant="ai"
+                    type="button"
+                    onClick={handleAnalyze}
+                    disabled={photos.length === 0}
+                    className="w-full gap-1.5 min-h-[44px]"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {photos.length > 0
+                      ? `AI Fill from ${photos.length} ${plural(photos.length, 'photo')}`
+                      : 'AI Fill'}
+                  </Button>
+                  {photos.length > 0 && (
+                    __EE__ ? (
+                      <Suspense fallback={<CreditCost cost={aiFillCost} />}>
+                        <AiCreditEstimate cost={aiFillCost} />
+                      </Suspense>
+                    ) : (
+                      <CreditCost cost={aiFillCost} />
+                    )
+                  )}
+                </div>
               );
             }
 

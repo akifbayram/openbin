@@ -1,5 +1,5 @@
 import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Sparkles } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,10 @@ import { cn, stickyDialogFooter } from '@/lib/utils';
 import type { AiSettings, AiSuggestions, BinItem } from '@/types';
 import { PhotoScanFrame } from './PhotoScanFrame';
 import type { BulkAddAction, Group, Photo } from './useBulkGroupAdd';
+
+const AiCreditEstimate = __EE__
+  ? lazy(() => import('@/ee/AiCreditEstimate').then(m => ({ default: m.AiCreditEstimate })))
+  : (() => null) as React.FC<{ cost: number; className?: string }>;
 
 const MAX_CORRECTIONS = 3;
 
@@ -496,7 +500,13 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
                 <Sparkles className="h-4 w-4 mr-1.5" />
                 Scan with AI
               </Button>
-              <CreditCost cost={visionWeight(group.photos.length)} className="self-center" />
+              {__EE__ ? (
+                <Suspense fallback={<CreditCost cost={visionWeight(group.photos.length)} className="self-center" />}>
+                  <AiCreditEstimate cost={visionWeight(group.photos.length)} className="self-center" />
+                </Suspense>
+              ) : (
+                <CreditCost cost={visionWeight(group.photos.length)} className="self-center" />
+              )}
               <button
                 type="button"
                 onClick={() => setRetryBandDismissed(true)}
@@ -566,6 +576,15 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
                     </button>
                   )}
                 </div>
+              )}
+              {group.correctionCount < MAX_CORRECTIONS && (
+                __EE__ ? (
+                  <Suspense fallback={<CreditCost cost={correctionText.trim() ? 1 : visionWeight(group.photos.length)} className="self-start" />}>
+                    <AiCreditEstimate cost={correctionText.trim() ? 1 : visionWeight(group.photos.length)} className="self-start" />
+                  </Suspense>
+                ) : (
+                  <CreditCost cost={correctionText.trim() ? 1 : visionWeight(group.photos.length)} className="self-start" />
+                )
               )}
             </div>
           )}
