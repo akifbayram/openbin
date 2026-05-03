@@ -139,7 +139,7 @@ const UNRESTRICTED: PlanFeatures = {
 };
 
 export function getFeatureMap(plan: PlanTier): PlanFeatures {
-  if (config.selfHosted) return UNRESTRICTED;
+  if (isSelfHosted()) return UNRESTRICTED;
   const pl = config.planLimits;
   if (plan === Plan.PRO) {
     return {
