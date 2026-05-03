@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initBulkAddStateFromFiles } from '../PhotoBulkAdd';
+import { initBulkAddStateFromFiles } from '@/features/bins/PhotoBulkAdd';
 
 function f(name: string): File {
   return new File([''], name, { type: 'image/jpeg' });

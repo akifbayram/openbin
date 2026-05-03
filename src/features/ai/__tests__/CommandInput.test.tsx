@@ -77,10 +77,6 @@ vi.mock('@/features/bins/useBins', () => ({
   useBinList: () => ({ bins: [], isLoading: false, refresh: vi.fn() }),
 }));
 
-vi.mock('@/features/capture/capturedPhotos', () => ({
-  takeCapturedPhotos: () => ({ files: [], groups: null }),
-}));
-
 vi.mock('@/lib/audioRecorder', () => ({
   isRecordingSupported: () => false,
   startRecording: vi.fn(),
@@ -95,15 +91,6 @@ vi.mock('@/lib/useTranscription', () => ({
     stop: vi.fn(),
     cancel: vi.fn(),
   }),
-}));
-
-vi.mock('../PhotoBulkAdd', () => ({
-  PhotoBulkAdd: ({ onClose, onBack }: { onClose: () => void; onBack: () => void }) => (
-    <div data-testid="photo-bulk-add">
-      <button type="button" onClick={onBack}>photo-back</button>
-      <button type="button" onClick={onClose}>photo-close</button>
-    </div>
-  ),
 }));
 
 vi.mock('@/features/tour/TourLauncher', () => ({

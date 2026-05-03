@@ -38,6 +38,7 @@ interface DashboardDialogsProps {
   createOpen: boolean;
   setCreateOpen: (v: boolean) => void;
   createInitialPhotos: File[] | null;
+  createInitialGroups: number[] | null;
   onCreateInitialPhotosConsumed: () => void;
   bulk: { isOpen: (d: BulkDialog) => boolean; open: (d: BulkDialog) => void; close: () => void };
   selectedIds: Set<string>;
@@ -57,7 +58,7 @@ interface DashboardDialogsProps {
 
 export function DashboardDialogs({
   createOpen, setCreateOpen,
-  createInitialPhotos, onCreateInitialPhotosConsumed,
+  createInitialPhotos, createInitialGroups, onCreateInitialPhotosConsumed,
   bulk, selectedIds, clearSelection,
   allTags, selectable, isAdmin, canWrite,
   bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy,
@@ -104,6 +105,7 @@ export function DashboardDialogs({
             open={createOpen}
             onOpenChange={setCreateOpen}
             initialPhotos={createInitialPhotos}
+            initialGroups={createInitialGroups}
             onInitialPhotosConsumed={onCreateInitialPhotosConsumed}
             allTags={allTags}
           />

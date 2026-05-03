@@ -16,6 +16,7 @@ interface BinListDialogsProps {
   createOpen: boolean;
   setCreateOpen: (v: boolean) => void;
   createInitialPhotos: File[] | null;
+  createInitialGroups: number[] | null;
   onCreateInitialPhotosConsumed: () => void;
   filterOpen: boolean;
   setFilterOpen: (v: boolean) => void;
@@ -37,7 +38,7 @@ interface BinListDialogsProps {
 
 export function BinListDialogs({
   createOpen, setCreateOpen,
-  createInitialPhotos, onCreateInitialPhotosConsumed,
+  createInitialPhotos, createInitialGroups, onCreateInitialPhotosConsumed,
   filterOpen, setFilterOpen,
   saveViewOpen, setSaveViewOpen,
   allTags, areas,
@@ -51,6 +52,7 @@ export function BinListDialogs({
         open={createOpen}
         onOpenChange={setCreateOpen}
         initialPhotos={createInitialPhotos}
+        initialGroups={createInitialGroups}
         onInitialPhotosConsumed={onCreateInitialPhotosConsumed}
         allTags={allTags}
       />

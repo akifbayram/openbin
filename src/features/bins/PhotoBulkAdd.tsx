@@ -64,11 +64,13 @@ function FlowProgress({ state }: { state: BulkAddState }) {
 }
 
 interface PhotoBulkAddProps {
-  initialFiles: File[];
+  initialPhotos: File[];
   initialGroups?: number[] | null;
   aiSettings: AiSettings | null;
-  onClose: () => void;
-  onBack: () => void;
+  /** Called when the wizard fully exits (success → "Close", or user dismiss). Caller navigates away. */
+  onComplete: () => void;
+  /** Called when the user wants to drop back to the single-bin form (cancel, or "Create another" after success). */
+  onExitToForm: () => void;
   /** Portal target for the flow progress indicator (e.g. dialog title bar). Falls back to inline when null. */
   headerToolbarTarget?: HTMLElement | null;
 }
@@ -107,22 +109,22 @@ export function initBulkAddStateFromFiles(
 }
 
 export function PhotoBulkAdd({
-  initialFiles,
+  initialPhotos,
   initialGroups,
   aiSettings,
-  onClose,
-  onBack,
+  onComplete,
+  onExitToForm,
   headerToolbarTarget,
 }: PhotoBulkAddProps) {
   const t = useTerminology();
   const { activeLocationId, demoMode: isDemo } = useAuth();
   const [state, dispatch] = useReducer(
     bulkAddReducer,
-    { files: initialFiles, groups: initialGroups ?? null },
+    { files: initialPhotos, groups: initialGroups ?? null },
     ({ files, groups }) => initBulkAddStateFromFiles(files, groups),
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const hadPhotos = useRef(initialFiles.length > 0);
+  const hadPhotos = useRef(initialPhotos.length > 0);
   const [successBins, setSuccessBins] = useState<CreatedBinInfo[] | null>(null);
 
   // Per-bin cap of 5 photos is enforced in the reducer; total upload count is unlimited (demo mode aside)
@@ -142,9 +144,9 @@ export function PhotoBulkAdd({
   useEffect(() => {
     if (totalPhotos > 0) hadPhotos.current = true;
     if (state.step === 'group' && hadPhotos.current && totalPhotos === 0) {
-      onBack();
+      onExitToForm();
     }
-  }, [totalPhotos, state.step, onBack]);
+  }, [totalPhotos, state.step, onExitToForm]);
 
   // Single-bin shortcut bypasses the summary step, so the user has nowhere to
   // see the retry affordance when their lone create fails. Fall back to summary.
@@ -246,9 +248,9 @@ export function PhotoBulkAdd({
           createdBins={successBins}
           onCreateAnother={() => {
             setSuccessBins(null);
-            onBack();
+            onExitToForm();
           }}
-          onClose={onClose}
+          onClose={onComplete}
         />
       </div>
     );
@@ -269,7 +271,7 @@ export function PhotoBulkAdd({
           fileInputRef={fileInputRef}
           onAddMore={handleAddMore}
           onContinue={() => dispatch({ type: 'GO_TO_REVIEW' })}
-          onBack={onBack}
+          onBack={onExitToForm}
         />
       )}
 

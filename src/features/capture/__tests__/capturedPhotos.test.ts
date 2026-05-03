@@ -76,13 +76,8 @@ describe('capturedPhotos store', () => {
     expect(getCapturedReturnTarget()).toBeNull();
   });
 
-  it('manages bulk-add return target', () => {
-    setCapturedReturnTarget('bulk-add');
-    expect(getCapturedReturnTarget()).toBe('bulk-add');
-  });
-
   it('takeCapturedPhotos resets return target', () => {
-    setCapturedReturnTarget('bulk-add');
+    setCapturedReturnTarget('bin-create');
     setCapturedPhotos([new File([''], 'f.jpg')], [0]);
 
     takeCapturedPhotos();

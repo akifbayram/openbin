@@ -28,7 +28,7 @@ describe('useReopenCreateOnCapture', () => {
     renderHook(() => useReopenCreateOnCapture(onReopen), { wrapper });
 
     expect(onReopen).toHaveBeenCalledTimes(1);
-    expect(onReopen).toHaveBeenCalledWith([file]);
+    expect(onReopen).toHaveBeenCalledWith([file], null);
     expect(hasCapturedPhotos()).toBe(false);
     expect(getCapturedReturnTarget()).toBe(null);
   });
@@ -40,19 +40,18 @@ describe('useReopenCreateOnCapture', () => {
     renderHook(() => useReopenCreateOnCapture(onReopen), { wrapper });
 
     expect(onReopen).toHaveBeenCalledTimes(1);
-    expect(onReopen).toHaveBeenCalledWith([]);
+    expect(onReopen).toHaveBeenCalledWith([], null);
   });
 
-  it('does not invoke the callback when target is bulk-add', () => {
-    setCapturedPhotos([new File(['x'], 'a.jpg')]);
-    setCapturedReturnTarget('bulk-add');
+  it('passes groups through to onReopen', () => {
     const onReopen = vi.fn();
-
+    setCapturedPhotos([new File(['a'], 'a.jpg', { type: 'image/jpeg' })], [0]);
+    setCapturedReturnTarget('bin-create');
     renderHook(() => useReopenCreateOnCapture(onReopen), { wrapper });
-
-    expect(onReopen).not.toHaveBeenCalled();
-    expect(hasCapturedPhotos()).toBe(true); // unchanged
-    expect(getCapturedReturnTarget()).toBe('bulk-add');
+    expect(onReopen).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.any(File)]),
+      [0],
+    );
   });
 
   it('does not invoke the callback when target is null', () => {

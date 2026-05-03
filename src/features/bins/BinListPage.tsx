@@ -58,7 +58,7 @@ export function BinListPage() {
   const location = useLocation();
   const { search, setSearch, debouncedSearch, sort, setSort, sortDir, setSortDir, filters, setFilters, page, setPage, clearAll } = useBinSearchParams();
 
-  const { createOpen, setCreateOpen, createInitialPhotos, onCreateInitialPhotosConsumed } =
+  const { createOpen, setCreateOpen, createInitialPhotos, createInitialGroups, onCreateInitialPhotosConsumed } =
     useBinCreateFromCapture();
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -363,6 +363,7 @@ export function BinListPage() {
       <BinListDialogs
         createOpen={createOpen} setCreateOpen={setCreateOpen}
         createInitialPhotos={createInitialPhotos}
+        createInitialGroups={createInitialGroups}
         onCreateInitialPhotosConsumed={onCreateInitialPhotosConsumed}
         filterOpen={filterOpen} setFilterOpen={setFilterOpen}
         saveViewOpen={saveViewOpen} setSaveViewOpen={setSaveViewOpen}

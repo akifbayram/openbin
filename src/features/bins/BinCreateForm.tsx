@@ -14,8 +14,7 @@ import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
-import { setCapturedPhotos, setCapturedReturnTarget } from '@/features/capture/capturedPhotos';
-import { getCommandInputRef } from '@/features/tour/TourProvider';
+import { setCapturedReturnTarget } from '@/features/capture/capturedPhotos';
 import { CreditCost, visionWeight } from '@/lib/aiCreditCost';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
@@ -26,11 +25,11 @@ import { cn, focusRing, plural, sectionHeader, stickyDialogFooter } from '@/lib/
 import type { AiSuggestions, BinItem, BinVisibility } from '@/types';
 import { AiBadge } from './AiBadge';
 import { BinPreviewCard } from './BinPreviewCard';
-import { BulkAddHint } from './BulkAddHint';
 import { ColorPicker } from './ColorPicker';
 import { CustomFieldsEditCard } from './CustomFieldsEditCard';
 import { IconPicker } from './IconPicker';
 import { ItemList } from './ItemList';
+import { PhotoBulkAdd } from './PhotoBulkAdd';
 import { PhotoUploadSection } from './PhotoUploadSection';
 import { QuickAddWidget } from './QuickAddWidget';
 import { StylePicker } from './StylePicker';
@@ -74,6 +73,10 @@ interface BinCreateFormProps {
   className?: string;
   initialPhotos?: File[] | null;
   onInitialPhotosConsumed?: () => void;
+  initialGroups?: number[] | null;
+  onWizardComplete?: () => void;
+  /** When true, programmatically clicks the photo file input once on mount (gallery deep-link). */
+  triggerFilePickerOnMount?: boolean;
 }
 
 export function BinCreateForm({
@@ -90,6 +93,9 @@ export function BinCreateForm({
   className,
   initialPhotos,
   onInitialPhotosConsumed,
+  initialGroups,
+  onWizardComplete,
+  triggerFilePickerOnMount,
 }: BinCreateFormProps) {
   const t = useTerminology();
   const { areas } = useAreaList(locationId);
@@ -103,6 +109,18 @@ export function BinCreateForm({
     setCapturedReturnTarget('bin-create');
     navigate('/capture', { state: { returnTo: location.pathname } });
   }
+
+  const [pickedFiles, setPickedFiles] = useState<File[] | null>(null);
+  const [pickedGroups, setPickedGroups] = useState<number[] | null>(null);
+
+  const effectivePhotos = pickedFiles ?? initialPhotos ?? null;
+  const effectiveGroups = pickedGroups ?? initialGroups ?? null;
+  const wizardMode = (effectiveGroups && new Set(effectiveGroups).size > 1) ?? false;
+  const [wizardActive, setWizardActive] = useState(wizardMode);
+
+  useEffect(() => {
+    if (wizardMode) setWizardActive(true);
+  }, [wizardMode]);
 
   const {
     name, setName,
@@ -123,11 +141,6 @@ export function BinCreateForm({
 
   // Progressive disclosure
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
-
-  // Hint that nudges users with 2+ photos toward the bulk-add flow.
-  // Resets automatically when the user clears their photo selection so a
-  // fresh batch can re-trigger the hint.
-  const [bulkHintDismissed, setBulkHintDismissed] = useState(false);
 
   // Name validation
   const [nameError, setNameError] = useState<string | null>(null);
@@ -187,6 +200,7 @@ export function BinCreateForm({
     handlePhotoSelect,
     handleRemovePhoto,
     addPhotosFromFiles,
+    clearPhotos,
     handleAnalyze,
     handleReanalyze,
   } = usePhotoAnalysis({
@@ -223,16 +237,8 @@ export function BinCreateForm({
   useEffect(() => {
     if (photos.length === 0) {
       aiFill.reset();
-      setBulkHintDismissed(false);
     }
   }, [photos.length, aiFill.reset]);
-
-  function handleSwitchToBulkAdd() {
-    setCapturedPhotos([...photos]);
-    setCapturedReturnTarget('bulk-add');
-    onCancel?.();
-    getCommandInputRef().current?.open();
-  }
 
   const initialPhotosConsumedRef = useRef(false);
   useEffect(() => {
@@ -242,6 +248,29 @@ export function BinCreateForm({
     addPhotosFromFiles(initialPhotos);
     onInitialPhotosConsumed?.();
   }, [initialPhotos, addPhotosFromFiles, onInitialPhotosConsumed]);
+
+  const filePickerTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (filePickerTriggeredRef.current) return;
+    if (!triggerFilePickerOnMount) return;
+    filePickerTriggeredRef.current = true;
+    fileInputRef.current?.click();
+  }, [triggerFilePickerOnMount, fileInputRef]);
+
+  // When photos accumulate to ≥2 in single-bin mode, lift them into the wizard.
+  // Each photo becomes its own group (user can merge in the wizard's group step).
+  // Hand ownership to the wizard by clearing the form's photo state — so when the
+  // wizard exits (success, cancel, or all photos removed), the form starts fresh.
+  useEffect(() => {
+    if (wizardActive) return;
+    if (photos.length < 2) return;
+    const captured = photos;
+    cancelAnalyze();
+    setPickedFiles(captured);
+    setPickedGroups(captured.map((_, i) => i));
+    clearPhotos();
+    setWizardActive(true);
+  }, [photos, wizardActive, cancelAnalyze, clearPhotos]);
 
   function handleUndoAiField(field: AiFillField) {
     const snap = aiFill.undo(field);
@@ -278,6 +307,29 @@ export function BinCreateForm({
     });
   }
 
+  if (wizardActive) {
+    return (
+      <PhotoBulkAdd
+        initialPhotos={effectivePhotos ?? []}
+        initialGroups={effectiveGroups ?? null}
+        aiSettings={aiSettings}
+        onComplete={() => {
+          setWizardActive(false);
+          setPickedFiles(null);
+          setPickedGroups(null);
+          onInitialPhotosConsumed?.();
+          onWizardComplete?.();
+        }}
+        onExitToForm={() => {
+          setWizardActive(false);
+          setPickedFiles(null);
+          setPickedGroups(null);
+          onInitialPhotosConsumed?.();
+        }}
+      />
+    );
+  }
+
   const compactLabel = 'text-[13px] text-[var(--text-tertiary)] mb-1.5 block';
 
   const areaName = areas.find(a => a.id === areaId)?.name ?? '';
@@ -302,22 +354,12 @@ export function BinCreateForm({
             onRemovePhoto={handleRemovePhoto}
             onCameraClick={handleCameraClick}
             onFilesDropped={addPhotosFromFiles}
+            onMultiFileSelection={(files) => {
+              setPickedFiles(files);
+              setPickedGroups(files.map((_, i) => i));
+            }}
             analyzing={analyzing}
           />
-
-          {/* Bulk-add nudge: surfaces once the user has 2+ photos, before they tap AI Fill. */}
-          {photos.length >= 2
-            && !analyzing
-            && !analyzeError
-            && confirmPhase === 'idle'
-            && aiFill.filled.size === 0
-            && !bulkHintDismissed && (
-            <BulkAddHint
-              photoCount={photos.length}
-              onSwitch={handleSwitchToBulkAdd}
-              onDismiss={() => setBulkHintDismissed(true)}
-            />
-          )}
 
           {/* AI Fill button / Error card / Success banner */}
           {(() => {
@@ -621,6 +663,10 @@ export function BinCreateForm({
             onRemovePhoto={handleRemovePhoto}
             onCameraClick={handleCameraClick}
             onFilesDropped={addPhotosFromFiles}
+            onMultiFileSelection={(files) => {
+              setPickedFiles(files);
+              setPickedGroups(files.map((_, i) => i));
+            }}
             analyzing={analyzing}
           />
 

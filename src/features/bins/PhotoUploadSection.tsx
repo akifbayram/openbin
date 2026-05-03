@@ -10,6 +10,7 @@ interface PhotoUploadSectionProps {
 	onRemovePhoto: (index: number) => void;
 	onCameraClick?: () => void;
 	onFilesDropped?: (files: File[]) => void;
+	onMultiFileSelection?: (files: File[]) => void;
 	analyzing: boolean;
 	fileInputRef: React.RefObject<HTMLInputElement | null>;
 }
@@ -21,6 +22,7 @@ export function PhotoUploadSection({
 	onRemovePhoto,
 	onCameraClick,
 	onFilesDropped,
+	onMultiFileSelection,
 	analyzing,
 	fileInputRef,
 }: PhotoUploadSectionProps) {
@@ -41,10 +43,24 @@ export function PhotoUploadSection({
 		const files = Array.from(e.dataTransfer.files).filter((f) =>
 			f.type.startsWith('image/')
 		);
-		if (files.length > 0) {
+		if (files.length === 0) return;
+		if (files.length >= 2 && onMultiFileSelection) {
+			onMultiFileSelection(files);
+		} else {
 			onFilesDropped?.(files);
 		}
 	}
+
+	const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(e.target.files ?? []);
+		if (files.length >= 2 && onMultiFileSelection) {
+			onMultiFileSelection(files);
+			// Reset the input so re-selecting the same files re-fires the change.
+			e.target.value = '';
+			return;
+		}
+		onPhotoSelect(e);
+	};
 
 	return (
 		<div className="space-y-2">
@@ -54,7 +70,7 @@ export function PhotoUploadSection({
 				accept="image/*"
 				multiple
 				className="hidden"
-				onChange={onPhotoSelect}
+				onChange={handleFileInputChange}
 			/>
 
 			{photos.length === 0 ? (

@@ -3,9 +3,8 @@
  * back to downstream consumers without shared React state.
  *
  * returnTarget controls which consumer picks up the photos:
- * - null (default) → useAutoOpenOnCapture opens CommandInput with a flat list
- * - 'bin-create'   → BinCreateForm picks them up, CommandInput ignores
- * - 'bulk-add'     → ConversationUI hands them to PhotoBulkAdd with pre-grouped state
+ * - null (default) → no consumer picks up the photos
+ * - 'bin-create'   → BinCreateForm / NewBinPage picks them up
  *
  * `pendingGroups` is a parallel array where `pendingGroups[i]` is the groupId of
  * `pending[i]`. Set only when the camera ran in `bulk-group` mode; flat captures
@@ -13,9 +12,9 @@
  */
 let pending: File[] = [];
 let pendingGroups: number[] | null = null;
-let returnTarget: 'bin-create' | 'bulk-add' | null = null;
+let returnTarget: 'bin-create' | null = null;
 
-export type CapturedReturnTarget = 'bin-create' | 'bulk-add' | null;
+export type CapturedReturnTarget = 'bin-create' | null;
 
 export function setCapturedPhotos(files: File[], groups?: number[]): void {
 	pending = files;

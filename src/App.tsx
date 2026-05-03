@@ -124,6 +124,10 @@ const CapturePage = lazyWithRetry(() =>
   import('@/features/capture/CapturePage').then((m) => ({ default: m.CapturePage }))
 );
 
+const NewBinPage = lazyWithRetry(() =>
+  import('@/features/bins/NewBinPage').then((m) => ({ default: m.NewBinPage }))
+);
+
 const AdminUsersPage = lazyWithRetry(() =>
   import('@/features/admin/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage }))
 );
@@ -429,6 +433,7 @@ export default function App() {
                 <Route path="/activity" element={<Navigate to="/settings/activity" replace />} />
 
                 <Route path="/reorganize" element={<RouteWithBoundary><ReorganizePage /></RouteWithBoundary>} />
+                <Route path="/new-bin" element={<RouteWithBoundary><NewBinPage /></RouteWithBoundary>} />
                 <Route path="/capture" element={<RouteWithBoundary><CapturePage /></RouteWithBoundary>} />
                 <Route path="/admin/users" element={<RouteWithBoundary><AdminUsersPage /></RouteWithBoundary>} />
                 <Route path="/admin/users/:id" element={<RouteWithBoundary><AdminUserDetailPage /></RouteWithBoundary>} />

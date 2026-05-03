@@ -23,10 +23,11 @@ interface BinCreateDialogProps {
   prefillName?: string;
   allTags?: string[];
   initialPhotos?: File[] | null;
+  initialGroups?: number[] | null;
   onInitialPhotosConsumed?: () => void;
 }
 
-export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allTagsProp, initialPhotos, onInitialPhotosConsumed }: BinCreateDialogProps) {
+export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allTagsProp, initialPhotos, initialGroups, onInitialPhotosConsumed }: BinCreateDialogProps) {
   const { activeLocationId } = useAuth();
   const t = useTerminology();
   const allTagsFetched = useAllTagsFetch(allTagsProp !== undefined);
@@ -120,7 +121,9 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
                   prefillName={prefillName}
                   allTags={allTags}
                   initialPhotos={initialPhotos}
+                  initialGroups={initialGroups}
                   onInitialPhotosConsumed={onInitialPhotosConsumed}
+                  onWizardComplete={() => handleOpenChange(false)}
                 />
               )}
             </div>

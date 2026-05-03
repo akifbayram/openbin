@@ -100,6 +100,13 @@ export function usePhotoAnalysis({
     });
   }, []);
 
+  const clearPhotos = useCallback(() => {
+    setPhotos([]);
+    setPhotoPreviews([]);
+    analyze.clear();
+    reanalyze.clear();
+  }, [analyze.clear, reanalyze.clear]);
+
   async function handleAnalyze() {
     if (photos.length === 0) return;
     if (!aiConfigured) {
@@ -138,5 +145,6 @@ export function usePhotoAnalysis({
     handleAnalyze,
     handleReanalyze,
     addPhotosFromFiles,
+    clearPhotos,
   };
 }

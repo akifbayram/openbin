@@ -8,7 +8,6 @@ import { useToast } from '@/components/ui/toast';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useOAuthReturn } from '@/features/auth/OAuthReturn';
 import { useFirstBinIds } from '@/features/bins/useBins';
-import { useAutoOpenOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useLocationList } from '@/features/locations/useLocations';
 import { DemoCtaOverlay } from '@/features/onboarding/DemoCtaOverlay';
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay';
@@ -100,12 +99,6 @@ export function AppLayout() {
     ref.current = { open: openAskAi, close: () => setCommandOpen(false) };
     return () => { ref.current = null; };
   }, [openAskAi]);
-  // Wrap openAskAi to match the (v: boolean) => void signature expected by useAutoOpenOnCapture.
-  const openAskAiForCapture = useCallback((v: boolean) => {
-    if (v) openAskAi();
-  }, [openAskAi]);
-  useAutoOpenOnCapture(aiEnabled, openAskAiForCapture);
-
   const tourContext = useMemo<TourContext>(() => ({
     canWrite,
     aiEnabled: aiSettings !== null,

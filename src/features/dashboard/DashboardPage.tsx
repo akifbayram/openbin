@@ -59,7 +59,7 @@ export function DashboardPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const { views: savedViews } = useSavedViews();
-  const { createOpen, setCreateOpen, createInitialPhotos, onCreateInitialPhotosConsumed } =
+  const { createOpen, setCreateOpen, createInitialPhotos, createInitialGroups, onCreateInitialPhotosConsumed } =
     useBinCreateFromCapture();
 
   const { isAdmin, canWrite, canCreateBin } = usePermissions();
@@ -366,6 +366,7 @@ export function DashboardPage() {
       <DashboardDialogs
         createOpen={createOpen} setCreateOpen={setCreateOpen}
         createInitialPhotos={createInitialPhotos}
+        createInitialGroups={createInitialGroups}
         onCreateInitialPhotosConsumed={onCreateInitialPhotosConsumed}
         bulk={bulk} selectedIds={selectedIds} clearSelection={clearSelection}
         allTags={allTags} selectable={selectable} isAdmin={isAdmin} canWrite={canWrite}

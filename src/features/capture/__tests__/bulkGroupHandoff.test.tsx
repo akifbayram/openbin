@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initBulkAddStateFromFiles } from '@/features/ai/PhotoBulkAdd';
+import { initBulkAddStateFromFiles } from '@/features/bins/PhotoBulkAdd';
 import {
   getCapturedReturnTarget,
   setCapturedPhotos,
@@ -17,9 +17,9 @@ describe('bulk-group camera → PhotoBulkAdd handoff', () => {
     const groupIds = [0, 0, 1];
 
     setCapturedPhotos(files, groupIds);
-    setCapturedReturnTarget('bulk-add');
+    setCapturedReturnTarget('bin-create');
 
-    expect(getCapturedReturnTarget()).toBe('bulk-add');
+    expect(getCapturedReturnTarget()).toBe('bin-create');
     const taken = takeCapturedPhotos();
     expect(taken.files).toEqual(files);
     expect(taken.groups).toEqual(groupIds);

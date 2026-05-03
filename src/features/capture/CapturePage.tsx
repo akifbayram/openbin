@@ -5,20 +5,15 @@ import { Button } from '@/components/ui/button';
 import { TourLauncher } from '@/features/tour/TourLauncher';
 import { cn, focusRing } from '@/lib/utils';
 import { CapturePageBulkGroup } from './CapturePageBulkGroup';
-import { getCapturedReturnTarget, setCapturedPhotos } from './capturedPhotos';
+import { setCapturedPhotos } from './capturedPhotos';
 import { FirstRunCoachmark, HelpButton } from './guidance/CameraGuidance';
 import type { CapturedPhoto } from './useCapture';
 import { useCapture } from './useCapture';
 
-type CaptureMode = 'single-bin' | 'bin-create' | 'bulk-group';
+type CaptureMode = 'single-bin' | 'bulk-group';
 
-function resolveCaptureMode(
-  binId: string | null,
-  returnTarget: ReturnType<typeof getCapturedReturnTarget>,
-): CaptureMode {
-  if (binId) return 'single-bin';
-  if (returnTarget === 'bin-create') return 'bin-create';
-  return 'bulk-group';
+function resolveCaptureMode(binId: string | null): CaptureMode {
+  return binId ? 'single-bin' : 'bulk-group';
 }
 
 function StatusBadge({ photo, onRetry }: { photo: CapturedPhoto; onRetry: () => void }) {
@@ -285,7 +280,7 @@ function CapturePageLegacy({ binId }: { binId?: string }) {
 export function CapturePage() {
   const [searchParams] = useSearchParams();
   const binIdParam = searchParams.get('binId');
-  const mode = resolveCaptureMode(binIdParam, getCapturedReturnTarget());
+  const mode = resolveCaptureMode(binIdParam);
 
   if (mode === 'bulk-group') {
     return <CapturePageBulkGroup />;
