@@ -1,11 +1,35 @@
 import { Router } from 'express';
 import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { config } from '../lib/config.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
-import { computeOverLimits, generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, SELF_HOSTED_USAGE_STUB, SELF_HOSTED_USAGE_SUMMARY_STUB, SubStatus, subStatusLabel } from '../lib/planGate.js';
+import { type CheckoutAction, computeOverLimits, generateDowngradeFlowAction, generatePortalAction, generateUpgradeAction, generateUpgradePlanAction, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, renderActionAsUrl, SELF_HOSTED_USAGE_STUB, SELF_HOSTED_USAGE_SUMMARY_STUB, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
+
+// Helper: render an action's URL form for the *Url back-compat field, or
+// return null if the action itself is null. Lets the response object stay
+// readable below without ?: chains around every URL field.
+function actionToUrl(action: CheckoutAction | null): string | null {
+  return action ? renderActionAsUrl(action) : null;
+}
+
+type DowngradeTarget = 'free' | 'plus';
+
+function isDowngradeTarget(v: unknown): v is DowngradeTarget {
+  return v === 'free' || v === 'plus';
+}
+
+function planLabelToTier(label: 'free' | 'plus' | 'pro') {
+  if (label === 'free') return Plan.FREE;
+  if (label === 'plus') return Plan.PLUS;
+  return Plan.PRO;
+}
+
+function rankPlan(label: 'free' | 'plus' | 'pro'): number {
+  return label === 'free' ? 0 : label === 'plus' ? 1 : 2;
+}
 
 router.get('/', authenticate, asyncHandler(async (req, res) => {
   if (isSelfHosted()) {
@@ -21,7 +45,18 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       upgradeProUrl: null,
       subscribePlanUrl: null,
       portalUrl: null,
+      // CheckoutAction-shaped fields (see lib/planGate.ts). New consumers
+      // should use *Action over *Url so tokens never land in URLs / browser
+      // history / Referer for endpoints we control (POST-able).
+      upgradeAction: null,
+      upgradePlusAction: null,
+      upgradeProAction: null,
+      subscribePlanAction: null,
+      portalAction: null,
       aiCredits: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
+      trialPeriodDays: config.trialPeriodDays,
     });
     return;
   }
@@ -46,6 +81,16 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     ? { used: aiCreditsRaw.used, limit: aiCreditsRaw.limit, resetsAt: aiCreditsRaw.resetsAt }
     : null;
 
+  // Generate every *Action once so we can derive matching *Url fields
+  // without firing the JWT-sign code path twice for the same surface.
+  const [upgradeAction, upgradePlusAction, upgradeProAction, subscribePlanAction, portalAction] = await Promise.all([
+    active && isPro ? null : generateUpgradeAction(userId, email, planInfo.previousSubStatus !== null),
+    isFree || (isPlus && isLapsed) ? generateUpgradePlanAction(userId, email, 'plus') : null,
+    !isPro || !isPaidActive ? generateUpgradePlanAction(userId, email, 'pro') : null,
+    isTrial || (!isFree && isLapsed) ? generateUpgradePlanAction(userId, email, planLabel(plan) as 'plus' | 'pro') : null,
+    isPaidActive ? generatePortalAction(userId, email) : null,
+  ]);
+
   res.json({
     plan: planLabel(plan),
     status: subStatusLabel(subStatus),
@@ -56,16 +101,25 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       ? (planInfo.previousSubStatus === SubStatus.TRIAL ? 'trial' : 'active')
       : null,
     features: getFeatureMap(plan),
-    upgradeUrl: active && isPro ? null : await generateUpgradeUrl(userId, email, planInfo.previousSubStatus !== null),
-    upgradePlusUrl: isFree || (isPlus && isLapsed)
-      ? await generateUpgradePlanUrl(userId, email, 'plus') : null,
-    upgradeProUrl: !isPro || !isPaidActive
-      ? await generateUpgradePlanUrl(userId, email, 'pro') : null,
-    subscribePlanUrl: isTrial || (!isFree && isLapsed)
-      ? await generateUpgradePlanUrl(userId, email, planLabel(plan) as 'plus' | 'pro') : null,
-    portalUrl: isPaidActive ? await generatePortalUrl(userId, email) : null,
+    // Legacy URL fields. Kept populated for back-compat with older clients
+    // and for email templates that need a plain href. New client code MUST
+    // prefer the matching *Action field (token in form body, not URL).
+    upgradeUrl: actionToUrl(upgradeAction),
+    upgradePlusUrl: actionToUrl(upgradePlusAction),
+    upgradeProUrl: actionToUrl(upgradeProAction),
+    subscribePlanUrl: actionToUrl(subscribePlanAction),
+    portalUrl: actionToUrl(portalAction),
+    // Preferred shape for new consumers.
+    upgradeAction,
+    upgradePlusAction,
+    upgradeProAction,
+    subscribePlanAction,
+    portalAction,
     canDowngradeToFree: !isFree && !isPaidActive,
     aiCredits,
+    cancelAtPeriodEnd: planInfo.cancelAtPeriodEnd,
+    billingPeriod: planInfo.billingPeriod,
+    trialPeriodDays: config.trialPeriodDays,
   });
 }));
 
@@ -145,6 +199,81 @@ router.post('/downgrade-to-free', authenticate, asyncHandler(async (req, res) =>
   invalidateOverLimitCache(userId);
 
   res.json({ ok: true });
+}));
+
+router.post('/downgrade-impact', authenticate, asyncHandler(async (req, res) => {
+  if (isSelfHosted()) throw new NotFoundError('Not available in self-hosted mode');
+
+  const { targetPlan } = req.body as { targetPlan?: unknown };
+  if (!isDowngradeTarget(targetPlan)) {
+    throw new ValidationError('targetPlan must be "free" or "plus"');
+  }
+
+  const userId = req.user!.id;
+  const planInfo = await getUserPlanInfo(userId);
+  if (!planInfo) throw new NotFoundError('User not found');
+
+  const currentLabel = planLabel(planInfo.plan) as 'free' | 'plus' | 'pro';
+  if (rankPlan(targetPlan) >= rankPlan(currentLabel)) {
+    throw new ValidationError('Target plan must be a downgrade');
+  }
+
+  const usage = await getUserUsage(userId);
+  const { computeDowngradeImpact } = await import('../ee/lib/downgradeImpact.js');
+  const impact = computeDowngradeImpact({
+    currentFeatures: getFeatureMap(planInfo.plan),
+    targetFeatures: getFeatureMap(planLabelToTier(targetPlan)),
+    targetPlan,
+    usage,
+  });
+
+  res.json(impact);
+}));
+
+router.post('/downgrade', authenticate, asyncHandler(async (req, res) => {
+  if (isSelfHosted()) throw new NotFoundError('Not available in self-hosted mode');
+
+  const { targetPlan } = req.body as { targetPlan?: unknown };
+  if (!isDowngradeTarget(targetPlan)) {
+    throw new ValidationError('targetPlan must be "free" or "plus"');
+  }
+
+  const userId = req.user!.id;
+  const planInfo = await getUserPlanInfo(userId);
+  if (!planInfo) throw new NotFoundError('User not found');
+
+  const currentLabel = planLabel(planInfo.plan) as 'free' | 'plus' | 'pro';
+  if (rankPlan(targetPlan) >= rankPlan(currentLabel)) {
+    throw new ValidationError('Target plan must be a downgrade');
+  }
+
+  const isActivePaid = isSubscriptionActive(planInfo) && planInfo.subStatus === SubStatus.ACTIVE;
+
+  // Stripe webhook is the source of truth — we don't mutate plan state
+  // here, just hand the user off to the portal flow.
+  if (isActivePaid) {
+    const action = await generateDowngradeFlowAction(userId, planInfo.email, targetPlan);
+    if (!action) throw new Error('MANAGER_URL or SUBSCRIPTION_JWT_SECRET not configured');
+    res.json({ portalFlowAction: action });
+    return;
+  }
+
+  // Lapsed user has no active Stripe sub, so there's nothing to cancel — flip the row directly.
+  if (targetPlan !== 'free') {
+    throw new ValidationError('Lapsed users can only downgrade to Free');
+  }
+  await query(
+    `UPDATE users SET plan = $1, sub_status = $2, active_until = NULL, previous_sub_status = NULL, updated_at = ${d.now()} WHERE id = $3`,
+    [Plan.FREE, SubStatus.ACTIVE, userId],
+  );
+  invalidateOverLimitCache(userId);
+
+  res.json({
+    plan: planLabel(Plan.FREE),
+    status: subStatusLabel(SubStatus.ACTIVE),
+    activeUntil: null,
+    cancelAtPeriodEnd: planInfo.cancelAtPeriodEnd,
+  });
 }));
 
 export { router as planRoutes };

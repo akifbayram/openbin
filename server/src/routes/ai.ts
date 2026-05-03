@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { d, generateUuid, query } from '../db.js';
-import { testProviderConnection } from '../lib/aiCaller.js';
+import { AiAnalysisError, testProviderConnection, validateEndpointUrl } from '../lib/aiCaller.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, getEnvGroupOverride, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
@@ -36,6 +36,16 @@ const MOCK_AI_SETTINGS = {
 } as const;
 
 const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini', 'openai-compatible'] as const;
+
+async function assertValidEndpointUrl(endpointUrl: unknown, isDemo: boolean): Promise<void> {
+  if (!endpointUrl || typeof endpointUrl !== 'string') return;
+  try {
+    await validateEndpointUrl(endpointUrl, isDemo);
+  } catch (err) {
+    if (err instanceof AiAnalysisError) throw new ValidationError(err.message);
+    throw err;
+  }
+}
 
 const router = Router();
 
@@ -206,6 +216,8 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     throw new ValidationError('requestTimeout must be between 10 and 300 seconds');
   }
 
+  await assertValidEndpointUrl(endpointUrl, isDemoUser(req));
+
   const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
   const encryptedKey = encryptApiKey(finalApiKey);
   const finalCustomPrompt = (customPrompt && typeof customPrompt === 'string' && customPrompt.trim()) ? customPrompt.trim() : null;
@@ -276,7 +288,7 @@ router.delete('/settings', requireAiAccess(), aiRouteHandler('delete AI settings
 }));
 
 // POST /api/ai/structure-text — structure dictated/typed text into items
-router.post('/structure-text', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('structure text', async (req, res) => {
+router.post('/structure-text', ...aiRateLimiters, requireAiAccess(), checkAiCredits(), aiRouteHandler('structure text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { context } = req.body;
 
@@ -302,8 +314,10 @@ router.post('/structure-text', ...aiRateLimiters, requireAiAccess(), checkAiCred
   res.json(result);
 }));
 
-// POST /api/ai/test — test connection with provided credentials
-router.post('/test', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('test connection', async (req, res) => {
+// POST /api/ai/test — test connection with provided credentials.
+// Intentionally does NOT consume an AI credit: this is a UX action to verify
+// a key/endpoint, and burning a credit per click punishes users for trying.
+router.post('/test', ...aiRateLimiters, requireAiAccess(), aiRouteHandler('test connection', async (req, res) => {
   if (isDemoUser(req)) {
     throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot configure API keys. Use server-configured keys or mock mode.');
   }
@@ -348,6 +362,8 @@ router.put('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('save
     throw new ValidationError('Invalid provider');
   }
 
+  await assertValidEndpointUrl(endpointUrl, isDemoUser(req));
+
   const id = generateUuid();
   await query(
     `INSERT INTO user_ai_task_overrides (id, user_id, task_group, provider, model, endpoint_url)
@@ -373,7 +389,7 @@ router.delete('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('d
 }));
 
 // POST /api/ai/transcribe — transcribe audio to text
-router.post('/transcribe', memoryAudioUpload.single('audio'), ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('transcribe audio', async (req, res) => {
+router.post('/transcribe', memoryAudioUpload.single('audio'), ...aiRateLimiters, requireAiAccess(), checkAiCredits(), aiRouteHandler('transcribe audio', async (req, res) => {
   const file = req.file;
   if (!file || !file.buffer || file.buffer.length === 0) {
     throw new ValidationError('No audio file provided');

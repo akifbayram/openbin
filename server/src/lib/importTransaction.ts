@@ -1,5 +1,6 @@
 import type { TxQueryFn } from '../db.js';
 import { query, withTransaction } from '../db.js';
+import { validateBinFields } from './binValidation.js';
 import {
   type ExportArea,
   type ExportBin,
@@ -24,6 +25,7 @@ import {
 } from './exportHelpers.js';
 import { ForbiddenError, PlanRestrictedError } from './httpErrors.js';
 import { getUserBinCount, getUserFeatures } from './planGate.js';
+import { validateBinName } from './validation.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -217,6 +219,18 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
     const oldToNewBinId = new Map<string, string>();
 
     async function importSingleBin(bin: ExportBin, opts?: { deletedAt?: string | null }): Promise<boolean> {
+      validateBinName(bin.name);
+      validateBinFields({
+        items: bin.items,
+        tags: bin.tags,
+        notes: bin.notes,
+        icon: bin.icon,
+        color: bin.color,
+        cardStyle: bin.cardStyle,
+        visibility: bin.visibility,
+        customFields: bin.customFields,
+      });
+
       if (importMode === 'merge' && bin.shortCode) {
         const existing = await tx('SELECT id FROM bins WHERE location_id = $1 AND short_code = $2', [locationId, bin.shortCode]);
         if (existing.rows.length > 0) return false;

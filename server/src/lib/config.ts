@@ -29,6 +29,12 @@ function clamp(value: number, min: number, max: number, fallback: number): numbe
   return Math.min(Math.max(value, min), max);
 }
 
+export type GeminiThinkingLevel = 'minimal' | 'low' | 'medium' | 'high';
+function parseGeminiThinkingLevel(value: string | undefined): GeminiThinkingLevel {
+  if (value === 'minimal' || value === 'low' || value === 'medium' || value === 'high') return value;
+  return 'minimal';
+}
+
 const photoStoragePath = process.env.PHOTO_STORAGE_PATH || './uploads';
 
 function readSecretFile(envPath: string | undefined): string | null {
@@ -101,6 +107,15 @@ export const config = Object.freeze({
   subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
 
+  // Account deletion lifecycle
+  // Grace period before scheduled accounts are hard-deleted. Self-host admins
+  // can set 0 for immediate hard-delete; cloud should keep >=1 to absorb
+  // Stripe webhook race conditions on subscription cancellation.
+  deletionGracePeriodDays: clamp(parseInt(process.env.DELETION_GRACE_PERIOD_DAYS || '30', 10), 0, 90, 30),
+  // Refund behavior when a paid user deletes their account. Anything other
+  // than 'prorated' resolves to 'none'.
+  deletionRefundPolicy: (process.env.DELETION_REFUND_POLICY === 'prorated' ? 'prorated' : 'none') as 'none' | 'prorated',
+
   // OAuth (cloud only)
   googleClientId: process.env.GOOGLE_CLIENT_ID || null,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
@@ -137,7 +152,7 @@ export const config = Object.freeze({
     plusMaxStorageMb: parseNullableInt(process.env.PLAN_PLUS_MAX_STORAGE_MB, 100),
     plusMaxMembers: parseNullableInt(process.env.PLAN_PLUS_MAX_MEMBERS, 1),
     plusActivityRetentionDays: parseNullableInt(process.env.PLAN_PLUS_ACTIVITY_RETENTION_DAYS, 30),
-    plusAiCreditsPerMonth: parseStrictInt(process.env.PLAN_PLUS_AI_CREDITS_PER_MONTH, 25),
+    plusAiCreditsPerMonth: parseStrictInt(process.env.PLAN_PLUS_AI_CREDITS_PER_MONTH, 100),
     plusReorganizeMaxBins: parseNullableInt(process.env.PLAN_PLUS_REORG_MAX_BINS, 10),
     // Pro tier
     proMaxBins: parseNullableInt(process.env.PLAN_PRO_MAX_BINS, 1000),
@@ -145,10 +160,16 @@ export const config = Object.freeze({
     proMaxMembers: parseNullableInt(process.env.PLAN_PRO_MAX_MEMBERS, 10),
     proMaxStorageMb: parseNullableInt(process.env.PLAN_PRO_MAX_STORAGE_MB, 1024),
     proActivityRetentionDays: parseNullableInt(process.env.PLAN_PRO_ACTIVITY_RETENTION_DAYS, 90),
-    proAiCreditsPerMonth: parseNullableInt(process.env.PLAN_PRO_AI_CREDITS_PER_MONTH, 250),
+    proAiCreditsPerMonth: parseNullableInt(process.env.PLAN_PRO_AI_CREDITS_PER_MONTH, 700),
     proReorganizeMaxBins: parseNullableInt(process.env.PLAN_PRO_REORG_MAX_BINS, 40),
-    freeAiCreditsPerMonth: 10,
-    trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '25', 10), 1, 1000, 25),
+    freeAiCreditsPerMonth: parseStrictInt(process.env.PLAN_FREE_AI_CREDITS_PER_MONTH, 30),
+    trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '30', 10), 1, 1000, 30),
+  }),
+  planPrices: Object.freeze({
+    plusQuarterlyCents: parseStrictInt(process.env.PLAN_PRICE_PLUS_QUARTERLY, 1500),
+    plusAnnualCents: parseStrictInt(process.env.PLAN_PRICE_PLUS_ANNUAL, 5000),
+    proQuarterlyCents: parseStrictInt(process.env.PLAN_PRICE_PRO_QUARTERLY, 3000),
+    proAnnualCents: parseStrictInt(process.env.PLAN_PRICE_PRO_ANNUAL, 10000),
   }),
   // Email (Resend)
   emailEnabled: parseBool(process.env.EMAIL_ENABLED, false),
@@ -200,6 +221,36 @@ export const config = Object.freeze({
   aiDeepTextModel: process.env.AI_DEEP_TEXT_MODEL || null,
   aiDeepTextEndpointUrl: process.env.AI_DEEP_TEXT_ENDPOINT_URL || null,
 
+  // Gemini 3 thinking depth: 'minimal' | 'low' | 'medium' | 'high'. Caps thinking-token
+  // spend on photo analysis and reorganize. Default 'minimal' is cheapest; structured-
+  // extraction tasks (vision, JSON output) need almost no reasoning. Bump to 'low' or
+  // higher if reorganize quality regresses.
+  geminiThinkingLevel: parseGeminiThinkingLevel(process.env.GEMINI_THINKING_LEVEL),
+
+  // ── AI cost & sizing knobs ──
+  // Per-call credit weights: charged against the user's plan AI credit cap.
+  // quickText is the baseline (chat/command/query). vision multiplies by image
+  // count; deepText multiplies by bin count (used by reorganize). Defaults are
+  // calibrated to Gemini 3 Flash Preview spend with thinkingLevel='minimal'.
+  aiWeightQuickText: clamp(parseInt(process.env.AI_WEIGHT_QUICKTEXT || '1', 10), 0, 1000, 1),
+  aiWeightVision: clamp(parseInt(process.env.AI_WEIGHT_VISION || '5', 10), 0, 1000, 5),
+  aiWeightDeepText: clamp(parseInt(process.env.AI_WEIGHT_DEEPTEXT || '2', 10), 0, 1000, 2),
+  // Hard cap on photos accepted in a single AI request. Bounds worst-case
+  // per-call provider cost and credit charge (cost = AI_WEIGHT_VISION × N).
+  aiMaxPhotosPerRequest: clamp(parseInt(process.env.AI_MAX_PHOTOS_PER_REQUEST || '5', 10), 1, 50, 5),
+  // Estimated input-token budget for chat/command/query context. Trims bin
+  // records before they reach the LLM so per-call input spend stays predictable.
+  aiContextTokenBudget: clamp(parseInt(process.env.AI_CONTEXT_TOKEN_BUDGET || '6000', 10), 100, 100000, 6000),
+  // Vision input downscale: photos larger than this on either axis are
+  // re-encoded to fit. Smaller = cheaper vision tokens; 1024 is calibrated
+  // to Gemini Flash's pricing tile boundary.
+  aiImageMaxDim: clamp(parseInt(process.env.AI_IMAGE_MAX_DIM || '1024', 10), 256, 4096, 1024),
+  aiImageWebpQuality: clamp(parseInt(process.env.AI_IMAGE_WEBP_QUALITY || '80', 10), 1, 100, 80),
+  // Conversation history caps shipped with each Ask AI / command turn.
+  aiHistoryMaxTurns: clamp(parseInt(process.env.AI_HISTORY_MAX_TURNS || '10', 10), 1, 100, 10),
+  aiHistoryMaxTurnChars: clamp(parseInt(process.env.AI_HISTORY_MAX_TURN_CHARS || '4096', 10), 100, 100000, 4096),
+  aiHistoryMaxTotalChars: clamp(parseInt(process.env.AI_HISTORY_MAX_TOTAL_CHARS || '32768', 10), 100, 1_000_000, 32768),
+
   // Backup
   backupEnabled: parseBool(process.env.BACKUP_ENABLED, false),
   backupInterval: process.env.BACKUP_INTERVAL || 'daily',
@@ -233,6 +284,7 @@ export const config = Object.freeze({
   aiRateLimitPerMinute: clamp(parseInt(process.env.AI_RATE_LIMIT_PER_MINUTE || '15', 10), 1, 1000, 15),
   aiRateLimitPerHour: clamp(parseInt(process.env.AI_RATE_LIMIT_PER_HOUR || '100', 10), 1, 10000, 100),
   aiRateLimitPerDay: clamp(parseInt(process.env.AI_RATE_LIMIT_PER_DAY || '200', 10), 1, 100000, 200),
+  aiMaxConcurrentPerUser: clamp(parseInt(process.env.AI_MAX_CONCURRENT_PER_USER || '4', 10), 1, 50, 4),
 
   // Bulk selection cap (per-endpoint enforcement)
   bulkMaxSelection: clamp(parseInt(process.env.BULK_MAX_SELECTION || '200', 10), 1, 1000, 200),

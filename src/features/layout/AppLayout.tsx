@@ -6,6 +6,7 @@ import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
 import { useToast } from '@/components/ui/toast';
 import { useAiSettings } from '@/features/ai/useAiSettings';
+import { useOAuthReturn } from '@/features/auth/OAuthReturn';
 import { useFirstBinIds } from '@/features/bins/useBins';
 import { useLocationList } from '@/features/locations/useLocations';
 import { DemoCtaOverlay } from '@/features/onboarding/DemoCtaOverlay';
@@ -30,7 +31,7 @@ import { usePermissions } from '@/lib/usePermissions';
 import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
 import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
-import { cn, isSafeExternalUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { BottomNav } from './BottomNav';
 import { DrawerProvider } from './DrawerContext';
 import { MobileDrawer } from './MobileDrawer';
@@ -42,6 +43,10 @@ const ScanDialog = React.lazy(() =>
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 
+const CheckoutLink = __EE__
+  ? lazy(() => import('@/ee/checkoutAction').then((m) => ({ default: m.CheckoutLink })))
+  : (() => null) as React.FC<Record<string, unknown>>;
+
 const HIGHLIGHTS_TOUR: TourId = 'highlights';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -51,6 +56,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function AppLayout() {
   useTheme();
+  useOAuthReturn();
   const { isCollapsed: sidebarCollapsed } = useSidebarCollapsed();
   const { settings } = useAppSettings();
   const { activeLocationId, setActiveLocationId, demoMode } = useAuth();
@@ -83,14 +89,9 @@ export function AppLayout() {
     (path: string, opts?: { state?: unknown }) => guardedNavigate(() => rawNavigate(path, opts)),
     [rawNavigate, guardedNavigate],
   );
-  // Dispatch: mobile navigates to /ask full-page view; desktop opens the CommandInput dialog.
   const openAskAi = useCallback(() => {
-    if (isMobile) {
-      navigate('/ask');
-    } else {
-      setCommandOpen(true);
-    }
-  }, [isMobile, navigate]);
+    setCommandOpen(true);
+  }, []);
   // Register directly on the module-level ref (can't use useRegisterCommandInput here
   // because AppLayout is *above* TourProvider, so useTourContext() would return null).
   useEffect(() => {
@@ -261,19 +262,27 @@ export function AppLayout() {
                   ? getLockedMessage(planInfo.previousSubStatus)
                   : 'You\'re over your plan limits. Reduce usage or upgrade to resume editing.'}
               </p>
-              {(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) && isSafeExternalUrl((showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) ?? '') && (
-                <a
-                  href={(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) ?? ''}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-md bg-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/30 transition-colors shrink-0"
-                >
-                  {showLockedBanner
-                    ? getLockedCta(planInfo.previousSubStatus)
-                    : 'Upgrade'}
-                  <ArrowUpRight className="h-3 w-3" />
-                </a>
-              )}
+              {(() => {
+                // Locked banner uses the plan-picker (still GET because /plans
+                // is static). Over-limit banner uses upgradeProAction (POST,
+                // token in body, never in URL).
+                const action = showLockedBanner ? planInfo.upgradeAction : planInfo.upgradeProAction;
+                if (!action) return null;
+                return (
+                  <Suspense fallback={null}>
+                    <CheckoutLink
+                      action={action}
+                      target="_blank"
+                      className="inline-flex items-center gap-1 rounded-md bg-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/30 transition-colors shrink-0"
+                    >
+                      {showLockedBanner
+                        ? getLockedCta(planInfo.previousSubStatus)
+                        : 'Upgrade'}
+                      <ArrowUpRight className="h-3 w-3" />
+                    </CheckoutLink>
+                  </Suspense>
+                );
+              })()}
             </div>
           </div>
         )}

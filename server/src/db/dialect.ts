@@ -117,4 +117,20 @@ export const d = {
   forUpdate(): string {
     return currentDialect === 'sqlite' ? '' : 'FOR UPDATE';
   },
+
+  /**
+   * Compare a TEXT timestamp column against the current time in a way that
+   * survives both ISO-8601 (`YYYY-MM-DDTHH:MM:SS.sssZ`, written by
+   * `new Date().toISOString()`) and SQL `datetime()` (`YYYY-MM-DD HH:MM:SS`)
+   * formats. Naive lexical comparison breaks across the `T` vs space
+   * separator, so we normalize both sides through the dialect's date parser.
+   *
+   * Returns a SQL boolean expression. Operator must be a SQL comparator like
+   * `'<='` or `'<'`.
+   */
+  tsCompareNow(col: string, op: '<' | '<=' | '>' | '>='): string {
+    return currentDialect === 'sqlite'
+      ? `datetime(${col}) ${op} datetime('now')`
+      : `(${col})::timestamptz ${op} NOW()`;
+  },
 };

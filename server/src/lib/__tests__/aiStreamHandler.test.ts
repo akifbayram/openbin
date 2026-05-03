@@ -10,6 +10,7 @@ vi.mock('../aiImageResize.js', () => ({
 
 vi.mock('../aiStream.js', () => ({
   pipeAiStreamToResponse: vi.fn(async () => {}),
+  withClientDisconnect: vi.fn((_req: unknown, base?: AbortSignal) => base ?? new AbortController().signal),
 }));
 
 vi.mock('../aiSettings.js', () => ({
@@ -72,7 +73,7 @@ describe('runAnalysisStream', () => {
       return 'mock-content' as unknown as import('ai').UserContent;
     });
 
-    const mockReq = { user: { id: 'user-1' } } as unknown as Request;
+    const mockReq = { user: { id: 'user-1' }, once: vi.fn().mockReturnThis() } as unknown as Request;
     const mockRes = {} as Response;
 
     await runAnalysisStream({

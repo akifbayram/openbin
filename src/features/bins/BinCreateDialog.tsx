@@ -95,36 +95,38 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent fullScreenMobile>
+        <DialogContent flush className="sm:max-w-lg h-[min(720px,85vh)]">
           {!successInfo && (
-            <DialogHeader>
+            <DialogHeader className="shrink-0 px-5 pt-4 pb-3 mb-0 text-left border-b border-[var(--border-subtle)]">
               <DialogTitle>New {t.Bin}</DialogTitle>
               <DialogDescription className="text-[13px]">Add a new storage {t.bin} to your inventory.</DialogDescription>
             </DialogHeader>
           )}
           {activeLocationId && (
-            successInfo ? (
-              <BinCreateSuccess
-                createdBins={successInfo}
-                onCreateAnother={() => setSuccessInfo(null)}
-                onClose={() => handleOpenChange(false)}
-              />
-            ) : (
-              <BinCreateForm
-                mode="full"
-                locationId={activeLocationId}
-                onSubmit={handleSubmit}
-                submitting={loading}
-                showCancel
-                onCancel={() => handleOpenChange(false)}
-                prefillName={prefillName}
-                allTags={allTags}
-                initialPhotos={initialPhotos}
-                initialGroups={initialGroups}
-                onInitialPhotosConsumed={onInitialPhotosConsumed}
-                onWizardComplete={() => handleOpenChange(false)}
-              />
-            )
+            <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable] px-5 pt-5 flex flex-col">
+              {successInfo ? (
+                <BinCreateSuccess
+                  createdBins={successInfo}
+                  onCreateAnother={() => setSuccessInfo(null)}
+                  onClose={() => handleOpenChange(false)}
+                />
+              ) : (
+                <BinCreateForm
+                  mode="full"
+                  locationId={activeLocationId}
+                  onSubmit={handleSubmit}
+                  submitting={loading}
+                  showCancel
+                  onCancel={() => handleOpenChange(false)}
+                  prefillName={prefillName}
+                  allTags={allTags}
+                  initialPhotos={initialPhotos}
+                  initialGroups={initialGroups}
+                  onInitialPhotosConsumed={onInitialPhotosConsumed}
+                  onWizardComplete={() => handleOpenChange(false)}
+                />
+              )}
+            </div>
           )}
         </DialogContent>
     </Dialog>

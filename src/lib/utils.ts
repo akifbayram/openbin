@@ -87,6 +87,14 @@ export const sectionHeaderRow = 'flex items-baseline justify-between mb-4';
 /** Inline icon-button: 36px tap target, flex-centered. */
 export const iconButton = 'shrink-0 flex items-center justify-center size-9';
 
+/** Standard top-right close button for dialogs/overlays: 44px tap target, filled chip. */
+export const closeButton =
+  'absolute right-2.5 top-2.5 z-10 rounded-[var(--radius-sm)] h-11 w-11 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center';
+
+/** Sticky footer for flush-mode dialog bodies (px-5 padding). Caller supplies its own layout (row-spread, flex justify-end, etc.). */
+export const stickyDialogFooter =
+  'mt-auto sticky bottom-0 -mx-5 bg-[var(--bg-flat-heavy)] border-t border-[var(--border-subtle)] px-5 pt-3 pb-[calc(12px+var(--safe-bottom))]';
+
 /** Fade-in-on-hover remove button for list rows (visible at 30% on mobile).
  *  44×44 touch target meets WCAG / platform minimums. */
 export const rowAction =

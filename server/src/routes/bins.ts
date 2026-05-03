@@ -13,7 +13,7 @@ import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/custo
 import { ForbiddenError, NotFoundError, OverLimitError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import { assertLocationWritable, assertPhotoStorageAllowedTx, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
+import { assertLocationWritable, assertPhotoStorageAllowedTx, generateUpgradeAction, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache, renderActionAsUrl } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { getUserUsageTrackingPrefs, recordBinUsage } from '../lib/recordBinUsage.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
@@ -31,8 +31,9 @@ router.use(authenticate);
 
 async function throwPhotoOverLimit(userId: string, message: string): Promise<never> {
   const planInfo = await getUserPlanInfo(userId);
-  const upgradeUrl = planInfo ? await generateUpgradeUrl(userId, planInfo.email) : null;
-  throw new OverLimitError(message, upgradeUrl);
+  const upgradeAction = planInfo ? await generateUpgradeAction(userId, planInfo.email) : null;
+  const upgradeUrl = upgradeAction ? renderActionAsUrl(upgradeAction) : null;
+  throw new OverLimitError(message, upgradeUrl, upgradeAction);
 }
 
 // POST /api/bins — create bin
@@ -133,10 +134,11 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // GET /api/bins/trash — list soft-deleted bins for a location
 router.get('/trash', asyncHandler(async (req, res) => {
-  const locationId = req.query.location_id as string | undefined;
+  // Accept both camelCase (canonical) and snake_case (legacy) for backward compatibility.
+  const locationId = (req.query.locationId ?? req.query.location_id) as string | undefined;
 
   if (!locationId) {
-    throw new ValidationError('location_id query parameter is required');
+    throw new ValidationError('locationId query parameter is required');
   }
 
   if (!await verifyLocationMembership(locationId, req.user!.id)) {
@@ -669,8 +671,8 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
   if (req.body.name) validateBinName(req.body.name);
 
   // Copy items from source
-  const itemsResult = await query<{ name: string; position: number }>(
-    'SELECT name, position FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL ORDER BY position',
+  const itemsResult = await query<{ name: string; position: number; quantity: number | null }>(
+    'SELECT name, position, quantity FROM bin_items WHERE bin_id = $1 AND deleted_at IS NULL ORDER BY position',
     [id]
   );
 

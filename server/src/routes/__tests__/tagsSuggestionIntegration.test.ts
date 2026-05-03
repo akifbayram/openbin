@@ -37,12 +37,13 @@ vi.mock('../../lib/routeHelpers.js', () => ({
   logRouteActivity: vi.fn(),
 }));
 vi.mock('../../middleware/locationAccess.js', () => ({
-  requireLocationMember: () => (req: any, res: any, next: any) => next(),
+  requireLocationMember: () => (_req: any, _res: any, next: any) => next(),
+  requireLocationMemberOrAbove: () => (_req: any, _res: any, next: any) => next(),
 }));
 vi.mock('../../middleware/requirePlan.js', () => ({
-  requirePlusOrAbove: () => (req: any, res: any, next: any) => next(),
-  requireAiAccess: () => (req: any, res: any, next: any) => next(),
-  checkAiCredits: (req: any, res: any, next: any) => next(),
+  requirePlusOrAbove: () => (_req: any, _res: any, next: any) => next(),
+  requireAiAccess: () => (_req: any, _res: any, next: any) => next(),
+  checkAiCredits: () => (_req: any, _res: any, next: any) => next(),
 }));
 vi.mock('../../lib/rateLimiters.js', () => ({
   aiRateLimiters: [],
@@ -66,7 +67,7 @@ vi.mock('../../lib/aiStreamHandler.js', () => ({
       }),
     },
   }),
-  streamOpts: (settings: any, opts: any) => opts,
+  streamOpts: (_settings: any, opts: any) => opts,
   runAnalysisStream: async () => {},
 }));
 

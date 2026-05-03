@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
 import { useToast } from '@/components/ui/toast';
-import { apiFetch } from '@/lib/api';
+import { RecoverAccountDialog } from '@/features/settings/dialogs/RecoverAccountDialog';
+import { ApiError, apiFetch } from '@/lib/api';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { useAuthStatusConfig } from '@/lib/qrConfig';
@@ -30,6 +31,8 @@ export function LoginPage() {
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoFailed, setDemoFailed] = useState(false);
   const [formError, setFormError] = useState('');
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryScheduledAt, setRecoveryScheduledAt] = useState<string>('');
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +82,15 @@ export function LoginPage() {
       await login(email.trim(), password);
       navigate('/');
     } catch (err) {
+      if (
+        err instanceof ApiError &&
+        err.code === 'ACCOUNT_DELETION_PENDING' &&
+        typeof err.details?.scheduledAt === 'string'
+      ) {
+        setRecoveryScheduledAt(err.details.scheduledAt);
+        setRecoveryOpen(true);
+        return;
+      }
       setFormError(getErrorMessage(err, 'Invalid email or password'));
       emailRef.current?.focus();
     } finally {
@@ -142,13 +154,8 @@ export function LoginPage() {
                       enterKeyHint="next"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="login-password">Password</Label>
-                      <Link to="/forgot-password" className="text-[13px] text-[var(--accent)] hover:underline focus-visible:underline focus-visible:outline-none shrink-0">
-                        Forgot password?
-                      </Link>
-                    </div>
+                  <div className="relative space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
                     <PasswordInput
                       ref={passwordRef}
                       id="login-password"
@@ -159,6 +166,9 @@ export function LoginPage() {
                       required
                       enterKeyHint="done"
                     />
+                    <Link to="/forgot-password" className="absolute right-0 top-0 text-[13px] text-[var(--accent)] hover:underline focus-visible:underline focus-visible:outline-none shrink-0">
+                      Forgot password?
+                    </Link>
                   </div>
                   <Button
                     type="submit"
@@ -183,6 +193,21 @@ export function LoginPage() {
           </>
         )}
       </div>
+      <RecoverAccountDialog
+        open={recoveryOpen}
+        onOpenChange={setRecoveryOpen}
+        email={email.trim()}
+        password={password}
+        scheduledAt={recoveryScheduledAt}
+        onRecovered={async () => {
+          try {
+            await login(email.trim(), password);
+            navigate('/');
+          } catch (err) {
+            setFormError(getErrorMessage(err, 'Login failed after recovery'));
+          }
+        }}
+      />
     </div>
   );
 }

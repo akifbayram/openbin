@@ -76,8 +76,10 @@ No-match handling (when the user references a bin that does not exist):
 
 a. Return an empty actions array. NEVER emit a phantom action with an invented bin_code. NEVER combine a phantom action with a fuzzy-matched action in the same response.
 b. If 1–3 existing bins share a token, prefix, or typo with the reference, suggest them in the interpretation: "Did you mean X, Y, or Z?"
-c. If NO existing bin shares a name token with the reference, do NOT list bin names. Instead offer to create: "I couldn't find a bin named 'X'. Reply 'create it' to make a new X bin, or tell me which existing bin you meant."
-d. If the user's phrasing already signals intent to create ("put these in a new bin called X"), emit a single create_bin action with that name and the mentioned items — no clarification needed.
+c. If NO existing bin shares a name token with the reference, branch on the inventory's "complete" flag:
+   - complete=true → "bins" is the user's full visible inventory. Offer to create: "I couldn't find a bin named 'X'. Reply 'create it' to make a new X bin, or tell me which existing bin you meant." Do NOT list bin names.
+   - complete=false → "bins" is a subset (trimmed bins appear in "other_bins" as bin_code+name). Do NOT offer to create — say "I can only see bins in your current view, and didn't find a bin named 'X' there. It may exist outside this view — try clearing your selection or being more specific."
+d. If the user's phrasing already signals intent to create ("put these in a new bin called X"), emit a single create_bin action with that name and the mentioned items — no clarification needed, regardless of the complete flag.
 e. Never dump the full inventory list as suggestions.
 
 Ambiguity: if multiple bins plausibly match or intent is unclear, return an empty actions array and explain the ambiguity in the interpretation.`;
@@ -96,7 +98,10 @@ Core rules:
 8. Use the visibility, is_pinned, photo_count, and trash_bins fields when the question asks about them ("which bins are private?", "what's pinned?", "which bins have photos?", "what's in the trash?").
 9. When a match is a trash bin (from trash_bins, not bins), set "is_trashed": true. The UI uses this flag to link to the trash page instead of the bin detail page.
 10. If a follow-up question cannot be resolved against the current inventory, say so in the answer and return an empty matches array rather than guessing.
-11. For questions that target data outside the filtered context (see security rule 2) — e.g. "what's in bins I don't own?", "which private bins exist?", "list every location on the server" — answer "I can only see bins in your current view." with empty matches. Never say "that's private" or "that belongs to another user".`;
+11. The inventory's "complete" flag tells you whether "bins" is exhaustive. Branch your no-match phrasing on it (try fuzzy/token matching first):
+    - complete=true → "bins" is everything the user can see. Answer "I couldn't find a bin matching '<name>'." with empty matches. If 1–3 bins share a token or prefix, append "Did you mean X, Y, or Z?".
+    - complete=false → "bins" is a subset; trimmed entries may appear in "other_bins" as bin_code+name. Don't assert non-existence — answer "I can only see bins in your current view." with empty matches.
+12. For data the user cannot access (other users' private bins, other locations, server-wide — see security rule 2), answer "I can only see bins in your current view." with empty matches regardless of the flag. Never say "that's private" or "that belongs to another user".`;
 
 export const QUERY_RESPONSE_SHAPE = `{"answer":"...","matches":[{"bin_code":"...","name":"...","area_name":"...","items":["..."],"tags":["..."],"relevance":"...","is_trashed":false}]}`;
 

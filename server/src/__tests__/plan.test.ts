@@ -13,6 +13,15 @@ vi.mock('../lib/planGate.js', async (importOriginal) => {
     generateUpgradeUrl: vi.fn(),
     generateUpgradePlanUrl: vi.fn(),
     generatePortalUrl: vi.fn(),
+    // CheckoutAction-shaped variants. The route was migrated in the
+    // 2026-04-26 hardening pass to call these and derive the *Url fields
+    // from them via renderActionAsUrl. We mock renderActionAsUrl to be
+    // identity over `action.url` so existing res.body.*Url assertions
+    // keep working unchanged.
+    generateUpgradeAction: vi.fn(),
+    generateUpgradePlanAction: vi.fn(),
+    generatePortalAction: vi.fn(),
+    renderActionAsUrl: vi.fn((action: { url: string } | null) => action?.url ?? null),
     getFeatureMap: vi.fn(),
     getAiCredits: vi.fn(),
   };
@@ -21,8 +30,15 @@ vi.mock('../lib/planGate.js', async (importOriginal) => {
 // ---- Imports (after mocks) ----
 
 import { createApp } from '../index.js';
-import { generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, isSelfHosted, Plan, SubStatus } from '../lib/planGate.js';
+import { generatePortalAction, generatePortalUrl, generateUpgradeAction, generateUpgradePlanAction, generateUpgradePlanUrl, generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, isSelfHosted, Plan, SubStatus } from '../lib/planGate.js';
 import { createTestUser } from './helpers.js';
+
+// Build a CheckoutAction whose mocked renderActionAsUrl returns the given
+// URL string. Lets each test carry on asserting on res.body.upgradeUrl etc.
+// while the route now derives those URLs from these action mocks.
+function actionWithUrl(url: string | null): { url: string; method: 'POST'; fields: Record<string, string> } | null {
+  return url ? { url, method: 'POST', fields: {} } : null;
+}
 
 let app: Express;
 
@@ -67,6 +83,12 @@ beforeEach(() => {
   vi.mocked(generateUpgradeUrl).mockReset();
   vi.mocked(generateUpgradePlanUrl).mockReset();
   vi.mocked(generatePortalUrl).mockReset();
+  vi.mocked(generateUpgradeAction).mockReset();
+  vi.mocked(generateUpgradePlanAction).mockReset();
+  vi.mocked(generatePortalAction).mockReset();
+  vi.mocked(generateUpgradeAction).mockResolvedValue(null);
+  vi.mocked(generateUpgradePlanAction).mockResolvedValue(null);
+  vi.mocked(generatePortalAction).mockResolvedValue(null);
   vi.mocked(getFeatureMap).mockReset();
   vi.mocked(getAiCredits).mockReset();
   vi.mocked(getAiCredits).mockResolvedValue({ used: 0, limit: 0, resetsAt: null });
@@ -107,9 +129,12 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'pro@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl(null));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -134,9 +159,12 @@ describe('GET /api/plan', () => {
       activeUntil: '2027-01-01T00:00:00.000Z',
       email: 'trial@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/auth/openbin?token=trial');
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl('https://manager.example.com/auth/openbin?token=trial'));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -158,9 +186,12 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'plus@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/auth/openbin?token=abc');
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl('https://manager.example.com/auth/openbin?token=abc'));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -184,10 +215,14 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'inactive@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl(null));
     vi.mocked(generateUpgradePlanUrl).mockResolvedValue(null);
+    vi.mocked(generateUpgradePlanAction).mockResolvedValue(actionWithUrl(null));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -220,11 +255,16 @@ describe('GET /api/plan', () => {
       activeUntil: '2027-01-01T00:00:00.000Z',
       email: 'trial@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl('https://manager.example.com/upgrade'));
     vi.mocked(generateUpgradePlanUrl).mockResolvedValue('https://manager.example.com/checkout');
+    vi.mocked(generateUpgradePlanAction).mockResolvedValue(actionWithUrl('https://manager.example.com/checkout'));
     vi.mocked(generatePortalUrl).mockResolvedValue(null);
+    vi.mocked(generatePortalAction).mockResolvedValue(actionWithUrl(null));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -246,11 +286,16 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'plus@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl(null));
     vi.mocked(generateUpgradePlanUrl).mockResolvedValue('https://manager.example.com/checkout-pro');
+    vi.mocked(generateUpgradePlanAction).mockResolvedValue(actionWithUrl('https://manager.example.com/checkout-pro'));
     vi.mocked(generatePortalUrl).mockResolvedValue('https://manager.example.com/portal');
+    vi.mocked(generatePortalAction).mockResolvedValue(actionWithUrl('https://manager.example.com/portal'));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -272,11 +317,16 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'pro@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl(null));
     vi.mocked(generateUpgradePlanUrl).mockResolvedValue(null);
+    vi.mocked(generateUpgradePlanAction).mockResolvedValue(actionWithUrl(null));
     vi.mocked(generatePortalUrl).mockResolvedValue('https://manager.example.com/portal');
+    vi.mocked(generatePortalAction).mockResolvedValue(actionWithUrl('https://manager.example.com/portal'));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -298,10 +348,14 @@ describe('GET /api/plan', () => {
       activeUntil: '2027-01-01T00:00:00.000Z',
       email: 'trial@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl('https://manager.example.com/upgrade'));
     vi.mocked(generateUpgradePlanUrl).mockResolvedValue('https://manager.example.com/checkout');
+    vi.mocked(generateUpgradePlanAction).mockResolvedValue(actionWithUrl('https://manager.example.com/checkout'));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -320,10 +374,14 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'expired@example.com',
       previousSubStatus: SubStatus.TRIAL,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl('https://manager.example.com/upgrade'));
     vi.mocked(generateUpgradePlanUrl).mockResolvedValue('https://manager.example.com/checkout-plus');
+    vi.mocked(generateUpgradePlanAction).mockResolvedValue(actionWithUrl('https://manager.example.com/checkout-plus'));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -342,12 +400,16 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'free@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl('https://manager.example.com/upgrade'));
     vi.mocked(generateUpgradePlanUrl).mockImplementation(async (_uid, _email, plan) =>
       `https://manager.example.com/checkout-${plan}`);
     vi.mocked(generatePortalUrl).mockResolvedValue(null);
+    vi.mocked(generatePortalAction).mockResolvedValue(actionWithUrl(null));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -366,11 +428,16 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'plus@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl(null));
     vi.mocked(generateUpgradePlanUrl).mockResolvedValue('https://manager.example.com/checkout-pro');
+    vi.mocked(generateUpgradePlanAction).mockResolvedValue(actionWithUrl('https://manager.example.com/checkout-pro'));
     vi.mocked(generatePortalUrl).mockResolvedValue('https://manager.example.com/portal');
+    vi.mocked(generatePortalAction).mockResolvedValue(actionWithUrl('https://manager.example.com/portal'));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -389,11 +456,16 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'pro@example.com',
       previousSubStatus: SubStatus.ACTIVE,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl('https://manager.example.com/upgrade'));
     vi.mocked(generateUpgradePlanUrl).mockResolvedValue('https://manager.example.com/checkout-pro');
+    vi.mocked(generateUpgradePlanAction).mockResolvedValue(actionWithUrl('https://manager.example.com/checkout-pro'));
     vi.mocked(generatePortalUrl).mockResolvedValue(null);
+    vi.mocked(generatePortalAction).mockResolvedValue(actionWithUrl(null));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -416,12 +488,18 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'plus@example.com',
       previousSubStatus: SubStatus.ACTIVE,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl('https://manager.example.com/upgrade'));
     vi.mocked(generateUpgradePlanUrl).mockImplementation(async (_uid, _email, plan) =>
       `https://manager.example.com/checkout-${plan}`);
+    vi.mocked(generateUpgradePlanAction).mockImplementation(async (_uid, _email, plan) =>
+      actionWithUrl(`https://manager.example.com/checkout-${plan}`));
     vi.mocked(generatePortalUrl).mockResolvedValue(null);
+    vi.mocked(generatePortalAction).mockResolvedValue(actionWithUrl(null));
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -444,12 +522,18 @@ describe('GET /api/plan', () => {
       activeUntil: null,
       email: 'free@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradeAction).mockResolvedValue(actionWithUrl('https://manager.example.com/upgrade'));
     vi.mocked(generateUpgradePlanUrl).mockImplementation(async (_uid, _email, plan) =>
       `https://manager.example.com/checkout-${plan}`);
+    vi.mocked(generateUpgradePlanAction).mockImplementation(async (_uid, _email, plan) =>
+      actionWithUrl(`https://manager.example.com/checkout-${plan}`));
     vi.mocked(generatePortalUrl).mockResolvedValue(null);
+    vi.mocked(generatePortalAction).mockResolvedValue(actionWithUrl(null));
     const { token } = await createTestUser(app);
 
     const res = await request(app)

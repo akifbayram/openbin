@@ -1,5 +1,6 @@
 import type { Request, RequestHandler } from 'express';
 import rateLimit from 'express-rate-limit';
+import { createAiConcurrencyLimiter } from '../middleware/aiConcurrencyLimiter.js';
 import { config, isDemoUser } from './config.js';
 
 const noop: RequestHandler = (_req, _res, next) => next();
@@ -56,10 +57,11 @@ const demoHourlyLimiter: RequestHandler = (() => {
   });
 })();
 
-/** Demo guards + three stacked per-user rate limiters: per-minute, per-hour, per-day. */
+/** Demo guards + per-user concurrency cap + three stacked per-user rate limiters: per-minute, per-hour, per-day. */
 export const aiRateLimiters: RequestHandler[] = [
   demoPhotoGuard,
   demoHourlyLimiter,
+  createAiConcurrencyLimiter(config.aiMaxConcurrentPerUser),
   createAiLimiter(60 * 1000,          config.aiRateLimitPerMinute),
   createAiLimiter(60 * 60 * 1000,     config.aiRateLimitPerHour),
   createAiLimiter(24 * 60 * 60 * 1000, config.aiRateLimitPerDay),

@@ -32,12 +32,15 @@ export function PreviewPanel({ selectedBins, expandedBins, expandedBinCount, pdf
 
   const effectiveFormat = printMode === 'names'
     ? nameSheetProps.format
-    : (labelSheetProps.format ?? getLabelFormat(DEFAULT_LABEL_FORMAT));
+    : printMode === 'items'
+      ? getLabelFormat('letter')
+      : (labelSheetProps.format ?? getLabelFormat(DEFAULT_LABEL_FORMAT));
 
-  const perPage = (printMode === 'labels' || printMode === 'names')
-    ? computeLabelsPerPage(effectiveFormat)
-    : 0;
-  const pageCount = perPage > 0 && hasSelection ? Math.ceil(expandedBinCount / perPage) : 0;
+  const perPage = printMode === 'items'
+    ? 1
+    : computeLabelsPerPage(effectiveFormat);
+  const totalCount = printMode === 'items' ? selectedBins.length : expandedBinCount;
+  const pageCount = hasSelection ? Math.ceil(totalCount / perPage) : 0;
 
   const [currentPage, setCurrentPage] = useState(0);
   useEffect(() => { setCurrentPage(0); }, [pageCount]);
@@ -46,16 +49,16 @@ export function PreviewPanel({ selectedBins, expandedBins, expandedBinCount, pdf
   const canNext = safePage < pageCount - 1;
 
   const previewBins = useMemo(() => {
-    if (printMode === 'items' || perPage <= 0) return selectedBins;
+    const source = printMode === 'items' ? selectedBins : expandedBins;
     const start = safePage * perPage;
-    return expandedBins.slice(start, start + perPage);
+    return source.slice(start, start + perPage);
   }, [selectedBins, expandedBins, safePage, perPage, printMode]);
 
   const previewRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
-  const pageSize = printMode !== 'items' ? computePageSize(effectiveFormat) : null;
-  const pageWidthPx = pageSize ? pageSize.width * 96 : 0;
-  const pageHeightPx = pageSize ? pageSize.height * 96 : 0;
+  const pageSize = computePageSize(effectiveFormat);
+  const pageWidthPx = pageSize.width * 96;
+  const pageHeightPx = pageSize.height * 96;
 
   useEffect(() => {
     const el = previewRef.current;
@@ -65,7 +68,7 @@ export function PreviewPanel({ selectedBins, expandedBins, expandedBinCount, pdf
     }
     const observer = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? 0;
-      setScale(w > 0 && w < pageWidthPx ? w / pageWidthPx : 1);
+      setScale(w > 0 ? w / pageWidthPx : 1);
     });
     observer.observe(el);
     return () => observer.disconnect();
@@ -140,23 +143,22 @@ export function PreviewPanel({ selectedBins, expandedBins, expandedBinCount, pdf
               )}
             </div>
             <div ref={previewRef} className="bg-[var(--bg-print-surface)] rounded-[var(--radius-md)] px-4 py-6 overflow-hidden shadow-[inset_0_0_0_1px_var(--border-preview)]">
-              {printMode === 'items' ? (
-                <ItemSheet {...itemSheetProps} />
-              ) : (
-                <div
-                  style={scale < 1 ? {
-                    transform: `scale(${scale})`,
-                    transformOrigin: 'top left',
-                    height: `${pageHeightPx * scale}px`,
-                  } : undefined}
-                >
-                  {printMode === 'names' ? (
-                    <NameSheet {...nameSheetProps} bins={previewBins} />
-                  ) : (
-                    <LabelSheet {...labelSheetProps} bins={previewBins} />
-                  )}
-                </div>
-              )}
+              <div
+                style={{
+                  transform: `scale(${scale})`,
+                  transformOrigin: 'top left',
+                  width: `${pageWidthPx}px`,
+                  height: `${pageHeightPx * scale}px`,
+                }}
+              >
+                {printMode === 'items' ? (
+                  <ItemSheet {...itemSheetProps} bins={previewBins} />
+                ) : printMode === 'names' ? (
+                  <NameSheet {...nameSheetProps} bins={previewBins} />
+                ) : (
+                  <LabelSheet {...labelSheetProps} bins={previewBins} />
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

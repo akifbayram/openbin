@@ -26,7 +26,9 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // POST /api/saved-views
 router.post('/', asyncHandler(async (req, res) => {
-  const { name, search_query, sort, filters } = req.body;
+  const { name, sort, filters } = req.body;
+  // Accept both camelCase (canonical) and snake_case (legacy) for backward compatibility.
+  const searchQuery = req.body.searchQuery ?? req.body.search_query;
 
   if (!name || typeof name !== 'string') {
     throw new ValidationError('name is required');
@@ -39,7 +41,7 @@ router.post('/', asyncHandler(async (req, res) => {
     `INSERT INTO saved_views (id, user_id, name, search_query, sort, filters)
      VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id, name, search_query, sort, filters, created_at`,
-    [id, req.user!.id, name, search_query || '', sort || 'updated', JSON.stringify(filters || {})]
+    [id, req.user!.id, name, searchQuery || '', sort || 'updated', JSON.stringify(filters || {})]
   );
 
   res.status(201).json(result.rows[0]);

@@ -65,11 +65,12 @@ export async function* apiStream(
     const data = await res.json().catch(() => ({ error: res.statusText }));
     const code = data.error as string | undefined;
     const upgradeUrl = data.upgrade_url as string | null | undefined;
+    const upgradeAction = (data.upgrade_action ?? null) as import('@/types').CheckoutAction | null;
     if (code === 'PLAN_RESTRICTED' || code === 'SUBSCRIPTION_EXPIRED' || code === 'AI_CREDITS_EXHAUSTED') {
       notify(Events.PLAN);
-      window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl } }));
+      window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl, upgradeAction } }));
     }
-    throw new ApiError(res.status, data.message || data.error || res.statusText, code, upgradeUrl);
+    throw new ApiError(res.status, data.message || data.error || res.statusText, code, upgradeUrl, upgradeAction);
   }
 
   const reader = res.body?.getReader();

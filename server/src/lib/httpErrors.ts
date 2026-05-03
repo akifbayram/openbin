@@ -1,3 +1,13 @@
+// CheckoutAction lives in planGate.ts. We re-declare the structural shape
+// here (instead of importing the alias) to keep this module dependency-free
+// for non-billing call sites — httpErrors is loaded by routes that don't
+// otherwise care about the plan layer.
+export interface CheckoutActionShape {
+  url: string;
+  method: 'GET' | 'POST';
+  fields: Record<string, string>;
+}
+
 export class HttpError extends Error {
   constructor(
     public readonly statusCode: number,
@@ -30,9 +40,28 @@ export class ForbiddenError extends HttpError {
   }
 }
 
+/**
+ * 409 Conflict error.
+ *
+ * The 1-arg form (just a message) keeps the existing CONFLICT response
+ * shape (`{ error: 'CONFLICT', message }`). The 1-arg structured form
+ * (a payload object with `code`, `message`, and arbitrary additional
+ * fields) lets callers surface a more specific error code (e.g.
+ * 'ACCOUNT_DELETION_PENDING') and recovery hints (e.g. `scheduledAt`)
+ * that the global error handler in `index.ts` will spread into the
+ * response body. Additional fields are kept on the instance via `details`.
+ */
 export class ConflictError extends HttpError {
-  constructor(message: string) {
-    super(409, 'CONFLICT', message);
+  public readonly details: Record<string, unknown> | null;
+  constructor(payload: string | { code?: string; message: string; [key: string]: unknown }) {
+    if (typeof payload === 'string') {
+      super(409, 'CONFLICT', payload);
+      this.details = null;
+    } else {
+      const { code, message, ...rest } = payload;
+      super(409, code ?? 'CONFLICT', message);
+      this.details = Object.keys(rest).length > 0 ? rest : null;
+    }
     this.name = 'ConflictError';
   }
 }
@@ -53,10 +82,16 @@ export class QuotaExceededError extends HttpError {
 
 export class PlanRestrictedError extends HttpError {
   public readonly upgradeUrl: string | null;
-  constructor(message: string, upgradeUrl: string | null = null) {
+  public readonly upgradeAction: CheckoutActionShape | null;
+  constructor(
+    message: string,
+    upgradeUrl: string | null = null,
+    upgradeAction: CheckoutActionShape | null = null,
+  ) {
     super(403, 'PLAN_RESTRICTED', message);
     this.name = 'PlanRestrictedError';
     this.upgradeUrl = upgradeUrl;
+    this.upgradeAction = upgradeAction;
   }
 }
 
@@ -76,10 +111,16 @@ export class ScanUnavailableError extends HttpError {
 
 export class OverLimitError extends HttpError {
   public readonly upgradeUrl: string | null;
-  constructor(message: string, upgradeUrl: string | null = null) {
+  public readonly upgradeAction: CheckoutActionShape | null;
+  constructor(
+    message: string,
+    upgradeUrl: string | null = null,
+    upgradeAction: CheckoutActionShape | null = null,
+  ) {
     super(403, 'OVER_LIMIT', message);
     this.name = 'OverLimitError';
     this.upgradeUrl = upgradeUrl;
+    this.upgradeAction = upgradeAction;
   }
 }
 
@@ -95,6 +136,13 @@ export class ReorganizeBinLimitError extends HttpError {
     this.name = 'ReorganizeBinLimitError';
     this.limit = limit;
     this.selected = selected;
+  }
+}
+
+export class NotImplementedError extends HttpError {
+  constructor(message: string) {
+    super(501, 'NOT_IMPLEMENTED', message);
+    this.name = 'NotImplementedError';
   }
 }
 

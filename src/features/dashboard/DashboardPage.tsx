@@ -115,6 +115,7 @@ export function DashboardPage() {
         actions={
           <div className="row">
             <div className="flex items-center gap-1">
+              <TourLauncher tourId="highlights" />
               <DashboardSettingsMenu settings={dashSettings} onUpdate={updateDashSettings} onReset={resetDashSettings} terminology={t} />
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
@@ -143,7 +144,6 @@ export function DashboardPage() {
                   </Button>
                 </Tooltip>
               )}
-              <TourLauncher tourId="highlights" />
             </div>
             {canCreateBin && (
               <Tooltip content={`New ${t.bin}`} side="bottom">
@@ -312,7 +312,7 @@ export function DashboardPage() {
                 Get started with {t.Bins}
               </h3>
               <p className="text-[14px] text-[var(--text-tertiary)] max-w-xs mx-auto">
-                Create your first {t.bin}, print a QR label, and scan it to find what's inside.
+                Create your first {t.bin} and print a QR label — next time, just scan to see what's inside.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">

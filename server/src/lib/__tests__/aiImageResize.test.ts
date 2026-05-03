@@ -49,12 +49,24 @@ describe('resizeImageForAi', () => {
     expect(result.buffer.equals(smallInput)).toBe(true);
   });
 
-  it('returns image/gif inputs unchanged without calling sharp', async () => {
-    const nonsenseBuffer = Buffer.from([0x01, 0x02, 0x03, 0x04, 0xff]);
-    const result = await resizeImageForAi(nonsenseBuffer, 'image/gif');
-    expect(result.mimeType).toBe('image/gif');
-    expect(result.buffer).toBe(nonsenseBuffer);
-    expect(result.buffer.equals(nonsenseBuffer)).toBe(true);
+  it('resizes a 2048x1536 GIF down to 1024 webp (no longer bypassed)', async () => {
+    const input = await sharp({
+      create: {
+        width: 2048,
+        height: 1536,
+        channels: 3,
+        background: { r: 50, g: 100, b: 150 },
+      },
+    })
+      .gif()
+      .toBuffer();
+
+    const result = await resizeImageForAi(input, 'image/gif');
+
+    expect(result.mimeType).toBe('image/webp');
+    const meta = await sharp(result.buffer).metadata();
+    expect(meta.format).toBe('webp');
+    expect(Math.max(meta.width ?? 0, meta.height ?? 0)).toBe(1024);
   });
 
   it('returns the original buffer when sharp throws on a malformed input (non-gif mime)', async () => {

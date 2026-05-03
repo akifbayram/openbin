@@ -1,11 +1,16 @@
 import { Camera, Image as ImageIcon, Plus, Send, Square } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { lazy, Suspense, useRef, useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
+import { CreditCost } from '@/lib/aiCreditCost';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import type { useTranscription } from '@/lib/useTranscription';
 import { cn, focusRing, iconButton } from '@/lib/utils';
 import { TranscriptionMicButton } from './TranscriptionMicButton';
+
+const AiCreditEstimate = __EE__
+  ? lazy(() => import('@/ee/AiCreditEstimate').then(m => ({ default: m.AiCreditEstimate })))
+  : (() => null) as React.FC<{ cost: number; className?: string }>;
 
 interface ConversationComposerProps {
   onSend: (text: string) => void;
@@ -173,6 +178,15 @@ export function ConversationComposer({
           >
             <Send className="h-4 w-4" />
           </button>
+        )}
+      </div>
+      <div className="mt-1 flex justify-end">
+        {__EE__ ? (
+          <Suspense fallback={<CreditCost cost={1} />}>
+            <AiCreditEstimate cost={1} />
+          </Suspense>
+        ) : (
+          <CreditCost cost={1} />
         )}
       </div>
     </div>

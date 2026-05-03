@@ -2,6 +2,8 @@ import * as React from 'react';
 import { cn, focusRing } from '@/lib/utils';
 
 const variants = {
+  ai:
+    'bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)] text-[var(--text-on-accent)]',
   default:
     'bg-[var(--accent)] text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)]',
   destructive:

@@ -12,6 +12,13 @@ vi.mock('@/features/photos/PhotoGallery', () => ({ PhotoGallery: () => <div data
 vi.mock('@/features/attachments/useAttachments', () => ({
   useAttachments: () => ({ attachments: [] }),
 }));
+vi.mock('@/lib/userPreferences', () => ({
+  useUserPreferences: vi.fn(() => ({
+    preferences: { dismissed_upgrade_prompts: [] as string[] },
+    isLoading: false,
+    updatePreferences: vi.fn(),
+  })),
+}));
 
 const basePlanInfo = {
   plan: 'free' as const,
@@ -25,8 +32,16 @@ const basePlanInfo = {
   upgradeProUrl: null,
   portalUrl: null,
   subscribePlanUrl: null,
+  upgradeAction: null,
+  upgradePlusAction: null,
+  upgradeProAction: null,
+  subscribePlanAction: null,
+  portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
   features: {
     ai: true, apiKeys: false, customFields: false, fullExport: false,
     reorganize: false, binSharing: false, attachments: false,
@@ -40,6 +55,7 @@ vi.mock('@/lib/usePlan', () => ({
 }));
 
 import { usePlan } from '@/lib/usePlan';
+import { useUserPreferences } from '@/lib/userPreferences';
 
 describe('BinDetailFilesTab', () => {
   it('hides upload affordance when attachments feature is gated and user can edit', () => {
@@ -58,6 +74,30 @@ describe('BinDetailFilesTab', () => {
     render(<BinDetailFilesTab binId="bin1" photos={[]} canEdit />);
 
     expect(screen.queryByRole('button', { name: /add attachment/i })).toBeNull();
+  });
+
+  it('hides Documents header when attachments prompt is dismissed and no attachments exist', () => {
+    vi.mocked(usePlan).mockReturnValue({
+      planInfo: basePlanInfo,
+      isLoading: false,
+      isPro: false, isPlus: false, isFree: true, isSelfHosted: false, isLocked: false,
+      isGated: (f) => f === 'attachments',
+      refresh: vi.fn(), usage: null, overLimits: null,
+      isOverAnyLimit: false, isLocationOverLimit: () => false, refreshUsage: vi.fn(),
+    });
+    vi.mocked(useUserPreferences).mockReturnValue({
+      preferences: { dismissed_upgrade_prompts: ['attachments'] } as never,
+      isLoading: false,
+      updatePreferences: vi.fn(),
+    });
+
+    const photo = { id: 'p1', bin_id: 'bin1', filename: 'a.jpg', mime_type: 'image/jpeg', size: 1, created_by: 'u1', created_at: '2026-01-01T00:00:00Z' };
+    render(<BinDetailFilesTab binId="bin1" photos={[photo]} canEdit />);
+
+    // Photos section should still render (with no header since Documents is hidden)
+    expect(screen.getByTestId('photo-gallery')).toBeInTheDocument();
+    // Documents header should be gone
+    expect(screen.queryByRole('heading', { name: /documents/i })).toBeNull();
   });
 
   it('renders upload affordance when feature is not gated', () => {

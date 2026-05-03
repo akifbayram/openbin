@@ -104,24 +104,28 @@ describe('PhotoGroupingGrid skeleton', () => {
 });
 
 describe('PhotoGroupingGrid header', () => {
-  it('shows singular "Group your photo" title for one photo', () => {
+  it('shows the "One bin per stack" title with one photo', () => {
     renderGrid(makeStateWithPhotos(1));
-    expect(screen.getByRole('heading', { name: /group your photo$/i })).toBeDefined();
+    expect(screen.getByRole('heading', { name: /one bin per stack/i })).toBeDefined();
   });
 
-  it('shows plural "Group your photos" title for multiple photos', () => {
+  it('shows the "One bin per stack" title with multiple photos', () => {
     renderGrid(makeStateWithPhotos(3));
-    expect(screen.getByRole('heading', { name: /group your photos/i })).toBeDefined();
+    expect(screen.getByRole('heading', { name: /one bin per stack/i })).toBeDefined();
   });
 
-  it('shows a drag-to-stack subhead when N > 1', () => {
+  it('shows the drag-to-stack subhead when N > 1', () => {
     renderGrid(makeStateWithPhotos(2));
-    expect(screen.getByText(/Drag a photo onto another bin to stack them/i)).toBeDefined();
+    expect(
+      screen.getByText(/Drag photos onto each other to put them in the same bin/i),
+    ).toBeDefined();
   });
 
-  it('hides the drag-to-stack subhead when N === 1', () => {
+  it('shows the add-more-photos subhead when N === 1', () => {
     renderGrid(makeStateWithPhotos(1));
-    expect(screen.queryByText(/Drag a photo onto another bin to stack them/i)).toBeNull();
+    expect(
+      screen.getByText(/Add more photos to create several bins at once/i),
+    ).toBeDefined();
   });
 });
 

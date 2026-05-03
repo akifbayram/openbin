@@ -25,6 +25,7 @@ import { useBinList } from '@/features/bins/useBins';
 import { BinSelectorCard } from '@/features/print/BinSelectorCard';
 import { useBinSelection } from '@/features/print/useBinSelection';
 import { TourLauncher } from '@/features/tour/TourLauncher';
+import { CreditCost, reorganizeWeight } from '@/lib/aiCreditCost';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
@@ -41,6 +42,14 @@ import { type TagSuggestOptions, type TagUserSelections, useReorganizeTags } fro
 const UpgradePrompt = __EE__
   ? lazy(() => import('@/ee/UpgradePrompt').then(m => ({ default: m.UpgradePrompt })))
   : (() => null) as React.FC<Record<string, unknown>>;
+
+const CheckoutLink = __EE__
+  ? lazy(() => import('@/ee/checkoutAction').then(m => ({ default: m.CheckoutLink })))
+  : (() => null) as React.FC<Record<string, unknown>>;
+
+const AiCreditEstimate = __EE__
+  ? lazy(() => import('@/ee/AiCreditEstimate').then(m => ({ default: m.AiCreditEstimate })))
+  : (() => null) as React.FC<{ cost: number; className?: string }>;
 
 interface OptionFieldConfig<K extends string> {
   legend: string;
@@ -221,7 +230,7 @@ export function ReorganizePage() {
   const reorgBinCap = planInfo.features.reorganizeMaxBins;
   const overCap = reorgBinCap != null && selection.selectedIds.size > reorgBinCap;
   const canSubmit = selection.selectedIds.size >= 2 && !isStreaming && !hasValidationError && !overCap;
-  const canUpgradeFromCap = overCap && isPlus && !!planInfo.upgradeProUrl;
+  const canUpgradeFromCap = overCap && isPlus && planInfo.upgradeProAction !== null;
   const capSuffix = canUpgradeFromCap ? ', or upgrade to Pro for a higher cap.' : '.';
 
   const handleAccept = useCallback(() => {
@@ -333,7 +342,7 @@ export function ReorganizePage() {
             <UpgradePrompt
               feature="Reorganize"
               description={`AI-powered ${t.bin} reorganization is available on the Pro plan.`}
-              upgradeUrl={planInfo.upgradeUrl}
+              upgradeAction={planInfo.upgradeAction}
             />
           </Suspense>
         )}
@@ -430,7 +439,7 @@ export function ReorganizePage() {
                     style={{ gridTemplateRows: optionsExpanded ? '1fr' : '0fr' }}
                   >
                     <div className="overflow-hidden">
-                      <div className="mt-3 space-y-4">
+                      <div className="mt-3 space-y-5">
                         <div>
                           <Label htmlFor="reorg-max-bins" className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
                             Number of {t.bins}
@@ -498,25 +507,30 @@ export function ReorganizePage() {
                         </div>
 
                         {optionFields.map((field) => (
-                          <fieldset key={field.legend} className="border-0 p-0 m-0">
-                            <legend className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2 p-0">
+                          <fieldset key={field.legend} className="border-0 m-0 px-0 pt-0 pb-2">
+                            <legend
+                              className={cn(
+                                'text-[12px] text-[var(--text-secondary)] font-medium block p-0',
+                                !field.hint && 'mb-2',
+                              )}
+                            >
                               {field.legend}
                             </legend>
+                            {field.hint && (
+                              <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5 mb-2">
+                                {field.hint}
+                              </p>
+                            )}
                             <OptionGroup
                               options={field.options}
                               value={field.value}
                               onChange={field.onChange}
                               size="sm"
                             />
-                            {field.hint && (
-                              <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5">
-                                {field.hint}
-                              </p>
-                            )}
                           </fieldset>
                         ))}
 
-                        <div className="text-[12px] text-[var(--text-tertiary)]">
+                        <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] text-[12px] text-[var(--text-tertiary)]">
                           {itemCount} item{itemCount !== 1 ? 's' : ''} across selected {t.bins}
                         </div>
                       </div>
@@ -574,10 +588,19 @@ export function ReorganizePage() {
               Suggest tags for {selection.selectedIds.size} {selection.selectedIds.size === 1 ? t.bin : t.bins}
             </Button>
           )}
-          {selection.selectedIds.size >= 2 && !overCap && (
-            <p className="text-[12px] text-[var(--text-tertiary)] text-center -mt-2">
-              {itemCount} item{itemCount !== 1 ? 's' : ''} across {selection.selectedIds.size} {t.bins}
-            </p>
+          {selection.selectedIds.size >= (mode === 'bins' ? 2 : 1) && !overCap && (
+            <div className="text-[12px] text-[var(--text-tertiary)] text-center -mt-2 flex flex-col items-center gap-0.5">
+              <span>
+                {itemCount} item{itemCount !== 1 ? 's' : ''} across {selection.selectedIds.size} {t.bins}
+              </span>
+              {__EE__ ? (
+                <Suspense fallback={<CreditCost cost={reorganizeWeight(selection.selectedIds.size)} />}>
+                  <AiCreditEstimate cost={reorganizeWeight(selection.selectedIds.size)} />
+                </Suspense>
+              ) : (
+                <CreditCost cost={reorganizeWeight(selection.selectedIds.size)} />
+              )}
+            </div>
           )}
           {overCap && reorgBinCap != null && (
             <Card className="border-t-2 border-t-[var(--destructive)]">
@@ -588,15 +611,16 @@ export function ReorganizePage() {
                     <p className="text-sm text-[var(--destructive)]">
                       {isPlus ? 'Plus' : 'Pro'} allows up to {reorgBinCap} {reorgBinCap === 1 ? t.bin : t.bins} per reorganize run. Deselect {selection.selectedIds.size - reorgBinCap} to continue{capSuffix}
                     </p>
-                    {canUpgradeFromCap && planInfo.upgradeProUrl && (
-                      <a
-                        href={planInfo.upgradeProUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center text-[13px] font-medium text-[var(--text-primary)] underline underline-offset-2"
-                      >
-                        Upgrade to Pro
-                      </a>
+                    {canUpgradeFromCap && planInfo.upgradeProAction && (
+                      <Suspense fallback={null}>
+                        <CheckoutLink
+                          action={planInfo.upgradeProAction}
+                          target="_blank"
+                          className="inline-flex items-center text-[13px] font-medium text-[var(--text-primary)] underline underline-offset-2"
+                        >
+                          Upgrade to Pro
+                        </CheckoutLink>
+                      </Suspense>
                     )}
                   </div>
                 </div>

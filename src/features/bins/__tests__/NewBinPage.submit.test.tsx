@@ -48,6 +48,22 @@ vi.mock('../useCustomFields', () => ({
 vi.mock('@/features/ai/useAiSettings', () => ({ useAiSettings: () => ({ settings: null, isLoading: false }) }));
 vi.mock('@/features/ai/useAiProviderSetup', () => ({ useAiProviderSetup: () => ({ configured: false, setup: null }) }));
 vi.mock('@/lib/aiToggle', () => ({ useAiEnabled: () => false }));
+vi.mock('@/lib/usePlan', () => ({
+  usePlan: () => ({
+    planInfo: {
+      plan: 'pro', status: 'active', activeUntil: null, previousSubStatus: null,
+      selfHosted: true, locked: false, features: {},
+      upgradeUrl: null, upgradePlusUrl: null, upgradeProUrl: null, portalUrl: null, subscribePlanUrl: null,
+      upgradeAction: null, upgradePlusAction: null, upgradeProAction: null, subscribePlanAction: null, portalAction: null,
+      canDowngradeToFree: false, aiCredits: null, cancelAtPeriodEnd: null, billingPeriod: null, trialPeriodDays: 7,
+    },
+    isLoading: false,
+    isPro: false, isPlus: false, isFree: false, isSelfHosted: true, isLocked: false,
+    isGated: () => false,
+    refresh: vi.fn(), usage: null, overLimits: null, isOverAnyLimit: false,
+    isLocationOverLimit: () => false, refreshUsage: vi.fn(),
+  }),
+}));
 vi.mock('../useAiFillState', () => ({
   useAiFillState: () => ({
     filled: new Set(),

@@ -24,6 +24,14 @@ export interface UserPlanInfo {
   activeUntil: string | null;
   email: string | null;
   previousSubStatus: SubStatusType | null;
+  // ISO timestamp when the subscription will cancel at period end. Mirrors
+  // the `users.cancel_at_period_end` column written by the billing webhook
+  // (server/src/ee/routes/subscriptions.ts). null while the subscription
+  // is active and not scheduled to cancel.
+  cancelAtPeriodEnd: string | null;
+  // Current billing cadence on the subscription. null on free/inactive
+  // plans or when not yet set by the webhook.
+  billingPeriod: 'quarterly' | 'annual' | null;
 }
 
 export interface PlanFeatures {
@@ -76,8 +84,16 @@ export function isSubscriptionActive(planInfo: { subStatus: SubStatusType; activ
 }
 
 export async function getUserPlanInfo(userId: string): Promise<UserPlanInfo | null> {
-  const result = await query<{ plan: number; sub_status: number; active_until: string | null; email: string | null; previous_sub_status: number | null }>(
-    'SELECT plan, sub_status, active_until, email, previous_sub_status FROM users WHERE id = $1',
+  const result = await query<{
+    plan: number;
+    sub_status: number;
+    active_until: string | null;
+    email: string | null;
+    previous_sub_status: number | null;
+    cancel_at_period_end: string | null;
+    billing_period: string | null;
+  }>(
+    'SELECT plan, sub_status, active_until, email, previous_sub_status, cancel_at_period_end, billing_period FROM users WHERE id = $1',
     [userId],
   );
   if (result.rows.length === 0) return null;
@@ -88,6 +104,8 @@ export async function getUserPlanInfo(userId: string): Promise<UserPlanInfo | nu
     activeUntil: row.active_until,
     email: row.email,
     previousSubStatus: row.previous_sub_status as SubStatusType | null,
+    cancelAtPeriodEnd: row.cancel_at_period_end,
+    billingPeriod: row.billing_period as 'quarterly' | 'annual' | null,
   };
 }
 
@@ -352,7 +370,7 @@ export interface AiCreditResult {
 
 export type AiCreditInfo = Omit<AiCreditResult, 'allowed'>;
 
-export async function checkAndIncrementAiCredits(userId: string): Promise<AiCreditResult> {
+export async function checkAndIncrementAiCredits(userId: string, weight = 1): Promise<AiCreditResult> {
   if (config.selfHosted) return { allowed: true, used: 0, limit: 0, resetsAt: null };
 
   const result = await query<{ plan: number; sub_status: number; ai_credits_used: number; ai_credits_reset_at: string | null; active_until: string | null }>(
@@ -375,8 +393,8 @@ export async function checkAndIncrementAiCredits(userId: string): Promise<AiCred
   if (plan === Plan.PLUS && sub_status === SubStatus.TRIAL) {
     const trialLimit = config.planLimits.trialAiCredits;
     const updated = await query<{ ai_credits_used: number }>(
-      'UPDATE users SET ai_credits_used = ai_credits_used + 1 WHERE id = $1 AND ai_credits_used < $2 RETURNING ai_credits_used',
-      [userId, trialLimit],
+      'UPDATE users SET ai_credits_used = ai_credits_used + $3 WHERE id = $1 AND ai_credits_used + $3 <= $2 RETURNING ai_credits_used',
+      [userId, trialLimit, weight],
     );
     if (updated.rows.length === 0) {
       return { allowed: false, used: ai_credits_used, limit: trialLimit, resetsAt: null };
@@ -384,24 +402,24 @@ export async function checkAndIncrementAiCredits(userId: string): Promise<AiCred
     return { allowed: true, used: updated.rows[0].ai_credits_used, limit: trialLimit, resetsAt: null };
   }
 
-  // Atomic reset-check-and-increment in a single query to prevent TOCTOU
+  // Atomic reset-check-and-increment in a single query to prevent TOCTOU.
   const nowIso = new Date().toISOString();
   const nextReset = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   const updated = await query<{ ai_credits_used: number; ai_credits_reset_at: string }>(
     `UPDATE users SET
       ai_credits_used = CASE
-        WHEN ai_credits_reset_at IS NULL OR ai_credits_reset_at <= $3 THEN 1
-        ELSE ai_credits_used + 1
+        WHEN ai_credits_reset_at IS NULL OR ai_credits_reset_at <= $3 THEN $5
+        ELSE ai_credits_used + $5
       END,
       ai_credits_reset_at = CASE
         WHEN ai_credits_reset_at IS NULL OR ai_credits_reset_at <= $3 THEN $4
         ELSE ai_credits_reset_at
       END
     WHERE id = $1 AND (
-      ai_credits_reset_at IS NULL OR ai_credits_reset_at <= $3 OR ai_credits_used < $2
+      ai_credits_reset_at IS NULL OR ai_credits_reset_at <= $3 OR ai_credits_used + $5 <= $2
     )
     RETURNING ai_credits_used, ai_credits_reset_at`,
-    [userId, limit, nowIso, nextReset],
+    [userId, limit, nowIso, nextReset, weight],
   );
   if (updated.rows.length === 0) {
     return { allowed: false, used: ai_credits_used, limit, resetsAt: ai_credits_reset_at };
@@ -409,10 +427,18 @@ export async function checkAndIncrementAiCredits(userId: string): Promise<AiCred
   return { allowed: true, used: updated.rows[0].ai_credits_used, limit, resetsAt: updated.rows[0].ai_credits_reset_at };
 }
 
-/** Decrement ai_credits_used by 1 (floor 0). No-op on self-hosted or unlimited plans. */
-export async function refundAiCredit(userId: string): Promise<void> {
+/**
+ * Decrement ai_credits_used by `weight` (floor 0). No-op on self-hosted.
+ * The `>= $2` predicate guards against partial refunds — if a period reset
+ * has already wiped the counter, refunding here would push it negative,
+ * so we skip the row instead.
+ */
+export async function refundAiCredit(userId: string, weight = 1): Promise<void> {
   if (config.selfHosted) return;
-  await query('UPDATE users SET ai_credits_used = ai_credits_used - 1 WHERE id = $1 AND ai_credits_used > 0', [userId]);
+  await query(
+    'UPDATE users SET ai_credits_used = ai_credits_used - $2 WHERE id = $1 AND ai_credits_used >= $2',
+    [userId, weight],
+  );
 }
 
 export async function getAiCredits(userId: string): Promise<AiCreditInfo> {
@@ -445,7 +471,10 @@ export interface UserUsage {
   locationCount: number;
   photoCount: number;
   photoStorageMb: number;
+  /** Counts of admins+members (non-viewers) per location. Used for plan-cap checks. */
   memberCounts: Record<string, number>;
+  /** Counts of viewers per location. Surfaced to UI/emails; never gates limits. */
+  viewerCounts: Record<string, number>;
 }
 
 export async function getUserUsage(userId: string): Promise<UserUsage> {
@@ -453,16 +482,24 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM bins WHERE created_by = $1 AND deleted_at IS NULL', [userId]),
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1', [userId]),
     query<{ cnt: number; total: number }>('SELECT COUNT(*) as cnt, COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]),
-    query<{ location_id: string; cnt: number }>(
-      `SELECT location_id, COUNT(*) as cnt FROM location_members
+    query<{ location_id: string; role: string; cnt: number }>(
+      `SELECT location_id, role, COUNT(*) as cnt FROM location_members
        WHERE location_id IN (SELECT id FROM locations WHERE created_by = $1)
-       GROUP BY location_id`,
+       GROUP BY location_id, role`,
       [userId],
     ),
   ]);
 
   const memberCounts: Record<string, number> = {};
-  for (const row of memberResult.rows) memberCounts[row.location_id] = row.cnt;
+  const viewerCounts: Record<string, number> = {};
+  for (const row of memberResult.rows) {
+    const cnt = Number(row.cnt);
+    if (row.role === 'viewer') {
+      viewerCounts[row.location_id] = (viewerCounts[row.location_id] ?? 0) + cnt;
+    } else {
+      memberCounts[row.location_id] = (memberCounts[row.location_id] ?? 0) + cnt;
+    }
+  }
 
   return {
     binCount: binResult.rows[0].cnt,
@@ -470,6 +507,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
     photoCount: photoResult.rows[0].cnt,
     photoStorageMb: Math.round((photoResult.rows[0].total / (1024 * 1024)) * 100) / 100,
     memberCounts,
+    viewerCounts,
   };
 }
 
@@ -481,20 +519,122 @@ export async function getManagerToken(userId: string, email: string | null): Pro
     .sign(getSubscriptionSecretKey());
 }
 
+// CheckoutAction is the structured shape that lets the client render a
+// form-POST (token in body, never in URL/log/Referer) for endpoints we
+// control. The legacy URL-shaped helpers below remain in service of the
+// /plans page (a static VitePress build that reads the token from its own
+// query string), but every other surface should consume *Action instead.
+//
+// Threat-model context: the billing service was logging full URLs
+// (including ?token=<JWT>) into a dozzle-readable log stream until the
+// 2026-04-26 hardening pass. The token redaction patch in billing is
+// belt-and-suspenders; the CheckoutAction migration is the suspenders —
+// removing the token from the wire entirely on every endpoint that can
+// accept POST body or an Authorization: Bearer header.
+//
+// All three actions are POST. The token rides in the form body and never
+// touches a URL — not the address bar, not browser history, not Referer,
+// not Umami pageview events, not access logs. The billing service's
+// /auth/openbin entry sets a short-lived HttpOnly cookie (obc_session)
+// from the POST body and then 302s the user to /plans without any token
+// in the URL; subsequent same-origin clicks within the /plans → checkout
+// flow read the token from that cookie.
+export interface CheckoutAction {
+  url: string;
+  method: 'GET' | 'POST';
+  fields: Record<string, string>;
+}
+
+export function buildUpgradeAction(token: string, returning?: boolean): CheckoutAction {
+  const fields: Record<string, string> = { token, origin: config.corsOrigin };
+  if (returning) fields.returning = '1';
+  return { url: `${config.managerUrl}/auth/openbin`, method: 'POST', fields };
+}
+
+export function buildUpgradePlanAction(token: string, plan: 'plus' | 'pro'): CheckoutAction {
+  return {
+    url: `${config.managerUrl}/auth/openbin`,
+    method: 'POST',
+    fields: { token, plan },
+  };
+}
+
+export function buildPortalAction(token: string): CheckoutAction {
+  return { url: `${config.managerUrl}/portal`, method: 'POST', fields: { token } };
+}
+
+export function buildDowngradeFlowAction(token: string, targetPlan: 'free' | 'plus'): CheckoutAction {
+  return {
+    url: `${config.managerUrl}/portal-flow`,
+    method: 'POST',
+    fields: { token, targetPlan },
+  };
+}
+
+// Render a CheckoutAction back into a single URL string. Used for:
+//   - Backwards-compat *Url fields on /api/plan responses
+//   - Email templates that need a plain href
+//   - Tests that still assert against URL strings
+//
+// For GET actions the fields are encoded into the query string. For POST
+// actions the URL is returned bare and the fields are encoded as query
+// params anyway — POST clients should prefer `action.fields`, but a URL
+// fallback keeps the email-link path working for callers that can't POST.
+export function renderActionAsUrl(action: CheckoutAction): string {
+  const params = new URLSearchParams(action.fields).toString();
+  return params ? `${action.url}?${params}` : action.url;
+}
+
+// Legacy URL builders. Used by:
+//   - Email templates (clickable links can't POST a form body)
+//   - The legacy *Url fields on /api/plan responses (back-compat)
+//
+// These intentionally still target /plans?token=… and /portal?token=…
+// rather than the action endpoints. The PlansLayout client-side script
+// detects the URL token, POSTs it to /auth/openbin to set the cookie,
+// then strips the token from the URL via history.replaceState — so the
+// magic-link UX still works while keeping the URL-bar exposure to a
+// single page render. New surfaces should consume *Action, not these.
 export function buildUpgradeUrl(token: string, returning?: boolean): string {
-  let url = `${config.managerUrl}/plans?token=${token}&origin=${encodeURIComponent(config.corsOrigin)}`;
-  if (returning) url += '&returning=1';
-  return url;
+  const params = new URLSearchParams({ token, origin: config.corsOrigin });
+  if (returning) params.set('returning', '1');
+  return `${config.managerUrl}/plans?${params.toString()}`;
 }
 
 export function buildUpgradePlanUrl(token: string, plan: 'plus' | 'pro'): string {
-  return `${config.managerUrl}/auth/openbin?token=${token}&plan=${plan}`;
+  const params = new URLSearchParams({ token, plan });
+  return `${config.managerUrl}/auth/openbin?${params.toString()}`;
 }
 
 export function buildPortalUrl(token: string): string {
-  return `${config.managerUrl}/portal?token=${token}`;
+  const params = new URLSearchParams({ token });
+  return `${config.managerUrl}/portal?${params.toString()}`;
 }
 
+export async function generateUpgradeAction(userId: string, email: string | null, returning?: boolean): Promise<CheckoutAction | null> {
+  const token = await getManagerToken(userId, email);
+  return token ? buildUpgradeAction(token, returning) : null;
+}
+
+export async function generateUpgradePlanAction(userId: string, email: string | null, plan: 'plus' | 'pro'): Promise<CheckoutAction | null> {
+  const token = await getManagerToken(userId, email);
+  return token ? buildUpgradePlanAction(token, plan) : null;
+}
+
+export async function generatePortalAction(userId: string, email: string | null): Promise<CheckoutAction | null> {
+  const token = await getManagerToken(userId, email);
+  return token ? buildPortalAction(token) : null;
+}
+
+export async function generateDowngradeFlowAction(userId: string, email: string | null, targetPlan: 'free' | 'plus'): Promise<CheckoutAction | null> {
+  const token = await getManagerToken(userId, email);
+  return token ? buildDowngradeFlowAction(token, targetPlan) : null;
+}
+
+// generate*Url: returns the URL form (for emails / legacy clients).
+// These call build*Url directly rather than rendering an *Action so that
+// emails get the user-friendly /plans?token=… landing page rather than
+// the /auth/openbin entry which is now POST-shaped.
 export async function generateUpgradeUrl(userId: string, email: string | null, returning?: boolean): Promise<string | null> {
   const token = await getManagerToken(userId, email);
   return token ? buildUpgradeUrl(token, returning) : null;
@@ -525,6 +665,7 @@ export const SELF_HOSTED_USAGE_STUB = {
   photoCount: 0,
   photoStorageMb: 0,
   memberCounts: {} as Record<string, number>,
+  viewerCounts: {} as Record<string, number>,
   overLimits: EMPTY_OVER_LIMITS,
 };
 

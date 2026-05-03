@@ -27,10 +27,15 @@ import type { AiSettings } from '@/types';
 const DEMO_MAX_PHOTOS = 3;
 
 function FlowProgress({ state }: { state: BulkAddState }) {
-  const { dots, label, currentIndex, total } = computeFlowProgress(state);
+  const { dots, label, currentIndex, total, isAnalyzing } = computeFlowProgress(state);
   return (
     <div className="flex items-center justify-end gap-2">
-      <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--text-tertiary)]">
+      <span
+        className={cn(
+          'font-mono text-[11px] uppercase tracking-wider transition-colors duration-200 ease-out',
+          isAnalyzing ? 'text-[var(--ai-accent)]' : 'text-[var(--text-tertiary)]',
+        )}
+      >
         {label}
       </span>
       {/* biome-ignore lint/a11y/useSemanticElements: role=group is the right ARIA match for an inline labeled grouping of related visuals */}
@@ -45,7 +50,9 @@ function FlowProgress({ state }: { state: BulkAddState }) {
             aria-hidden="true"
             className={cn(
               'h-1.5 rounded-full transition-[width,background-color] duration-200 ease-out',
-              d.state === 'current' ? 'w-[18px] bg-[var(--accent)]' : 'w-1.5',
+              d.state === 'current' ? 'w-[18px]' : 'w-1.5',
+              d.state === 'current' && !isAnalyzing && 'bg-[var(--accent)]',
+              d.state === 'current' && isAnalyzing && 'bg-[var(--ai-accent)] ai-thinking-pulse',
               d.state === 'done' && 'bg-[var(--accent)]',
               d.state === 'pending' && 'bg-[var(--text-quaternary)]',
             )}
@@ -141,6 +148,15 @@ export function PhotoBulkAdd({
     }
   }, [totalPhotos, state.step, onExitToForm]);
 
+  // Single-bin shortcut bypasses the summary step, so the user has nowhere to
+  // see the retry affordance when their lone create fails. Fall back to summary.
+  const hasFailures = state.groups.some((g) => g.status === 'failed');
+  useEffect(() => {
+    if (state.step === 'review' && !state.isCreating && hasFailures) {
+      dispatch({ type: 'GO_TO_SUMMARY' });
+    }
+  }, [state.step, state.isCreating, hasFailures]);
+
   function handleAddMore(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -227,21 +243,23 @@ export function PhotoBulkAdd({
 
   if (successBins) {
     return (
-      <BinCreateSuccess
-        createdBins={successBins}
-        onCreateAnother={() => {
-          setSuccessBins(null);
-          onExitToForm();
-        }}
-        onClose={onComplete}
-      />
+      <div className="flex min-h-full flex-col">
+        <BinCreateSuccess
+          createdBins={successBins}
+          onCreateAnother={() => {
+            setSuccessBins(null);
+            onExitToForm();
+          }}
+          onClose={onComplete}
+        />
+      </div>
     );
   }
 
   const flowProgress = <FlowProgress state={state} />;
 
   return (
-    <div className="space-y-5">
+    <div className="flex min-h-full flex-col gap-5">
       {headerToolbarTarget ? createPortal(flowProgress, headerToolbarTarget) : flowProgress}
 
       {state.step === 'group' && (
@@ -264,6 +282,8 @@ export function PhotoBulkAdd({
           editingFromSummary={state.editingFromSummary}
           aiSettings={aiSettings}
           dispatch={dispatch}
+          onCreateNow={handleCreateAll}
+          isCreating={state.isCreating}
         />
       )}
 

@@ -71,6 +71,7 @@ import {
   isSelfHosted,
   isSubscriptionActive,
   Plan,
+  refundAiCredit,
   SubStatus,
 } from '../lib/planGate.js';
 
@@ -381,7 +382,7 @@ describe('getUserPlanInfo()', () => {
 
   it('returns mapped UserPlanInfo when user found', async () => {
     vi.mocked(query).mockResolvedValue({
-      rows: [{ plan: Plan.PRO, sub_status: SubStatus.ACTIVE, active_until: null, email: 'user@example.com', previous_sub_status: null }],
+      rows: [{ plan: Plan.PRO, sub_status: SubStatus.ACTIVE, active_until: null, email: 'user@example.com', previous_sub_status: null, cancel_at_period_end: null, billing_period: null }],
       rowCount: 1,
     });
     const result = await getUserPlanInfo('user-id');
@@ -391,13 +392,15 @@ describe('getUserPlanInfo()', () => {
       activeUntil: null,
       email: 'user@example.com',
       previousSubStatus: null,
+      cancelAtPeriodEnd: null,
+      billingPeriod: null,
     });
   });
 
   it('maps snake_case DB columns to camelCase', async () => {
     const activeUntil = '2027-01-01T00:00:00.000Z';
     vi.mocked(query).mockResolvedValue({
-      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.TRIAL, active_until: activeUntil, email: null, previous_sub_status: SubStatus.ACTIVE }],
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.TRIAL, active_until: activeUntil, email: null, previous_sub_status: SubStatus.ACTIVE, cancel_at_period_end: '2027-02-01T00:00:00.000Z', billing_period: 'quarterly' }],
       rowCount: 1,
     });
     const result = await getUserPlanInfo('user-id');
@@ -406,6 +409,8 @@ describe('getUserPlanInfo()', () => {
     expect(result?.activeUntil).toBe(activeUntil);
     expect(result?.email).toBeNull();
     expect(result?.previousSubStatus).toBe(SubStatus.ACTIVE);
+    expect(result?.cancelAtPeriodEnd).toBe('2027-02-01T00:00:00.000Z');
+    expect(result?.billingPeriod).toBe('quarterly');
   });
 
   it('queries with the correct SQL and userId', async () => {
@@ -721,5 +726,160 @@ describe('checkAndIncrementAiCredits()', () => {
     const result = await checkAndIncrementAiCredits('user1');
     expect(result.allowed).toBe(true);
     expect(result.used).toBe(1);
+  });
+});
+
+describe('checkAndIncrementAiCredits() — weighted', () => {
+  beforeEach(() => {
+    setConfig({ selfHosted: false, planLimits: { ...DEFAULT_PLAN_LIMITS } });
+    vi.mocked(query).mockReset();
+  });
+
+  it('passes the weight as the increment value in the atomic UPDATE', async () => {
+    const futureReset = new Date(Date.now() + 86400000).toISOString();
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, ai_credits_used: 5, ai_credits_reset_at: futureReset, active_until: null }],
+      rowCount: 1,
+    });
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ ai_credits_used: 10, ai_credits_reset_at: futureReset }],
+      rowCount: 1,
+    });
+
+    const result = await checkAndIncrementAiCredits('user1', 5);
+    expect(result.allowed).toBe(true);
+    expect(result.used).toBe(10);
+
+    // The atomic UPDATE call's params should include the weight (5) twice:
+    // once in the SELECT-side limit comparison, once on the increment expression.
+    const calls = vi.mocked(query).mock.calls;
+    const updateCall = calls[calls.length - 1];
+    const params = updateCall[1] as unknown[];
+    expect(params).toContain(5);
+    // SQL must expose `+ $weight` increment style — not a hardcoded `+ 1`.
+    expect(updateCall[0]).not.toMatch(/ai_credits_used \+ 1\b/);
+  });
+
+  it('denies when used + weight would exceed the limit', async () => {
+    // Plus plan: 25 credits/month. Used=22, weight=5 → would be 27 > 25 → deny.
+    const futureReset = new Date(Date.now() + 86400000).toISOString();
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, ai_credits_used: 22, ai_credits_reset_at: futureReset, active_until: null }],
+      rowCount: 1,
+    });
+    vi.mocked(query).mockResolvedValueOnce({ rows: [], rowCount: 0 });
+
+    const result = await checkAndIncrementAiCredits('user1', 5);
+    expect(result.allowed).toBe(false);
+    expect(result.used).toBe(22);
+    expect(result.limit).toBe(25);
+  });
+
+  it('allows when used + weight exactly equals the limit', async () => {
+    // Plus plan: 25 credits/month. Used=20, weight=5 → 25 ≤ 25 → allow.
+    const futureReset = new Date(Date.now() + 86400000).toISOString();
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, ai_credits_used: 20, ai_credits_reset_at: futureReset, active_until: null }],
+      rowCount: 1,
+    });
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ ai_credits_used: 25, ai_credits_reset_at: futureReset }],
+      rowCount: 1,
+    });
+
+    const result = await checkAndIncrementAiCredits('user1', 5);
+    expect(result.allowed).toBe(true);
+    expect(result.used).toBe(25);
+  });
+
+  it('defaults to weight=1 when omitted (backward compat)', async () => {
+    const futureReset = new Date(Date.now() + 86400000).toISOString();
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, ai_credits_used: 10, ai_credits_reset_at: futureReset, active_until: null }],
+      rowCount: 1,
+    });
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ ai_credits_used: 11, ai_credits_reset_at: futureReset }],
+      rowCount: 1,
+    });
+
+    const result = await checkAndIncrementAiCredits('user1');
+    expect(result.allowed).toBe(true);
+    expect(result.used).toBe(11);
+
+    const calls = vi.mocked(query).mock.calls;
+    const updateCall = calls[calls.length - 1];
+    expect(updateCall[1] as unknown[]).toContain(1);
+  });
+
+  it('applies the weight to the trial branch too', async () => {
+    // Trial: lifetime 25 credits, no reset.
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.TRIAL, ai_credits_used: 5, ai_credits_reset_at: null, active_until: null }],
+      rowCount: 1,
+    });
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ ai_credits_used: 14 }],
+      rowCount: 1,
+    });
+
+    const result = await checkAndIncrementAiCredits('user1', 9);
+    expect(result.allowed).toBe(true);
+    expect(result.used).toBe(14);
+
+    const calls = vi.mocked(query).mock.calls;
+    const updateCall = calls[calls.length - 1];
+    expect(updateCall[1] as unknown[]).toContain(9);
+  });
+
+  it('denies trial when used + weight exceeds trial cap', async () => {
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.TRIAL, ai_credits_used: 21, ai_credits_reset_at: null, active_until: null }],
+      rowCount: 1,
+    });
+    // Atomic UPDATE returns no rows because 21 + 5 = 26 > 25.
+    vi.mocked(query).mockResolvedValueOnce({ rows: [], rowCount: 0 });
+
+    const result = await checkAndIncrementAiCredits('user1', 5);
+    expect(result.allowed).toBe(false);
+    expect(result.used).toBe(21);
+    expect(result.limit).toBe(25);
+  });
+});
+
+describe('refundAiCredit() — weighted', () => {
+  beforeEach(() => {
+    setConfig({ selfHosted: false, planLimits: { ...DEFAULT_PLAN_LIMITS } });
+    vi.mocked(query).mockReset();
+    vi.mocked(query).mockResolvedValue({ rows: [], rowCount: 0 });
+  });
+
+  it('decrements by the supplied weight', async () => {
+    await refundAiCredit('user1', 9);
+    const calls = vi.mocked(query).mock.calls;
+    expect(calls.length).toBe(1);
+    const params = calls[0][1] as unknown[];
+    expect(params).toContain(9);
+    expect(calls[0][0]).not.toMatch(/ai_credits_used - 1\b/);
+  });
+
+  it('defaults to weight=1 when omitted (backward compat)', async () => {
+    await refundAiCredit('user1');
+    const params = vi.mocked(query).mock.calls[0][1] as unknown[];
+    expect(params).toContain(1);
+  });
+
+  it('clamps the decrement so ai_credits_used never goes negative', async () => {
+    await refundAiCredit('user1', 9);
+    // The SQL must guard against negative balances (e.g. with GREATEST/MAX or
+    // a `WHERE ai_credits_used >= weight` clause).
+    const sql = vi.mocked(query).mock.calls[0][0] as string;
+    expect(sql).toMatch(/MAX\s*\(\s*0\b|GREATEST\s*\(\s*0\b|>= \$/);
+  });
+
+  it('is a no-op in self-hosted mode', async () => {
+    setConfig({ selfHosted: true });
+    await refundAiCredit('user1', 5);
+    expect(vi.mocked(query)).not.toHaveBeenCalled();
   });
 });

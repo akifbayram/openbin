@@ -1,9 +1,7 @@
 import { MessageCircle } from 'lucide-react';
 import { formatKeys } from '@/lib/shortcuts';
 import type { TourDefinition } from '../tourRegistry';
-import { delay, type TourContext, type TourStep } from '../tourSteps';
-
-const askRoute = (ctx: TourContext) => (ctx.isMobile ? '/ask' : '/');
+import { delay, type TourStep } from '../tourSteps';
 
 const steps: TourStep[] = [
   {
@@ -16,12 +14,11 @@ const steps: TourStep[] = [
       const [shortcut] = formatKeys('mod+j');
       return `Open Ask AI with ${shortcut} from anywhere.`;
     },
-    route: askRoute,
+    route: '/',
     mobilePlacement: 'bottom',
-    // Open the palette once on entry; subsequent steps rely on it staying open.
+    // Open the dialog once on entry; subsequent steps rely on it staying open.
     // Tour-level `onEnd` handles the close so we don't flash open/closed between steps.
     beforeShow: async (ctx) => {
-      if (ctx.isMobile) return;
       ctx.openCommandInput();
       await delay(400);
     },
@@ -32,7 +29,7 @@ const steps: TourStep[] = [
     placement: 'top',
     title: 'Talk instead of type',
     body: 'Tap the mic to dictate — great for hands-busy capture.',
-    route: askRoute,
+    route: '/',
     mobilePlacement: 'top',
   },
   {
@@ -42,7 +39,7 @@ const steps: TourStep[] = [
     title: 'Drop a photo into the chat',
     body: (ctx) =>
       `Attach a photo and AI creates a ${ctx.terminology.bin} from it — items, tags, notes included.`,
-    route: askRoute,
+    route: '/',
     condition: (ctx) => ctx.canWrite,
     mobilePlacement: 'top',
   },
@@ -53,7 +50,7 @@ const steps: TourStep[] = [
     title: 'Try a query',
     body: (ctx) =>
       `Ask "where are the batteries?" or "create a kitchen utensils ${ctx.terminology.bin}".`,
-    route: askRoute,
+    route: '/',
     mobilePlacement: 'top',
     buttonLabel: 'Got it',
   },
@@ -66,6 +63,6 @@ export const askAi: TourDefinition = {
   icon: MessageCircle,
   steps,
   onEnd: (ctx) => {
-    if (!ctx.isMobile) ctx.closeCommandInput();
+    ctx.closeCommandInput();
   },
 };

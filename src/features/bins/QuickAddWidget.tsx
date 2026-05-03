@@ -5,6 +5,7 @@ import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useCreditCostLabel } from '@/lib/aiCreditCost';
 import type { useDictation } from '@/lib/useDictation';
 import { cn } from '@/lib/utils';
 import { DictationButton } from './DictationButton';
@@ -38,6 +39,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
   const isRecording = dictation?.state === 'recording';
   const isInline = variant === 'inline';
   const hasValue = quickAdd.value.trim().length > 0;
+  const { label: aiAddLabel } = useCreditCostLabel('Add with AI', 1);
   // Sub-panel padding for expanded/preview states. In `card` variant the outer
   // wrapper supplies padding; in `inline` we add it per-state to align with row inset.
   const panelClass = isInline ? 'space-y-2 px-3.5 py-2.5' : 'space-y-2';
@@ -106,12 +108,12 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
             </Tooltip>
           )}
           {!isRecording && (aiEnabled || aiGated) && (
-            <Tooltip content="Add with AI">
+            <Tooltip content={aiAddLabel}>
               <button
                 type="button"
                 onClick={aiGated ? onUpgrade : quickAdd.handleAiClick}
                 className="shrink-0 flex items-center justify-center size-11 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
-                aria-label="Add with AI"
+                aria-label={aiAddLabel}
               >
                 <Sparkles className="h-4 w-4" />
               </button>
@@ -166,11 +168,12 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
             </button>
             <div className="flex-1" />
             <Button
+              variant="ai"
               type="button"
               size="sm"
               onClick={quickAdd.handleExtractClick}
               disabled={!quickAdd.expandedText.trim() || quickAdd.isStructuring}
-              className="gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
+              className="gap-1.5"
             >
               {quickAdd.isStructuring ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -9,6 +9,16 @@ import {
   wrap,
 } from '../lib/emailTemplates.js';
 
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function formatDollars(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
 export type { EmailTemplate };
 
 export interface DowngradeImpact {
@@ -326,6 +336,96 @@ export function downgradeImpactEmail(params: { displayName: string; impact: Down
       'Pro-only features (AI recognition, API keys, custom fields, reorganization, webhooks) are now restricted.',
       '',
       `Upgrade to Pro: ${params.upgradeUrl}`,
+    ].join('\n'),
+  };
+}
+
+export function deletionRequestedEmail(params: {
+  displayName: string;
+  scheduledAt: string;
+  recoveryUrl: string;
+  hadActiveSubscription: boolean;
+  refundAmountCents?: number;
+}): EmailTemplate {
+  const scheduled = formatDate(params.scheduledAt);
+  let subscriptionLineHtml = '';
+  let subscriptionLineText = '';
+  if (params.hadActiveSubscription) {
+    if (params.refundAmountCents != null && params.refundAmountCents > 0) {
+      const amt = formatDollars(params.refundAmountCents);
+      subscriptionLineHtml = `Your subscription was cancelled and a prorated refund of <strong>${amt}</strong> will appear on your next statement.`;
+      subscriptionLineText = `Your subscription was cancelled and a prorated refund of ${amt} will appear on your next statement.`;
+    } else {
+      subscriptionLineHtml = 'Your subscription was cancelled and no further charges will be made.';
+      subscriptionLineText = 'Your subscription was cancelled and no further charges will be made.';
+    }
+  }
+
+  return {
+    subject: 'Your OpenBin account will be deleted',
+    html: wrap([
+      h1('Your account will be deleted'),
+      greeting(params.displayName),
+      p(`Your OpenBin account is scheduled for permanent deletion on <strong>${scheduled}</strong>.`),
+      subscriptionLineHtml ? p(subscriptionLineHtml) : '',
+      p('If you change your mind, you can recover your account by signing in before the scheduled date.'),
+      divider,
+      btn(params.recoveryUrl, 'Recover My Account'),
+      p('<small>If you didn\'t request this, please contact <a href="mailto:support@openbin.app">support@openbin.app</a> immediately.</small>'),
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      `Your OpenBin account is scheduled for permanent deletion on ${scheduled}.`,
+      ...(subscriptionLineText ? ['', subscriptionLineText] : []),
+      '',
+      'If you change your mind, you can recover your account by signing in before the scheduled date.',
+      '',
+      `Recover your account: ${params.recoveryUrl}`,
+      '',
+      'If you didn\'t request this, please contact support@openbin.app immediately.',
+    ].join('\n'),
+  };
+}
+
+export function deletionRecoveredEmail(params: { displayName: string; loginUrl: string }): EmailTemplate {
+  return {
+    subject: 'Your OpenBin account was recovered',
+    html: wrap([
+      h1('Your account was recovered'),
+      greeting(params.displayName),
+      p('Your OpenBin account has been recovered and is fully active again.'),
+      p('<strong>Note:</strong> If your subscription was cancelled when you initiated the deletion, it has not been restored — you\'ll need to resubscribe to continue Pro features.'),
+      divider,
+      btn(params.loginUrl, 'Sign In'),
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      'Your OpenBin account has been recovered and is fully active again.',
+      '',
+      'Note: If your subscription was cancelled when you initiated the deletion, it has NOT been restored — you\'ll need to resubscribe to continue Pro features.',
+      '',
+      `Sign in: ${params.loginUrl}`,
+    ].join('\n'),
+  };
+}
+
+export function deletionCompletedEmail(params: { displayName: string }): EmailTemplate {
+  return {
+    subject: 'Your OpenBin account has been deleted',
+    html: wrap([
+      h1('Your account has been deleted'),
+      greeting(params.displayName),
+      p('Your OpenBin account and all associated data have been permanently removed.'),
+      p('If you have any questions, please contact <a href="mailto:support@openbin.app">support@openbin.app</a>.'),
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      'Your OpenBin account and all associated data have been permanently removed.',
+      '',
+      'If you have any questions, please contact support@openbin.app.',
     ].join('\n'),
   };
 }

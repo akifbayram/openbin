@@ -31,7 +31,11 @@ export function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [inviteCode, setInviteCode] = useState(searchParams.get('invite') ?? '');
   const [loading, setLoading] = useState(false);
-  const [invitePreview, setInvitePreview] = useState<{ name: string; memberCount: number } | null>(null);
+  const [invitePreview, setInvitePreview] = useState<{
+    name: string;
+    memberCount: number;
+    viewerCount: number;
+  } | null>(null);
   const [inviteInvalid, setInviteInvalid] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const markTouched = useCallback((field: string) => setTouched((t) => ({ ...t, [field]: true })), []);
@@ -74,7 +78,11 @@ export function RegisterPage() {
         })
         .then((data) => {
           if (data) {
-            setInvitePreview(data);
+            setInvitePreview({
+              name: data.name,
+              memberCount: data.memberCount,
+              viewerCount: data.viewerCount ?? 0,
+            });
             setInviteInvalid(false);
           }
         })
@@ -184,7 +192,25 @@ export function RegisterPage() {
             <Users className="h-5 w-5 text-[var(--accent)] shrink-0" />
             <span>
               You've been invited to join <strong>{invitePreview.name}</strong>
-              <span className="text-[var(--text-tertiary)]"> · {invitePreview.memberCount} {invitePreview.memberCount === 1 ? 'member' : 'members'}</span>
+              <span className="text-[var(--text-tertiary)]">
+                {' · '}
+                {(() => {
+                  const totalMembers = invitePreview.memberCount;
+                  const viewers = invitePreview.viewerCount;
+                  const nonViewerMembers = totalMembers - viewers;
+                  return (
+                    <>
+                      {nonViewerMembers} {nonViewerMembers === 1 ? 'member' : 'members'}
+                      {viewers > 0 && (
+                        <>
+                          {', '}
+                          {viewers} {viewers === 1 ? 'viewer' : 'viewers'}
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </span>
             </span>
           </div>
         )}

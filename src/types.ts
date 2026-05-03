@@ -14,6 +14,8 @@ export interface User {
   activeUntil?: string | null;
   isAdmin?: boolean;
   hasPassword?: boolean;
+  deletionRequestedAt?: string | null;
+  deletionScheduledAt?: string | null;
 }
 
 export interface Location {
@@ -30,6 +32,7 @@ export interface Location {
   default_join_role: 'member' | 'viewer';
   role?: 'admin' | 'member' | 'viewer';
   member_count?: number;
+  viewer_count?: number;
   area_count?: number;
   bin_count?: number;
   created_at: string;
@@ -326,7 +329,26 @@ export interface PlanUsage {
   locationCount: number;
   photoStorageMb: number;
   memberCounts: Record<string, number>;
+  viewerCounts: Record<string, number>;
   overLimits: OverLimits;
+}
+
+// CheckoutAction is a structured form-target shape that lets the client
+// render a form-POST (token in body, never in URL/log/Referer/history)
+// for billing endpoints we control. Backwards-compat URL fields are
+// derived from the same action and remain on PlanInfo for older consumers
+// and email templates that still need a plain href.
+//
+// The /plans page is GET-only because it's a static VitePress build that
+// reads the token from its own query string. Other surfaces (/auth/openbin
+// with a plan, /portal) are POST so the JWT never appears in the URL bar.
+//
+// Threat-model context: see openbin-deploy/SECURITY.md ("Token redaction
+// in logs") and the 2026-04-26 hardening pass DEPLOY-LOG entry.
+export interface CheckoutAction {
+  url: string;
+  method: 'GET' | 'POST';
+  fields: Record<string, string>;
 }
 
 export interface PlanInfo {
@@ -337,13 +359,61 @@ export interface PlanInfo {
   selfHosted: boolean;
   locked: boolean;
   features: PlanFeatures;
+  // Legacy URL fields. Kept for emails and back-compat. Prefer *Action
+  // for any new code that renders a button or programmatically opens a
+  // billing flow — *Action keeps the JWT out of the URL when POST-able.
   upgradeUrl: string | null;
   upgradePlusUrl: string | null;
   upgradeProUrl: string | null;
   portalUrl: string | null;
   subscribePlanUrl: string | null;
+  // Preferred shape for new consumers. Render with `<CheckoutLink>` from
+  // src/lib/checkoutAction.tsx. Either-or fields will both be null on
+  // self-hosted or in plan states where the surface doesn't apply.
+  upgradeAction: CheckoutAction | null;
+  upgradePlusAction: CheckoutAction | null;
+  upgradeProAction: CheckoutAction | null;
+  subscribePlanAction: CheckoutAction | null;
+  portalAction: CheckoutAction | null;
   canDowngradeToFree: boolean;
   aiCredits: { used: number; limit: number; resetsAt: string | null } | null;
+  // ISO timestamp when the subscription will cancel at period end (set by
+  // billing webhook on `customer.subscription.updated` with
+  // cancel_at_period_end=true). null when the subscription is active and
+  // not scheduled to cancel.
+  cancelAtPeriodEnd: string | null;
+  // Current billing cadence on the subscription. null on free / inactive
+  // plans or when the value has not yet been set by the billing webhook.
+  billingPeriod: 'quarterly' | 'annual' | null;
+  // Trial total length in days, sourced from `config.trialPeriodDays` on the
+  // server. Surfaces here so the client trial bar uses the same denominator
+  // as billing instead of hardcoding 7.
+  trialPeriodDays: number;
+}
+
+export interface CatalogPlan {
+  id: 'free' | 'plus' | 'pro';
+  name: string;
+  prices: {
+    quarterly: number;        // cents; 0 for free
+    annual: number | null;    // cents/year; null for free
+  };
+  features: PlanFeatures;
+}
+
+export interface PlanCatalog {
+  plans: CatalogPlan[];
+}
+
+export interface DowngradeWarning {
+  kind: 'usage-exceeded' | 'feature-loss';
+  title: string;
+  description: string;
+}
+
+export interface DowngradeImpact {
+  targetPlan: 'free' | 'plus';
+  warnings: DowngradeWarning[];
 }
 
 export interface UsageDay {

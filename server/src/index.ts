@@ -9,6 +9,7 @@ import { query } from './db.js';
 import { config } from './lib/config.js';
 import { csrfProtect } from './lib/csrf.js';
 import {
+  ConflictError,
   HttpError,
   OverLimitError,
   PlanRestrictedError,
@@ -25,7 +26,6 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { requireActiveSubscription } from './middleware/requirePlan.js';
 import activityRoutes from './routes/activity.js';
 import { adminRoutes } from './routes/admin.js';
-import { adminOverridesRoutes } from './routes/adminOverrides.js';
 import { adminSecurityRoutes } from './routes/adminSecurity.js';
 import { adminSystemRoutes } from './routes/adminSystem.js';
 import aiRoutes from './routes/ai.js';
@@ -43,6 +43,7 @@ import binsRoutes from './routes/bins.js';
 import binUsageRoutes from './routes/binUsage.js';
 import customFieldsRoutes from './routes/customFields.js';
 import exportRoutes from './routes/export.js';
+import { internalRoutes } from './routes/internal.js';
 import itemCheckoutsRoutes, { locationCheckoutsRouter as locationCheckoutsRoutes } from './routes/itemCheckouts.js';
 import itemsRoutes from './routes/items.js';
 import locationsRoutes from './routes/locations.js';
@@ -62,6 +63,32 @@ import userPreferencesRoutes from './routes/userPreferences.js';
 
 const STATIC_DIR = path.join(import.meta.dirname, '..', 'public');
 
+// CSP hashes pin the inline scripts in index.html — update when those scripts change.
+// CF beacon allowances cover the Web Analytics RUM script Cloudflare auto-injects at
+// the proxy layer; harmless on self-hosted (no CF proxy in the request path).
+const CSP_INLINE_SCRIPT_HASHES = [
+  "'sha256-7KadoKzu1sd1+0LivMFrmxISBXbhj6nm/vOZqEaVC5I='",
+  "'sha256-4kldY8Nv9iluY61Doo0WCNi1p1qCWgXWfSgXIX8g3g0='",
+];
+const CF_BEACON_SCRIPT_SRC = 'https://static.cloudflareinsights.com';
+const CF_BEACON_CONNECT_SRC = 'https://cloudflareinsights.com';
+
+function buildCspHeader(): string {
+  const frameAncestors = config.frameAncestors
+    ? `frame-ancestors 'self' ${config.frameAncestors};`
+    : "frame-ancestors 'none';";
+  const scriptSrc = ["'self'", ...CSP_INLINE_SCRIPT_HASHES, CF_BEACON_SCRIPT_SRC].join(' ');
+  return [
+    "default-src 'self';",
+    frameAncestors,
+    "img-src 'self' data: blob:;",
+    `script-src ${scriptSrc};`,
+    "style-src 'self' 'unsafe-inline';",
+    `connect-src 'self' ${CF_BEACON_CONNECT_SRC};`,
+    "worker-src 'self' blob:;",
+  ].join(' ');
+}
+
 export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => void }): express.Express {
   const app = express();
   if (config.trustProxy) app.set('trust proxy', 1);
@@ -75,29 +102,54 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
     },
   }));
 
-  // Security headers
+  // Security headers — header strings depend only on config, so build them once.
+  const cspHeader = buildCspHeader();
+  const xFrameOptions = config.frameAncestors
+    ? `ALLOW-FROM ${config.frameAncestors.split(' ')[0]}`
+    : 'DENY';
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
-    if (config.frameAncestors) {
-      res.setHeader('X-Frame-Options', `ALLOW-FROM ${config.frameAncestors.split(' ')[0]}`);
-    } else {
-      res.setHeader('X-Frame-Options', 'DENY');
-    }
+    res.setHeader('X-Frame-Options', xFrameOptions);
     if (config.trustProxy) {
       res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
     }
-    // CSP hashes must match the inline scripts in index.html — update if those scripts change
-    const frameAncestorsCsp = config.frameAncestors
-      ? `frame-ancestors 'self' ${config.frameAncestors};`
-      : "frame-ancestors 'none';";
-    res.setHeader(
-      'Content-Security-Policy',
-      `default-src 'self'; ${frameAncestorsCsp} img-src 'self' data: blob:; script-src 'self' 'sha256-7KadoKzu1sd1+0LivMFrmxISBXbhj6nm/vOZqEaVC5I=' 'sha256-4kldY8Nv9iluY61Doo0WCNi1p1qCWgXWfSgXIX8g3g0='; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self' blob:;`,
-    );
+    res.setHeader('Content-Security-Policy', cspHeader);
     next();
   });
+
+  // Public plan catalog — explicit per-route CORS allow-list so cloud + billing
+  // origins can read pricing without auth. Mounted before global cors() so its
+  // ACAO header wins over the single-origin default. config.corsOrigin is only
+  // included when set explicitly to avoid leaking the localhost dev default
+  // into production allow-lists; dev origin is added separately when not in prod.
+  // Cloud-only: self-hosted instances have no billing surface and no need to
+  // expose a public catalog.
+  if (!config.selfHosted) {
+    const PLANS_CORS_ORIGINS = new Set<string>([
+      'https://openbin.app',
+      'https://cloud.openbin.app',
+      'https://billing.openbin.app',
+      ...(config.corsOriginExplicit ? [config.corsOrigin] : []),
+      ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:5173'] : []),
+    ]);
+    app.get(
+      '/api/plans',
+      cors({
+        origin: (origin, cb) => {
+          if (!origin || PLANS_CORS_ORIGINS.has(origin)) cb(null, true);
+          else cb(null, false);
+        },
+        methods: ['GET'],
+        credentials: false,
+      }),
+      async (_req, res) => {
+        const { getPlanCatalog } = await import('./ee/lib/planCatalog.js');
+        res.json(getPlanCatalog());
+      },
+    );
+  }
 
   app.use(cors({
     origin: config.corsOrigin,
@@ -150,6 +202,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/auth/account', sensitiveAuthLimiter);
   app.use('/api/auth/forgot-password', sensitiveAuthLimiter);
   app.use('/api/auth/reset-password', sensitiveAuthLimiter);
+  app.use('/api/auth/recover-deletion', sensitiveAuthLimiter);
   app.use('/api/auth', authRoutes);
   app.use('/api/auth', avatarRoutes);
   app.use('/api/locations/join', joinLimiter);
@@ -186,9 +239,9 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/tags', tagsRoutes);
   app.use('/api/items', itemsRoutes);
   app.use('/api', batchRoutes);
+  app.use('/api/v1', internalRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/admin/security', adminSecurityRoutes);
-  app.use('/api/admin/overrides', adminOverridesRoutes);
   app.use('/api/admin/system', adminSystemRoutes);
 
   // Global error handler
@@ -198,6 +251,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
         error: err.code,
         message: err.message,
         upgrade_url: err.upgradeUrl,
+        upgrade_action: err.upgradeAction,
       });
       return;
     }
@@ -206,6 +260,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
         error: err.code,
         message: err.message,
         upgrade_url: err.upgradeUrl,
+        upgrade_action: err.upgradeAction,
       });
       return;
     }
@@ -224,6 +279,18 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
         message: err.message,
         max: err.max,
         requested: err.requested,
+      });
+      return;
+    }
+    if (err instanceof ConflictError && err.details) {
+      // Structured ConflictError carries an explicit error code (e.g.
+      // ACCOUNT_DELETION_PENDING) and arbitrary recovery hints. Spread the
+      // extra fields so the client can act on them (e.g. show a recovery UI
+      // with the scheduled-deletion timestamp).
+      res.status(err.statusCode).json({
+        error: err.code,
+        message: err.message,
+        ...err.details,
       });
       return;
     }

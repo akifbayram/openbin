@@ -2,6 +2,7 @@ import { AlertCircle, Check, Loader2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
+import { cn, stickyDialogFooter } from '@/lib/utils';
 import type { BulkAddAction, Group } from './useBulkGroupAdd';
 
 interface GroupSummaryStepProps {
@@ -37,9 +38,11 @@ export function GroupSummaryStep({
     failed.length === 0 &&
     namedConfirmed.every((g) => g.status === 'created');
   const totalToCreate = createReady.length + failed.length;
+  const showActions =
+    !isCreating && (createReady.length > 0 || failed.length > 0);
 
   return (
-    <div className="space-y-5">
+    <div className={cn('flex flex-1 flex-col gap-5', !showActions && 'pb-[calc(24px+var(--safe-bottom))]')}>
       <header className="space-y-1">
         <h2 className="text-[18px] font-semibold leading-tight text-[var(--text-primary)]">
           {isCreating
@@ -166,21 +169,24 @@ export function GroupSummaryStep({
       )}
 
       {/* Actions */}
-      {!isCreating && createReady.length > 0 && (
-        <Button
-          onClick={onCreateAll}
-          data-tour="bulk-add-confirm"
-          aria-label={`Create ${createReady.length} ${createReady.length !== 1 ? t.Bins : t.Bin}`}
-          className="w-full"
-        >
-          Create All ({createReady.length} {createReady.length !== 1 ? t.bins : t.bin})
-        </Button>
-      )}
-
-      {failed.length > 0 && !isCreating && (
-        <Button variant="ghost" onClick={onRetryFailed} className="w-full">
-          Retry {failed.length} failed
-        </Button>
+      {showActions && (
+        <div className={cn('flex flex-col gap-2', stickyDialogFooter)}>
+          {createReady.length > 0 && (
+            <Button
+              onClick={onCreateAll}
+              data-tour="bulk-add-confirm"
+              aria-label={`Create ${createReady.length} ${createReady.length !== 1 ? t.Bins : t.Bin}`}
+              className="w-full"
+            >
+              Create All ({createReady.length} {createReady.length !== 1 ? t.bins : t.bin})
+            </Button>
+          )}
+          {failed.length > 0 && (
+            <Button variant="ghost" onClick={onRetryFailed} className="w-full">
+              Retry {failed.length} failed
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

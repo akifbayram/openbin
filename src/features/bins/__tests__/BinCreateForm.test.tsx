@@ -95,6 +95,23 @@ vi.mock('@/features/bins/PhotoBulkAdd', () => ({
   PhotoBulkAdd: () => <div data-testid="photo-bulk-add">wizard</div>,
 }));
 
+vi.mock('@/lib/usePlan', () => ({
+  usePlan: () => ({
+    planInfo: {
+      plan: 'pro', status: 'active', activeUntil: null, previousSubStatus: null,
+      selfHosted: true, locked: false, features: {},
+      upgradeUrl: null, upgradePlusUrl: null, upgradeProUrl: null, portalUrl: null, subscribePlanUrl: null,
+      upgradeAction: null, upgradePlusAction: null, upgradeProAction: null, subscribePlanAction: null, portalAction: null,
+      canDowngradeToFree: false, aiCredits: null, cancelAtPeriodEnd: null, billingPeriod: null, trialPeriodDays: 7,
+    },
+    isLoading: false,
+    isPro: false, isPlus: false, isFree: false, isSelfHosted: true, isLocked: false,
+    isGated: () => false,
+    refresh: vi.fn(), usage: null, overLimits: null, isOverAnyLimit: false,
+    isLocationOverLimit: () => false, refreshUsage: vi.fn(),
+  }),
+}));
+
 vi.mock('@/lib/terminology', () => ({
   useTerminology: () => ({
     bin: 'bin', bins: 'bins', Bin: 'Bin', Bins: 'Bins',
@@ -117,6 +134,7 @@ vi.mock('@/lib/auth', () => ({
     setActiveLocationId: vi.fn(),
     updateUser: vi.fn(),
     deleteAccount: vi.fn(),
+    recoverAccount: vi.fn(),
   }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

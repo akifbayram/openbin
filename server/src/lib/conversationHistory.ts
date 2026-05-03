@@ -1,7 +1,14 @@
 import type { ModelMessage } from 'ai';
+import { config } from './config.js';
 
-/** Maximum number of turns sent to the AI provider. Older turns are dropped. */
-export const MAX_TURNS = 10;
+/** Maximum number of turns sent to the AI provider. Older turns are dropped.
+ *  Override via AI_HISTORY_MAX_TURNS env var. */
+export const MAX_TURNS = config.aiHistoryMaxTurns;
+
+/** Per-turn char cap. Override via AI_HISTORY_MAX_TURN_CHARS env var. */
+export const MAX_TURN_CHARS = config.aiHistoryMaxTurnChars;
+/** Total history char cap across all turns. Override via AI_HISTORY_MAX_TOTAL_CHARS env var. */
+export const MAX_TOTAL_CHARS = config.aiHistoryMaxTotalChars;
 
 /** Wire format for a conversation turn from the client. */
 export type ConversationTurn =
@@ -59,8 +66,26 @@ export function toProviderMessages(history: ConversationTurn[]): ModelMessage[] 
 export function parseHistoryFromBody(body: unknown): ModelMessage[] {
   const raw = (body as { history?: unknown } | null | undefined)?.history;
   if (!Array.isArray(raw)) return [];
-  const valid = raw.filter(isValidTurn);
-  return toProviderMessages(trimHistory(valid));
+  const valid = raw.filter(
+    (t): t is ConversationTurn => isValidTurn(t) && turnContentLength(t) <= MAX_TURN_CHARS,
+  );
+  return toProviderMessages(trimToTotalCharBudget(trimHistory(valid)));
+}
+
+function trimToTotalCharBudget(history: ConversationTurn[]): ConversationTurn[] {
+  let total = history.reduce((sum, t) => sum + turnContentLength(t), 0);
+  let i = 0;
+  while (total > MAX_TOTAL_CHARS && i < history.length) {
+    total -= turnContentLength(history[i]);
+    i++;
+  }
+  return i === 0 ? history : history.slice(i);
+}
+
+function turnContentLength(t: ConversationTurn): number {
+  if (t.role === 'user') return t.content.length;
+  if (t.kind === 'answer') return t.content.length;
+  return t.interpretation.length;
 }
 
 /** Runtime guard: does this value match the ConversationTurn discriminated union? */

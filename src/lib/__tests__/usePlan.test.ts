@@ -33,6 +33,7 @@ const MOCK_USAGE = {
   locationCount: 1,
   photoStorageMb: 10,
   memberCounts: {},
+  viewerCounts: {},
   overLimits: { locations: false, photos: false, members: [] },
 };
 
@@ -64,8 +65,16 @@ const SELF_HOSTED_PLAN: PlanInfo = {
   upgradeProUrl: null,
   portalUrl: null,
   subscribePlanUrl: null,
+  upgradeAction: null,
+  upgradePlusAction: null,
+  upgradeProAction: null,
+  subscribePlanAction: null,
+  portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
 };
 
 const FREE_PLAN: PlanInfo = {
@@ -96,8 +105,16 @@ const FREE_PLAN: PlanInfo = {
   upgradeProUrl: 'https://example.com/auth/openbin?token=abc&plan=pro',
   portalUrl: null,
   subscribePlanUrl: null,
+  upgradeAction: null,
+  upgradePlusAction: null,
+  upgradeProAction: null,
+  subscribePlanAction: null,
+  portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
 };
 
 const PLUS_PLAN: PlanInfo = {
@@ -128,8 +145,16 @@ const PLUS_PLAN: PlanInfo = {
   upgradeProUrl: 'https://example.com/auth/openbin?token=abc&plan=pro',
   portalUrl: 'https://example.com/portal?token=abc',
   subscribePlanUrl: null,
+  upgradeAction: null,
+  upgradePlusAction: null,
+  upgradeProAction: null,
+  subscribePlanAction: null,
+  portalAction: null,
   canDowngradeToFree: false,
   aiCredits: { used: 5, limit: 25, resetsAt: null },
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
 };
 
 const PRO_PLAN: PlanInfo = {
@@ -160,8 +185,16 @@ const PRO_PLAN: PlanInfo = {
   upgradeProUrl: null,
   portalUrl: 'https://example.com/portal?token=abc',
   subscribePlanUrl: null,
+  upgradeAction: null,
+  upgradePlusAction: null,
+  upgradeProAction: null,
+  subscribePlanAction: null,
+  portalAction: null,
   canDowngradeToFree: false,
   aiCredits: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
+  trialPeriodDays: 7,
 };
 
 function makeWrapper() {

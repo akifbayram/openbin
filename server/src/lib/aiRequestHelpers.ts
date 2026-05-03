@@ -1,36 +1,61 @@
 import type { Request } from 'express';
+import { config } from './config.js';
 import { ValidationError } from './httpErrors.js';
+
+/** Hard cap shared by file uploads, photoId arrays, and the credit-cost
+ *  resolver — keep these aligned or the charge desyncs from the work.
+ *  Override via AI_MAX_PHOTOS_PER_REQUEST env var. */
+export const MAX_PHOTOS_PER_REQUEST = config.aiMaxPhotosPerRequest;
 
 // ── Uploaded-file extraction ───────────────────────────────────────
 
-/** Extract uploaded photo files from multipart `photo` / `photos` fields. Throws if none present. */
-export function extractUploadedFiles(req: Request): Express.Multer.File[] {
+function gatherUploadedFiles(req: Request): Express.Multer.File[] {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-  const allFiles = [
+  return [
     ...(files?.photo || []),
     ...(files?.photos || []),
-  ].slice(0, 5);
+  ].slice(0, MAX_PHOTOS_PER_REQUEST);
+}
+
+/** Extract uploaded photo files from multipart `photo` / `photos` fields. Throws if none present. */
+export function extractUploadedFiles(req: Request): Express.Multer.File[] {
+  const allFiles = gatherUploadedFiles(req);
   if (allFiles.length === 0) {
     throw new ValidationError('photo file is required (JPEG, PNG, WebP, or GIF, max 5MB)');
   }
   return allFiles;
 }
 
+/** Same shape as `extractUploadedFiles` but returns 0 when nothing is uploaded
+ *  instead of throwing. Used by the credit-cost resolver, which runs before
+ *  the route handler can produce its own validation error. */
+export function countUploadedFiles(req: Request): number {
+  return gatherUploadedFiles(req).length;
+}
+
 // ── Photo-ID extraction ────────────────────────────────────────────
+
+function gatherPhotoIds(body: Record<string, unknown>): string[] {
+  const { photoId, photoIds } = body;
+  if (Array.isArray(photoIds) && photoIds.length > 0) {
+    return photoIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, MAX_PHOTOS_PER_REQUEST);
+  }
+  if (typeof photoId === 'string') return [photoId];
+  return [];
+}
 
 /** Extract and validate photo IDs from `photoId` (string) or `photoIds` (array). Throws if none. */
 export function extractPhotoIds(body: Record<string, unknown>): string[] {
-  const { photoId, photoIds } = body;
-  let ids: string[] = [];
-  if (Array.isArray(photoIds) && photoIds.length > 0) {
-    ids = photoIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 5);
-  } else if (typeof photoId === 'string') {
-    ids = [photoId];
-  }
+  const ids = gatherPhotoIds(body);
   if (ids.length === 0) {
     throw new ValidationError('photoId or photoIds is required');
   }
   return ids;
+}
+
+/** Non-throwing companion for the credit-cost resolver. */
+export function countPhotoIds(body: Record<string, unknown>): number {
+  return gatherPhotoIds(body).length;
 }
 
 // ── Previous-result validation & sanitization ──────────────────────

@@ -803,61 +803,85 @@ describe('bulkAddReducer create lifecycle', () => {
 });
 
 describe('computeFlowProgress', () => {
-  it('group step with no bins yet returns Photos/Create bookends', () => {
+  it('group step shows four phase dots with photos current', () => {
     const result = computeFlowProgress({ ...initialState, step: 'group' });
-    expect(result.dots.map((d) => d.state)).toEqual(['current', 'pending']);
-    expect(result.dots.map((d) => d.key)).toEqual(['photos', 'create']);
+    expect(result.dots.map((d) => d.key)).toEqual(['photos', 'analyze', 'review', 'create']);
+    expect(result.dots.map((d) => d.state)).toEqual(['current', 'pending', 'pending', 'pending']);
     expect(result.label).toBe('PHOTOS');
     expect(result.currentIndex).toBe(0);
-    expect(result.total).toBe(2);
+    expect(result.total).toBe(4);
   });
 
-  it('group step with bins keeps bin dots pending', () => {
+  it('group step with bins still shows four macro phase dots (no per-bin dots)', () => {
     const groups = [makeGroup([makePhoto()]), makeGroup([makePhoto()])];
     const result = computeFlowProgress({ ...initialState, step: 'group', groups });
+    expect(result.dots).toHaveLength(4);
     expect(result.dots.map((d) => d.state)).toEqual(['current', 'pending', 'pending', 'pending']);
     expect(result.label).toBe('PHOTOS');
   });
 
-  it('review step with single bin uses REVIEW label, no count', () => {
+  it('review step with current bin analyzing surfaces ANALYZE phase + isAnalyzing flag', () => {
     const g = makeGroup([makePhoto()], { status: 'analyzing' });
     const result = computeFlowProgress({ ...initialState, step: 'review', groups: [g], currentIndex: 0 });
-    expect(result.dots.map((d) => d.state)).toEqual(['done', 'current', 'pending']);
-    expect(result.label).toBe('REVIEW');
+    expect(result.dots.map((d) => d.key)).toEqual(['photos', 'analyze', 'review', 'create']);
+    expect(result.dots.map((d) => d.state)).toEqual(['done', 'current', 'pending', 'pending']);
+    expect(result.label).toBe('ANALYZE');
+    expect(result.isAnalyzing).toBe(true);
     expect(result.currentIndex).toBe(1);
   });
 
-  it('review step with multiple bins still uses REVIEW label (count comes from dots)', () => {
+  it('review step with pending bin (manual mode / AI disabled) shows REVIEW', () => {
+    // 'pending' means the AI is not running on this bin — either manual mode or post-error.
+    // Macro label should reflect "user is reviewing manually", not "AI is analyzing".
+    const g = makeGroup([makePhoto()], { status: 'pending' });
+    const result = computeFlowProgress({ ...initialState, step: 'review', groups: [g], currentIndex: 0 });
+    expect(result.label).toBe('REVIEW');
+    expect(result.isAnalyzing).toBe(false);
+    expect(result.dots.map((d) => d.state)).toEqual(['done', 'done', 'current', 'pending']);
+  });
+
+  it('review step with current bin reviewed shows REVIEW phase, analyze done', () => {
+    const g = makeGroup([makePhoto()], { status: 'reviewed' });
+    const result = computeFlowProgress({ ...initialState, step: 'review', groups: [g], currentIndex: 0 });
+    expect(result.dots.map((d) => d.state)).toEqual(['done', 'done', 'current', 'pending']);
+    expect(result.label).toBe('REVIEW');
+    expect(result.isAnalyzing).toBe(false);
+    expect(result.currentIndex).toBe(2);
+  });
+
+  it('label tracks the current bin status, not aggregate state', () => {
     const groups = [
       makeGroup([makePhoto()], { status: 'reviewed' }),
       makeGroup([makePhoto()], { status: 'analyzing' }),
       makeGroup([makePhoto()]),
     ];
-    const result = computeFlowProgress({ ...initialState, step: 'review', groups, currentIndex: 1 });
-    expect(result.dots.map((d) => d.state)).toEqual(['done', 'done', 'current', 'pending', 'pending']);
-    expect(result.label).toBe('REVIEW');
+    // Currently on bin 1 (analyzing) → ANALYZE
+    const onAnalyzing = computeFlowProgress({ ...initialState, step: 'review', groups, currentIndex: 1 });
+    expect(onAnalyzing.label).toBe('ANALYZE 2/3');
+    expect(onAnalyzing.isAnalyzing).toBe(true);
+    // Hop to bin 0 (reviewed) → REVIEW even though bin 1 is still analyzing
+    const onReviewed = computeFlowProgress({ ...initialState, step: 'review', groups, currentIndex: 0 });
+    expect(onReviewed.label).toBe('REVIEW 1/3');
+    expect(onReviewed.isAnalyzing).toBe(false);
   });
 
-  it('review step collapses analyze and review into one current dot per bin', () => {
-    const analyzing = makeGroup([makePhoto()], { status: 'analyzing' });
-    const reviewed = makeGroup([makePhoto()], { status: 'reviewed' });
-    const a = computeFlowProgress({ ...initialState, step: 'review', groups: [analyzing], currentIndex: 0 });
-    const b = computeFlowProgress({ ...initialState, step: 'review', groups: [reviewed], currentIndex: 0 });
-    expect(a.dots.map((d) => d.state)).toEqual(['done', 'current', 'pending']);
-    expect(b.dots.map((d) => d.state)).toEqual(['done', 'current', 'pending']);
-  });
-
-  it('marks bins ahead of current as done when reviewedCount > currentIndex (back-from-summary)', () => {
+  it('multi-bin review appends BIN n/N counter to the label', () => {
     const groups = [
       makeGroup([makePhoto()], { status: 'reviewed' }),
       makeGroup([makePhoto()], { status: 'reviewed' }),
       makeGroup([makePhoto()], { status: 'reviewed' }),
     ];
-    const result = computeFlowProgress({ ...initialState, step: 'review', groups, currentIndex: 0 });
-    expect(result.dots.map((d) => d.state)).toEqual(['done', 'current', 'done', 'done', 'pending']);
+    const result = computeFlowProgress({ ...initialState, step: 'review', groups, currentIndex: 1 });
+    expect(result.label).toBe('REVIEW 2/3');
   });
 
-  it('summary step marks all bins done and Create current', () => {
+  it('single-bin review omits the per-bin counter', () => {
+    const g = makeGroup([makePhoto()], { status: 'reviewed' });
+    const result = computeFlowProgress({ ...initialState, step: 'review', groups: [g], currentIndex: 0 });
+    expect(result.label).toBe('REVIEW');
+  });
+
+  it('summary step marks photos/analyze/review done and Create current', () => {
     const groups = [
       makeGroup([makePhoto()], { status: 'reviewed' }),
       makeGroup([makePhoto()], { status: 'reviewed' }),
@@ -868,13 +892,10 @@ describe('computeFlowProgress', () => {
     expect(result.currentIndex).toBe(3);
   });
 
-  it('uses group ids as keys for bin dots', () => {
-    const groups = [
-      makeGroup([makePhoto()]),
-      makeGroup([makePhoto()]),
-    ];
+  it('uses fixed phase keys (photos/analyze/review/create) regardless of bin count', () => {
+    const groups = [makeGroup([makePhoto()]), makeGroup([makePhoto()])];
     const result = computeFlowProgress({ ...initialState, step: 'group', groups });
-    expect(result.dots.map((d) => d.key)).toEqual(['photos', groups[0].id, groups[1].id, 'create']);
+    expect(result.dots.map((d) => d.key)).toEqual(['photos', 'analyze', 'review', 'create']);
   });
 });
 

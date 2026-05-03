@@ -7,6 +7,9 @@ vi.mock('../email.js', () => ({
 import { query } from '../../db.js';
 import type { DowngradeImpact } from '../../ee/emailTemplates.js';
 import {
+  fireDeletionCompletedEmail,
+  fireDeletionRecoveredEmail,
+  fireDeletionRequestedEmail,
   fireDowngradeImpactEmail,
   fireExploreFeaturesEmail,
   firePostTrialEarlyEmail,
@@ -128,6 +131,30 @@ describe('emailSender', () => {
     fireWelcomeEmail(USER_ID, EMAIL, 'Test User');
     await new Promise((r) => setTimeout(r, 50));
     expect(mockSendEmail).not.toHaveBeenCalled();
+  });
+
+  it('fireDeletionRequestedEmail calls sendEmail with deletion subject and includes refund text when applicable', async () => {
+    fireDeletionRequestedEmail(USER_ID, EMAIL, 'Test User', '2026-05-15T00:00:00.000Z', true, 1234);
+    await vi.waitFor(() => expect(mockSendEmail).toHaveBeenCalledTimes(1));
+    expect(mockSendEmail.mock.calls[0][0]).toBe(EMAIL);
+    expect(mockSendEmail.mock.calls[0][1]).toContain('deleted');
+    // Body should include the formatted refund amount
+    const html = mockSendEmail.mock.calls[0][2];
+    expect(html).toContain('$12.34');
+  });
+
+  it('fireDeletionRecoveredEmail calls sendEmail with recovery subject', async () => {
+    fireDeletionRecoveredEmail(USER_ID, EMAIL, 'Test User');
+    await vi.waitFor(() => expect(mockSendEmail).toHaveBeenCalledTimes(1));
+    expect(mockSendEmail.mock.calls[0][0]).toBe(EMAIL);
+    expect(mockSendEmail.mock.calls[0][1]).toContain('recovered');
+  });
+
+  it('fireDeletionCompletedEmail calls sendEmail with completion subject', async () => {
+    fireDeletionCompletedEmail(USER_ID, EMAIL, 'Test User');
+    await vi.waitFor(() => expect(mockSendEmail).toHaveBeenCalledTimes(1));
+    expect(mockSendEmail.mock.calls[0][0]).toBe(EMAIL);
+    expect(mockSendEmail.mock.calls[0][1]).toContain('deleted');
   });
 
   it('safeSend swallows errors from sendEmail', async () => {

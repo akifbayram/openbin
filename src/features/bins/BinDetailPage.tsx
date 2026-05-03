@@ -104,7 +104,7 @@ export function BinDetailPage() {
   const HeaderIcon = resolveIcon(bin.icon);
 
   function handleClose() {
-    if (backState?.backPath) navigate(backState.backPath);
+    if (backState?.backPath && backState.backPath.startsWith('/')) navigate(backState.backPath);
     else if (window.history.length > 1) navigate(-1);
     else navigate('/bins');
   }
@@ -126,6 +126,7 @@ export function BinDetailPage() {
             showAiButton={actions.showAiButton}
             isAnalyzing={actions.isAnalyzing}
             isReanalysis={actions.isReanalysis}
+            analyzePhotoCount={actions.photos.length}
             otherLocations={actions.otherLocations}
             onClose={handleClose}
             onPrev={prevBinId ? () => navigate(`/bin/${prevBinId}`, { state: { ...backState } }) : null}

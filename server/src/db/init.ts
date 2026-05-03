@@ -107,6 +107,35 @@ async function seedAdminUser(eng: DatabaseEngine): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// System user seed helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Bootstrap a 'system' user row so admin_audit_log entries from system
+ * actors (e.g. inactivityChecker invoking requestDeletion with
+ * `initiatedByAdminId: 'system'`) can satisfy the actor_id FK without
+ * being silently dropped by logAdminAction's catch handler.
+ *
+ * The row is intentionally unable to log in:
+ *   - password_hash NULL (no credential)
+ *   - suspended_at set permanently (any auth attempt is rejected)
+ *   - is_admin FALSE (does not count toward admin caps or last-admin guards)
+ *   - sub_status INACTIVE (not surfaced as a billing customer)
+ *
+ * The id is the literal string 'system' (not a UUID) so any code attributing
+ * an action to "system" can pass it directly without a lookup.
+ */
+async function seedSystemUser(eng: DatabaseEngine): Promise<void> {
+  // CURRENT_TIMESTAMP is portable across SQLite and Postgres — avoids needing
+  // setDialect() to have been called before this seed runs (it hasn't yet).
+  await eng.query(
+    `INSERT INTO users (id, email, display_name, password_hash, is_admin, plan, sub_status, suspended_at)
+     VALUES ('system', 'system@openbin.local', 'System', NULL, FALSE, 1, 0, CURRENT_TIMESTAMP)
+     ON CONFLICT (id) DO NOTHING`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -182,6 +211,7 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
 
   const sqliteEngine = createSqliteEngine();
   await seedAdminUser(sqliteEngine);
+  await seedSystemUser(sqliteEngine);
   return sqliteEngine;
 }
 
@@ -234,6 +264,7 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
 
   const pgEngine = createPostgresEngine();
   await seedAdminUser(pgEngine);
+  await seedSystemUser(pgEngine);
   return pgEngine;
 }
 

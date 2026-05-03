@@ -6,7 +6,7 @@ import { ListItem } from '@/components/ui/list-item';
 import { resolveColor } from '@/lib/colorPalette';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
-import { plural } from '@/lib/utils';
+import { cn, plural, stickyDialogFooter } from '@/lib/utils';
 
 export interface CreatedBinInfo {
   id: string;
@@ -51,7 +51,7 @@ export function BinCreateSuccess({ createdBins, onCreateAnother, onClose }: BinC
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 py-4">
+    <div className="flex flex-1 flex-col items-center gap-6">
       {/* Animated checkmark */}
       <div className="relative flex items-center justify-center">
         <AnimatedCheckmark />
@@ -75,17 +75,13 @@ export function BinCreateSuccess({ createdBins, onCreateAnother, onClose }: BinC
       </div>
 
       {/* Action buttons */}
-      <div className="flex w-full flex-col gap-2 scan-text-fade-delay">
-        <Button className="w-full" onClick={onCreateAnother}>
+      <div className={cn('row-spread self-stretch', stickyDialogFooter, 'scan-text-fade-delay')}>
+        <Button variant="ghost" onClick={onClose}>
+          Done
+        </Button>
+        <Button onClick={onCreateAnother}>
           <CirclePlus className="mr-2 h-4 w-4" />
           Create another
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full"
-          onClick={onClose}
-        >
-          Done
         </Button>
       </div>
     </div>

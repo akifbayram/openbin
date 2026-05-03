@@ -3,6 +3,9 @@ import { resolveTemplate, safeSend } from '../lib/emailSender.js';
 import { generateUpgradeUrl, type PlanTier, planLabel } from '../lib/planGate.js';
 import {
   type DowngradeImpact,
+  deletionCompletedEmail,
+  deletionRecoveredEmail,
+  deletionRequestedEmail,
   downgradeImpactEmail,
   exploreFeaturesEmail,
   inactivityWarning7dEmail,
@@ -106,4 +109,49 @@ export function fireInactivityWarning7d(userId: string, email: string, displayNa
   const vars = { displayName, loginUrl, daysInactive: String(daysInactive) };
   const template = resolveTemplate('inactivity_warning_7d', vars, inactivityWarning7dEmail({ displayName, loginUrl, daysInactive }));
   safeSend(userId, 'inactivity_warning_7d', email, template);
+}
+
+export function fireDeletionRequestedEmail(
+  userId: string,
+  email: string,
+  displayName: string,
+  scheduledAt: string,
+  hadActiveSubscription: boolean,
+  refundAmountCents?: number,
+): void {
+  const recoveryUrl = config.baseUrl ? `${config.baseUrl}/login` : '';
+  const vars = {
+    displayName,
+    scheduledAt,
+    recoveryUrl,
+    hadActiveSubscription: String(hadActiveSubscription),
+    refundAmountCents: refundAmountCents != null ? String(refundAmountCents) : '',
+  };
+  const template = resolveTemplate(
+    'deletion_requested',
+    vars,
+    deletionRequestedEmail({ displayName, scheduledAt, recoveryUrl, hadActiveSubscription, refundAmountCents }),
+  );
+  safeSend(userId, 'deletion_requested', email, template);
+}
+
+export function fireDeletionRecoveredEmail(userId: string, email: string, displayName: string): void {
+  const loginUrl = config.baseUrl ? `${config.baseUrl}/login` : '';
+  const vars = { displayName, loginUrl };
+  const template = resolveTemplate(
+    'deletion_recovered',
+    vars,
+    deletionRecoveredEmail({ displayName, loginUrl }),
+  );
+  safeSend(userId, 'deletion_recovered', email, template);
+}
+
+export function fireDeletionCompletedEmail(userId: string, email: string, displayName: string): void {
+  const vars = { displayName };
+  const template = resolveTemplate(
+    'deletion_completed',
+    vars,
+    deletionCompletedEmail({ displayName }),
+  );
+  safeSend(userId, 'deletion_completed', email, template);
 }

@@ -1,5 +1,5 @@
 import { Check, RefreshCw, Sparkles, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -15,12 +15,13 @@ import { useAiSettings } from '@/features/ai/useAiSettings';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
 import { setCapturedReturnTarget } from '@/features/capture/capturedPhotos';
+import { CreditCost, visionWeight } from '@/lib/aiCreditCost';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
 import { prefersReducedMotion } from '@/lib/reducedMotion';
 import { useTerminology } from '@/lib/terminology';
-import { cn, focusRing, plural, sectionHeader } from '@/lib/utils';
+import { cn, focusRing, plural, sectionHeader, stickyDialogFooter } from '@/lib/utils';
 import type { AiSuggestions, BinItem, BinVisibility } from '@/types';
 import { AiBadge } from './AiBadge';
 import { BinPreviewCard } from './BinPreviewCard';
@@ -39,6 +40,10 @@ import { useCustomFields } from './useCustomFields';
 import { useItemEntry } from './useItemEntry';
 import { usePhotoAnalysis } from './usePhotoAnalysis';
 import { VisibilityPicker } from './VisibilityPicker';
+
+const AiCreditEstimate = __EE__
+  ? lazy(() => import('@/ee/AiCreditEstimate').then(m => ({ default: m.AiCreditEstimate })))
+  : (() => null) as React.FC<{ cost: number; className?: string }>;
 
 export interface BinCreateFormData {
   name: string;
@@ -334,7 +339,7 @@ export function BinCreateForm({
     : header;
 
   return (
-    <form onSubmit={handleFormSubmit} className={cn(isFull ? 'space-y-5' : 'space-y-3', className)}>
+    <form onSubmit={handleFormSubmit} className={cn(isFull ? 'flex flex-1 flex-col gap-5' : 'space-y-3', className)}>
       {renderedHeader}
 
       {/* --- FULL MODE LAYOUT --- */}
@@ -409,18 +414,31 @@ export function BinCreateForm({
                   />
                 );
               }
+              const aiFillCost = visionWeight(photos.length);
               return (
-                <Button
-                  type="button"
-                  onClick={handleAnalyze}
-                  disabled={photos.length === 0}
-                  className="w-full gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)] text-[var(--text-on-accent)] min-h-[44px]"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  {photos.length > 0
-                    ? `AI Fill from ${photos.length} ${plural(photos.length, 'photo')}`
-                    : 'AI Fill'}
-                </Button>
+                <div className="flex flex-col items-center gap-1.5 w-full">
+                  <Button
+                    variant="ai"
+                    type="button"
+                    onClick={handleAnalyze}
+                    disabled={photos.length === 0}
+                    className="w-full gap-1.5 min-h-[44px]"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {photos.length > 0
+                      ? `AI Fill from ${photos.length} ${plural(photos.length, 'photo')}`
+                      : 'AI Fill'}
+                  </Button>
+                  {photos.length > 0 && (
+                    __EE__ ? (
+                      <Suspense fallback={<CreditCost cost={aiFillCost} />}>
+                        <AiCreditEstimate cost={aiFillCost} />
+                      </Suspense>
+                    ) : (
+                      <CreditCost cost={aiFillCost} />
+                    )
+                  )}
+                </div>
               );
             }
 
@@ -696,7 +714,7 @@ export function BinCreateForm({
 
       {/* Footer */}
       {isFull ? (
-        <div className="flex gap-2 justify-end pt-2">
+        <div className={cn('flex gap-2 justify-end', stickyDialogFooter)}>
           {showCancel && (
             <Button type="button" variant="ghost" onClick={onCancel}>
               Cancel

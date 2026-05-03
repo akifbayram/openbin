@@ -11,11 +11,12 @@ const router = Router();
 
 router.use(authenticate);
 
-// GET /api/tag-colors?location_id=X — list all tag colors for a location
+// GET /api/tag-colors?locationId=X — list all tag colors for a location
+// Accepts both camelCase (canonical) and snake_case (legacy) for backward compatibility.
 router.get('/', asyncHandler(async (req, res) => {
-  const locationId = req.query.location_id as string;
+  const locationId = (req.query.locationId ?? req.query.location_id) as string;
   if (!locationId) {
-    throw new ValidationError('location_id query parameter is required');
+    throw new ValidationError('locationId query parameter is required');
   }
 
   if (!await verifyLocationMembership(locationId, req.user!.id)) {

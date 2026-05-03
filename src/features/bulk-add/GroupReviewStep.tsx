@@ -1,5 +1,5 @@
-import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, RotateCw, Sparkles } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Sparkles } from 'lucide-react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
@@ -23,15 +23,20 @@ import { type AiFillField, useAiFillState } from '@/features/bins/useAiFillState
 import { useAllTags } from '@/features/bins/useBins';
 import { useItemEntry } from '@/features/bins/useItemEntry';
 import { compressImageForAi } from '@/features/photos/compressImageForAi';
+import { CreditCost, visionWeight } from '@/lib/aiCreditCost';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { aiItemsToBinItems } from '@/lib/itemQuantities';
 import { prefersReducedMotion } from '@/lib/reducedMotion';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
+import { cn, stickyDialogFooter } from '@/lib/utils';
 import type { AiSettings, AiSuggestions, BinItem } from '@/types';
 import { PhotoScanFrame } from './PhotoScanFrame';
 import type { BulkAddAction, Group, Photo } from './useBulkGroupAdd';
+
+const AiCreditEstimate = __EE__
+  ? lazy(() => import('@/ee/AiCreditEstimate').then(m => ({ default: m.AiCreditEstimate })))
+  : (() => null) as React.FC<{ cost: number; className?: string }>;
 
 const MAX_CORRECTIONS = 3;
 
@@ -66,9 +71,13 @@ interface GroupReviewStepProps {
   editingFromSummary: boolean;
   aiSettings: AiSettings | null;
   dispatch: React.Dispatch<BulkAddAction>;
+  /** Single-bin shortcut: when there's exactly one group, the last button creates immediately instead of advancing to the summary step. */
+  onCreateNow?: () => void;
+  /** True while a single-bin create is in flight — locks the button and swaps the label so the user gets feedback. */
+  isCreating?: boolean;
 }
 
-export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSettings, dispatch }: GroupReviewStepProps) {
+export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSettings, dispatch, onCreateNow, isCreating }: GroupReviewStepProps) {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
   const { aiEnabled, setAiEnabled } = useAiEnabled();
@@ -76,6 +85,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [correctionText, setCorrectionText] = useState('');
+  const [retryBandDismissed, setRetryBandDismissed] = useState(false);
   const [confirmPhase, setConfirmPhase] = useState<'idle' | 'locking'>('idle');
   const lockTimerRef = useRef<number | null>(null);
 
@@ -138,6 +148,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
 
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === groups.length - 1;
+  const isSingleBin = groups.length === 1;
 
   const isAnalyzing = group.status === 'analyzing';
   const isAnyActive = isAnalyzing || isAnalyzingStream || isReanalyzing || isCorrecting;
@@ -214,6 +225,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   useEffect(() => {
     setCorrectionOpen(false);
     setCorrectionText('');
+    setRetryBandDismissed(false);
     pendingResult.current = null;
     aiFill.reset();
   }, [currentIndex]);
@@ -382,7 +394,11 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { status: 'reviewed' } });
     }
     if (isLast) {
-      dispatch({ type: 'GO_TO_SUMMARY' });
+      if (isSingleBin && onCreateNow) {
+        onCreateNow();
+      } else {
+        dispatch({ type: 'GO_TO_SUMMARY' });
+      }
     } else {
       dispatch({ type: 'SET_CURRENT_INDEX', index: currentIndex + 1 });
     }
@@ -411,8 +427,16 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
     dispatch({ type: 'UPDATE_GROUP', id: group.id, changes: { status: 'pending' } });
   }
 
-  const showTryAiAgain =
-    aiEnabled && !!aiSettings && group.status === 'pending' && !isAnyActive;
+  const showRetryBand =
+    aiEnabled && !!aiSettings && group.status === 'pending' && !isAnyActive && !retryBandDismissed;
+
+  const nextLabel = !isLast
+    ? 'Next'
+    : isSingleBin
+      ? isCreating
+        ? 'Creating...'
+        : `Create ${t.Bin}`
+      : 'Review all';
 
   const sparklesButton = aiEnabled && group.status === 'reviewed' && !showProgressBar && (
     <button
@@ -422,8 +446,8 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       className={cn(
         'absolute top-2 right-2 p-1.5 rounded-full transition-colors animate-fade-in',
         correctionOpen
-          ? 'bg-[var(--ai-accent)] text-white'
-          : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
+          ? 'bg-[var(--ai-accent)] text-[var(--text-on-accent)]'
+          : 'bg-black/40 text-[var(--text-on-accent)] hover:bg-[var(--ai-accent)]',
       )}
     >
       <Sparkles className="h-4 w-4" />
@@ -431,7 +455,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
   );
 
   return (
-    <div data-tour="group-review" className="space-y-5">
+    <div data-tour="group-review" className="flex flex-1 flex-col gap-5">
       {/* Image stays mounted across analyze/review so it doesn't reflow when the lock beat ends — only the chrome swaps. */}
       {/* overflow-hidden + matching radius clips scan-line/bracket glow to the photo's rounded shape. */}
       <div className="relative overflow-hidden rounded-[var(--radius-lg)]">
@@ -443,7 +467,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
         {group.photos.length > 1 && (
           <span
             aria-hidden="true"
-            className="absolute bottom-2 left-2 rounded-full bg-black/65 px-2 py-0.5 font-mono text-[11px] font-medium text-white"
+            className="absolute bottom-2 left-2 rounded-full bg-black/65 px-2 py-0.5 font-mono text-[11px] font-medium text-[var(--text-on-accent)]"
           >
             +{group.photos.length - 1}
           </span>
@@ -466,6 +490,33 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
         />
       ) : (
         <div className="animate-fade-in space-y-5">
+          {showRetryBand && (
+            <div className="rounded-[var(--radius-lg)] border border-[var(--ai-accent)]/20 bg-[var(--ai-accent)]/5 p-3 flex flex-col gap-2">
+              <Button
+                variant="ai"
+                onClick={() => triggerAnalyze(group)}
+                fullWidth
+              >
+                <Sparkles className="h-4 w-4 mr-1.5" />
+                Scan with AI
+              </Button>
+              {__EE__ ? (
+                <Suspense fallback={<CreditCost cost={visionWeight(group.photos.length)} className="self-center" />}>
+                  <AiCreditEstimate cost={visionWeight(group.photos.length)} className="self-center" />
+                </Suspense>
+              ) : (
+                <CreditCost cost={visionWeight(group.photos.length)} className="self-center" />
+              )}
+              <button
+                type="button"
+                onClick={() => setRetryBandDismissed(true)}
+                className="self-center text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors py-1"
+              >
+                Continue manually
+              </button>
+            </div>
+          )}
+
           <div
             key={aiFill.keyFor('name')}
             className={cn('space-y-2', nameFilled && 'ai-field-fill')}
@@ -511,7 +562,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
                     <button
                       type="button"
                       onClick={handleCorrectionSubmit}
-                      className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                      className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-[var(--text-on-accent)] hover:bg-[var(--ai-accent-hover)] transition-colors"
                     >
                       <ArrowUp className="h-4 w-4" />
                     </button>
@@ -519,12 +570,21 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
                     <button
                       type="button"
                       onClick={() => { setCorrectionOpen(false); triggerReanalyze(group); }}
-                      className="shrink-0 h-9 px-3 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors text-[13px] font-medium"
+                      className="shrink-0 h-9 px-3 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-[var(--text-on-accent)] hover:bg-[var(--ai-accent-hover)] transition-colors text-[13px] font-medium"
                     >
                       Reanalyze
                     </button>
                   )}
                 </div>
+              )}
+              {group.correctionCount < MAX_CORRECTIONS && (
+                __EE__ ? (
+                  <Suspense fallback={<CreditCost cost={correctionText.trim() ? 1 : visionWeight(group.photos.length)} className="self-start" />}>
+                    <AiCreditEstimate cost={correctionText.trim() ? 1 : visionWeight(group.photos.length)} className="self-start" />
+                  </Suspense>
+                ) : (
+                  <CreditCost cost={correctionText.trim() ? 1 : visionWeight(group.photos.length)} className="self-start" />
+                )
               )}
             </div>
           )}
@@ -551,19 +611,6 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
           {/* Inline AI Setup */}
           {aiEnabled && aiSetupExpanded && !aiSettings && (
             <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
-          )}
-
-          {/* Retry AI when user cancelled mid-stream */}
-          {showTryAiAgain && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="self-start"
-              onClick={() => triggerAnalyze(group)}
-            >
-              <RotateCw className="h-3.5 w-3.5 mr-1" />
-              Try AI again
-            </Button>
           )}
 
           <div
@@ -655,7 +702,7 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
       )}
 
       {/* Navigation — always visible so flushPendingLock fires even during the lock beat */}
-      <div className="row-spread pt-2">
+      <div className={cn('row-spread', stickyDialogFooter)}>
         <Button variant="ghost" onClick={handleBack}>
           <ChevronLeft className="h-4 w-4 mr-1" />
           {editingFromSummary ? 'Back to summary' : 'Back'}
@@ -666,8 +713,15 @@ export function GroupReviewStep({ groups, currentIndex, editingFromSummary, aiSe
             Done
           </Button>
         ) : (
-          <Button onClick={handleNext} disabled={isAnyActive}>
-            {isLast ? 'Review all' : 'Next'}
+          <Button
+            onClick={handleNext}
+            disabled={
+              isAnyActive ||
+              (isSingleBin && (!group.name.trim() || isCreating === true))
+            }
+            data-tour={isSingleBin ? 'bulk-add-confirm' : undefined}
+          >
+            {nextLabel}
             {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
           </Button>
         )}

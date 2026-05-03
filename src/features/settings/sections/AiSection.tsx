@@ -260,7 +260,7 @@ export function AiSection() {
             <UpgradePrompt
               feature="AI Features"
               description="Enable AI-powered suggestions and commands."
-              upgradeUrl={planInfo.upgradeUrl}
+              upgradeAction={planInfo.upgradeAction}
             />
           </Suspense>
         )

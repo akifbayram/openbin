@@ -159,7 +159,7 @@ describe('GroupReviewStep skeleton', () => {
   it('renders Back and Next buttons', () => {
     renderStep(makeState());
     expect(screen.getByRole('button', { name: /back/i })).toBeDefined();
-    expect(screen.getByRole('button', { name: /next|review all/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /next|review all|create bin/i })).toBeDefined();
   });
 });
 
@@ -296,22 +296,113 @@ describe('GroupReviewStep streaming UI', () => {
     expect(container.querySelectorAll('[data-bracket]').length).toBe(0);
   });
 
-  it('shows "Try AI again" when status is pending and AI is configured', () => {
-    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+});
+
+describe('GroupReviewStep retry band (post-cancel)', () => {
+  beforeEach(() => {
+    mockStream.mockReset();
+    mockStream.mockResolvedValue(null);
+    mockCancel.mockReset();
+    mockStreamError = null;
+    mockStreamState = {
+      analyze: { ...idleStream },
+      reanalyze: { ...idleStream },
+      correction: { ...idleStream },
+    };
+  });
+
+  const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
+
+  it('renders a primary "Scan with AI" button when status is pending and AI is configured', () => {
     renderStep(makeState({ status: 'pending' }), { aiSettings });
-    expect(screen.getByRole('button', { name: /try ai again/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /scan with ai/i })).toBeTruthy();
   });
 
-  it('does not show "Try AI again" while streaming', () => {
+  it('renders a secondary "Continue manually" button alongside Scan with AI', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+    expect(screen.getByRole('button', { name: /continue manually/i })).toBeTruthy();
+  });
+
+  it('positions the retry band before the Name field in DOM order', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+    const scanBtn = screen.getByRole('button', { name: /scan with ai/i });
+    const nameLabel = screen.getByText('Name');
+    // DOCUMENT_POSITION_FOLLOWING (4) means scanBtn is BEFORE nameLabel.
+    // eslint-disable-next-line no-bitwise
+    expect(scanBtn.compareDocumentPosition(nameLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('clicking "Scan with AI" triggers the analyze stream', async () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+    // Reset to ignore the auto-analyze call that fires on mount.
+    mockStream.mockClear();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /scan with ai/i }));
+    });
+    expect(mockStream).toHaveBeenCalled();
+  });
+
+  it('clicking "Continue manually" hides both retry-band buttons', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
+    fireEvent.click(screen.getByRole('button', { name: /continue manually/i }));
+    expect(screen.queryByRole('button', { name: /scan with ai/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /continue manually/i })).toBeNull();
+  });
+
+  it('hides the retry band while streaming', () => {
     setAnalyzeStreaming();
-    const aiSettings = { id: 's1', provider: 'openai', apiKey: 'k', model: 'gpt-4o', endpointUrl: null } as any;
     renderStep(makeState({ status: 'analyzing' }), { aiSettings });
+    expect(screen.queryByRole('button', { name: /scan with ai/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /continue manually/i })).toBeNull();
+  });
+
+  it('hides the retry band when AI settings are missing', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings: null });
+    expect(screen.queryByRole('button', { name: /scan with ai/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /continue manually/i })).toBeNull();
+  });
+
+  it('does not render the legacy "Try AI again" ghost button', () => {
+    renderStep(makeState({ status: 'pending' }), { aiSettings });
     expect(screen.queryByRole('button', { name: /try ai again/i })).toBeNull();
   });
 
-  it('does not show "Try AI again" when AI settings are missing', () => {
-    renderStep(makeState({ status: 'pending' }), { aiSettings: null });
-    expect(screen.queryByRole('button', { name: /try ai again/i })).toBeNull();
+  it('reshows the retry band after dismiss when navigating to a new group', () => {
+    let state = initialState;
+    const p1 = createPhoto(new File([''], 'a.jpg', { type: 'image/jpeg' }));
+    const p2 = createPhoto(new File([''], 'b.jpg', { type: 'image/jpeg' }));
+    const g1 = { ...createGroupFromPhoto(p1, null), status: 'pending' as const };
+    const g2 = { ...createGroupFromPhoto(p2, null), status: 'pending' as const };
+    state = { ...state, step: 'review', groups: [g1, g2], currentIndex: 0 };
+
+    const { rerender } = render(
+      <ToastProvider>
+        <GroupReviewStep
+          groups={state.groups}
+          currentIndex={0}
+          editingFromSummary={state.editingFromSummary}
+          aiSettings={aiSettings}
+          dispatch={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /continue manually/i }));
+    expect(screen.queryByRole('button', { name: /scan with ai/i })).toBeNull();
+
+    rerender(
+      <ToastProvider>
+        <GroupReviewStep
+          groups={state.groups}
+          currentIndex={1}
+          editingFromSummary={state.editingFromSummary}
+          aiSettings={aiSettings}
+          dispatch={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: /scan with ai/i })).toBeTruthy();
   });
 });
 
@@ -542,5 +633,80 @@ describe('GroupReviewStep lock confirmation beat', () => {
       (call) => call[0]?.type === 'SET_ANALYZE_RESULT',
     );
     expect(resultDispatches).toHaveLength(1);
+  });
+});
+
+describe('GroupReviewStep single-bin create flow', () => {
+  beforeEach(() => {
+    mockStream.mockReset();
+    mockStream.mockResolvedValue(null);
+    mockCancel.mockReset();
+    mockStreamError = null;
+    mockStreamState = {
+      analyze: { ...idleStream },
+      reanalyze: { ...idleStream },
+      correction: { ...idleStream },
+    };
+  });
+
+  it('shows "Create bin" button (not "Review all") when there is exactly one group', () => {
+    renderStep(makeState({ name: 'My bin', status: 'reviewed' }));
+    expect(screen.getByRole('button', { name: /create bin/i })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /review all/i })).toBeNull();
+  });
+
+  it('disables the "Create bin" button when the group name is empty', () => {
+    renderStep(makeState({ name: '', status: 'reviewed' }));
+    const button = screen.getByRole('button', { name: /create bin/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  it('enables the "Create bin" button once the group has a non-empty trimmed name', () => {
+    renderStep(makeState({ name: '  Box  ', status: 'reviewed' }));
+    const button = screen.getByRole('button', { name: /create bin/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+  });
+
+  it('clicking "Create bin" calls onCreateNow and does not dispatch GO_TO_SUMMARY', () => {
+    const dispatch = vi.fn();
+    const onCreateNow = vi.fn();
+    renderStep(makeState({ name: 'Box', status: 'reviewed' }), { dispatch, onCreateNow });
+    fireEvent.click(screen.getByRole('button', { name: /create bin/i }));
+    expect(onCreateNow).toHaveBeenCalledTimes(1);
+    const summaryDispatches = dispatch.mock.calls.filter(
+      (call) => call[0]?.type === 'GO_TO_SUMMARY',
+    );
+    expect(summaryDispatches).toHaveLength(0);
+  });
+
+  it('multi-bin mode: last bin still shows "Review all" and dispatches GO_TO_SUMMARY (does not call onCreateNow)', () => {
+    const dispatch = vi.fn();
+    const onCreateNow = vi.fn();
+    const p1 = createPhoto(new File([''], 'a.jpg', { type: 'image/jpeg' }));
+    const p2 = createPhoto(new File([''], 'b.jpg', { type: 'image/jpeg' }));
+    const g1 = { ...createGroupFromPhoto(p1, null), name: 'Bin one', status: 'reviewed' as const };
+    const g2 = { ...createGroupFromPhoto(p2, null), name: 'Bin two', status: 'reviewed' as const };
+    const state: BulkAddState = { ...initialState, step: 'review', groups: [g1, g2], currentIndex: 1 };
+    renderStep(state, { dispatch, onCreateNow });
+
+    expect(screen.getByRole('button', { name: /review all/i })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /create bin/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /review all/i }));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'GO_TO_SUMMARY' });
+    expect(onCreateNow).not.toHaveBeenCalled();
+  });
+
+  it('places the data-tour="bulk-add-confirm" anchor on the "Create bin" button in single-bin mode', () => {
+    renderStep(makeState({ name: 'Box', status: 'reviewed' }));
+    const button = screen.getByRole('button', { name: /create bin/i });
+    expect(button.getAttribute('data-tour')).toBe('bulk-add-confirm');
+  });
+
+  it('swaps the button label to "Creating..." and disables it while a single-bin create is in flight', () => {
+    renderStep(makeState({ name: 'Box', status: 'creating' }), { isCreating: true });
+    const button = screen.getByRole('button', { name: /creating/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: /^create bin$/i })).toBeNull();
   });
 });

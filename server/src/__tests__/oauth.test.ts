@@ -3,7 +3,8 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { query } from '../db.js';
 import { createApp } from '../index.js';
-import { findOrCreateOAuthUser } from '../lib/oauth.js';
+import { ForbiddenError, UnauthorizedError } from '../lib/httpErrors.js';
+import { findOrCreateOAuthUser, linkOAuthIdentity, oauthErrorReason } from '../lib/oauth.js';
 import { signToken } from '../middleware/auth.js';
 import { createTestUser } from './helpers.js';
 
@@ -155,10 +156,16 @@ describe('OAuth routes', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({});
     expect(res.status).toBe(200);
-    expect(res.body.message).toBe('Account deleted');
-    // Verify user is gone
-    const check = await query('SELECT id FROM users WHERE id = $1', [user.id]);
-    expect(check.rows).toHaveLength(0);
+    // Default grace = 30 days → soft-delete with a scheduled hard-delete.
+    expect(res.body.message).toBe('Account scheduled for deletion');
+    expect(res.body.scheduledAt).toBeTruthy();
+    // User row remains during the grace window with deletion fields set.
+    const check = await query<{ deleted_at: string | null }>(
+      'SELECT deleted_at FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(check.rows).toHaveLength(1);
+    expect(check.rows[0].deleted_at).not.toBeNull();
   });
 
   it('OAuth-only user can delete account with no request body', async () => {
@@ -174,7 +181,7 @@ describe('OAuth routes', () => {
       .delete('/api/auth/account')
       .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
-    expect(res.body.message).toBe('Account deleted');
+    expect(res.body.message).toBe('Account scheduled for deletion');
   });
 
   it('OAuth-only user hasPassword is false on /me', async () => {
@@ -210,6 +217,87 @@ describe('OAuth routes', () => {
     expect(res.status).toBe(401);
   });
 
+  it('password user links a Google identity (created)', async () => {
+    const { user } = await createTestUser(app, { email: 'pwlink@example.com' });
+    const result = await linkOAuthIdentity({
+      userId: user.id,
+      provider: 'google',
+      providerUserId: 'sub-pwlink',
+      email: 'pwlink@example.com',
+    });
+    expect(result).toBe('created');
+    const links = await query<{ provider: string; provider_user_id: string }>(
+      'SELECT provider, provider_user_id FROM user_oauth_links WHERE user_id = $1',
+      [user.id],
+    );
+    expect(links.rows).toEqual([{ provider: 'google', provider_user_id: 'sub-pwlink' }]);
+  });
+
+  it('linking the same identity twice returns already_linked', async () => {
+    const { user } = await createTestUser(app, { email: 'twice@example.com' });
+    await linkOAuthIdentity({
+      userId: user.id,
+      provider: 'google',
+      providerUserId: 'sub-twice',
+      email: 'twice@example.com',
+    });
+    const second = await linkOAuthIdentity({
+      userId: user.id,
+      provider: 'google',
+      providerUserId: 'sub-twice',
+      email: 'twice@example.com',
+    });
+    expect(second).toBe('already_linked');
+  });
+
+  it('linking an identity already attached to another user returns conflict', async () => {
+    const a = await createTestUser(app, { email: 'a@example.com' });
+    const b = await createTestUser(app, { email: 'b@example.com' });
+    await linkOAuthIdentity({
+      userId: a.user.id,
+      provider: 'google',
+      providerUserId: 'sub-shared',
+      email: 'a@example.com',
+    });
+    const second = await linkOAuthIdentity({
+      userId: b.user.id,
+      provider: 'google',
+      providerUserId: 'sub-shared',
+      email: 'b@example.com',
+    });
+    expect(second).toBe('conflict');
+  });
+
+  it('linking replaces an existing different sub for the same (user, provider)', async () => {
+    const { user } = await createTestUser(app, { email: 'rep@example.com' });
+    await linkOAuthIdentity({
+      userId: user.id,
+      provider: 'google',
+      providerUserId: 'sub-old',
+      email: 'rep@example.com',
+    });
+    const replaced = await linkOAuthIdentity({
+      userId: user.id,
+      provider: 'google',
+      providerUserId: 'sub-new',
+      email: 'rep@example.com',
+    });
+    expect(replaced).toBe('created');
+    const links = await query<{ provider_user_id: string }>(
+      'SELECT provider_user_id FROM user_oauth_links WHERE user_id = $1 AND provider = $2',
+      [user.id, 'google'],
+    );
+    expect(links.rows).toEqual([{ provider_user_id: 'sub-new' }]);
+  });
+
+  it('oauthErrorReason maps known errors to specific reasons', () => {
+    expect(oauthErrorReason(new ForbiddenError('An account with this email already exists. ...'))).toBe('email_in_use');
+    expect(oauthErrorReason(new ForbiddenError('Registration is currently closed'))).toBe('forbidden');
+    expect(oauthErrorReason(new UnauthorizedError('Invalid OAuth state'))).toBe('invalid_state');
+    expect(oauthErrorReason({ code: 'ERR_JWT_INVALID' })).toBe('token_invalid');
+    expect(oauthErrorReason(new Error('something else'))).toBe('callback_failed');
+  });
+
   it('password user can delete account with correct password', async () => {
     const { token, password, user } = await createTestUser(app);
     const res = await request(app)
@@ -217,8 +305,14 @@ describe('OAuth routes', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ password });
     expect(res.status).toBe(200);
-    expect(res.body.message).toBe('Account deleted');
-    const check = await query('SELECT id FROM users WHERE id = $1', [user.id]);
-    expect(check.rows).toHaveLength(0);
+    // Default grace = 30 days → soft-delete with a scheduled hard-delete.
+    expect(res.body.message).toBe('Account scheduled for deletion');
+    expect(res.body.scheduledAt).toBeTruthy();
+    const check = await query<{ deleted_at: string | null }>(
+      'SELECT deleted_at FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(check.rows).toHaveLength(1);
+    expect(check.rows[0].deleted_at).not.toBeNull();
   });
 });

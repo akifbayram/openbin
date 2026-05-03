@@ -768,6 +768,7 @@ router.post('/locations/:id/import/zip', importLimiter, zipUpload, requireLocati
       const photos: ExportPhoto[] = [];
       if (bin.photos && Array.isArray(bin.photos)) {
         for (const ref of bin.photos) {
+          if (typeof ref.zipPath !== 'string' || !/^photos\/[\w-]+\.[a-z]{3,4}$/.test(ref.zipPath)) continue;
           const photoBytes = files[ref.zipPath];
           if (!photoBytes) continue;
           const data = Buffer.from(photoBytes).toString('base64');

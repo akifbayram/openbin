@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDialect } from '../db/dialect.js';
+import { d, getDialect } from '../db/dialect.js';
 import { generateUuid, query } from '../db.js';
 import { logAdminAction } from '../lib/adminAudit.js';
 import { isValidRole } from '../lib/adminHelpers.js';
@@ -210,6 +210,32 @@ router.get('/health', asyncHandler(async (_req, res) => {
     },
     activeSessions: sessionResult.rows[0].cnt ?? 0,
     uptime: process.uptime(),
+  });
+}));
+
+// GET /deletion-diagnostics
+router.get('/deletion-diagnostics', asyncHandler(async (_req, res) => {
+  const [pending, expired, orphans] = await Promise.all([
+    query<{ cnt: number }>(
+      `SELECT COUNT(*) AS cnt FROM users
+       WHERE deletion_scheduled_at IS NOT NULL
+         AND ${d.tsCompareNow('deletion_scheduled_at', '>')}`,
+    ),
+    query<{ cnt: number }>(
+      `SELECT COUNT(*) AS cnt FROM users
+       WHERE deletion_scheduled_at IS NOT NULL
+         AND ${d.tsCompareNow('deletion_scheduled_at', '<=')}`,
+    ),
+    query<{ cnt: number }>(
+      `SELECT COUNT(*) AS cnt FROM subscription_orphans
+       WHERE received_at >= ${d.daysAgo(30)}`,
+    ),
+  ]);
+
+  res.json({
+    pendingDeletionCount: Number(pending.rows[0]?.cnt ?? 0),
+    expiredPendingCount: Number(expired.rows[0]?.cnt ?? 0),
+    subscriptionOrphanCount30d: Number(orphans.rows[0]?.cnt ?? 0),
   });
 }));
 

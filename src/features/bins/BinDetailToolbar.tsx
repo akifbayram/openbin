@@ -3,6 +3,7 @@ import { ArrowRightLeft, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHor
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useCreditCostLabel, visionWeight } from '@/lib/aiCreditCost';
 import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { useMenuKeyboard } from '@/lib/useMenuKeyboard';
@@ -19,6 +20,8 @@ interface BinDetailToolbarProps {
   showAiButton: boolean;
   isAnalyzing: boolean;
   isReanalysis: boolean;
+  /** Used to surface the (variable) AI credit cost in the Analyze tooltip. */
+  analyzePhotoCount: number;
   otherLocations: Location[];
   onClose: () => void;
   onPrev: (() => void) | null;
@@ -46,6 +49,7 @@ export function BinDetailToolbar({
   showAiButton,
   isAnalyzing,
   isReanalysis,
+  analyzePhotoCount,
   otherLocations,
   onClose,
   onPrev,
@@ -68,6 +72,9 @@ export function BinDetailToolbar({
   const wrapperRef = useRef<HTMLDivElement>(null);
   useClickOutside(wrapperRef, close);
   const { menuRef, onKeyDown: menuKeyDown } = useMenuKeyboard(visible, close);
+  const aiCost = visionWeight(analyzePhotoCount);
+  const aiBaseLabel = isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI';
+  const { label: aiTipLabel, compactSuffix: aiMobileSuffix } = useCreditCostLabel(aiBaseLabel, aiCost);
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(bin.name);
@@ -170,8 +177,8 @@ export function BinDetailToolbar({
         {/* Desktop-only action buttons */}
         <div className="hidden lg:flex gap-1.5">
           {showAiButton && (
-            <Tooltip content={isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'} side="bottom">
-              <Button size="icon" onClick={onAnalyze} disabled={isAnalyzing} aria-label={isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'} variant="ghost">
+            <Tooltip content={aiTipLabel} side="bottom">
+              <Button size="icon" onClick={onAnalyze} disabled={isAnalyzing} aria-label={aiTipLabel} variant="ghost">
                 {isAnalyzing ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <Sparkles className="h-[18px] w-[18px]" />}
               </Button>
             </Tooltip>
@@ -211,9 +218,12 @@ export function BinDetailToolbar({
             >
               {/* Mobile-only: AI, Pin */}
               {showAiButton && (
-                <button type="button" role="menuitem" className={cn(menuItemBase, 'lg:hidden disabled:opacity-40')} onClick={() => handleItem(onAnalyze)} disabled={isAnalyzing}>
-                  {isAnalyzing ? <Loader2 className="h-4 w-4 text-[var(--text-tertiary)] animate-spin" /> : <Sparkles className="h-4 w-4 text-[var(--text-tertiary)]" />}
-                  {isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'}
+                <button type="button" role="menuitem" className={cn(menuItemBase, 'lg:hidden disabled:opacity-40 justify-between')} onClick={() => handleItem(onAnalyze)} disabled={isAnalyzing}>
+                  <span className="row-tight">
+                    {isAnalyzing ? <Loader2 className="h-4 w-4 text-[var(--text-tertiary)] animate-spin" /> : <Sparkles className="h-4 w-4 text-[var(--text-tertiary)]" />}
+                    {aiBaseLabel}
+                  </span>
+                  <span className="text-xs text-[var(--text-tertiary)]">{aiCost}c{aiMobileSuffix}</span>
                 </button>
               )}
               {canPin && (

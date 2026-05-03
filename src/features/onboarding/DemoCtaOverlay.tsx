@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BrandIcon } from '@/components/BrandIcon';
 import { Button } from '@/components/ui/button';
 import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
-import { cn, focusRing, iconButton, overlayBackdrop } from '@/lib/utils';
+import { closeButton, cn, focusRing, overlayBackdrop } from '@/lib/utils';
 import { DEMO_TOUR_DONE_EVENT, getDemoTourDoneAt } from './onboardingConstants';
 
 const DEMO_CTA_DELAY_MS = 3 * 60 * 1000;
@@ -52,20 +52,27 @@ export function DemoCtaOverlay() {
   if (!visible) return null;
 
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: dismiss is also reachable via Escape (useOverlayAnimation) and the explicit close button
     <div
       className={cn(overlayBackdrop, 'z-50 flex items-center justify-center', open ? 'opacity-100' : 'opacity-0')}
       role="dialog"
       aria-modal="true"
       aria-labelledby="demo-cta-title"
+      onClick={dismiss}
     >
-      <div className="flat-heavy rounded-[var(--radius-xl)] w-full max-w-sm mx-5 px-8 py-8 relative onboarding-step-enter">
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: card swallows backdrop clicks so only the backdrop dismisses */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation only — no keyboard equivalent needed */}
+      <div
+        className="flat-heavy rounded-[var(--radius-xl)] w-full max-w-sm mx-5 px-8 py-8 relative onboarding-step-enter"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className={cn(iconButton, focusRing, 'absolute top-3 right-3 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors')}
+          className={cn(closeButton, focusRing)}
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
         </button>
 
         <div className="flex flex-col items-center text-center">

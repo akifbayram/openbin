@@ -1,8 +1,48 @@
 import type { LanguageModel, ModelMessage, UserContent } from 'ai';
 import { Output, streamText } from 'ai';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { mapSdkError, toSafeAiMessage } from './aiCaller.js';
+import { config } from './config.js';
 import { createLogger } from './logger.js';
+
+/**
+ * Per-provider streamText options. Currently bounds Gemini 3 thinking depth —
+ * Gemini 3 Flash defaults to dynamic thinking which can multiply output-token
+ * cost on complex prompts (e.g. photo analyses with many items). Capping via
+ * `thinkingLevel` keeps reasoning-token spend predictable.
+ *
+ * Gemini 2.5 uses a numeric `thinkingBudget` instead; not handled here because
+ * OpenBin currently routes vision/deepText to Gemini 3.
+ */
+type GoogleProviderOptions = {
+  google: { thinkingConfig: { thinkingLevel: 'minimal' | 'low' | 'medium' | 'high' } };
+};
+function buildProviderOptions(model: LanguageModel): GoogleProviderOptions | undefined {
+  const id = (model as { modelId?: string }).modelId ?? '';
+  if (/^gemini-3/i.test(id)) {
+    return {
+      google: {
+        thinkingConfig: { thinkingLevel: config.geminiThinkingLevel },
+      },
+    };
+  }
+  return undefined;
+}
+
+/** Returns a signal that aborts on `req.close` OR baseSignal, whichever fires first. */
+export function withClientDisconnect(req: Request, baseSignal?: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+
+  if (baseSignal?.aborted) {
+    controller.abort();
+    return controller.signal;
+  }
+
+  baseSignal?.addEventListener('abort', () => controller.abort(), { once: true });
+  req.once('close', () => controller.abort());
+
+  return controller.signal;
+}
 
 const log = createLogger('ai');
 
@@ -48,9 +88,11 @@ export async function streamAiToWriter(
   opts: StreamOptions,
 ): Promise<string | null> {
   try {
+    const providerOptions = buildProviderOptions(model);
     const streamResult = streamText({
       model,
       ...(opts.schema ? { output: Output.object({ schema: opts.schema }) } : {}),
+      ...(providerOptions ? { providerOptions } : {}),
       system: opts.system,
       messages: [
         ...(opts.priorMessages ?? []),

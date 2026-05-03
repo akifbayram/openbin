@@ -1,4 +1,5 @@
 import { Events, notify } from '@/lib/eventBus';
+import type { CheckoutAction } from '@/types';
 
 const API_BASE = '';
 const CSRF_COOKIE = 'openbin-csrf';
@@ -21,12 +22,23 @@ export class ApiError extends Error {
   status: number;
   code?: string;
   upgradeUrl?: string | null;
-  constructor(status: number, message: string, code?: string, upgradeUrl?: string | null) {
+  upgradeAction?: CheckoutAction | null;
+  details?: Record<string, unknown>;
+  constructor(
+    status: number,
+    message: string,
+    code?: string,
+    upgradeUrl?: string | null,
+    upgradeAction?: CheckoutAction | null,
+    details?: Record<string, unknown>,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.upgradeUrl = upgradeUrl;
+    this.upgradeAction = upgradeAction ?? null;
+    this.details = details;
   }
 }
 
@@ -128,15 +140,24 @@ async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boole
     const data = await res.json().catch(() => ({ error: res.statusText }));
     const code = data.error as string | undefined;
     const upgradeUrl = data.upgrade_url as string | null | undefined;
+    const upgradeAction = (data.upgrade_action ?? null) as CheckoutAction | null;
     if (code === 'PLAN_RESTRICTED' || code === 'SUBSCRIPTION_EXPIRED' || code === 'OVER_LIMIT' || code === 'AI_CREDITS_EXHAUSTED') {
       notify(Events.PLAN);
-      window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl } }));
+      window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl, upgradeAction } }));
     }
     if (res.status === 403 && Date.now() - lastLocationRefresh > 5_000) {
       lastLocationRefresh = Date.now();
       notify(Events.LOCATIONS);
     }
-    throw new ApiError(res.status, data.message || data.error || res.statusText, code, upgradeUrl);
+    const { error: _e, message: _m, upgrade_url: _u, upgrade_action: _ua, ...rest } = data;
+    throw new ApiError(
+      res.status,
+      data.message || data.error || res.statusText,
+      code,
+      upgradeUrl,
+      upgradeAction,
+      Object.keys(rest).length > 0 ? rest : undefined,
+    );
   }
 
   if (res.status === 204) return undefined as T;

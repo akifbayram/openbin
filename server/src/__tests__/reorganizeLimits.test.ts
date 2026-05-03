@@ -24,6 +24,8 @@ const plusHint: UserPlanInfo = {
   activeUntil: null,
   email: 'plus@example.com',
   previousSubStatus: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
 };
 
 const proHint: UserPlanInfo = {
@@ -32,6 +34,8 @@ const proHint: UserPlanInfo = {
   activeUntil: null,
   email: 'pro@example.com',
   previousSubStatus: null,
+  cancelAtPeriodEnd: null,
+  billingPeriod: null,
 };
 
 describe('assertReorganizeBinLimit', () => {

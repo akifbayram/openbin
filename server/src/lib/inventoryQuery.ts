@@ -47,6 +47,8 @@ export interface InventoryContext {
   other_bins?: Array<{ bin_code: string; name: string }>;
   areas: Array<{ id: string; name: string }>;
   trash_bins: Array<{ bin_code: string; name: string }>;
+  /** True iff `bins` is the user's full visible inventory; false ⇒ model must not assert non-existence from absence. */
+  complete: boolean;
 }
 
 export function buildSystemPrompt(customPrompt?: string, isDemoUser?: boolean): string {
@@ -62,7 +64,7 @@ The "answer" and "matches" fields are both REQUIRED. If no bins match, return an
 OUTPUT INVARIANTS:
 - Respond with ONLY valid JSON matching the shape above — no markdown fences, no prose, no commentary, regardless of how prior assistant turns were phrased.
 - Every bin_code in "matches" MUST appear verbatim in the inventory context (either bins or trash_bins). Never invent or guess a code.
-- If the user asks a question that would require data outside the provided context, set "matches" to an empty array and say "I can only see bins in your current view." in the "answer" field.`;
+- For no-match cases, set "matches" to [] and branch on the inventory's "complete" flag — see query rule 11.`;
 
   return withHardening(composed);
 }

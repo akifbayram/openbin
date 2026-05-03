@@ -216,6 +216,7 @@ describe('enforceEngineLock', () => {
   it('throws on engine mismatch', async () => {
     h.mockSqliteEngine.query
       .mockResolvedValueOnce({ rows: [{ id: '1' }], rowCount: 1 }) // seedAdminUser — admin exists
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // seedSystemUser INSERT
       .mockResolvedValueOnce({ rows: [{ value: 'postgres' }], rowCount: 1 }); // engine lock — mismatch
 
     await expect(reinitialize()).rejects.toThrow('Engine mismatch');
@@ -224,6 +225,7 @@ describe('enforceEngineLock', () => {
   it('passes when engine matches stored value', async () => {
     h.mockSqliteEngine.query
       .mockResolvedValueOnce({ rows: [{ id: '1' }], rowCount: 1 }) // seedAdminUser — admin exists
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // seedSystemUser INSERT
       .mockResolvedValueOnce({ rows: [{ value: 'sqlite' }], rowCount: 1 }); // engine lock — match
 
     const engine = await reinitialize();
@@ -320,26 +322,33 @@ describe('seedAdminUser', () => {
   it('checks for any admin (not a specific email)', async () => {
     h.mockSqliteEngine.query
       .mockResolvedValueOnce({ rows: [{ id: '1', email: 'other@example.com' }], rowCount: 1 }) // existing admin
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // seedSystemUser INSERT
       .mockResolvedValueOnce({ rows: [{ value: 'sqlite' }], rowCount: 1 }); // engine lock
 
     await reinitialize();
 
     const selectCall = getSeedCalls().find((sql) => sql.includes('is_admin = TRUE'));
     expect(selectCall).toBeDefined();
-    // No INSERT should happen because an admin already exists
-    const insertCall = getSeedCalls().find((sql) => sql.includes('INSERT INTO users'));
-    expect(insertCall).toBeUndefined();
+    // No admin INSERT should happen because an admin already exists. The
+    // system user INSERT (uses ON CONFLICT (id), not RETURNING) is expected.
+    const adminInsertCall = getSeedCalls().find(
+      (sql) => sql.includes('INSERT INTO users') && sql.includes('RETURNING id'),
+    );
+    expect(adminInsertCall).toBeUndefined();
   });
 
   it('inserts with ON CONFLICT (email) DO NOTHING', async () => {
     h.mockSqliteEngine.query
       .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // seed SELECT — no admin
       .mockResolvedValueOnce({ rows: [{ id: 'new-admin' }], rowCount: 1 }) // seed INSERT RETURNING
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // seedSystemUser INSERT
       .mockResolvedValueOnce({ rows: [{ value: 'sqlite' }], rowCount: 1 }); // engine lock
 
     await reinitialize();
 
-    const insertCall = getSeedCalls().find((sql) => sql.includes('INSERT INTO users'));
+    const insertCall = getSeedCalls().find(
+      (sql) => sql.includes('INSERT INTO users') && sql.includes('RETURNING id'),
+    );
     expect(insertCall).toMatch(/ON CONFLICT\s*\(email\)\s*DO NOTHING/);
     expect(insertCall).toMatch(/RETURNING id/);
   });
@@ -382,11 +391,14 @@ describe('seedAdminUser', () => {
     h.mockSqliteEngine.query
       .mockResolvedValueOnce({ rows: [{ id: 'one', email: 'a@b.co' }], rowCount: 1 }) // existing admin
       .mockResolvedValueOnce({ rows: [{ id: 'two' }], rowCount: 1 }) // INSERT RETURNING
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // seedSystemUser INSERT
       .mockResolvedValueOnce({ rows: [{ value: 'sqlite' }], rowCount: 1 }); // engine lock
 
     await reinitialize();
 
-    const insertCall = getSeedCalls().find((sql) => sql.includes('INSERT INTO users'));
+    const insertCall = getSeedCalls().find(
+      (sql) => sql.includes('INSERT INTO users') && sql.includes('RETURNING id'),
+    );
     expect(insertCall).toBeDefined();
   });
 
@@ -399,7 +411,11 @@ describe('seedAdminUser', () => {
 
     await reinitialize();
 
-    const insertCall = getSeedCalls().find((sql) => sql.includes('INSERT INTO users'));
-    expect(insertCall).toBeUndefined();
+    // The admin INSERT (with RETURNING id) should not happen. The system
+    // user INSERT (different shape) is expected and unrelated.
+    const adminInsertCall = getSeedCalls().find(
+      (sql) => sql.includes('INSERT INTO users') && sql.includes('RETURNING id'),
+    );
+    expect(adminInsertCall).toBeUndefined();
   });
 });

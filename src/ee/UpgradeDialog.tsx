@@ -1,8 +1,9 @@
 import { ArrowUpRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CheckoutLink } from '@/ee/checkoutAction';
 import { usePlan } from '@/lib/usePlan';
-import { cn, focusRing, isSafeExternalUrl } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -14,7 +15,7 @@ interface UpgradeDialogProps {
 export function UpgradeDialog({ open, onOpenChange, feature, description }: UpgradeDialogProps) {
   const { isFree, isPlus, isLocked, planInfo } = usePlan();
   const isActiveFreeOrPlus = (isFree || isPlus) && !isLocked;
-  const upgradeUrl = planInfo.upgradeUrl;
+  const upgradeAction = planInfo.upgradeAction;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -34,11 +35,10 @@ export function UpgradeDialog({ open, onOpenChange, feature, description }: Upgr
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Maybe later
           </Button>
-          {upgradeUrl && isSafeExternalUrl(upgradeUrl) && (
-            <a
-              href={upgradeUrl}
+          {upgradeAction && (
+            <CheckoutLink
+              action={upgradeAction}
               target="_blank"
-              rel="noopener noreferrer"
               className={cn(
                 'inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] h-10 px-5 text-[14px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors',
                 focusRing,
@@ -46,7 +46,7 @@ export function UpgradeDialog({ open, onOpenChange, feature, description }: Upgr
             >
               Upgrade
               <ArrowUpRight className="h-3.5 w-3.5" />
-            </a>
+            </CheckoutLink>
           )}
         </DialogFooter>
       </DialogContent>

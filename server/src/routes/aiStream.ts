@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { buildCommandContext, buildInventoryContext } from '../lib/aiContext.js';
+import { reorganizeWeight, visionWeight } from '../lib/aiCreditWeights.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import { buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent } from '../lib/aiProviders.js';
-import { extractPhotoIds, extractUploadedFiles, sanitizePreviousResult, validatePreviousResult } from '../lib/aiRequestHelpers.js';
+import { countPhotoIds, countUploadedFiles, extractPhotoIds, extractUploadedFiles, sanitizePreviousResult, validatePreviousResult } from '../lib/aiRequestHelpers.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { sanitizeForPrompt } from '../lib/aiSanitize.js';
 import { AiSuggestionsSchema, QueryResultSchema, TagProposalSchema } from '../lib/aiSchemas.js';
@@ -27,7 +28,7 @@ import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../l
 import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 import { demoConnectionLimiter, isDemoUser as isDemoConn } from '../middleware/demoConnectionLimiter.js';
-import { requireLocationMember } from '../middleware/locationAccess.js';
+import { requireLocationMemberOrAbove } from '../middleware/locationAccess.js';
 import { checkAiCredits, requireAiAccess, requirePlusOrAbove } from '../middleware/requirePlan.js';
 
 const streamRouter = Router();
@@ -134,8 +135,21 @@ function validateBinIds(binIds: unknown): string[] | undefined {
   return valid.length > 0 ? valid : undefined;
 }
 
+/** Count what the route is about to analyze without throwing — the credit
+ *  resolver runs before the route handler can produce its own validation
+ *  error, so we charge for "at least 1 photo" even when the request is
+ *  malformed. The route handler will then throw the real ValidationError. */
+function imageCountFromReq(req: import('express').Request): number {
+  return countUploadedFiles(req) || countPhotoIds((req.body ?? {}) as Record<string, unknown>) || 1;
+}
+
+function reorganizeBinCountFromReq(req: import('express').Request): number {
+  const body = (req.body ?? {}) as { bins?: unknown };
+  return Array.isArray(body.bins) ? body.bins.length : 0;
+}
+
 // POST /api/ai/query/stream
-streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream query', async (req, res) => {
+streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits(), requireLocationMemberOrAbove(), aiRouteHandler('stream query', async (req, res) => {
   const question = validateTextInput(req.body.question, 'question');
   const { locationId } = req.body;
   const priorMessages = parseHistoryFromBody(req.body);
@@ -149,13 +163,13 @@ streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAi
     system: buildQuerySysPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
     userContent: buildQueryUserMsg(question, context),
     priorMessages,
-    ...streamOpts(settings, { maxTokens: 4096, temperature: 0.2 }),
+    ...streamOpts(settings, req, { maxTokens: 4096, temperature: 0.2 }),
     enrichResult: makeQueryEnrichResult(locationId, req.user!.id),
   });
 }));
 
 // POST /api/ai/command/stream
-streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream command', async (req, res) => {
+streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits(), requireLocationMemberOrAbove(), aiRouteHandler('stream command', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId } = req.body;
   const priorMessages = parseHistoryFromBody(req.body);
@@ -172,13 +186,13 @@ streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), check
     system: buildCommandSysPrompt(context.availableColors, context.availableIcons, settings.command_prompt ?? undefined, isDemoUser(req)),
     userContent: buildCommandUserMsg(request),
     priorMessages,
-    ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
+    ...streamOpts(settings, req, { maxTokens: 2500, temperature: 0.2 }),
     enrichResult: makeCommandEnrichResult(locationId, req.user!.id),
   });
 }));
 
 // POST /api/ai/ask/stream — unified command+query endpoint
-streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream ask', async (req, res) => {
+streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits(), requireLocationMemberOrAbove(), aiRouteHandler('stream ask', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId, binIds: rawBinIds } = req.body;
   const binIds = validateBinIds(rawBinIds);
@@ -202,7 +216,7 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
       system: buildQuerySysPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
       userContent: buildQueryUserMsg(`${scopeNote}${text}`, queryContext),
       priorMessages,
-      ...streamOpts(settings, { maxTokens: 4096, temperature: 0.2 }),
+      ...streamOpts(settings, req, { maxTokens: 4096, temperature: 0.2 }),
       enrichResult: makeQueryEnrichResult(locationId, req.user!.id),
     });
   } else {
@@ -220,14 +234,14 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
       system,
       userContent: buildCommandUserMsg(request),
       priorMessages,
-      ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
+      ...streamOpts(settings, req, { maxTokens: 2500, temperature: 0.2 }),
       enrichResult: makeCommandEnrichResult(locationId, req.user!.id),
     });
   }
 }));
 
 // POST /api/ai/structure-text/stream
-streamRouter.post('/structure-text/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('stream structure-text', async (req, res) => {
+streamRouter.post('/structure-text/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits(), aiRouteHandler('stream structure-text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { context } = req.body;
   const { settings, model } = await resolveUserModel(req.user!.id, 'structure', isDemoUser(req));
@@ -235,7 +249,7 @@ streamRouter.post('/structure-text/stream', ...aiRateLimiters, requireAiAccess()
   await pipeAiStreamToResponse(res, model, {
     system: buildStructurePrompt({ text, mode: 'items', context }, settings.structure_prompt ?? undefined, isDemoUser(req)),
     userContent: text,
-    ...streamOpts(settings, { maxTokens: STRUCTURE_TEXT_TOKENS, temperature: 0.2 }),
+    ...streamOpts(settings, req, { maxTokens: STRUCTURE_TEXT_TOKENS, temperature: 0.2 }),
   });
 }));
 
@@ -263,7 +277,7 @@ function demoAwareAnalyzeUpload(req: import('express').Request, res: import('exp
 }
 
 // POST /api/ai/analyze-image/stream
-streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnalyzeUpload, ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('stream analyze image', async (req, res) => {
+streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnalyzeUpload, ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits((req) => visionWeight(imageCountFromReq(req))), aiRouteHandler('stream analyze image', async (req, res) => {
   const allFiles = extractUploadedFiles(req);
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
@@ -278,7 +292,7 @@ streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnaly
 }));
 
 // POST /api/ai/analyze/stream — stream analysis of stored photos
-streamRouter.post('/analyze/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('stream analyze photo', async (req, res) => {
+streamRouter.post('/analyze/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits((req) => visionWeight(imageCountFromReq(req))), aiRouteHandler('stream analyze photo', async (req, res) => {
   const ids = extractPhotoIds(req.body);
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
@@ -298,7 +312,7 @@ streamRouter.post('/analyze/stream', ...aiRateLimiters, requirePlusOrAbove(), re
 }));
 
 // POST /api/ai/reanalyze/stream — stream reanalysis of stored photos with previous result context
-streamRouter.post('/reanalyze/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('stream reanalyze photo', async (req, res) => {
+streamRouter.post('/reanalyze/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits((req) => visionWeight(imageCountFromReq(req))), aiRouteHandler('stream reanalyze photo', async (req, res) => {
   const ids = extractPhotoIds(req.body);
   const safePrevious = sanitizePreviousResult(validatePreviousResult(req.body.previousResult));
 
@@ -320,7 +334,7 @@ streamRouter.post('/reanalyze/stream', ...aiRateLimiters, requirePlusOrAbove(), 
 }));
 
 // POST /api/ai/correct/stream — correct a previous analysis result
-streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('stream correction', async (req, res) => {
+streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits(), aiRouteHandler('stream correction', async (req, res) => {
   const { correction, locationId } = req.body;
 
   const safePrevious = sanitizePreviousResult(validatePreviousResult(req.body.previousResult));
@@ -346,7 +360,7 @@ streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), check
     system: buildCorrectionPrompt(),
     userContent: userMessage,
     schema: AiSuggestionsSchema,
-    ...streamOpts(settings, { maxTokens: 2500 }),
+    ...streamOpts(settings, req, { maxTokens: 2500 }),
   });
 }));
 
@@ -354,7 +368,7 @@ streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), check
 streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
-]), ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('stream reanalyze image', async (req, res) => {
+]), ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits((req) => visionWeight(imageCountFromReq(req))), aiRouteHandler('stream reanalyze image', async (req, res) => {
   const allFiles = extractUploadedFiles(req);
 
   let rawPrev: unknown = null;
@@ -380,7 +394,7 @@ streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
 }));
 
 // POST /api/ai/reorganize/stream
-streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
+streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits((req) => reorganizeWeight(reorganizeBinCountFromReq(req))), requireLocationMemberOrAbove(), aiRouteHandler('stream reorganization', async (req, res) => {
   const { bins: inputBins, maxBins, areaName, userNotes, strictness, granularity,
     ambiguousPolicy, duplicates, outliers, minItemsPerBin, maxItemsPerBin } = req.body;
 
@@ -411,7 +425,7 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
   // Retry up to 3 times if the AI drops or invents items (per-item identity, not just totals)
   const MAX_ATTEMPTS = 3;
   const writeEvent = initSseResponse(res);
-  const sOpts = streamOpts(settings, { temperature: 0.2, maxTokens: 16000 });
+  const sOpts = streamOpts(settings, req, { temperature: 0.2, maxTokens: 16000 });
   const allowDupes = ambiguousPolicy === 'multi-bin' || duplicates === 'allow';
   const inputItemNames = inputBins.flatMap((b: { items?: string[] }) => b.items ?? []);
   let finalText: string | null = null;
@@ -452,7 +466,7 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
         type: 'error',
         message: "Couldn't preserve all items after 3 attempts. Try adjusting options or regenerate.",
       });
-      await refundAiCredit(req.user!.id);
+      await refundAiCredit(req.user!.id, res.locals.aiCreditWeight ?? 1);
     } else {
       writeEvent({ type: 'done', text: finalText });
     }
@@ -462,7 +476,7 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(),
 }));
 
 // POST /api/ai/reorganize-tags/stream
-streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream tag suggestions', async (req, res) => {
+streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits((req) => reorganizeWeight(reorganizeBinCountFromReq(req))), requireLocationMemberOrAbove(), aiRouteHandler('stream tag suggestions', async (req, res) => {
   const { bins: inputBins, locationId, changeLevel, granularity, maxTagsPerBin, userNotes } = req.body ?? {};
 
   if (!Array.isArray(inputBins) || inputBins.length === 0) throw new ValidationError('bins array is required');
@@ -513,7 +527,7 @@ streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbo
 
   const MAX_ATTEMPTS = 3;
   const writeEvent = initSseResponse(res);
-  const sOpts = streamOpts(settings, { temperature: 0.2, maxTokens: 8000 });
+  const sOpts = streamOpts(settings, req, { temperature: 0.2, maxTokens: 8000 });
   let finalText: string | null = null;
   let hardFailure = false;
 
@@ -556,7 +570,7 @@ streamRouter.post('/reorganize-tags/stream', ...aiRateLimiters, requirePlusOrAbo
 
     if (hardFailure || !finalText) {
       writeEvent({ type: 'error', message: 'AI returned an invalid response after 3 attempts' });
-      await refundAiCredit(req.user!.id);
+      await refundAiCredit(req.user!.id, res.locals.aiCreditWeight ?? 1);
       return;
     }
 

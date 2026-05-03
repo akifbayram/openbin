@@ -5,6 +5,7 @@ import { computeChanges } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ConflictError, ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
+import { countNonViewerMembers } from '../lib/memberCounts.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getEffectiveMemberRole, getFeatureMap, invalidateOverLimitCache, isSelfHosted, type PlanTier } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
@@ -25,6 +26,7 @@ router.get('/', asyncHandler(async (req, res) => {
     `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.app_name, l.term_bin, l.term_location, l.term_area, l.default_join_role, l.created_at, l.updated_at,
             lm.role,
             (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count,
+            (SELECT COUNT(*) FROM location_members WHERE location_id = l.id AND role = 'viewer') AS viewer_count,
             (SELECT COUNT(*) FROM areas WHERE location_id = l.id) AS area_count,
             (SELECT COUNT(*) FROM bins WHERE location_id = l.id AND deleted_at IS NULL) AS bin_count
      FROM locations l
@@ -52,7 +54,8 @@ router.get('/', asyncHandler(async (req, res) => {
         row.role as 'admin' | 'member' | 'viewer',
         row.created_by,
       ),
-      member_count: row.member_count,
+      member_count: Number(row.member_count),
+      viewer_count: Number(row.viewer_count),
       area_count: row.area_count,
       bin_count: row.bin_count,
       created_at: row.created_at,
@@ -136,6 +139,7 @@ router.post('/', asyncHandler(async (req, res) => {
     default_join_role: location.default_join_role,
     role: 'admin',
     member_count: 1,
+    viewer_count: 0,
     area_count: 0,
     created_at: location.created_at,
     updated_at: location.updated_at,
@@ -332,12 +336,11 @@ router.post('/join', asyncHandler(async (req, res) => {
       ? getFeatureMap(planRow.rows[0].plan as PlanTier)
       : getFeatureMap(1 as PlanTier); // PRO default
 
-    if (ownerFeatures.maxMembersPerLocation !== null) {
-      const countResult = await tx<{ cnt: number }>(
-        'SELECT COUNT(*) as cnt FROM location_members WHERE location_id = $1',
-        [location.id],
-      );
-      if (countResult.rows[0].cnt >= ownerFeatures.maxMembersPerLocation) {
+    // Viewers don't consume paid member slots (free-viewers model).
+    const joiningAsViewer = location.default_join_role === 'viewer';
+    if (!joiningAsViewer && ownerFeatures.maxMembersPerLocation !== null) {
+      const nonViewerCount = await countNonViewerMembers(location.id, tx);
+      if (nonViewerCount >= ownerFeatures.maxMembersPerLocation) {
         throw new PlanRestrictedError('This location has reached its member limit');
       }
     }
@@ -357,15 +360,18 @@ router.post('/join', asyncHandler(async (req, res) => {
     entityName: req.user!.email,
   });
 
-  // Get area count for the joined location
-  const areaCountResult = await query(
-    'SELECT COUNT(*) AS area_count FROM areas WHERE location_id = $1',
-    [location.id]
-  );
-  const memberCountResult = await query(
-    'SELECT COUNT(*) AS member_count FROM location_members WHERE location_id = $1',
-    [location.id]
-  );
+  const [areaCountResult, memberCountResult] = await Promise.all([
+    query<{ area_count: number }>(
+      'SELECT COUNT(*) AS area_count FROM areas WHERE location_id = $1',
+      [location.id],
+    ),
+    query<{ member_count: number; viewer_count: number }>(
+      `SELECT COUNT(*) AS member_count,
+              SUM(CASE WHEN role = 'viewer' THEN 1 ELSE 0 END) AS viewer_count
+       FROM location_members WHERE location_id = $1`,
+      [location.id],
+    ),
+  ]);
 
   res.status(201).json({
     id: location.id,
@@ -379,7 +385,8 @@ router.post('/join', asyncHandler(async (req, res) => {
     term_location: location.term_location,
     term_area: location.term_area,
     role: location.default_join_role,
-    member_count: memberCountResult.rows[0]?.member_count ?? 0,
+    member_count: Number(memberCountResult.rows[0]?.member_count ?? 0),
+    viewer_count: Number(memberCountResult.rows[0]?.viewer_count ?? 0),
     area_count: areaCountResult.rows[0]?.area_count ?? 0,
     created_at: location.created_at,
     updated_at: location.updated_at,
@@ -552,10 +559,43 @@ router.put('/:id/members/:userId/role', asyncHandler(async (req, res) => {
     }
   }
 
-  await query(
-    'UPDATE location_members SET role = $1 WHERE location_id = $2 AND user_id = $3',
-    [role, id, userId]
-  );
+  // Elevating a viewer consumes a paid slot — run the same cap check the join path uses.
+  // Wrap in a transaction so the count + UPDATE are serialized against concurrent joins.
+  const isElevatingViewer = targetRole === 'viewer' && role !== 'viewer';
+  const ownerId = await withTransaction(async (tx) => {
+    const locResult = await tx<{ created_by: string }>(
+      `SELECT created_by FROM locations WHERE id = $1`,
+      [id],
+    );
+    const owner = locResult.rows[0]?.created_by;
+
+    if (isElevatingViewer && owner) {
+      const planRow = await tx<{ plan: number }>(
+        `SELECT plan FROM users WHERE id = $1 ${d.forUpdate()}`,
+        [owner],
+      );
+      const ownerFeatures = planRow.rows.length > 0
+        ? getFeatureMap(planRow.rows[0].plan as PlanTier)
+        : getFeatureMap(1 as PlanTier);
+      if (ownerFeatures.maxMembersPerLocation !== null) {
+        const nonViewerCount = await countNonViewerMembers(id, tx);
+        if (nonViewerCount >= ownerFeatures.maxMembersPerLocation) {
+          throw new PlanRestrictedError(
+            `Cannot promote viewer: this location has reached its ${ownerFeatures.maxMembersPerLocation}-member limit. Upgrade or remove an existing member first.`,
+          );
+        }
+      }
+    }
+
+    await tx(
+      'UPDATE location_members SET role = $1 WHERE location_id = $2 AND user_id = $3',
+      [role, id, userId],
+    );
+
+    return owner;
+  });
+
+  if (ownerId) invalidateOverLimitCache(ownerId);
 
   // Get email for activity log
   const userResult = await query('SELECT email FROM users WHERE id = $1', [userId]);

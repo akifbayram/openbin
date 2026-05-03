@@ -193,9 +193,12 @@ export async function insertBinWithItems(fields: InsertBinFields, assertLimitUse
           const item = fields.items[i];
           const itemName = typeof item === 'string' ? item : (item as { name: string })?.name;
           if (!itemName) continue;
+          const itemQty = typeof item === 'object' && item !== null
+            ? ((item as { quantity?: number | null }).quantity ?? null)
+            : null;
           await tx(
-            'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, NULL, $4)',
-            [generateUuid(), binId, itemName, i]
+            'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)',
+            [generateUuid(), binId, itemName, itemQty, i]
           );
         }
 
