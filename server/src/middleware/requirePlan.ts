@@ -7,7 +7,7 @@ import {
   checkAndIncrementAiCredits,
   generateUpgradeAction,
   generateUpgradePlanAction,
-  getFeatureMap,
+  getUserFeatures,
   getUserPlanInfo,
   hasAiAccess,
   isPlusOrAbove,
@@ -119,7 +119,7 @@ export function requireExportAccess(): RequestHandler {
       throw new PlanRestrictedError('Export is not available during your trial. Subscribe to export your data.', u.url, u.action);
     }
 
-    if (getFeatureMap(planInfo.plan).fullExport) { next(); return; }
+    if ((await getUserFeatures(userId)).fullExport) { next(); return; }
 
     const u = actionAndUrl(await generateUpgradeAction(userId, planInfo.email));
     throw new PlanRestrictedError('Export requires a Plus or Pro plan', u.url, u.action);
