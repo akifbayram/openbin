@@ -57,6 +57,10 @@ vi.mock('../db.js', () => ({
 import { query } from '../db.js';
 import { config } from '../lib/config.js';
 import {
+  buildDowngradeFlowAction,
+  buildPortalAction,
+  buildUpgradeAction,
+  buildUpgradePlanAction,
   checkAndIncrementAiCredits,
   checkLocationWritable,
   computeOverLimits,
@@ -471,6 +475,44 @@ describe('generateUpgradeUrl()', () => {
     const { payload: decoded } = await jose.jwtVerify(token, new TextEncoder().encode('sub-secret'));
     expect(decoded.userId).toBe('user-id');
     expect(decoded.email).toBeNull();
+  });
+});
+
+describe('build*Action()', () => {
+  it('buildUpgradeAction produces method:POST with token in fields', () => {
+    const action = buildUpgradeAction('tok123');
+    expect(action.method).toBe('POST');
+    expect(action.fields.token).toBe('tok123');
+    expect(action.url).toBeTruthy();
+  });
+
+  it('buildUpgradeAction returning=true adds returning field', () => {
+    const action = buildUpgradeAction('tok', true);
+    expect(action.fields.returning).toBe('1');
+  });
+
+  it('buildUpgradePlanAction produces method:POST with plan field', () => {
+    const plus = buildUpgradePlanAction('tok', 'plus');
+    expect(plus.method).toBe('POST');
+    expect(plus.fields.plan).toBe('plus');
+    expect(plus.fields.token).toBe('tok');
+
+    const pro = buildUpgradePlanAction('tok', 'pro');
+    expect(pro.fields.plan).toBe('pro');
+  });
+
+  it('buildPortalAction produces method:POST with token in fields only', () => {
+    const action = buildPortalAction('tok999');
+    expect(action.method).toBe('POST');
+    expect(action.fields.token).toBe('tok999');
+    expect(Object.keys(action.fields)).toEqual(['token']);
+  });
+
+  it('buildDowngradeFlowAction produces method:POST with targetPlan field', () => {
+    const action = buildDowngradeFlowAction('tok', 'free');
+    expect(action.method).toBe('POST');
+    expect(action.fields.targetPlan).toBe('free');
+    expect(action.fields.token).toBe('tok');
   });
 });
 

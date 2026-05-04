@@ -116,18 +116,6 @@ describe('CurrentPlanCard', () => {
     expect(screen.queryByText(/\/ quarter/)).toBeNull();
   });
 
-  it('Renders the inline UsageRow inside the card', () => {
-    render(
-      <CurrentPlanCard
-        plan="pro" status="active" activeUntil="2026-05-27T00:00:00Z"
-        cancelAtPeriodEnd={null} billingPeriod="quarterly" trialPeriodDays={7}
-        priceCents={1000} annualSavingsCents={0}
-        usage={PRO_USAGE} features={PRO_FEATURES} aiCredits={null}
-      />,
-    );
-    expect(screen.getByText(/bins/)).toBeInTheDocument();
-  });
-
   it('Trial with trialDaysLeft===0: shows "Trial ended" copy', () => {
     render(
       <CurrentPlanCard

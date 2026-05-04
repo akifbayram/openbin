@@ -2,11 +2,12 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../index.js';
-import { createTestArea, createTestBin, createTestLocation, createTestUser } from './helpers.js';
+import { createTestArea, createTestBin, createTestLocation, createTestUser, joinTestLocation } from './helpers.js';
 
 let app: Express;
 let token: string;
 let locationId: string;
+let inviteCode: string;
 
 beforeEach(async () => {
   app = createApp();
@@ -14,6 +15,7 @@ beforeEach(async () => {
   token = user.token;
   const loc = await createTestLocation(app, token);
   locationId = loc.id;
+  inviteCode = loc.invite_code;
 });
 
 const batch = (body: Record<string, unknown>, authToken?: string) =>
@@ -370,6 +372,37 @@ describe('POST /api/batch', () => {
     });
     expect(res.status).toBe(200);
     expect(res.body.results[0].success).toBe(false);
+  });
+
+  // --- Viewer role enforcement ---
+
+  it('viewer cannot create_bin', async () => {
+    const viewer = await createTestUser(app);
+    await joinTestLocation(app, viewer.token, inviteCode);
+    await request(app).put(`/api/locations/${locationId}/members/${viewer.user.id}/role`).set('Authorization', `Bearer ${token}`).send({ role: 'viewer' });
+
+    const res = await batch({ locationId, operations: [{ type: 'create_bin', name: 'Sneaky' }] }, viewer.token);
+    expect(res.status).toBe(403);
+  });
+
+  it('viewer cannot add_items', async () => {
+    const bin = await createTestBin(app, token, locationId);
+    const viewer = await createTestUser(app);
+    await joinTestLocation(app, viewer.token, inviteCode);
+    await request(app).put(`/api/locations/${locationId}/members/${viewer.user.id}/role`).set('Authorization', `Bearer ${token}`).send({ role: 'viewer' });
+
+    const res = await batch({ locationId, operations: [{ type: 'add_items', bin_id: bin.id, items: ['x'] }] }, viewer.token);
+    expect(res.status).toBe(403);
+  });
+
+  it('viewer cannot delete_bin', async () => {
+    const bin = await createTestBin(app, token, locationId);
+    const viewer = await createTestUser(app);
+    await joinTestLocation(app, viewer.token, inviteCode);
+    await request(app).put(`/api/locations/${locationId}/members/${viewer.user.id}/role`).set('Authorization', `Bearer ${token}`).send({ role: 'viewer' });
+
+    const res = await batch({ locationId, operations: [{ type: 'delete_bin', bin_id: bin.id }] }, viewer.token);
+    expect(res.status).toBe(403);
   });
 
   it('mixed success/failure: bad op does not block others in transaction', async () => {

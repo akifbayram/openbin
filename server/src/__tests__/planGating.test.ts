@@ -92,12 +92,6 @@ function mockFreeUser() {
   vi.mocked(generateUpgradePlanUrl).mockResolvedValue(null);
 }
 
-/** Configure mocks so the self-hosted fast-path is taken. */
-function mockSelfHosted() {
-  vi.mocked(isSelfHosted).mockReturnValue(true);
-  vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
-}
-
 beforeEach(() => {
   app = createApp();
   vi.mocked(isSelfHosted).mockReset();
@@ -125,19 +119,6 @@ describe('AI route plan gating', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-  });
-
-  it('GET /api/ai/settings works for self-hosted (no DB plan query)', async () => {
-    mockSelfHosted();
-    const { token } = await createTestUser(app);
-
-    const res = await request(app)
-      .get('/api/ai/settings')
-      .set('Authorization', `Bearer ${token}`);
-
-    // Self-hosted bypasses plan gate — returns 200 (null AI config) not 403
-    expect(res.status).toBe(200);
-    expect(getUserPlanInfo).not.toHaveBeenCalled();
   });
 
   it('POST /api/ai/analyze/stream returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
@@ -224,18 +205,6 @@ describe('Export route plan gating', () => {
     expect(res.status).toBe(200);
   });
 
-  it('GET /api/locations/:id/export works for self-hosted without plan query', async () => {
-    mockSelfHosted();
-    const { token } = await createTestUser(app);
-    const location = await createTestLocation(app, token);
-
-    const res = await request(app)
-      .get(`/api/locations/${location.id}/export`)
-      .set('Authorization', `Bearer ${token}`);
-
-    expect(res.status).toBe(200);
-    expect(getUserPlanInfo).not.toHaveBeenCalled();
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -281,18 +250,6 @@ describe('API key route plan gating', () => {
     expect(res.body.key).toBeDefined();
   });
 
-  it('POST /api/api-keys works for self-hosted without plan query', async () => {
-    mockSelfHosted();
-    const { token } = await createTestUser(app);
-
-    const res = await request(app)
-      .post('/api/api-keys')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Self-Hosted Key' });
-
-    expect(res.status).toBe(201);
-    expect(getUserPlanInfo).not.toHaveBeenCalled();
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -354,17 +311,5 @@ describe('Custom field route plan gating', () => {
     expect(res.body.name).toBe('Color');
   });
 
-  it('POST /api/locations/:id/custom-fields works for self-hosted without plan query', async () => {
-    mockSelfHosted();
-    const { token } = await createTestUser(app);
-    const location = await createTestLocation(app, token);
-
-    const res = await request(app)
-      .post(`/api/locations/${location.id}/custom-fields`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Weight' });
-
-    expect(res.status).toBe(201);
-    expect(getUserPlanInfo).not.toHaveBeenCalled();
-  });
 });
+

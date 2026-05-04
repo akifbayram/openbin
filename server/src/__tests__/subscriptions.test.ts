@@ -65,6 +65,7 @@ vi.mock('../lib/config.js', () => ({
 import { query } from '../db.js';
 import { subscriptionsRoutes } from '../ee/routes/subscriptions.js';
 import { createApp } from '../index.js';
+import { SubStatus } from '../lib/planGate.js';
 import { createTestUser } from './helpers.js';
 
 const SUB_SECRET = 'test-webhook-secret';
@@ -389,6 +390,27 @@ describe('POST /api/subscriptions/callback', () => {
       [user.id],
     );
     expect(row.rows[0].cancel_at_period_end).toBeNull();
+  });
+
+  it('captures previous_sub_status when transitioning to inactive', async () => {
+    const { user } = await createTestUser(app);
+    const activeUntil = '2026-12-31T00:00:00.000Z';
+
+    const trialToken = await makeSubToken({ userId: user.id, plan: 0, status: 2, activeUntil });
+    await request(app).post('/api/subscriptions/callback').set('Authorization', `Bearer ${trialToken}`).send({});
+
+    const inactiveToken = await makeSubToken({ userId: user.id, plan: 0, status: 0, activeUntil: null });
+    const res = await request(app)
+      .post('/api/subscriptions/callback')
+      .set('Authorization', `Bearer ${inactiveToken}`)
+      .send({});
+    expect(res.status).toBe(200);
+
+    const row = await query<{ previous_sub_status: number | null }>(
+      'SELECT previous_sub_status FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(row.rows[0].previous_sub_status).toBe(SubStatus.TRIAL);
   });
 
   it('rejects invalid billingPeriod values', async () => {

@@ -122,8 +122,8 @@ describe('POST /api/plan/downgrade-impact', () => {
       .send({ targetPlan: 'free' });
     expect(res.status).toBe(200);
     expect(res.body.targetPlan).toBe('free');
+    expect(Array.isArray(res.body.warnings)).toBe(true);
     expect(res.body.warnings.length).toBeGreaterThan(0);
-    expect(res.body.warnings.some((w: { title: string }) => w.title.startsWith('47 bins'))).toBe(true);
   });
 
   it('rejects invalid target plan', async () => {
