@@ -39,7 +39,7 @@ import { batchRoutes } from './routes/batch.js';
 import binItemsRoutes from './routes/binItems.js';
 import binPinsRoutes from './routes/binPins.js';
 import { binSharesRoutes } from './routes/binShares.js';
-import binsRoutes from './routes/bins.js';
+import binsRoutes from './routes/bins/index.js';
 import binUsageRoutes from './routes/binUsage.js';
 import customFieldsRoutes from './routes/customFields.js';
 import exportRoutes from './routes/export.js';
