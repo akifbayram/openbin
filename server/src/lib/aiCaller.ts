@@ -19,7 +19,7 @@ export async function testProviderConnection(config: AiProviderConfig, isDemoUse
     await generateText({
       model,
       messages: [{ role: 'user' as const, content: 'Reply with OK' }],
-      maxOutputTokens: 10,
+      maxOutputTokens: 16,
     });
   } catch (err) {
     throw mapSdkError(err);
