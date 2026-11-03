@@ -44,8 +44,9 @@ async function streamPlannedQuery(
     buildPlannerSchemaContext(locationId, req.user!.id),
   ]);
 
+  // OpenAI rejects the planner's root union schema. Request JSON via the prompt
+  // and validate the parsed plan below before executing it.
   await pipeAiStreamToResponse(res, model, {
-    schema: QueryPlanSchema,
     system: buildPlannerSystemPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
     userContent: buildPlannerUserMessage(`${scopeNote}${question}`, schemaCtx),
     priorMessages,
