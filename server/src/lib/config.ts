@@ -92,7 +92,7 @@ export const config = Object.freeze({
   accessTokenExpiresIn: '15m',
   refreshTokenMaxDays: 7,
   cookieSecure: process.env.NODE_ENV === 'production' || parseBool(process.env.TRUST_PROXY, false),
-  bcryptRounds: 12,
+  bcryptRounds: process.env.NODE_ENV === 'test' ? 4 : 12,
   registrationMode: (() => {
     const mode = process.env.REGISTRATION_MODE;
     if (mode === 'open' || mode === 'invite' || mode === 'closed') return mode;
