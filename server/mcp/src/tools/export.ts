@@ -12,7 +12,7 @@ interface ExportBin {
   id: string;
   name: string;
   location: string;
-  items: string[];
+  items: Array<string | { name: string; quantity?: number | null }>;
   notes: string;
   tags: string[];
   icon: string;
@@ -28,6 +28,12 @@ interface ExportData {
   exportedAt: string;
   locationName: string;
   bins: ExportBin[];
+}
+
+/** Items with a quantity are exported as objects; plain items as strings. */
+function formatExportItem(item: ExportBin["items"][number]): string {
+  if (typeof item === "string") return item;
+  return item.quantity != null ? `${item.name} (x${item.quantity})` : item.name;
 }
 
 export function registerExportTools(server: McpServer, api: ApiClient) {
@@ -50,7 +56,7 @@ export function registerExportTools(server: McpServer, api: ApiClient) {
       for (const bin of data.bins) {
         const parts = [`- **${bin.name}** (${bin.shortCode})`];
         if (bin.location) parts.push(`  Area: ${bin.location}`);
-        if (bin.items.length > 0) parts.push(`  Items: ${bin.items.join(", ")}`);
+        if (bin.items.length > 0) parts.push(`  Items: ${bin.items.map(formatExportItem).join(", ")}`);
         if (bin.tags.length > 0) parts.push(`  Tags: ${bin.tags.join(", ")}`);
         if (bin.notes) parts.push(`  Notes: ${bin.notes}`);
         if (bin.photos.length > 0) parts.push(`  Photos: ${bin.photos.length}`);
