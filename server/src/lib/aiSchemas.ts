@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-/** Schema for an AI-suggested item with optional quantity. */
+/** Quantity must be present for strict structured output; null means unknown. */
 const AiItemSchema = z.object({
   name: z.string(),
-  quantity: z.number().nullable().optional(),
+  quantity: z.number().nullable(),
 });
 
 /** Schema for image analysis results. */
