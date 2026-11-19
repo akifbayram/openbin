@@ -1,5 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _resetForTest, getEntries, pushLog, subscribe, unsubscribe } from '../logBuffer.js';
+
+beforeEach(() => {
+  _resetForTest();
+});
 
 afterEach(() => {
   _resetForTest();

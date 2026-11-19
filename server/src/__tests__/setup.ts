@@ -4,7 +4,8 @@ import { afterAll, afterEach, beforeAll } from 'vitest';
 process.env.DATABASE_PATH = ':memory:';
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret';
-process.env.PHOTO_STORAGE_PATH = '/tmp/openbin-test-photos';
+// Per-worker dir: test files run in parallel and some clear their storage dirs
+process.env.PHOTO_STORAGE_PATH = `/tmp/openbin-test-photos-${process.env.VITEST_POOL_ID ?? '0'}`;
 // Ensure SQLite mode in tests (no DATABASE_URL)
 delete process.env.DATABASE_URL;
 
@@ -64,6 +65,8 @@ afterEach(() => {
 });
 
 afterAll(async () => {
+  // Shared-module workers reuse the engine for the next file; the process exit closes it.
+  if (process.env.OPENBIN_TEST_SHARED_MODULES) return;
   const { closeThumbnailPool } = await import('../lib/thumbnailPool.js');
   await closeThumbnailPool();
   const { getEngine } = await import('../db/init.js');
