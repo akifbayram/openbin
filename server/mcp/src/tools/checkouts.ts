@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { type ApiClient, withErrorHandling } from "../api-client.js";
+import { resolveBinId } from "../resolve-bin.js";
 import { resolveItemId } from "../resolve-item.js";
 
 interface CheckoutListResponse {
@@ -30,11 +31,12 @@ export function registerCheckoutTools(server: McpServer, api: ApiClient) {
     "checkout_item",
     "Check out an item from a bin. Provide item_id or item_name (not both).",
     {
-      bin_id: z.string().describe("Bin ID (6-character short code)"),
+      bin_id: z.string().describe("Bin UUID or 6-character short code"),
       item_id: z.string().optional().describe("Item UUID"),
       item_name: z.string().optional().describe("Item name (case-insensitive match)"),
     },
     withErrorHandling(async ({ bin_id, item_id, item_name }) => {
+      bin_id = await resolveBinId(api, bin_id);
       const resolved = await resolveItemId(api, bin_id, item_id, item_name);
       if ("error" in resolved) {
         return { content: [{ type: "text" as const, text: resolved.error }], isError: true };
@@ -59,12 +61,14 @@ export function registerCheckoutTools(server: McpServer, api: ApiClient) {
     "return_item",
     "Return a checked-out item. Optionally return it to a different bin. Provide item_id or item_name (not both).",
     {
-      bin_id: z.string().describe("Origin bin ID (6-character short code)"),
+      bin_id: z.string().describe("Origin bin UUID or 6-character short code"),
       item_id: z.string().optional().describe("Item UUID"),
       item_name: z.string().optional().describe("Item name (case-insensitive match)"),
-      target_bin_id: z.string().optional().describe("Return to a different bin (must be in same location)"),
+      target_bin_id: z.string().optional().describe("Return to a different bin (UUID or short code; must be in same location)"),
     },
     withErrorHandling(async ({ bin_id, item_id, item_name, target_bin_id }) => {
+      bin_id = await resolveBinId(api, bin_id);
+      if (target_bin_id) target_bin_id = await resolveBinId(api, target_bin_id);
       const resolved = await resolveItemId(api, bin_id, item_id, item_name);
       if ("error" in resolved) {
         return { content: [{ type: "text" as const, text: resolved.error }], isError: true };
@@ -92,9 +96,10 @@ export function registerCheckoutTools(server: McpServer, api: ApiClient) {
     "list_bin_checkouts",
     "List active (unreturned) checkouts for a specific bin",
     {
-      bin_id: z.string().describe("Bin ID (6-character short code)"),
+      bin_id: z.string().describe("Bin UUID or 6-character short code"),
     },
     withErrorHandling(async ({ bin_id }) => {
+      bin_id = await resolveBinId(api, bin_id);
       const data = await api.get<CheckoutListResponse>(
         `/api/bins/${encodeURIComponent(bin_id)}/checkouts`,
       );

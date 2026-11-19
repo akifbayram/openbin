@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { type ApiClient, withErrorHandling } from "../api-client.js";
+import { resolveBinId } from "../resolve-bin.js";
 
 interface ScanEntry {
   id: string;
@@ -52,9 +53,10 @@ export function registerScanHistoryTools(server: McpServer, api: ApiClient) {
     "record_scan",
     "Record a QR scan for a bin (updates scan history)",
     {
-      bin_id: z.string().describe("Bin ID (6-character short code)"),
+      bin_id: z.string().describe("Bin UUID or 6-character short code"),
     },
     withErrorHandling(async ({ bin_id }) => {
+      bin_id = await resolveBinId(api, bin_id);
       await api.post("/api/scan-history", { binId: bin_id });
 
       return {

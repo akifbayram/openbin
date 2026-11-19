@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { type ApiClient, withErrorHandling } from "../api-client.js";
+import { resolveBinId } from "../resolve-bin.js";
 
 interface ActionResult {
   type: string;
@@ -23,7 +24,7 @@ const OperationSchema = z.object({
     "add_tags", "remove_tags", "modify_tag",
     "set_area", "set_notes", "set_icon", "set_color",
   ]).describe("Operation type"),
-  bin_id: z.string().optional().describe("Bin ID (6-character short code; required for all types except create_bin)"),
+  bin_id: z.string().optional().describe("Bin UUID or 6-character short code (required for all types except create_bin; restore_bin needs the UUID)"),
   bin_name: z.string().optional().describe("Bin name (for logging; required for existing-bin operations)"),
   name: z.string().optional().describe("Bin name (create_bin, update_bin)"),
   items: z.array(z.string()).optional().describe("Item names (add_items, remove_items, create_bin)"),
@@ -51,6 +52,10 @@ export function registerBatchTools(server: McpServer, api: ApiClient) {
       operations: z.array(OperationSchema).min(1).max(50).describe("Array of operations to execute"),
     },
     withErrorHandling(async ({ location_id, operations }) => {
+      // Trashed bins can't be looked up by short code, so restore_bin keeps its ID as given.
+      operations = await Promise.all(operations.map(async (op) =>
+        op.bin_id && op.type !== "restore_bin" ? { ...op, bin_id: await resolveBinId(api, op.bin_id) } : op,
+      ));
       const data = await api.post<BatchResponse>("/api/batch", {
         locationId: location_id,
         operations,

@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { type ApiClient, withErrorHandling } from "../api-client.js";
+import { isBinUuid, resolveBinId } from "../resolve-bin.js";
 
 interface BinItem {
   id: string;
@@ -108,7 +109,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     "get_bin",
     "Get a single bin by ID or short code",
     {
-      id: z.string().optional().describe("Bin ID (6-character short code)"),
+      id: z.string().optional().describe("Bin UUID or 6-character short code"),
       short_code: z.string().optional().describe("6-character short code (e.g. 'A1B2C3')"),
     },
     withErrorHandling(async ({ id, short_code }) => {
@@ -119,9 +120,9 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
         };
       }
 
-      const path = id
+      const path = id && isBinUuid(id)
         ? `/api/bins/${encodeURIComponent(id)}`
-        : `/api/bins/lookup/${encodeURIComponent(short_code!)}`;
+        : `/api/bins/lookup/${encodeURIComponent((id ?? short_code)!)}`;
 
       const bin = await api.get<Bin>(path);
 
@@ -170,7 +171,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     "update_bin",
     "Update an existing bin",
     {
-      id: z.string().describe("Bin ID (6-character short code)"),
+      id: z.string().describe("Bin UUID or 6-character short code"),
       name: z.string().optional().describe("New bin name"),
       items: z
         .array(z.string())
@@ -188,6 +189,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
       card_style: z.string().optional().describe('Card style JSON. Variants: "default" (omit or empty string), "border" ({variant,secondaryColor,borderWidth,borderStyle}), "gradient" ({variant,secondaryColor}), "stripe" ({variant,secondaryColor,stripePosition:left|right|top|bottom,stripeWidth}), "photo" ({variant,coverPhotoId})'),
     },
     withErrorHandling(async ({ id, name, items, tags, notes, area_id, icon, color, card_style }) => {
+      id = await resolveBinId(api, id);
       const body: Record<string, unknown> = {};
       if (name !== undefined) body.name = name;
       if (items !== undefined) body.items = items;
@@ -214,8 +216,9 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
   server.tool(
     "delete_bin",
     "Soft-delete a bin (moves to trash, can be restored)",
-    { id: z.string().describe("Bin ID (6-character short code)") },
+    { id: z.string().describe("Bin UUID or 6-character short code") },
     withErrorHandling(async ({ id }) => {
+      id = await resolveBinId(api, id);
       const bin = await api.del<Bin>(`/api/bins/${encodeURIComponent(id)}`);
 
       return {
@@ -261,7 +264,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
   server.tool(
     "restore_bin",
     "Restore a soft-deleted bin from trash",
-    { id: z.string().describe("Bin ID (6-character short code)") },
+    { id: z.string().describe("Bin UUID (the ID shown by list_trash; short codes don't work for trashed bins)") },
     withErrorHandling(async ({ id }) => {
       const bin = await api.post<Bin>(`/api/bins/${encodeURIComponent(id)}/restore`);
 
@@ -279,7 +282,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
   server.tool(
     "permanent_delete_bin",
     "Permanently delete a bin from trash (cannot be undone)",
-    { id: z.string().describe("Bin ID (6-character short code; must already be in trash)") },
+    { id: z.string().describe("Bin UUID (the ID shown by list_trash; short codes don't work for trashed bins)") },
     withErrorHandling(async ({ id }) => {
       await api.del(`/api/bins/${encodeURIComponent(id)}/permanent`);
 
@@ -321,8 +324,9 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
   server.tool(
     "pin_bin",
     "Pin a bin for quick access",
-    { id: z.string().describe("Bin ID (6-character short code)") },
+    { id: z.string().describe("Bin UUID or 6-character short code") },
     withErrorHandling(async ({ id }) => {
+      id = await resolveBinId(api, id);
       await api.post(`/api/bins/${encodeURIComponent(id)}/pin`);
 
       return {
@@ -334,8 +338,9 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
   server.tool(
     "unpin_bin",
     "Unpin a bin",
-    { id: z.string().describe("Bin ID (6-character short code)") },
+    { id: z.string().describe("Bin UUID or 6-character short code") },
     withErrorHandling(async ({ id }) => {
+      id = await resolveBinId(api, id);
       await api.del(`/api/bins/${encodeURIComponent(id)}/pin`);
 
       return {
@@ -348,9 +353,10 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     "reorder_pinned_bins",
     "Reorder pinned bins",
     {
-      bin_ids: z.array(z.string()).min(1).describe("Bin IDs (6-character short codes) in the desired order"),
+      bin_ids: z.array(z.string()).min(1).describe("Bin UUIDs or 6-character short codes, in the desired order"),
     },
     withErrorHandling(async ({ bin_ids }) => {
+      bin_ids = await Promise.all(bin_ids.map((b) => resolveBinId(api, b)));
       await api.put("/api/bins/pinned/reorder", { bin_ids });
 
       return {
@@ -365,10 +371,11 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     "add_tags",
     "Add tags to a bin (merges with existing tags, does not replace them)",
     {
-      id: z.string().describe("Bin ID (6-character short code)"),
+      id: z.string().describe("Bin UUID or 6-character short code"),
       tags: z.array(z.string()).min(1).describe("Tag names to add"),
     },
     withErrorHandling(async ({ id, tags }) => {
+      id = await resolveBinId(api, id);
       const result = await api.put<{ id: string; tags: string[] }>(
         `/api/bins/${encodeURIComponent(id)}/add-tags`,
         { tags },
@@ -391,10 +398,11 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     "move_bin",
     "Move a bin to a different location (admin only). Area is unassigned after move.",
     {
-      id: z.string().describe("Bin ID (6-character short code)"),
+      id: z.string().describe("Bin UUID or 6-character short code"),
       location_id: z.string().describe("Target location UUID"),
     },
     withErrorHandling(async ({ id, location_id }) => {
+      id = await resolveBinId(api, id);
       const bin = await api.post<Bin>(
         `/api/bins/${encodeURIComponent(id)}/move`,
         { locationId: location_id },
